@@ -85,7 +85,7 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void }> = 
                             {urgentAlerts.length > 0 ? urgentAlerts.map(alert => (
                                 <li key={alert.id} className="text-sm">
                                     <p className="font-medium text-text-primary">{alert.clientName}</p>
-                                    <p className="text-xs text-text-secondary">New lead uncontacted for > 24 hours.</p>
+                                    <p className="text-xs text-text-secondary">New lead uncontacted for &gt; 24 hours.</p>
                                 </li>
                             )) : <p className="text-sm text-text-secondary">No urgent alerts.</p>}
                         </ul>
