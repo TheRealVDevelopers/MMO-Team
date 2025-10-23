@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Make My Office - Internal Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --color-primary: 37 99 235;
+        --color-secondary: 5 150 105;
+        --color-accent: 217 119 6;
+        --color-error: 220 38 38;
+        --color-purple: 139 92 246;
+        --color-background: 248 250 252;
+        --color-surface: 255 255 255;
+        --color-text-primary: 31 41 55;
+        --color-text-secondary: 107 114 128;
+        --color-border: 229 231 235;
+        --color-subtle-background: 249 250 251;
+        --color-toggle-background: 209 213 219;
+
+        --color-primary-subtle-background: 219 234 254;
+        --color-primary-subtle-text: 59 130 246;
+        --color-secondary-subtle-background: 220 252 231;
+        --color-secondary-subtle-text: 22 163 74;
+        --color-accent-subtle-background: 254 243 199;
+        --color-accent-subtle-text: 245 158 11;
+        --color-error-subtle-background: 254 226 226;
+        --color-error-subtle-text: 220 38 38;
+        --color-purple-subtle-background: 233 213 255;
+        --color-purple-subtle-text: 139 92 246;
+        --color-slate-subtle-background: 241 245 249;
+        --color-slate-subtle-text: 71 85 105;
+      }
+    </style>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+            colors: {
+              primary: 'rgb(var(--color-primary) / <alpha-value>)',
+              secondary: 'rgb(var(--color-secondary) / <alpha-value>)',
+              accent: 'rgb(var(--color-accent) / <alpha-value>)',
+              error: 'rgb(var(--color-error) / <alpha-value>)',
+              purple: 'rgb(var(--color-purple) / <alpha-value>)',
+              background: 'rgb(var(--color-background) / <alpha-value>)',
+              surface: 'rgb(var(--color-surface) / <alpha-value>)',
+              'text-primary': 'rgb(var(--color-text-primary) / <alpha-value>)',
+              'text-secondary': 'rgb(var(--color-text-secondary) / <alpha-value>)',
+              border: 'rgb(var(--color-border) / <alpha-value>)',
+              'subtle-background': 'rgb(var(--color-subtle-background) / <alpha-value>)',
+              'toggle-background': 'rgb(var(--color-toggle-background) / <alpha-value>)',
+
+              'primary-subtle-background': 'rgb(var(--color-primary-subtle-background) / <alpha-value>)',
+              'primary-subtle-text': 'rgb(var(--color-primary-subtle-text) / <alpha-value>)',
+              'secondary-subtle-background': 'rgb(var(--color-secondary-subtle-background) / <alpha-value>)',
+              'secondary-subtle-text': 'rgb(var(--color-secondary-subtle-text) / <alpha-value>)',
+              'accent-subtle-background': 'rgb(var(--color-accent-subtle-background) / <alpha-value>)',
+              'accent-subtle-text': 'rgb(var(--color-accent-subtle-text) / <alpha-value>)',
+              'error-subtle-background': 'rgb(var(--color-error-subtle-background) / <alpha-value>)',
+              'error-subtle-text': 'rgb(var(--color-error-subtle-text) / <alpha-value>)',
+              'purple-subtle-background': 'rgb(var(--color-purple-subtle-background) / <alpha-value>)',
+              'purple-subtle-text': 'rgb(var(--color-purple-subtle-text) / <alpha-value>)',
+              'slate-subtle-background': 'rgb(var(--color-slate-subtle-background) / <alpha-value>)',
+              'slate-subtle-text': 'rgb(var(--color-slate-subtle-text) / <alpha-value>)',
+            }
+          }
+        }
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "firebase/app": "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js",
+    "firebase/analytics": "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js",
+    "firebase/": "https://aistudiocdn.com/firebase@^12.4.0/",
+    "react-dom": "https://aistudiocdn.com/react-dom@^19.2.0",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^0.14.0"
+  }
+}
+</script>
+</head>
+  <body class="bg-background font-sans text-text-primary transition-colors duration-300">
+    <div id="root"></div>
+    <div id="modal-root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
