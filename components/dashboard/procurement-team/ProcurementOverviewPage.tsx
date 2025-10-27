@@ -34,7 +34,7 @@ const ProcurementOverviewPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <KpiCard title="Requests in Queue" value={requestQueue.length.toString()} subtext={`${urgentRequests} urgent`} />
                 <KpiCard title="Orders Placed (Month)" value="12" />
-                <KpiCard title="Cost Savings (Month)" value="$12,540" />
+                <KpiCard title="Cost Savings (Month)" value="₹10,03,200" />
                 <KpiCard title="Avg. Sourcing Time" value="4.2 Days" />
             </div>
 

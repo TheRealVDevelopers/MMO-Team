@@ -1,11 +1,10 @@
+
 import React from 'react';
 import Card from '../../shared/Card';
-import { LEADS } from '../../../constants';
-import { LeadPipelineStatus } from '../../../types';
+import { LEADS, formatCurrencyINR, formatDateTime } from '../../../constants';
+import { LeadPipelineStatus, SiteVisit } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { ChevronRightIcon, ClockIcon } from '../../icons/IconComponents';
-
-const formatCurrency = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(value);
 
 const KpiCard: React.FC<{ title: string; value: string; onClick?: () => void }> = ({ title, value, onClick }) => (
     <Card className={`flex flex-col justify-between ${onClick ? 'cursor-pointer hover:shadow-md hover:border-primary transition-all' : ''} border border-transparent`} onClick={onClick}>
@@ -14,7 +13,7 @@ const KpiCard: React.FC<{ title: string; value: string; onClick?: () => void }> 
     </Card>
 );
 
-const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
+const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void, siteVisits: SiteVisit[] }> = ({ setCurrentPage, siteVisits }) => {
     const { currentUser } = useAuth();
     
     if (!currentUser) return null;
@@ -28,23 +27,25 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void }> = 
     
     const todaysFollowUps = myLeads.filter(l => l.status === LeadPipelineStatus.CONTACTED_CALL_DONE || l.status === LeadPipelineStatus.NEW_NOT_CONTACTED);
     const recentActivities = myLeads.flatMap(l => l.history).sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime()).slice(0, 5);
-    const formatDateTime = (date: Date) => new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(date);
 
+    const mySiteVisits = siteVisits.filter(v => v.requesterId === currentUser?.id);
+    const upcomingVisits = mySiteVisits.filter(v => v.date >= new Date()).sort((a,b) => a.date.getTime() - b.date.getTime()).slice(0, 3);
+    
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 p-4 sm:p-6 lg:p-8">
             <h2 className="text-2xl font-bold text-text-primary">Welcome back, {currentUser.name.split(' ')[0]}!</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <KpiCard title="My Active Leads" value={activeLeads.toString()} onClick={() => setCurrentPage('leads')} />
                 <KpiCard title="My Conversion (Month)" value={`${conversionRate}%`} onClick={() => setCurrentPage('performance')} />
                 <KpiCard title="Won this Month" value={projectsWon.toString()} onClick={() => setCurrentPage('leads')}/>
-                <KpiCard title="My Revenue (Month)" value={formatCurrency(totalRevenue)} onClick={() => setCurrentPage('performance')} />
+                <KpiCard title="My Revenue (Month)" value={formatCurrencyINR(totalRevenue)} onClick={() => setCurrentPage('performance')} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2">
                     <Card className="h-full">
-                        <h3 className="text-lg font-bold">Today's Follow-ups</h3>
+                        <h3 className="text-lg font-bold">Today's Priority Tasks</h3>
                         <div className="mt-4 flow-root">
                             {todaysFollowUps.length > 0 ? (
                                 <ul role="list" className="-my-4 divide-y divide-border">
@@ -69,7 +70,25 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void }> = 
                         </div>
                     </Card>
                 </div>
-                <div className="lg:col-span-1">
+                <div className="lg:col-span-1 space-y-6">
+                     <Card>
+                        <h3 className="text-lg font-bold">Upcoming Site Visits</h3>
+                        {upcomingVisits.length > 0 ? (
+                            <ul className="mt-4 space-y-3">
+                                {upcomingVisits.map(visit => (
+                                    <li key={visit.id} className="text-sm">
+                                        <p className="font-medium text-text-primary">{visit.projectName}</p>
+                                        <p className="text-xs text-text-secondary flex items-center mt-1">
+                                            <ClockIcon className="w-3 h-3 mr-1.5" />
+                                            {formatDateTime(visit.date)}
+                                        </p>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p className="text-sm text-text-secondary mt-2">No upcoming visits scheduled.</p>
+                        )}
+                    </Card>
                     <Card>
                         <h3 className="text-lg font-bold">Recent Activity</h3>
                          <ul role="list" className="mt-4 space-y-4">

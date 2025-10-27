@@ -8,7 +8,7 @@ import {
     ExclamationTriangleIcon,
     RectangleStackIcon
 } from '../../icons/IconComponents';
-import { USERS, PROJECTS, PENDING_APPROVALS_COUNT, LEADS, ACTIVITIES } from '../../../constants';
+import { USERS, PROJECTS, PENDING_APPROVALS_COUNT, LEADS, ACTIVITIES, formatLargeNumberINR } from '../../../constants';
 import { ActivityStatus, UserRole, ProjectStatus, LeadPipelineStatus } from '../../../types';
 
 const MetricCard: React.FC<{ title: string; value: string; icon: React.ReactNode; subtext?: string; }> = ({ title, value, icon, subtext }) => (
@@ -51,7 +51,8 @@ const OverviewDashboard: React.FC = () => {
     const conversionRate = totalLeads > 0 ? ((convertedLeads / totalLeads) * 100).toFixed(1) : 0;
     
     const teamMembers = USERS.length;
-    
+    const totalRevenue = PROJECTS.filter(p => p.status === ProjectStatus.COMPLETED || p.status === ProjectStatus.APPROVED).reduce((sum, p) => sum + p.budget, 0);
+
     // Alert Calculations
     const projectDelays = PROJECTS.filter(p => p.progress < 50 && new Date(p.endDate) < new Date());
     const pendingApprovals = ACTIVITIES.filter(a => a.status === ActivityStatus.PENDING);
@@ -65,7 +66,7 @@ const OverviewDashboard: React.FC = () => {
             <MetricCard title="Total Projects" value={totalProjects.toString()} icon={<RectangleStackIcon />} subtext={`${activeProjects} active, ${completedProjects} completed`} />
             <MetricCard title="Lead Conversion" value={`${conversionRate}%`} icon={<ChartBarIcon />} subtext={`${newLeadsThisWeek} new leads this week`} />
             <MetricCard title="Team Members" value={teamMembers.toString()} icon={<UserGroupIcon />} subtext="Across all departments" />
-            <MetricCard title="Total Revenue (YTD)" value="$1.2M" icon={<BanknotesIcon />} subtext="Placeholder data" />
+            <MetricCard title="Total Revenue (YTD)" value={formatLargeNumberINR(totalRevenue)} icon={<BanknotesIcon />} subtext="From all completed projects" />
         </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

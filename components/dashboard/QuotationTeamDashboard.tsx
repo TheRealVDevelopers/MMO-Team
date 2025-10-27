@@ -1,3 +1,5 @@
+
+
 import React, { useState } from 'react';
 import QuotationTeamSidebar from './quotation-team/QuotationTeamSidebar';
 import QuotationOverviewPage from './quotation-team/QuotationOverviewPage';
@@ -5,6 +7,9 @@ import NegotiationsBoardPage from './quotation-team/NegotiationsBoardPage';
 import MyPerformancePage from './quotation-team/MyPerformancePage';
 import { Project } from '../../types';
 import QuotationDetailModal from './quotation-team/QuotationDetailModal';
+import ItemsCatalogPage from './quotation-team/ItemsCatalogPage';
+import ProjectTemplatesPage from './quotation-team/ProjectTemplatesPage';
+import PriceAnalyticsPage from './quotation-team/PriceAnalyticsPage';
 
 const QuotationTeamDashboard: React.FC = () => {
   const [currentPage, setCurrentPage] = useState('overview');
@@ -26,9 +31,15 @@ const QuotationTeamDashboard: React.FC = () => {
       case 'overview':
         return <QuotationOverviewPage onProjectSelect={handleProjectSelect} />;
       case 'negotiations':
-        return <NegotiationsBoardPage onProjectSelect={handleProjectSelect} />;
+        return <NegotiationsBoardPage onProjectSelect={handleProjectSelect} setCurrentPage={setCurrentPage} />;
       case 'performance':
-        return <MyPerformancePage />;
+        return <MyPerformancePage setCurrentPage={setCurrentPage} />;
+      case 'catalog':
+          return <ItemsCatalogPage setCurrentPage={setCurrentPage}/>;
+      case 'templates':
+          return <ProjectTemplatesPage setCurrentPage={setCurrentPage}/>;
+      case 'analytics':
+          return <PriceAnalyticsPage setCurrentPage={setCurrentPage}/>;
       default:
         return <QuotationOverviewPage onProjectSelect={handleProjectSelect} />;
     }

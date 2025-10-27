@@ -1,11 +1,21 @@
+
 import React from 'react';
 import Card from '../../shared/Card';
-import { ArrowDownTrayIcon } from '../../icons/IconComponents';
+import { ArrowDownTrayIcon, ArrowLeftIcon } from '../../icons/IconComponents';
 
-const ReportsPage: React.FC = () => {
+const ReportsPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
     return (
         <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-text-primary">Financial Reports</h2>
+            <div className="flex items-center gap-4">
+                <button
+                    onClick={() => setCurrentPage('overview')}
+                    className="flex items-center space-x-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+                >
+                    <ArrowLeftIcon className="w-5 h-5" />
+                    <span>Back</span>
+                </button>
+                <h2 className="text-2xl font-bold text-text-primary">Financial Reports</h2>
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card>

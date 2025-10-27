@@ -1,9 +1,10 @@
+
 import React, { useState, useMemo } from 'react';
 import Card from '../../shared/Card';
-import { INVOICES } from '../../../constants';
+import { INVOICES, formatCurrencyINR, formatDate } from '../../../constants';
 import { Invoice, PaymentStatus } from '../../../types';
 import StatusPill from '../../shared/StatusPill';
-import { PlusIcon } from '../../icons/IconComponents';
+import { PlusIcon, ArrowLeftIcon } from '../../icons/IconComponents';
 
 const PaymentStatusPill: React.FC<{ status: PaymentStatus }> = ({ status }) => {
     const color = {
@@ -17,19 +18,26 @@ const PaymentStatusPill: React.FC<{ status: PaymentStatus }> = ({ status }) => {
     return <StatusPill color={color}>{status}</StatusPill>;
 };
 
-const InvoicesPage: React.FC = () => {
+const InvoicesPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
     const [statusFilter, setStatusFilter] = useState<PaymentStatus | 'all'>('all');
 
     const filteredInvoices = useMemo(() => {
         return INVOICES.filter(invoice => statusFilter === 'all' || invoice.status === statusFilter);
     }, [statusFilter]);
 
-    const formatCurrency = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
-
     return (
         <div className="space-y-6">
             <div className="sm:flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-text-primary">Invoice Management</h2>
+                 <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => setCurrentPage('overview')}
+                        className="flex items-center space-x-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+                    >
+                        <ArrowLeftIcon className="w-5 h-5" />
+                        <span>Back</span>
+                    </button>
+                    <h2 className="text-2xl font-bold text-text-primary">Invoice Management</h2>
+                </div>
                 <button className="flex items-center space-x-2 bg-primary text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 mt-2 sm:mt-0">
                     <PlusIcon className="w-4 h-4" />
                     <span>Create New Invoice</span>
@@ -69,10 +77,10 @@ const InvoicesPage: React.FC = () => {
                                         <p className="text-xs text-text-secondary">{invoice.projectName}</p>
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap">
-                                        <p className="text-sm font-medium text-text-primary">{formatCurrency(invoice.amount)}</p>
-                                        <p className="text-xs text-text-secondary">Paid: {formatCurrency(invoice.paidAmount)}</p>
+                                        <p className="text-sm font-medium text-text-primary">{formatCurrencyINR(invoice.amount)}</p>
+                                        <p className="text-xs text-text-secondary">Paid: {formatCurrencyINR(invoice.paidAmount)}</p>
                                     </td>
-                                    <td className="px-4 py-3 text-sm text-text-secondary">{invoice.dueDate.toLocaleDateString()}</td>
+                                    <td className="px-4 py-3 text-sm text-text-secondary">{formatDate(invoice.dueDate)}</td>
                                     <td className="px-4 py-3"><PaymentStatusPill status={invoice.status} /></td>
                                 </tr>
                             ))}

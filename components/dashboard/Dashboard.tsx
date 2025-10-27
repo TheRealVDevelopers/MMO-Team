@@ -1,5 +1,6 @@
 
 
+
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types';
@@ -12,45 +13,24 @@ import SiteEngineerDashboard from './SiteEngineerDashboard';
 import ProcurementTeamDashboard from './ProcurementTeamDashboard';
 import ExecutionTeamDashboard from './ExecutionTeamDashboard';
 import AccountsTeamDashboard from './AccountsTeamDashboard';
-import OverviewDashboard from './super-admin/OverviewDashboard';
-import TeamManagementPage from './super-admin/TeamManagementPage';
-import ProjectTrackingPage from './super-admin/ProjectTrackingPage';
-import LeadsManagementPage from './super-admin/LeadsManagementPage';
-import ReportsPage from './super-admin/ReportsPage';
+import SuperAdminDashboard from './SuperAdminDashboard';
 
 
-const Dashboard: React.FC<{ currentPage: string }> = ({ currentPage }) => {
+const Dashboard: React.FC<{ currentPage: string; setCurrentPage?: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
 
   if (!currentUser) {
     return (
-      <div className="text-center py-10">
+      <div className="text-center py-10 p-4 sm:p-6 lg:p-8">
         <p>Please select a user to view a dashboard.</p>
       </div>
     );
   }
 
-  const renderDashboard = () => {
-    // Super Admin gets the multi-page view
-    if (currentUser.role === UserRole.SUPER_ADMIN) {
-      switch (currentPage) {
-        case 'overview':
-          return <OverviewDashboard />;
-        case 'team':
-          return <TeamManagementPage />;
-        case 'projects':
-          return <ProjectTrackingPage />;
-        case 'leads':
-          return <LeadsManagementPage />;
-        case 'reports':
-          return <ReportsPage />;
-        default:
-          return <OverviewDashboard />;
-      }
-    }
-
-    // Other roles get their specific single-page dashboard
+  const renderRoleDashboard = () => {
     switch (currentUser.role) {
+      case UserRole.SUPER_ADMIN:
+        return <SuperAdminDashboard currentPage={currentPage} setCurrentPage={setCurrentPage!} />;
       case UserRole.SALES_TEAM_MEMBER:
         return <SalesTeamDashboard />;
       case UserRole.SALES_GENERAL_MANAGER:
@@ -68,11 +48,31 @@ const Dashboard: React.FC<{ currentPage: string }> = ({ currentPage }) => {
       case UserRole.ACCOUNTS_TEAM:
         return <AccountsTeamDashboard />;
       default:
-        return <div className="p-4 sm:p-6 lg:p-8"><PlaceholderDashboard role={currentUser.role} /></div>;
+        return <PlaceholderDashboard role={currentUser.role} />;
     }
   };
 
-  return <>{renderDashboard()}</>;
+  // Some dashboards have their own padding or need full width
+  const fullWidthRoles: UserRole[] = [
+      UserRole.SALES_TEAM_MEMBER, 
+      UserRole.EXECUTION_TEAM,
+      UserRole.DRAWING_TEAM,
+      UserRole.QUOTATION_TEAM,
+      UserRole.SITE_ENGINEER,
+      UserRole.PROCUREMENT_TEAM,
+      UserRole.ACCOUNTS_TEAM,
+      UserRole.SALES_GENERAL_MANAGER,
+  ];
+
+  if (fullWidthRoles.includes(currentUser.role)) {
+      return renderRoleDashboard();
+  }
+
+  return (
+    <div className="p-4 sm:p-6 lg:p-8 h-full">
+        {renderRoleDashboard()}
+    </div>
+  );
 };
 
 export default Dashboard;

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import AccountsTeamSidebar from './accounts-team/AccountsTeamSidebar';
 import AccountsOverviewPage from './accounts-team/AccountsOverviewPage';
@@ -14,13 +15,13 @@ const AccountsTeamDashboard: React.FC = () => {
       case 'overview':
         return <AccountsOverviewPage setCurrentPage={setCurrentPage} />;
       case 'invoices':
-        return <InvoicesPage />;
+        return <InvoicesPage setCurrentPage={setCurrentPage} />;
       case 'expenses':
-        return <ExpensesPage />;
+        return <ExpensesPage setCurrentPage={setCurrentPage} />;
       case 'payments':
-        return <PaymentsPage />;
+        return <PaymentsPage setCurrentPage={setCurrentPage} />;
       case 'reports':
-        return <ReportsPage />;
+        return <ReportsPage setCurrentPage={setCurrentPage} />;
       default:
         return <AccountsOverviewPage setCurrentPage={setCurrentPage} />;
     }

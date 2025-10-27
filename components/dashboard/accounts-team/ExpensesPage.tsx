@@ -1,9 +1,10 @@
+
 import React, { useState, useMemo } from 'react';
 import Card from '../../shared/Card';
-import { EXPENSES } from '../../../constants';
+import { EXPENSES, formatCurrencyINR, formatDate } from '../../../constants';
 import { Expense } from '../../../types';
 import StatusPill from '../../shared/StatusPill';
-import { PlusIcon } from '../../icons/IconComponents';
+import { PlusIcon, ArrowLeftIcon } from '../../icons/IconComponents';
 
 const ExpenseStatusPill: React.FC<{ status: 'Pending' | 'Approved' | 'Paid' }> = ({ status }) => {
     const color = {
@@ -14,7 +15,7 @@ const ExpenseStatusPill: React.FC<{ status: 'Pending' | 'Approved' | 'Paid' }> =
     return <StatusPill color={color}>{status}</StatusPill>;
 };
 
-const ExpensesPage: React.FC = () => {
+const ExpensesPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
     const [categoryFilter, setCategoryFilter] = useState<'All' | 'Vendor' | 'Material' | 'Labor' | 'Other'>('All');
 
     const filteredExpenses = useMemo(() => {
@@ -22,12 +23,20 @@ const ExpensesPage: React.FC = () => {
         return EXPENSES.filter(expense => expense.category === categoryFilter);
     }, [categoryFilter]);
 
-    const formatCurrency = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
 
     return (
         <div className="space-y-6">
             <div className="sm:flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-text-primary">Expense Management</h2>
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => setCurrentPage('overview')}
+                        className="flex items-center space-x-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+                    >
+                        <ArrowLeftIcon className="w-5 h-5" />
+                        <span>Back</span>
+                    </button>
+                    <h2 className="text-2xl font-bold text-text-primary">Expense Management</h2>
+                </div>
                 <button className="flex items-center space-x-2 bg-primary text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 mt-2 sm:mt-0">
                     <PlusIcon className="w-4 h-4" />
                     <span>Add New Expense</span>
@@ -60,13 +69,13 @@ const ExpensesPage: React.FC = () => {
                         <tbody className="bg-surface divide-y divide-border">
                             {filteredExpenses.map(expense => (
                                 <tr key={expense.id} className="hover:bg-subtle-background">
-                                    <td className="px-4 py-3 text-sm text-text-secondary">{expense.date.toLocaleDateString()}</td>
+                                    <td className="px-4 py-3 text-sm text-text-secondary">{formatDate(expense.date)}</td>
                                     <td className="px-4 py-3 whitespace-nowrap">
                                         <p className="text-sm font-medium text-text-primary">{expense.description}</p>
                                         <p className="text-xs text-text-secondary">Project: {expense.projectId}</p>
                                     </td>
                                     <td className="px-4 py-3 text-sm text-text-secondary">{expense.category}</td>
-                                    <td className="px-4 py-3 text-sm font-medium text-text-primary">{formatCurrency(expense.amount)}</td>
+                                    <td className="px-4 py-3 text-sm font-medium text-text-primary">{formatCurrencyINR(expense.amount)}</td>
                                     <td className="px-4 py-3"><ExpenseStatusPill status={expense.status} /></td>
                                 </tr>
                             ))}

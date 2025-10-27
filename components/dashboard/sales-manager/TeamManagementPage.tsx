@@ -1,15 +1,15 @@
 
+
 import React, { useState, useMemo } from 'react';
 import Card from '../../shared/Card';
-import { USERS, LEADS } from '../../../constants';
-import { User, UserRole, LeadPipelineStatus } from '../../../types';
+import { USERS, formatCurrencyINR } from '../../../constants';
+import { User, UserRole, LeadPipelineStatus, Lead } from '../../../types';
 import { MapPinIcon, FunnelIcon } from '../../icons/IconComponents';
 
 const salesTeam = USERS.filter(u => u.role === UserRole.SALES_TEAM_MEMBER);
-const formatCurrency = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(value);
 
-const TeamMemberCard: React.FC<{ member: User }> = ({ member }) => {
-    const memberLeads = LEADS.filter(l => l.assignedTo === member.id);
+const TeamMemberCard: React.FC<{ member: User; leads: Lead[] }> = ({ member, leads }) => {
+    const memberLeads = leads.filter(l => l.assignedTo === member.id);
     const activeLeads = memberLeads.filter(l => ![LeadPipelineStatus.WON, LeadPipelineStatus.LOST].includes(l.status)).length;
     const wonLeads = memberLeads.filter(l => l.status === LeadPipelineStatus.WON).length;
     const conversionRate = memberLeads.length > 0 ? (wonLeads / memberLeads.length) * 100 : 0;
@@ -37,7 +37,7 @@ const TeamMemberCard: React.FC<{ member: User }> = ({ member }) => {
                 </div>
                 <div className="col-span-2">
                     <p className="text-text-secondary">Revenue Generated</p>
-                    <p className="font-bold text-lg text-secondary">{formatCurrency(revenue)}</p>
+                    <p className="font-bold text-lg text-secondary">{formatCurrencyINR(revenue)}</p>
                 </div>
             </div>
             <button className="mt-4 w-full py-1.5 bg-subtle-background text-text-primary text-sm font-semibold rounded-md hover:bg-border">View Details</button>
@@ -45,7 +45,7 @@ const TeamMemberCard: React.FC<{ member: User }> = ({ member }) => {
     );
 };
 
-const TeamManagementPage: React.FC = () => {
+const TeamManagementPage: React.FC<{ leads: Lead[] }> = ({ leads }) => {
     const [regionFilter, setRegionFilter] = useState<'all' | string>('all');
 
     const filteredTeam = useMemo(() => {
@@ -58,7 +58,7 @@ const TeamManagementPage: React.FC = () => {
     return (
         <div className="space-y-6">
             <div className="sm:flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-text-primary">Team Management</h2>
+                <div/>
                 <div className="flex items-center space-x-2 mt-2 sm:mt-0">
                     <FunnelIcon className="w-5 h-5 text-text-secondary" />
                     <select 
@@ -74,7 +74,7 @@ const TeamManagementPage: React.FC = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {filteredTeam.map(member => (
-                    <TeamMemberCard key={member.id} member={member} />
+                    <TeamMemberCard key={member.id} member={member} leads={leads} />
                 ))}
             </div>
         </div>

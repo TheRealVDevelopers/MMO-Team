@@ -3,7 +3,10 @@ import {
     BuildingOfficeIcon,
     RectangleGroupIcon,
     ViewColumnsIcon,
-    ChartBarSquareIcon
+    ChartBarSquareIcon,
+    TagIcon,
+    ListBulletIcon,
+    PresentationChartLineIcon
 } from '../../icons/IconComponents';
 
 interface SidebarProps {
@@ -39,7 +42,10 @@ const NavItem: React.FC<{
 const QuotationTeamSidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage }) => {
     const navItems = [
         { id: 'overview', label: 'Dashboard', icon: <RectangleGroupIcon className="w-6 h-6" /> },
-        { id: 'negotiations', label: 'Negotiations', icon: <ViewColumnsIcon className="w-6 h-6" /> },
+        { id: 'negotiations', label: 'Quotations', icon: <ViewColumnsIcon className="w-6 h-6" /> },
+        { id: 'catalog', label: 'Items Catalog', icon: <TagIcon className="w-6 h-6" /> },
+        { id: 'templates', label: 'Templates', icon: <ListBulletIcon className="w-6 h-6" /> },
+        { id: 'analytics', label: 'Price Analytics', icon: <PresentationChartLineIcon className="w-6 h-6" /> },
         { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
     ];
 

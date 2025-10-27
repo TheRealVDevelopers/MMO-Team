@@ -1,8 +1,7 @@
 import React from 'react';
 import { Lead } from '../../types';
 import { DocumentCheckIcon } from '../icons/IconComponents';
-
-const formatDateTime = (date: Date) => new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+import { formatDateTime } from '../../constants';
 
 const LeadHistoryView: React.FC<{ lead: Lead }> = ({ lead }) => (
     <div className="flow-root">

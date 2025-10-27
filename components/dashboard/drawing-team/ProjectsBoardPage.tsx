@@ -1,8 +1,9 @@
+
 import React from 'react';
 import { PROJECTS } from '../../../constants';
 import { Project, ProjectStatus } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
-import { ClockIcon, FireIcon, PaperClipIcon } from '../../icons/IconComponents';
+import { ClockIcon, FireIcon, PaperClipIcon, ArrowLeftIcon } from '../../icons/IconComponents';
 
 const KANBAN_COLUMNS: { id: string, title: string, statuses: ProjectStatus[] }[] = [
     { id: 'todo', title: 'To Do', statuses: [ProjectStatus.AWAITING_DESIGN] },
@@ -37,7 +38,7 @@ const ProjectCard: React.FC<{ project: Project; onSelect: () => void; }> = ({ pr
     );
 };
 
-const ProjectsBoardPage: React.FC<{ onProjectSelect: (project: Project) => void }> = ({ onProjectSelect }) => {
+const ProjectsBoardPage: React.FC<{ onProjectSelect: (project: Project) => void; setCurrentPage: (page: string) => void; }> = ({ onProjectSelect, setCurrentPage }) => {
     const { currentUser } = useAuth();
     if (!currentUser) return null;
 
@@ -45,7 +46,16 @@ const ProjectsBoardPage: React.FC<{ onProjectSelect: (project: Project) => void 
 
     return (
         <div className="space-y-6 h-full flex flex-col">
-            <h2 className="text-2xl font-bold text-text-primary">Projects Board</h2>
+            <div className="flex items-center gap-4">
+                <button
+                    onClick={() => setCurrentPage('overview')}
+                    className="flex items-center space-x-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+                >
+                    <ArrowLeftIcon className="w-5 h-5" />
+                    <span>Back</span>
+                </button>
+                <h2 className="text-2xl font-bold text-text-primary">Projects Board</h2>
+            </div>
             <div className="flex-grow grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
                 {KANBAN_COLUMNS.map(column => (
                     <div key={column.id} className="bg-subtle-background rounded-lg p-3 flex flex-col">

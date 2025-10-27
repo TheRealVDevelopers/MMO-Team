@@ -3,7 +3,8 @@ import {
     BuildingOfficeIcon,
     RectangleGroupIcon,
     CalendarDaysIcon,
-    DocumentTextIcon
+    DocumentTextIcon,
+    ReceiptPercentIcon
 } from '../../icons/IconComponents';
 
 interface SidebarProps {
@@ -38,9 +39,9 @@ const NavItem: React.FC<{
 
 const SiteEngineerSidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage }) => {
     const navItems = [
-        { id: 'overview', label: 'Dashboard', icon: <RectangleGroupIcon className="w-6 h-6" /> },
-        { id: 'visits', label: 'Site Visits', icon: <CalendarDaysIcon className="w-6 h-6" /> },
-        { id: 'documents', label: 'Documents', icon: <DocumentTextIcon className="w-6 h-6" /> },
+        { id: 'dashboard', label: 'Dashboard', icon: <RectangleGroupIcon className="w-6 h-6" /> },
+        { id: 'schedule', label: "Today's Schedule", icon: <CalendarDaysIcon className="w-6 h-6" /> },
+        { id: 'expenses', label: 'Expense Claims', icon: <ReceiptPercentIcon className="w-6 h-6" /> },
     ];
 
     return (

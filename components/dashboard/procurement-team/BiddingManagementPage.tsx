@@ -1,7 +1,8 @@
+
 import React from 'react';
-import { MATERIAL_REQUESTS } from '../../../constants';
+import { MATERIAL_REQUESTS, formatDate } from '../../../constants';
 import { MaterialRequest, MaterialRequestStatus } from '../../../types';
-import { ClockIcon, FireIcon } from '../../icons/IconComponents';
+import { ClockIcon, FireIcon, ArrowLeftIcon } from '../../icons/IconComponents';
 
 const KANBAN_COLUMNS: { id: string, title: string, statuses: MaterialRequestStatus[] }[] = [
     { id: 'rfq', title: 'RFQ Pending', statuses: [MaterialRequestStatus.RFQ_PENDING] },
@@ -24,17 +25,26 @@ const RequestCard: React.FC<{ request: MaterialRequest; }> = ({ request }) => {
             <div className="flex justify-between items-center text-xs text-text-secondary border-t border-border pt-2">
                 <div className="flex items-center space-x-1">
                     <ClockIcon className="w-4 h-4" />
-                    <span>Due: {request.requiredBy.toLocaleDateString()}</span>
+                    <span>Due: {formatDate(request.requiredBy)}</span>
                 </div>
             </div>
         </div>
     );
 };
 
-const BiddingManagementPage: React.FC = () => {
+const BiddingManagementPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
     return (
         <div className="space-y-6 h-full flex flex-col">
-            <h2 className="text-2xl font-bold text-text-primary">Bidding Management Board</h2>
+            <div className="flex items-center gap-4">
+                <button
+                    onClick={() => setCurrentPage('overview')}
+                    className="flex items-center space-x-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+                >
+                    <ArrowLeftIcon className="w-5 h-5" />
+                    <span>Back</span>
+                </button>
+                <h2 className="text-2xl font-bold text-text-primary">Bidding Management Board</h2>
+            </div>
             <div className="flex-grow grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
                 {KANBAN_COLUMNS.map(column => (
                     <div key={column.id} className="bg-subtle-background rounded-lg p-3 flex flex-col">

@@ -1,9 +1,10 @@
+
 import React from 'react';
 import Card from '../../shared/Card';
 import { PROJECTS } from '../../../constants';
 import { ProjectStatus } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
-import { CheckCircleIcon, ClockIcon, XCircleIcon, ChartBarIcon } from '../../icons/IconComponents';
+import { CheckCircleIcon, ClockIcon, XCircleIcon, ChartBarIcon, ArrowLeftIcon } from '../../icons/IconComponents';
 
 const KpiCard: React.FC<{ title: string; value: string; icon: React.ReactNode }> = ({ title, value, icon }) => (
     <Card>
@@ -19,7 +20,7 @@ const KpiCard: React.FC<{ title: string; value: string; icon: React.ReactNode }>
     </Card>
 );
 
-const MyPerformancePage: React.FC = () => {
+const MyPerformancePage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
     const { currentUser } = useAuth();
     if (!currentUser) return null;
 
@@ -31,7 +32,16 @@ const MyPerformancePage: React.FC = () => {
     
     return (
         <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-text-primary">My Performance</h2>
+            <div className="flex items-center gap-4">
+                <button
+                    onClick={() => setCurrentPage('overview')}
+                    className="flex items-center space-x-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+                >
+                    <ArrowLeftIcon className="w-5 h-5" />
+                    <span>Back</span>
+                </button>
+                <h2 className="text-2xl font-bold text-text-primary">My Performance</h2>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <KpiCard title="Quotes Sent" value={quotesSent.toString()} icon={<ChartBarIcon />} />

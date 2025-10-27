@@ -1,11 +1,22 @@
+
 import React from 'react';
 import Card from '../../shared/Card';
 import { VENDORS } from '../../../constants';
+import { ArrowLeftIcon } from '../../icons/IconComponents';
 
-const VendorManagementPage: React.FC = () => {
+const VendorManagementPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
     return (
         <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-text-primary">Vendor Management</h2>
+            <div className="flex items-center gap-4">
+                <button
+                    onClick={() => setCurrentPage('overview')}
+                    className="flex items-center space-x-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+                >
+                    <ArrowLeftIcon className="w-5 h-5" />
+                    <span>Back</span>
+                </button>
+                <h2 className="text-2xl font-bold text-text-primary">Vendor Management</h2>
+            </div>
             <Card>
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-border">

@@ -1,8 +1,10 @@
+
 import React, { useState, useMemo } from 'react';
 import Card from '../../shared/Card';
-import { SITE_VISITS } from '../../../constants';
+import { SITE_VISITS, formatDateTime } from '../../../constants';
 import { SiteVisit, SiteVisitStatus } from '../../../types';
 import StatusPill from '../../shared/StatusPill';
+import { ArrowLeftIcon } from '../../icons/IconComponents';
 
 const VisitStatusPill: React.FC<{ status: SiteVisitStatus }> = ({ status }) => {
     const color = {
@@ -13,7 +15,7 @@ const VisitStatusPill: React.FC<{ status: SiteVisitStatus }> = ({ status }) => {
     return <StatusPill color={color}>{status}</StatusPill>;
 };
 
-const SiteVisitsPage: React.FC<{ onVisitSelect: (visit: SiteVisit) => void }> = ({ onVisitSelect }) => {
+const SiteVisitsPage: React.FC<{ onVisitSelect: (visit: SiteVisit) => void; setCurrentPage: (page: string) => void; }> = ({ onVisitSelect, setCurrentPage }) => {
     const [statusFilter, setStatusFilter] = useState<SiteVisitStatus | 'all'>('all');
     
     const filteredVisits = useMemo(() => {
@@ -22,7 +24,16 @@ const SiteVisitsPage: React.FC<{ onVisitSelect: (visit: SiteVisit) => void }> = 
     
     return (
         <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-            <h2 className="text-2xl font-bold text-text-primary">All Site Visits</h2>
+            <div className="flex items-center gap-4">
+                <button
+                    onClick={() => setCurrentPage('overview')}
+                    className="flex items-center space-x-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+                >
+                    <ArrowLeftIcon className="w-5 h-5" />
+                    <span>Back</span>
+                </button>
+                <h2 className="text-2xl font-bold text-text-primary">All Site Visits</h2>
+            </div>
             <Card>
                 <div className="flex items-center space-x-4 mb-4">
                     <label htmlFor="status-filter" className="text-sm font-medium text-text-secondary">Filter by status:</label>
@@ -52,7 +63,7 @@ const SiteVisitsPage: React.FC<{ onVisitSelect: (visit: SiteVisit) => void }> = 
                                         <p className="text-sm font-bold text-text-primary">{visit.projectName}</p>
                                         <p className="text-xs text-text-secondary">{visit.clientName}</p>
                                     </td>
-                                    <td className="px-4 py-3 text-sm text-text-secondary">{visit.date.toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-sm text-text-secondary">{formatDateTime(visit.date)}</td>
                                     <td className="px-4 py-3"><VisitStatusPill status={visit.status} /></td>
                                 </tr>
                             ))}

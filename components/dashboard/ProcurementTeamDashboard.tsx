@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import ProcurementTeamSidebar from './procurement-team/ProcurementTeamSidebar';
 import ProcurementOverviewPage from './procurement-team/ProcurementOverviewPage';
@@ -13,11 +14,11 @@ const ProcurementTeamDashboard: React.FC = () => {
       case 'overview':
         return <ProcurementOverviewPage />;
       case 'bidding':
-        return <BiddingManagementPage />;
+        return <BiddingManagementPage setCurrentPage={setCurrentPage} />;
       case 'vendors':
-        return <VendorManagementPage />;
+        return <VendorManagementPage setCurrentPage={setCurrentPage} />;
       case 'performance':
-        return <MyPerformancePage />;
+        return <MyPerformancePage setCurrentPage={setCurrentPage} />;
       default:
         return <ProcurementOverviewPage />;
     }

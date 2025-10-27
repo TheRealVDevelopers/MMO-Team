@@ -35,34 +35,21 @@ const AppContent: React.FC = () => {
     }
   }, [currentUser?.role]);
 
-  const needsFullWidthLayout = [
-    UserRole.SALES_GENERAL_MANAGER, 
-    UserRole.SALES_TEAM_MEMBER, 
-    UserRole.DRAWING_TEAM, 
-    UserRole.QUOTATION_TEAM, 
-    UserRole.SITE_ENGINEER, 
-    UserRole.PROCUREMENT_TEAM,
-    UserRole.EXECUTION_TEAM,
-    UserRole.ACCOUNTS_TEAM,
-  ].includes(currentUser?.role as UserRole);
+  const needsSidebar = currentUser?.role === UserRole.SUPER_ADMIN && !isSettingsOpen;
 
 
   return (
     <div className="min-h-screen flex text-text-primary bg-background">
-      {currentUser?.role === UserRole.SUPER_ADMIN && !isSettingsOpen && (
+      {needsSidebar && (
           <Sidebar currentPage={currentPage} setCurrentPage={handleSetPage} />
       )}
       <div className="flex-1 flex flex-col min-w-0">
         <Header openSettings={handleOpenSettings} />
         <main className="flex-grow overflow-y-auto">
           {isSettingsOpen ? (
-            <div className="p-4 sm:p-6 lg:p-8"><SettingsPage /></div>
-          ) : needsFullWidthLayout ? (
-            <Dashboard currentPage={currentPage} />
+            <div className="p-4 sm:p-6 lg:p-8"><SettingsPage onClose={handleCloseSettings} /></div>
           ) : (
-            <div className="p-4 sm:p-6 lg:p-8">
-              <Dashboard currentPage={currentPage} />
-            </div>
+            <Dashboard currentPage={currentPage} setCurrentPage={handleSetPage} />
           )}
         </main>
       </div>

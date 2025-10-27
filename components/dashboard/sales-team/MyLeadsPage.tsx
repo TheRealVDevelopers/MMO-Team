@@ -1,114 +1,156 @@
 import React, { useState, useMemo } from 'react';
-import Card from '../../shared/Card';
-import { LEADS } from '../../../constants';
-import { Lead, LeadPipelineStatus } from '../../../types';
-import StatusPill from '../../shared/StatusPill';
+import { Lead, LeadPipelineStatus, LeadHistory } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
-import LeadDetailModal from './LeadDetailModal';
+import LeadCard from './LeadCard';
+import LeadDetailModal from '../../shared/LeadDetailModal';
+import { PlusIcon, ChartBarIcon, FunnelIcon, CheckCircleIcon } from '../../icons/IconComponents';
+import AddNewLeadModal from '../sales-manager/AddNewLeadModal';
+import { USERS } from '../../../constants';
 
-const formatDateTime = (date: Date) => new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+interface MyLeadsPageProps {
+  leads: Lead[];
+  onUpdateLead: (lead: Lead) => void;
+  onAddNewLead: (lead: Lead) => void;
+}
 
-const LeadStatusPill: React.FC<{ status: LeadPipelineStatus }> = ({ status }) => {
-    const color = {
-        [LeadPipelineStatus.NEW_NOT_CONTACTED]: 'red',
-        [LeadPipelineStatus.CONTACTED_CALL_DONE]: 'amber',
-        [LeadPipelineStatus.SITE_VISIT_SCHEDULED]: 'purple',
-        [LeadPipelineStatus.WAITING_FOR_DRAWING]: 'slate',
-        [LeadPipelineStatus.QUOTATION_SENT]: 'blue',
-        [LeadPipelineStatus.NEGOTIATION]: 'amber',
-        [LeadPipelineStatus.WON]: 'green',
-        [LeadPipelineStatus.LOST]: 'slate',
-    }[status] as 'red' | 'amber' | 'purple' | 'slate' | 'blue' | 'green';
-    return <StatusPill color={color}>{status}</StatusPill>;
-};
+const KpiCard: React.FC<{ title: string; value: string; icon: React.ReactNode }> = ({ title, value, icon }) => (
+  <div className="bg-surface p-4 rounded-lg shadow-sm flex items-center">
+    <div className="p-3 rounded-full bg-primary-subtle-background text-primary mr-4">{icon}</div>
+    <div>
+      <p className="text-sm font-medium text-text-secondary">{title}</p>
+      <p className="text-2xl font-bold text-text-primary">{value}</p>
+    </div>
+  </div>
+);
 
-const PriorityPill: React.FC<{ priority: 'High' | 'Medium' | 'Low' }> = ({ priority }) => {
-    const color = {
-        High: 'red',
-        Medium: 'amber',
-        Low: 'slate',
-    }[priority] as 'red' | 'amber' | 'slate';
-    return <StatusPill color={color}>{priority}</StatusPill>;
-};
+const orderedColumnTitles: ('New Leads' | 'In Progress' | 'Won' | 'Lost')[] = [
+    'New Leads',
+    'In Progress',
+    'Won',
+    'Lost',
+];
 
-const MyLeadsPage: React.FC = () => {
-    const { currentUser } = useAuth();
-    const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-    const [statusFilter, setStatusFilter] = useState<LeadPipelineStatus | 'all'>('all');
+const MyLeadsPage: React.FC<MyLeadsPageProps> = ({ leads, onUpdateLead, onAddNewLead }) => {
+  const { currentUser } = useAuth();
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [isAddLeadModalOpen, setAddLeadModalOpen] = useState(false);
+  
+  const inProgressStatuses: LeadPipelineStatus[] = [
+    LeadPipelineStatus.CONTACTED_CALL_DONE,
+    LeadPipelineStatus.SITE_VISIT_SCHEDULED,
+    LeadPipelineStatus.WAITING_FOR_DRAWING,
+    LeadPipelineStatus.QUOTATION_SENT,
+    LeadPipelineStatus.NEGOTIATION,
+    LeadPipelineStatus.IN_PROCUREMENT,
+    LeadPipelineStatus.IN_EXECUTION,
+  ];
 
-    const myLeads = useMemo(() => {
-        if (!currentUser) return [];
-        return LEADS.filter(lead =>
-            lead.assignedTo === currentUser.id &&
-            (statusFilter === 'all' || lead.status === statusFilter)
-        );
-    }, [currentUser, statusFilter]);
-
-    // This state is just to force re-renders when mock data is "updated"
-    const [leadsData, setLeadsData] = useState(LEADS);
-    const handleLeadUpdate = (updatedLead: Lead) => {
-        const newLeads = leadsData.map(l => l.id === updatedLead.id ? updatedLead : l);
-        setLeadsData(newLeads); // In a real app, this would re-fetch or update a global state
-        setSelectedLead(updatedLead);
+  const leadsByColumn = useMemo(() => {
+    const grouped: Record<string, Lead[]> = {
+      'New Leads': [],
+      'In Progress': [],
+      'Won': [],
+      'Lost': [],
     };
 
-    if (!currentUser) return null;
+    leads.forEach(lead => {
+      if (lead.status === LeadPipelineStatus.NEW_NOT_CONTACTED) {
+        grouped['New Leads'].push(lead);
+      } else if (inProgressStatuses.includes(lead.status)) {
+        grouped['In Progress'].push(lead);
+      } else if (lead.status === LeadPipelineStatus.WON) {
+        grouped['Won'].push(lead);
+      } else if (lead.status === LeadPipelineStatus.LOST) {
+        grouped['Lost'].push(lead);
+      }
+    });
 
-    return (
-        <>
-            <div className="space-y-6">
+    return grouped;
+  }, [leads]);
+
+  const handleAddLead = (newLeadData: Omit<Lead, 'id' | 'status' | 'inquiryDate' | 'history' | 'lastContacted'>) => {
+    const newLead: Lead = {
+      ...newLeadData,
+      id: `lead-${Date.now()}`,
+      status: LeadPipelineStatus.NEW_NOT_CONTACTED,
+      inquiryDate: new Date(),
+      lastContacted: 'Just now',
+      history: [
+        {
+          action: 'Lead Created',
+          user: currentUser?.name || 'System',
+          timestamp: new Date(),
+          notes: `Assigned to ${USERS.find(u => u.id === newLeadData.assignedTo)?.name}`
+        }
+      ],
+      reminders: [],
+      tasks: {},
+    };
+    onAddNewLead(newLead);
+  };
+  
+  // Stats calculation
+  const totalLeads = leads.length;
+  const wonLeads = leads.filter(l => l.status === LeadPipelineStatus.WON).length;
+  const conversionRate = totalLeads > 0 ? (wonLeads / totalLeads) * 100 : 0;
+  const newLeadsCount = leadsByColumn['New Leads']?.length || 0;
+
+  return (
+    <>
+      <div className="flex flex-col h-full p-4 sm:p-6 lg:p-8 bg-subtle-background">
+        <div className="flex-shrink-0 mb-6">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                 <h2 className="text-2xl font-bold text-text-primary">My Leads</h2>
-                <Card>
-                    <div className="flex items-center space-x-4 mb-4">
-                        <label htmlFor="status-filter" className="text-sm font-medium text-text-secondary">Filter by status:</label>
-                        <select
-                            id="status-filter"
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value as any)}
-                            className="bg-surface border-border rounded-md py-1 px-2 text-sm focus:ring-primary focus:border-primary"
-                        >
-                            <option value="all">All Statuses</option>
-                            {Object.values(LeadPipelineStatus).map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                    </div>
-
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-border">
-                            <thead className="bg-subtle-background">
-                                <tr>
-                                    <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Client / Project</th>
-                                    <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Priority</th>
-                                    <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Status</th>
-                                    <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Last Activity</th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-surface divide-y divide-border">
-                                {myLeads.map(lead => (
-                                    <tr key={lead.id} onClick={() => setSelectedLead(lead)} className="cursor-pointer hover:bg-subtle-background">
-                                        <td className="px-4 py-3 whitespace-nowrap">
-                                            <p className="text-sm font-bold text-text-primary">{lead.clientName}</p>
-                                            <p className="text-xs text-text-secondary">{lead.projectName}</p>
-                                        </td>
-                                        <td className="px-4 py-3 whitespace-nowrap"><PriorityPill priority={lead.priority} /></td>
-                                        <td className="px-4 py-3 whitespace-nowrap"><LeadStatusPill status={lead.status} /></td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-text-secondary">{formatDateTime(lead.history[lead.history.length - 1].timestamp)}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </Card>
+                <button onClick={() => setAddLeadModalOpen(true)} className="flex items-center space-x-2 bg-primary text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700">
+                    <PlusIcon className="w-4 h-4" />
+                    <span>Add New Lead</span>
+                </button>
             </div>
-            {selectedLead && (
-                 <LeadDetailModal 
-                    lead={selectedLead}
-                    isOpen={!!selectedLead}
-                    onClose={() => setSelectedLead(null)}
-                    onUpdate={handleLeadUpdate}
-                />
-            )}
-        </>
-    );
+             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <KpiCard title="Total Leads" value={totalLeads.toString()} icon={<FunnelIcon />} />
+                <KpiCard title="New Leads" value={newLeadsCount.toString()} icon={<FunnelIcon />} />
+                <KpiCard title="Conversion Rate" value={`${conversionRate.toFixed(1)}%`} icon={<ChartBarIcon />} />
+                <KpiCard title="Deals Won" value={wonLeads.toString()} icon={<CheckCircleIcon />} />
+            </div>
+        </div>
+        
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 overflow-x-auto min-h-0 pb-4">
+          {orderedColumnTitles.map((title) => {
+            const columnLeads = leadsByColumn[title] || [];
+            return (
+              <div key={title} className="bg-background rounded-lg flex flex-col min-w-[300px]">
+                <div className="flex justify-between items-center p-3 border-b border-border sticky top-0 bg-background z-10">
+                  <h3 className="font-bold text-sm text-text-primary">{title}</h3>
+                  <span className="text-xs font-semibold bg-primary-subtle-background text-primary-subtle-text px-2 py-0.5 rounded-full">{columnLeads.length}</span>
+                </div>
+                <div className="p-3 space-y-3 overflow-y-auto">
+                  {columnLeads.map(lead => (
+                    <LeadCard key={lead.id} lead={lead} onClick={() => setSelectedLead(lead)} />
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+      {selectedLead && (
+        <LeadDetailModal
+          isOpen={!!selectedLead}
+          onClose={() => setSelectedLead(null)}
+          lead={selectedLead}
+          onUpdate={(updatedLead) => {
+            onUpdateLead(updatedLead);
+            setSelectedLead(updatedLead);
+          }}
+        />
+      )}
+      <AddNewLeadModal
+        isOpen={isAddLeadModalOpen}
+        onClose={() => setAddLeadModalOpen(false)}
+        onAddLead={handleAddLead}
+      />
+    </>
+  );
 };
 
 export default MyLeadsPage;

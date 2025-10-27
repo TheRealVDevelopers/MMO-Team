@@ -1,13 +1,10 @@
 import React from 'react';
-// Fix: The type LeadStatus was not exported from types.ts. It has been corrected to LeadPipelineStatus which is the correct enum for lead statuses.
 import { LeadPipelineStatus } from '../../types';
 
 interface BadgeProps {
-  // Fix: The status prop type was updated from the non-existent LeadStatus to LeadPipelineStatus.
   status: LeadPipelineStatus;
 }
 
-// Fix: The statusClasses object was updated to use LeadPipelineStatus as keys and now includes mappings for all statuses, ensuring the component can render all possible lead states correctly.
 const statusClasses: Record<LeadPipelineStatus, { container: string, dot: string }> = {
   [LeadPipelineStatus.NEW_NOT_CONTACTED]: { container: 'bg-error-subtle-background text-error-subtle-text', dot: 'bg-error' },
   [LeadPipelineStatus.CONTACTED_CALL_DONE]: { container: 'bg-accent-subtle-background text-accent-subtle-text', dot: 'bg-accent' },
@@ -15,6 +12,8 @@ const statusClasses: Record<LeadPipelineStatus, { container: string, dot: string
   [LeadPipelineStatus.WAITING_FOR_DRAWING]: { container: 'bg-slate-subtle-background text-slate-subtle-text', dot: 'bg-text-secondary' },
   [LeadPipelineStatus.QUOTATION_SENT]: { container: 'bg-primary-subtle-background text-primary-subtle-text', dot: 'bg-primary' },
   [LeadPipelineStatus.NEGOTIATION]: { container: 'bg-accent-subtle-background text-accent-subtle-text', dot: 'bg-accent' },
+  [LeadPipelineStatus.IN_PROCUREMENT]: { container: 'bg-purple-subtle-background text-purple-subtle-text', dot: 'bg-purple' },
+  [LeadPipelineStatus.IN_EXECUTION]: { container: 'bg-accent-subtle-background text-accent-subtle-text', dot: 'bg-accent' },
   [LeadPipelineStatus.WON]: { container: 'bg-secondary-subtle-background text-secondary-subtle-text', dot: 'bg-secondary' },
   [LeadPipelineStatus.LOST]: { container: 'bg-slate-subtle-background text-slate-subtle-text', dot: 'bg-text-secondary' },
 };

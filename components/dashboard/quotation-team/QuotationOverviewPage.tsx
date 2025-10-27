@@ -1,6 +1,6 @@
 import React from 'react';
 import Card from '../../shared/Card';
-import { PROJECTS } from '../../../constants';
+import { PROJECTS, formatCurrencyINR, formatDate } from '../../../constants';
 import { Project, ProjectStatus } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { FireIcon, ClockIcon } from '../../icons/IconComponents';
@@ -32,7 +32,6 @@ const QuotationOverviewPage: React.FC<{ onProjectSelect: (project: Project) => v
     const dealsWon = myProjects.filter(p => p.status === ProjectStatus.APPROVED).length;
     const conversionRate = quotesSent > 0 ? ((dealsWon / quotesSent) * 100).toFixed(1) : '0';
     const avgDealSize = dealsWon > 0 ? (myProjects.filter(p => p.status === ProjectStatus.APPROVED).reduce((sum, p) => sum + p.budget, 0) / dealsWon) : 0;
-    const formatCurrency = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(value);
 
     return (
         <div className="space-y-6">
@@ -41,7 +40,7 @@ const QuotationOverviewPage: React.FC<{ onProjectSelect: (project: Project) => v
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <KpiCard title="Projects in Queue" value={quotationQueue.length.toString()} subtext="Awaiting your pricing" />
                 <KpiCard title="Conversion Rate" value={`${conversionRate}%`} subtext={`${dealsWon} deals won`} />
-                <KpiCard title="Average Deal Size" value={formatCurrency(avgDealSize)} />
+                <KpiCard title="Average Deal Size" value={formatCurrencyINR(avgDealSize)} />
                 <KpiCard title="Avg. Negotiation Time" value="2.1 Days" />
             </div>
 
@@ -65,7 +64,7 @@ const QuotationOverviewPage: React.FC<{ onProjectSelect: (project: Project) => v
                                         <p className="text-sm font-bold text-text-primary">{project.projectName}</p>
                                         <p className="text-xs text-text-secondary">{project.clientName}</p>
                                     </td>
-                                    <td className="px-4 py-3 text-sm text-text-secondary">{project.startDate.toLocaleDateString()}</td>
+                                    <td className="px-4 py-3 text-sm text-text-secondary">{formatDate(project.startDate)}</td>
                                     <td className="px-4 py-3 text-sm text-text-secondary flex items-center"><ClockIcon className="w-4 h-4 mr-1.5"/>{project.deadline}</td>
                                     <td className="px-4 py-3"><PriorityIndicator priority={project.priority} /></td>
                                 </tr>

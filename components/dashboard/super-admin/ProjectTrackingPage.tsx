@@ -1,9 +1,13 @@
+
 import React, { useState } from 'react';
 import Card from '../../shared/Card';
-import { PROJECTS } from '../../../constants';
+import { PROJECTS, formatDate, formatCurrencyINR } from '../../../constants';
 import { Project, ProjectStatus } from '../../../types';
 import ProgressBar from '../../shared/ProgressBar';
 import StatusPill from '../../shared/StatusPill';
+import ProjectDetailModal from './ProjectDetailModal';
+import GanttChart from './GanttChart';
+import { ArrowLeftIcon } from '../../icons/IconComponents';
 
 const getStatusPillColor = (status: ProjectStatus): 'blue' | 'amber' | 'green' | 'red' | 'slate' | 'purple' => {
     switch (status) {
@@ -16,13 +20,31 @@ const getStatusPillColor = (status: ProjectStatus): 'blue' | 'amber' | 'green' |
     }
 }
 
-const ProjectTrackingPage: React.FC = () => {
+const getProgressColor = (progress: number): string => {
+    if (progress < 40) return 'bg-error';
+    if (progress < 80) return 'bg-accent';
+    return 'bg-secondary';
+};
+
+const ProjectTrackingPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
     const [view, setView] = useState<'list' | 'gantt'>('list');
+    const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+
 
     return (
+        <>
         <div className="space-y-6">
             <div className="sm:flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-text-primary">Project Tracking</h2>
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => setCurrentPage('overview')}
+                        className="flex items-center space-x-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+                    >
+                        <ArrowLeftIcon className="w-5 h-5" />
+                        <span>Back</span>
+                    </button>
+                    <h2 className="text-2xl font-bold text-text-primary">Project Tracking</h2>
+                </div>
                 <div className="flex space-x-1 p-1 bg-subtle-background rounded-lg mt-2 sm:mt-0">
                     <button onClick={() => setView('list')} className={`px-3 py-1 text-sm font-medium rounded-md ${view === 'list' ? 'bg-surface shadow' : 'text-text-secondary'}`}>List View</button>
                     <button onClick={() => setView('gantt')} className={`px-3 py-1 text-sm font-medium rounded-md ${view === 'gantt' ? 'bg-surface shadow' : 'text-text-secondary'}`}>Gantt View</button>
@@ -44,7 +66,7 @@ const ProjectTrackingPage: React.FC = () => {
                             </thead>
                             <tbody className="bg-surface divide-y divide-border">
                                 {PROJECTS.map((project) => (
-                                    <tr key={project.id} className="hover:bg-subtle-background cursor-pointer">
+                                    <tr key={project.id} onClick={() => setSelectedProject(project)} className="hover:bg-subtle-background cursor-pointer">
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm font-medium text-text-primary">{project.projectName}</div>
                                             <div className="text-xs text-text-secondary">{project.clientName}</div>
@@ -55,16 +77,16 @@ const ProjectTrackingPage: React.FC = () => {
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
                                                 <div className="w-32">
-                                                   <ProgressBar progress={project.progress} />
+                                                   <ProgressBar progress={project.progress} colorClass={getProgressColor(project.progress)} />
                                                 </div>
                                                 <span className="text-sm ml-2 text-text-secondary">{project.progress}%</span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
-                                            {project.startDate.toLocaleDateString()} - {project.endDate.toLocaleDateString()}
+                                            {formatDate(project.startDate)} - {formatDate(project.endDate)}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
-                                            ${project.budget.toLocaleString()}
+                                            {formatCurrencyINR(project.budget)}
                                         </td>
                                     </tr>
                                 ))}
@@ -75,14 +97,21 @@ const ProjectTrackingPage: React.FC = () => {
             )}
 
             {view === 'gantt' && (
-                <Card>
-                    <h3 className="text-lg font-bold">Gantt Chart</h3>
-                    <div className="mt-4 h-96 bg-subtle-background rounded-md flex items-center justify-center">
-                         <p className="text-text-secondary">Gantt Chart Visualization Coming Soon</p>
+                <Card className="p-0 overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <GanttChart projects={PROJECTS} />
                     </div>
                 </Card>
             )}
         </div>
+        {selectedProject && (
+            <ProjectDetailModal 
+                project={selectedProject}
+                isOpen={!!selectedProject}
+                onClose={() => setSelectedProject(null)}
+            />
+        )}
+        </>
     );
 };
 

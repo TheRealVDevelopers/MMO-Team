@@ -1,6 +1,7 @@
+
 import React from 'react';
 import Card from '../../shared/Card';
-import { CheckCircleIcon, ClockIcon, BanknotesIcon, ChartBarIcon } from '../../icons/IconComponents';
+import { CheckCircleIcon, ClockIcon, BanknotesIcon, ChartBarIcon, ArrowLeftIcon } from '../../icons/IconComponents';
 
 const KpiCard: React.FC<{ title: string; value: string; icon: React.ReactNode }> = ({ title, value, icon }) => (
     <Card>
@@ -16,10 +17,19 @@ const KpiCard: React.FC<{ title: string; value: string; icon: React.ReactNode }>
     </Card>
 );
 
-const MyPerformancePage: React.FC = () => {
+const MyPerformancePage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
     return (
         <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-text-primary">Procurement Performance</h2>
+            <div className="flex items-center gap-4">
+                <button
+                    onClick={() => setCurrentPage('overview')}
+                    className="flex items-center space-x-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+                >
+                    <ArrowLeftIcon className="w-5 h-5" />
+                    <span>Back</span>
+                </button>
+                <h2 className="text-2xl font-bold text-text-primary">Procurement Performance</h2>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <KpiCard title="Total Savings (YTD)" value="$85,210" icon={<BanknotesIcon />} />

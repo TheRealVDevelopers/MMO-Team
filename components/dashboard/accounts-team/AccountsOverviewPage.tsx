@@ -1,11 +1,9 @@
 import React from 'react';
 import Card from '../../shared/Card';
-import { INVOICES, PROJECTS } from '../../../constants';
+import { INVOICES, PROJECTS, formatCurrencyINR } from '../../../constants';
 import { PaymentStatus, Project } from '../../../types';
 import { ExclamationTriangleIcon, BanknotesIcon } from '../../icons/IconComponents';
 import ProgressBar from '../../shared/ProgressBar';
-
-const formatCurrency = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(value);
 
 const KpiCard: React.FC<{ title: string; value: string; }> = ({ title, value }) => (
     <Card>
@@ -32,10 +30,10 @@ const AccountsOverviewPage: React.FC<{ setCurrentPage: (page: string) => void }>
             <h2 className="text-2xl font-bold text-text-primary">Financial Overview</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <KpiCard title="Total Invoiced (YTD)" value={formatCurrency(totalInvoiced)} />
-                <KpiCard title="Revenue Received" value={formatCurrency(totalPaid)} />
-                <KpiCard title="Total Outstanding" value={formatCurrency(outstanding)} />
-                <KpiCard title="Amount Overdue" value={formatCurrency(overdue)} />
+                <KpiCard title="Total Invoiced (YTD)" value={formatCurrencyINR(totalInvoiced)} />
+                <KpiCard title="Revenue Received" value={formatCurrencyINR(totalPaid)} />
+                <KpiCard title="Total Outstanding" value={formatCurrencyINR(outstanding)} />
+                <KpiCard title="Amount Overdue" value={formatCurrencyINR(overdue)} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -61,8 +59,8 @@ const AccountsOverviewPage: React.FC<{ setCurrentPage: (page: string) => void }>
                                                     <p className="text-sm font-bold text-text-primary">{project.projectName}</p>
                                                     <p className="text-xs text-text-secondary">{project.clientName}</p>
                                                 </td>
-                                                <td className="px-4 py-3 text-sm text-text-secondary">{formatCurrency(project.budget)}</td>
-                                                <td className={`px-4 py-3 text-sm font-bold ${profit > 0 ? 'text-secondary' : 'text-error'}`}>{formatCurrency(profit)}</td>
+                                                <td className="px-4 py-3 text-sm text-text-secondary">{formatCurrencyINR(project.budget)}</td>
+                                                <td className={`px-4 py-3 text-sm font-bold ${profit > 0 ? 'text-secondary' : 'text-error'}`}>{formatCurrencyINR(profit)}</td>
                                                 <td className="px-4 py-3"><ProgressBar progress={margin} colorClass={margin > 15 ? 'bg-secondary' : 'bg-accent'} /></td>
                                             </tr>
                                         )
@@ -79,7 +77,7 @@ const AccountsOverviewPage: React.FC<{ setCurrentPage: (page: string) => void }>
                             {INVOICES.filter(i => i.status === PaymentStatus.OVERDUE).map(alert => (
                                 <li key={alert.id} className="text-sm cursor-pointer hover:bg-subtle-background p-1 rounded-md" onClick={() => setCurrentPage('invoices')}>
                                     <p className="font-medium text-text-primary">Invoice {alert.id} Overdue</p>
-                                    <p className="text-xs text-text-secondary">{alert.clientName} - {formatCurrency(alert.amount - alert.paidAmount)}</p>
+                                    <p className="text-xs text-text-secondary">{alert.clientName} - {formatCurrencyINR(alert.amount - alert.paidAmount)}</p>
                                 </li>
                             ))}
                         </ul>

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import DrawingTeamSidebar from './drawing-team/DrawingTeamSidebar';
 import DrawingOverviewPage from './drawing-team/DrawingOverviewPage';
@@ -19,9 +20,9 @@ const DrawingTeamDashboard: React.FC = () => {
       case 'overview':
         return <DrawingOverviewPage onProjectSelect={handleProjectSelect} />;
       case 'projects':
-        return <ProjectsBoardPage onProjectSelect={handleProjectSelect} />;
+        return <ProjectsBoardPage onProjectSelect={handleProjectSelect} setCurrentPage={setCurrentPage} />;
       case 'performance':
-        return <MyPerformancePage />;
+        return <MyPerformancePage setCurrentPage={setCurrentPage} />;
       default:
         return <DrawingOverviewPage onProjectSelect={handleProjectSelect} />;
     }

@@ -291,3 +291,9 @@ export const ReceiptPercentIcon: React.FC<{ className?: string }> = ({ className
         <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-1.5h5.25m-5.25 0h5.25m-5.25 0H9m-9 0h2.25m-2.25 0h2.25m-2.25 0H9M9 18v-3.375c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125V18m-2.25-9h15A2.25 2.25 0 0 0 18 6.75V5.25A2.25 2.25 0 0 0 15.75 3H6.75A2.25 2.25 0 0 0 4.5 5.25v1.5A2.25 2.25 0 0 0 6.75 9H18m0 9v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V18m-3.375 0h-1.5m-1.5 0h-5.25m5.25 0h1.5" />
     </svg>
 );
+
+export const MagnifyingGlassIcon: React.FC<{ className?: string }> = ({ className = "w-5 h-5" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+    </svg>
+);

@@ -1,7 +1,9 @@
+
 import React, { useState } from 'react';
 import Card from '../../shared/Card';
-import { VENDOR_BILLS } from '../../../constants';
+import { VENDOR_BILLS, formatCurrencyINR, formatDate } from '../../../constants';
 import StatusPill from '../../shared/StatusPill';
+import { ArrowLeftIcon } from '../../icons/IconComponents';
 
 const BillStatusPill: React.FC<{ status: 'Pending' | 'Scheduled' | 'Paid' }> = ({ status }) => {
     const color = {
@@ -12,14 +14,21 @@ const BillStatusPill: React.FC<{ status: 'Pending' | 'Scheduled' | 'Paid' }> = (
     return <StatusPill color={color}>{status}</StatusPill>;
 };
 
-const PaymentsPage: React.FC = () => {
+const PaymentsPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
     const [activeTab, setActiveTab] = useState<'vendors' | 'payroll'>('vendors');
-
-    const formatCurrency = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
     
     return (
         <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-text-primary">Outgoing Payments</h2>
+            <div className="flex items-center gap-4">
+                <button
+                    onClick={() => setCurrentPage('overview')}
+                    className="flex items-center space-x-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+                >
+                    <ArrowLeftIcon className="w-5 h-5" />
+                    <span>Back</span>
+                </button>
+                <h2 className="text-2xl font-bold text-text-primary">Outgoing Payments</h2>
+            </div>
             
             <Card>
                 <div className="border-b border-border">
@@ -50,8 +59,8 @@ const PaymentsPage: React.FC = () => {
                                     <tr key={bill.id} className="hover:bg-subtle-background">
                                         <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-text-primary">{bill.vendorName}</td>
                                         <td className="px-4 py-3 text-sm text-text-secondary">{bill.invoiceNumber}</td>
-                                        <td className="px-4 py-3 text-sm font-medium text-text-primary">{formatCurrency(bill.amount)}</td>
-                                        <td className="px-4 py-3 text-sm text-text-secondary">{bill.dueDate.toLocaleDateString()}</td>
+                                        <td className="px-4 py-3 text-sm font-medium text-text-primary">{formatCurrencyINR(bill.amount)}</td>
+                                        <td className="px-4 py-3 text-sm text-text-secondary">{formatDate(bill.dueDate)}</td>
                                         <td className="px-4 py-3"><BillStatusPill status={bill.status} /></td>
                                     </tr>
                                 ))}
