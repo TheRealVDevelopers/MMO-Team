@@ -1,3 +1,4 @@
+
 import React from 'react';
 import Card from '../../shared/Card';
 import { 
@@ -10,6 +11,7 @@ import {
 } from '../../icons/IconComponents';
 import { USERS, PROJECTS, PENDING_APPROVALS_COUNT, LEADS, ACTIVITIES, formatLargeNumberINR } from '../../../constants';
 import { ActivityStatus, UserRole, ProjectStatus, LeadPipelineStatus } from '../../../types';
+import TeamLiveStatusCard from './TeamLiveStatusCard';
 
 const MetricCard: React.FC<{ title: string; value: string; icon: React.ReactNode; subtext?: string; }> = ({ title, value, icon, subtext }) => (
     <Card className="hover:shadow-md hover:border-primary transition-all border border-transparent">
@@ -71,12 +73,7 @@ const OverviewDashboard: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-            <Card>
-                <h3 className="text-lg font-bold">Productivity Chart (Weekly)</h3>
-                <div className="mt-4 h-64 bg-subtle-background rounded-md flex items-center justify-center">
-                    <p className="text-text-secondary">Chart Placeholder</p>
-                </div>
-            </Card>
+            <TeamLiveStatusCard />
         </div>
         <div className="lg:col-span-1 space-y-6">
             <AlertCard 

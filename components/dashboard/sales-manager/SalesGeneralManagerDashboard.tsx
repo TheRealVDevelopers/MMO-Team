@@ -1,19 +1,18 @@
-
 import React, { useState } from 'react';
 import SalesManagerSidebar from './sales-manager/SalesManagerSidebar';
 import SalesOverviewPage from './sales-manager/SalesOverviewPage';
 import LeadManagementPage from './sales-manager/LeadManagementPage';
 import TeamManagementPage from './sales-manager/TeamManagementPage';
 import ReportsPage from './sales-manager/ReportsPage';
-import { Lead, LeadHistory, LeadPipelineStatus } from '../../types';
-import { LEADS, USERS } from '../../constants';
-import { UserPlusIcon, UsersIcon, ArrowDownTrayIcon, ArrowLeftIcon } from '../icons/IconComponents';
+import { Lead, LeadHistory, LeadPipelineStatus } from '../../../types';
+import { LEADS, USERS } from '../../../constants';
+import { UserPlusIcon, UsersIcon, ArrowDownTrayIcon, ArrowLeftIcon } from '../../icons/IconComponents';
 import AddNewLeadModal from './sales-manager/AddNewLeadModal';
 import AssignLeadModal from './sales-manager/AssignLeadModal';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../../context/AuthContext';
 import PerformancePage from './sales-manager/PerformancePage';
-import CommunicationDashboard from '../communication/CommunicationDashboard';
-import EscalateIssuePage from '../escalation/EscalateIssuePage';
+import CommunicationDashboard from '../../communication/CommunicationDashboard';
+import EscalateIssuePage from '../../escalation/EscalateIssuePage';
 
 const SalesGeneralManagerDashboard: React.FC = () => {
   const { currentUser } = useAuth();
@@ -32,7 +31,10 @@ const SalesGeneralManagerDashboard: React.FC = () => {
     'escalate-issue': 'Escalate an Issue',
   };
   
-  const handleAddLead = (newLeadData: Omit<Lead, 'id' | 'status' | 'inquiryDate' | 'history' | 'lastContacted'>) => {
+  const handleAddLead = (
+    newLeadData: Omit<Lead, 'id' | 'status' | 'inquiryDate' | 'history' | 'lastContacted'>,
+    reminder?: { date: string; notes: string }
+  ) => {
     const newLead: Lead = {
       ...newLeadData,
       id: `lead-${Date.now()}`,
@@ -46,8 +48,26 @@ const SalesGeneralManagerDashboard: React.FC = () => {
           timestamp: new Date(),
           notes: `Assigned to ${USERS.find(u => u.id === newLeadData.assignedTo)?.name}`
         }
-      ]
+      ],
+      tasks: {},
+      reminders: [],
     };
+
+    if (reminder && reminder.date && reminder.notes) {
+        newLead.reminders = [{
+            id: `rem-${Date.now()}`,
+            date: new Date(reminder.date),
+            notes: reminder.notes,
+            completed: false,
+        }];
+        newLead.history.push({
+            action: 'Reminder set upon creation',
+            user: currentUser?.name || 'System',
+            timestamp: new Date(),
+            notes: `For ${new Date(reminder.date).toLocaleString()}: ${reminder.notes}`
+        });
+    }
+
     setLeads(prevLeads => [newLead, ...prevLeads]);
   };
 

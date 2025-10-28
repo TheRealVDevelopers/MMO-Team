@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { PROJECTS, formatCurrencyINR } from '../../../constants';
 import { Project, ProjectStatus } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
-import { ClockIcon, FireIcon, CheckCircleIcon, XCircleIcon, ArrowLeftIcon } from '../../icons/IconComponents';
+import { ClockIcon, FireIcon, CheckCircleIcon, XCircleIcon, ArrowLeftIcon, EllipsisVerticalIcon } from '../../icons/IconComponents';
 
 const KANBAN_COLUMNS: { id: string, title: string, statuses: ProjectStatus[] }[] = [
     { id: 'sent', title: 'Sent to Client', statuses: [ProjectStatus.QUOTATION_SENT] },
@@ -18,16 +17,30 @@ const ProjectCard: React.FC<{ project: Project; onSelect: () => void; }> = ({ pr
     let icon = null;
     if(project.status === ProjectStatus.APPROVED) icon = <CheckCircleIcon className="text-secondary" />;
     if(project.status === ProjectStatus.REJECTED) icon = <XCircleIcon className="text-error" />;
+
+    const handleActionClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onSelect();
+    };
     
     return (
-        <div onClick={onSelect} className="bg-surface p-3 rounded-md border border-border space-y-3 cursor-pointer hover:shadow-lg transition-shadow">
+        <div onClick={onSelect} className="bg-surface p-3 rounded-md border border-border space-y-3 cursor-pointer hover:shadow-lg transition-shadow group relative">
             <div className="flex justify-between items-start">
                 <div>
-                    <p className="text-sm font-bold text-text-primary">{project.projectName}</p>
+                    <p className="text-sm font-bold text-text-primary pr-6">{project.projectName}</p>
                     <p className="text-xs text-text-secondary">{project.clientName}</p>
                 </div>
                 {icon ? icon : project.priority === 'High' && <FireIcon className="text-error" />}
             </div>
+
+            <button 
+                onClick={handleActionClick}
+                className="absolute top-2 right-2 p-1 rounded-full text-text-secondary hover:bg-subtle-background hover:text-text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                aria-label="Open project details"
+            >
+                <EllipsisVerticalIcon className="w-5 h-5" />
+            </button>
+
              <p className="text-xl font-bold text-primary">{formatCurrencyINR(project.budget)}</p>
             <div className="flex justify-between items-center text-xs text-text-secondary border-t border-border pt-2">
                 <div className="flex items-center space-x-1">

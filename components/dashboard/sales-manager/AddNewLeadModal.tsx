@@ -2,14 +2,17 @@ import React, { useState } from 'react';
 import Modal from '../../shared/Modal';
 import { USERS } from '../../../constants';
 import { UserRole, Lead } from '../../../types';
-import { BanknotesIcon, BuildingOfficeIcon, TagIcon, UserCircleIcon, CheckCircleIcon } from '../../icons/IconComponents';
+import { BanknotesIcon, BuildingOfficeIcon, TagIcon, UserCircleIcon, CheckCircleIcon, CalendarDaysIcon, PencilSquareIcon } from '../../icons/IconComponents';
 
 const salesTeam = USERS.filter(u => u.role === UserRole.SALES_TEAM_MEMBER);
 
 interface AddNewLeadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddLead: (newLeadData: Omit<Lead, 'id' | 'status' | 'inquiryDate' | 'history' | 'lastContacted'>) => void;
+  onAddLead: (
+    newLeadData: Omit<Lead, 'id' | 'status' | 'inquiryDate' | 'history' | 'lastContacted'>,
+    reminder?: { date: string; notes: string }
+  ) => void;
 }
 
 const initialFormData = {
@@ -19,25 +22,35 @@ const initialFormData = {
     source: '',
     assignedTo: salesTeam[0]?.id || '',
     priority: 'Medium' as 'High' | 'Medium' | 'Low',
+    reminderDate: '',
+    reminderNotes: '',
 }
 
 const AddNewLeadModal: React.FC<AddNewLeadModalProps> = ({ isOpen, onClose, onAddLead }) => {
   const [formData, setFormData] = useState(initialFormData);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const { clientName, projectName, value, assignedTo } = formData;
+    const { clientName, projectName, value, assignedTo, reminderDate, reminderNotes } = formData;
     if (!clientName || !projectName || !value || !assignedTo) {
         alert('Please fill all required fields.');
         return;
     }
     
-    onAddLead({ ...formData, value: Number(value) });
+    // separate reminder data
+    const { reminderDate: rd, reminderNotes: rn, ...leadData } = formData;
+    
+    let reminder;
+    if (reminderDate && reminderNotes) {
+        reminder = { date: reminderDate, notes: reminderNotes };
+    }
+
+    onAddLead({ ...leadData, value: Number(value) }, reminder);
     setFormData(initialFormData);
     onClose();
   };
@@ -101,6 +114,20 @@ const AddNewLeadModal: React.FC<AddNewLeadModalProps> = ({ isOpen, onClose, onAd
                         {formData.assignedTo === user.id && <CheckCircleIcon className="w-5 h-5 text-primary absolute top-1 right-1" />}
                     </button>
                 ))}
+            </div>
+        </div>
+
+        <div className="pt-4 border-t border-border">
+            <label className="block text-sm font-medium text-text-primary mb-2">Add a Reminder (Optional)</label>
+            <div className="space-y-4">
+                <div className="relative">
+                    <CalendarDaysIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary"/>
+                    <input type="datetime-local" name="reminderDate" value={formData.reminderDate} onChange={handleInputChange} className="pl-10 w-full p-2 border border-border bg-subtle-background rounded-md shadow-sm" />
+                </div>
+                <div className="relative">
+                     <PencilSquareIcon className="w-5 h-5 absolute left-3 top-3 text-text-secondary"/>
+                    <textarea name="reminderNotes" value={formData.reminderNotes} onChange={handleInputChange} placeholder="Reminder notes..." rows={2} className="pl-10 w-full p-2 border border-border bg-subtle-background rounded-md shadow-sm" />
+                </div>
             </div>
         </div>
 

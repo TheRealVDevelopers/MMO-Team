@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Card from '../../shared/Card';
 import { PROJECTS, formatDate, formatCurrencyINR } from '../../../constants';
 import { Project, ProjectStatus } from '../../../types';
@@ -29,6 +28,14 @@ const getProgressColor = (progress: number): string => {
 const ProjectTrackingPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
     const [view, setView] = useState<'list' | 'gantt'>('list');
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+    const [statusFilter, setStatusFilter] = useState<ProjectStatus | 'all'>('all');
+
+    const filteredProjects = useMemo(() => {
+        if (statusFilter === 'all') {
+            return PROJECTS;
+        }
+        return PROJECTS.filter(project => project.status === statusFilter);
+    }, [statusFilter]);
 
 
     return (
@@ -45,9 +52,24 @@ const ProjectTrackingPage: React.FC<{ setCurrentPage: (page: string) => void }> 
                     </button>
                     <h2 className="text-2xl font-bold text-text-primary">Project Tracking</h2>
                 </div>
-                <div className="flex space-x-1 p-1 bg-subtle-background rounded-lg mt-2 sm:mt-0">
-                    <button onClick={() => setView('list')} className={`px-3 py-1 text-sm font-medium rounded-md ${view === 'list' ? 'bg-surface shadow' : 'text-text-secondary'}`}>List View</button>
-                    <button onClick={() => setView('gantt')} className={`px-3 py-1 text-sm font-medium rounded-md ${view === 'gantt' ? 'bg-surface shadow' : 'text-text-secondary'}`}>Gantt View</button>
+                <div className="flex items-center space-x-2 mt-2 sm:mt-0">
+                    {view === 'list' && (
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value as ProjectStatus | 'all')}
+                            className="px-3 py-1.5 border border-border rounded-md text-sm bg-surface focus:ring-primary focus:border-primary"
+                            aria-label="Filter projects by status"
+                        >
+                            <option value="all">All Statuses</option>
+                            {Object.values(ProjectStatus).map(status => (
+                                <option key={status} value={status}>{status}</option>
+                            ))}
+                        </select>
+                    )}
+                    <div className="flex space-x-1 p-1 bg-subtle-background rounded-lg">
+                        <button onClick={() => setView('list')} className={`px-3 py-1 text-sm font-medium rounded-md ${view === 'list' ? 'bg-surface shadow' : 'text-text-secondary'}`}>List View</button>
+                        <button onClick={() => setView('gantt')} className={`px-3 py-1 text-sm font-medium rounded-md ${view === 'gantt' ? 'bg-surface shadow' : 'text-text-secondary'}`}>Gantt View</button>
+                    </div>
                 </div>
             </div>
             
@@ -65,7 +87,7 @@ const ProjectTrackingPage: React.FC<{ setCurrentPage: (page: string) => void }> 
                                 </tr>
                             </thead>
                             <tbody className="bg-surface divide-y divide-border">
-                                {PROJECTS.map((project) => (
+                                {filteredProjects.map((project) => (
                                     <tr key={project.id} onClick={() => setSelectedProject(project)} className="hover:bg-subtle-background cursor-pointer">
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm font-medium text-text-primary">{project.projectName}</div>

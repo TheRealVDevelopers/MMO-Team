@@ -22,7 +22,8 @@ const AttendanceCalendar: React.FC<{ attendanceData: Attendance[] }> = ({ attend
         calendarDays.push(<div key={`empty-${i}`} className="border border-border bg-subtle-background"></div>);
     }
 
-    const attendanceMap = new Map(attendanceData.map(a => [new Date(a.date).getDate(), a.status]));
+    // Fix: Explicitly type the Map to ensure correct type inference.
+    const attendanceMap = new Map<number, AttendanceStatus>(attendanceData.map(a => [new Date(a.date).getDate(), a.status]));
 
     for (let day = 1; day <= daysInMonth; day++) {
         const status = attendanceMap.get(day);
@@ -46,11 +47,10 @@ const AttendanceCalendar: React.FC<{ attendanceData: Attendance[] }> = ({ attend
     }
     
     // Summary Calculation
-    // FIX: Added a type assertion to the initial value of the reduce function to solve indexing errors.
-    const summary = attendanceData.reduce((acc, curr) => {
+    const summary = attendanceData.reduce((acc: Record<AttendanceStatus, number>, curr) => {
         acc[curr.status] = (acc[curr.status] || 0) + 1;
         return acc;
-    }, {} as Partial<Record<AttendanceStatus, number>>);
+    }, {} as Record<AttendanceStatus, number>);
 
     return (
         <div className="space-y-4">
@@ -64,7 +64,6 @@ const AttendanceCalendar: React.FC<{ attendanceData: Attendance[] }> = ({ attend
                 {calendarDays}
             </div>
             <div className="flex flex-wrap gap-4 pt-4 border-t border-border text-sm">
-                {/* FIX: Explicitly typed the `status` parameter in the map callback to resolve indexing errors. */}
                 {Object.values(AttendanceStatus).map((status: AttendanceStatus) => {
                     const colors = statusColors[status];
                     return (

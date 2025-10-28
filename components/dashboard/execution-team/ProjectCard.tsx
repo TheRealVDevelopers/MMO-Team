@@ -1,6 +1,6 @@
 import React from 'react';
 import { Project } from '../../../types';
-import { PaperClipIcon } from '../../icons/IconComponents';
+import { PaperClipIcon, EllipsisVerticalIcon } from '../../icons/IconComponents';
 
 const ProjectCard: React.FC<{ project: Project, isSelected: boolean, onClick: () => void }> = ({ project, isSelected, onClick }) => {
     
@@ -13,20 +13,33 @@ const ProjectCard: React.FC<{ project: Project, isSelected: boolean, onClick: ()
         if (daysRemaining < 7) return 'bg-accent'; // Nearing deadline
         return 'bg-secondary'; // On track
     };
+
+    const handleActionClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onClick();
+    };
     
     return (
     <div 
         onClick={onClick}
-        className={`bg-surface p-3 rounded-md border space-y-3 cursor-pointer transition-all duration-200 ${isSelected ? 'border-primary shadow-lg' : 'border-border hover:border-gray-300'}`}
+        className={`bg-surface p-3 rounded-md border space-y-3 cursor-pointer transition-all duration-200 group relative ${isSelected ? 'border-primary shadow-lg hover:-translate-y-1' : 'border-border hover:border-gray-300 hover:shadow-md hover:-translate-y-1'}`}
     >
         <div className="flex justify-between items-start">
             <div>
-                <p className="text-sm font-bold text-text-primary">{project.projectName}</p>
+                <p className="text-sm font-bold text-text-primary pr-6">{project.projectName}</p>
                 <p className="text-xs text-text-secondary">{project.clientName}</p>
             </div>
             <div className={`w-3 h-3 rounded-full ${getStatusColor()}`}></div>
         </div>
         
+        <button 
+            onClick={handleActionClick}
+            className="absolute top-2 right-2 p-1 rounded-full text-text-secondary hover:bg-subtle-background hover:text-text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+            aria-label="Open project details"
+        >
+            <EllipsisVerticalIcon className="w-5 h-5" />
+        </button>
+
         <div className="flex justify-between items-center text-xs text-text-secondary">
             <span>Progress: {project.progress}%</span>
             <span>Due: {new Date(project.endDate).toLocaleDateString()}</span>

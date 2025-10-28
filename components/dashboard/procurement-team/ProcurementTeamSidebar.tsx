@@ -4,7 +4,10 @@ import {
     RectangleGroupIcon,
     TagIcon,
     ChartBarSquareIcon,
-    BuildingStorefrontIcon
+    BuildingStorefrontIcon,
+    ClockIcon,
+    ChatBubbleLeftRightIcon,
+    ShieldExclamationIcon
 } from '../../icons/IconComponents';
 
 interface SidebarProps {
@@ -39,10 +42,12 @@ const NavItem: React.FC<{
 
 const ProcurementTeamSidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage }) => {
     const navItems = [
-        { id: 'overview', label: 'Dashboard', icon: <RectangleGroupIcon className="w-6 h-6" /> },
+        { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
         { id: 'bidding', label: 'Bidding', icon: <TagIcon className="w-6 h-6" /> },
         { id: 'vendors', label: 'Vendors', icon: <BuildingStorefrontIcon className="w-6 h-6" /> },
+        { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
         { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
+        { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
     ];
 
     return (

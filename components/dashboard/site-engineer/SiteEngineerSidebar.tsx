@@ -1,10 +1,13 @@
+
 import React from 'react';
 import { 
     BuildingOfficeIcon,
-    RectangleGroupIcon,
     CalendarDaysIcon,
-    DocumentTextIcon,
-    ReceiptPercentIcon
+    ReceiptPercentIcon,
+    ChartBarSquareIcon,
+    ClockIcon,
+    ChatBubbleLeftRightIcon,
+    ShieldExclamationIcon
 } from '../../icons/IconComponents';
 
 interface SidebarProps {
@@ -39,9 +42,12 @@ const NavItem: React.FC<{
 
 const SiteEngineerSidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage }) => {
     const navItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: <RectangleGroupIcon className="w-6 h-6" /> },
+        { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
         { id: 'schedule', label: "Today's Schedule", icon: <CalendarDaysIcon className="w-6 h-6" /> },
         { id: 'expenses', label: 'Expense Claims', icon: <ReceiptPercentIcon className="w-6 h-6" /> },
+        { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
+        { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
+        { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
     ];
 
     return (
@@ -50,7 +56,7 @@ const SiteEngineerSidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPa
                 <div className="flex items-center pl-2.5 mb-5 h-16 -mt-4">
                      <BuildingOfficeIcon className="h-8 w-8 text-primary" />
                      <h1 className="ml-3 text-xl font-bold text-text-primary tracking-tight">
-                        Field Engineer
+                        Engineer Hub
                     </h1>
                 </div>
                 <ul className="space-y-2">
@@ -67,6 +73,6 @@ const SiteEngineerSidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPa
             </div>
         </aside>
     );
-}
+};
 
 export default SiteEngineerSidebar;

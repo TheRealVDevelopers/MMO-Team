@@ -1,5 +1,4 @@
 
-
 import React, { useState } from 'react';
 import QuotationTeamSidebar from './quotation-team/QuotationTeamSidebar';
 import QuotationOverviewPage from './quotation-team/QuotationOverviewPage';
@@ -10,9 +9,12 @@ import QuotationDetailModal from './quotation-team/QuotationDetailModal';
 import ItemsCatalogPage from './quotation-team/ItemsCatalogPage';
 import ProjectTemplatesPage from './quotation-team/ProjectTemplatesPage';
 import PriceAnalyticsPage from './quotation-team/PriceAnalyticsPage';
+import MyDayPage from './shared/MyDayPage';
+import CommunicationDashboard from '../communication/CommunicationDashboard';
+import EscalateIssuePage from '../escalation/EscalateIssuePage';
 
 const QuotationTeamDashboard: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState('overview');
+  const [currentPage, setCurrentPage] = useState('my-day');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   const handleProjectSelect = (project: Project) => {
@@ -28,6 +30,8 @@ const QuotationTeamDashboard: React.FC = () => {
 
   const renderPage = () => {
     switch (currentPage) {
+      case 'my-day':
+        return <MyDayPage />;
       case 'overview':
         return <QuotationOverviewPage onProjectSelect={handleProjectSelect} />;
       case 'negotiations':
@@ -40,8 +44,12 @@ const QuotationTeamDashboard: React.FC = () => {
           return <ProjectTemplatesPage setCurrentPage={setCurrentPage}/>;
       case 'analytics':
           return <PriceAnalyticsPage setCurrentPage={setCurrentPage}/>;
+      case 'communication':
+        return <CommunicationDashboard />;
+      case 'escalate-issue':
+        return <EscalateIssuePage setCurrentPage={setCurrentPage} />;
       default:
-        return <QuotationOverviewPage onProjectSelect={handleProjectSelect} />;
+        return <MyDayPage />;
     }
   };
 
@@ -49,7 +57,7 @@ const QuotationTeamDashboard: React.FC = () => {
     <>
         <div className="flex h-full">
             <QuotationTeamSidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+            <div className="flex-1 overflow-y-auto">
                 {renderPage()}
             </div>
         </div>

@@ -1,9 +1,6 @@
 
 
-
-
-
-import { User, Lead, UserRole, Project, ProjectStatus, Vendor, Invoice, PaymentStatus, Bid, LeadPipelineStatus, Activity, ActivityStatus, SiteVisit, SiteVisitStatus, MaterialRequest, MaterialRequestStatus, Issue, ChecklistItem, CommunicationMessage, Expense, VendorBill, Attendance, AttendanceStatus, Document, QuotationRequest, QuotationRequestStatus, DrawingRequest, DrawingRequestStatus, ProcurementRequest, ProcurementRequestStatus, ExecutionRequest, ExecutionRequestStatus, AccountsRequest, AccountsRequestStatus, Item, ProjectTemplate, ExpenseClaim, ExpenseClaimStatus } from './types';
+import { User, Lead, UserRole, Project, ProjectStatus, Vendor, Invoice, PaymentStatus, Bid, LeadPipelineStatus, Activity, ActivityStatus, SiteVisit, SiteVisitStatus, MaterialRequest, MaterialRequestStatus, Issue, ChecklistItem, CommunicationMessage, Expense, VendorBill, Attendance, AttendanceStatus, Document, QuotationRequest, QuotationRequestStatus, DrawingRequest, DrawingRequestStatus, ProcurementRequest, ProcurementRequestStatus, ExecutionRequest, ExecutionRequestStatus, AccountsRequest, AccountsRequestStatus, Item, ProjectTemplate, ExpenseClaim, ExpenseClaimStatus, Task, TaskStatus, ChatChannel, ChannelType, ChatMessage, QuickClarifyQuestion, QuestionCategory, QuestionUrgency, Complaint, ComplaintType, ComplaintPriority, ComplaintStatus, SiteReport } from './types';
 
 export const formatCurrencyINR = (value: number) => 
     new Intl.NumberFormat('en-IN', { 
@@ -359,7 +356,6 @@ export const ACCOUNTS_REQUESTS: AccountsRequest[] = [
     { id: 'ar-1', leadId: 'lead-6', projectName: 'Executive Floor Interiors', requesterId: 'user-10', assigneeId: 'user-9', status: AccountsRequestStatus.REQUESTED, requestDate: new Date(now.getTime() - 10 * 60 * 60 * 1000), task: 'Generate Proforma', notes: 'Please prepare proforma invoice for 50% advance payment.'},
 ];
 
-// Fix: Add missing ITEMS constant for QuotationDetailModal
 export const ITEMS: Item[] = [
   { id: 'item-1', name: 'Executive Desk', category: 'Workstations', price: 45000, imageUrl: 'https://via.placeholder.com/150/007bff/ffffff?text=Desk' },
   { id: 'item-2', name: 'Ergonomic Chair', category: 'Chairs', price: 22000, imageUrl: 'https://via.placeholder.com/150/28a745/ffffff?text=Chair' },
@@ -369,78 +365,82 @@ export const ITEMS: Item[] = [
   { id: 'item-6', name: 'Visitor Chair', category: 'Chairs', price: 9500, imageUrl: 'https://via.placeholder.com/150/fd7e14/ffffff?text=Chair' },
 ];
 
-
 export const MATERIAL_REQUESTS: MaterialRequest[] = [
     { id: 'mr-1', projectId: 'proj-106', projectName: 'Reception Area Redesign', materials: [{ name: 'Reception Desk', spec: 'Custom Oak, 8ft' }, { name: 'Visitor Chairs', spec: 'Leather, Set of 6' }], requiredBy: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000), status: MaterialRequestStatus.RFQ_PENDING, priority: 'High' },
     { id: 'mr-2', projectId: 'proj-104', projectName: 'Full Floor Fit-out', materials: [{ name: 'LED Downlights', spec: '4-inch, Warm White, 100 units' }], requiredBy: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000), status: MaterialRequestStatus.BIDDING_OPEN, priority: 'Medium' },
     { id: 'mr-3', projectId: 'proj-108', projectName: 'HQ Remodel', materials: [{ name: 'Wall Paint', spec: 'Azure Blue, 20 gallons' }, { name: 'Acoustic Panels', spec: '2x4ft, 50 units' }], requiredBy: new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000), status: MaterialRequestStatus.UNDER_EVALUATION, priority: 'Medium' },
     { id: 'mr-4', projectId: 'proj-101', projectName: 'Pantry Renovation', materials: [{ name: 'Quartz Countertop', spec: 'Calacatta Gold, 40 sqft' }], requiredBy: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000), status: MaterialRequestStatus.NEGOTIATION, priority: 'High' },
     { id: 'mr-5', projectId: 'proj-109', projectName: 'Co-working Space', materials: [{ name: 'Modular Desks', spec: 'Set of 20' }], requiredBy: new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000), status: MaterialRequestStatus.ORDER_PLACED, priority: 'Low' },
-    { id: 'mr-6', projectId: 'proj-105', projectName: 'Conference Room AV', materials: [{ name: 'HDMI Cables', spec: '25ft, 10 pack' }], requiredBy: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000), status: MaterialRequestStatus.DELIVERED, priority: 'Low' },
+    { id: 'mr-6', projectId: 'proj-105', projectName: 'Conference Room AV', materials: [{ name: 'HDMI Cables', spec: '25ft, 2 pack' }], requiredBy: new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000), status: MaterialRequestStatus.DELIVERED, priority: 'Low' },
 ];
 
-const generateMockAttendance = (year: number, month: number): Attendance[] => {
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const attendance: Attendance[] = [];
-    // Skew towards present
-    const statuses = [
-        AttendanceStatus.PRESENT, AttendanceStatus.PRESENT, AttendanceStatus.PRESENT, 
-        AttendanceStatus.PRESENT, AttendanceStatus.PRESENT, AttendanceStatus.PRESENT,
-        AttendanceStatus.ABSENT, AttendanceStatus.LEAVE, AttendanceStatus.HALF_DAY
-    ];
-
-    for (let day = 1; day <= daysInMonth; day++) {
-        const date = new Date(year, month, day);
-        const dayOfWeek = date.getDay();
-
-        if (dayOfWeek === 0 || dayOfWeek === 6) { // Skip weekends (Sunday=0, Saturday=6)
-            continue;
-        }
-        
-        const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
-        attendance.push({ date, status: randomStatus });
-    }
-    return attendance;
-};
-
-export const ATTENDANCE_DATA: Record<string, Attendance[]> = {};
-const currentYear = today.getFullYear();
-const currentMonth = today.getMonth();
-USERS.forEach(user => {
-    ATTENDANCE_DATA[user.id] = generateMockAttendance(currentYear, currentMonth);
-});
-
 export const PROJECT_TEMPLATES: ProjectTemplate[] = [
-  { id: 'template-1', name: 'Startup Office (500 sq ft)', description: 'Basic setup for a small, modern startup.', projectType: 'Office', itemCount: 15, avgCost: 800000 },
-  { id: 'template-2', name: 'Corporate Office (2000 sq ft)', description: 'Professional layout for established companies.', projectType: 'Office', itemCount: 45, avgCost: 3500000 },
-  { id: 'template-3', name: '2 BHK Apartment (Standard)', description: 'Standard interior package for a 2-bedroom apartment.', projectType: 'Residential', itemCount: 32, avgCost: 1200000 },
-  { id: 'template-4', name: 'Retail Store Front', description: 'Attractive setup for a small retail business.', projectType: 'Commercial', itemCount: 22, avgCost: 1800000 },
+    { id: 'pt-1', name: 'Small Office (10-20 ppl)', description: 'Basic fit-out for a small team, includes workstations, 1 meeting room, and a pantry.', projectType: 'Office', itemCount: 45, avgCost: 1500000 },
+    { id: 'pt-2', name: 'Executive Cabin', description: 'Premium setup for a single executive cabin, with high-end furniture and finishes.', projectType: 'Office', itemCount: 15, avgCost: 800000 },
+    { id: 'pt-3', name: '2BHK Apartment - Modern', description: 'Complete interior solution for a 2-bedroom apartment with a modern aesthetic.', projectType: 'Residential', itemCount: 120, avgCost: 2500000 },
+];
+
+export const SITE_REPORTS: SiteReport[] = [
+    { id: 'rep-1', visitId: 'sv-3', checklistItems: [{ text: 'Measure total carpet area', checked: true }], measurements: [{ roomName: 'Pantry', length: 15, width: 10, height: 9 }], photos: [], notes: 'Site is ready for design work.', expenseClaimId: 'ec-1' },
 ];
 
 export const EXPENSE_CLAIMS: ExpenseClaim[] = [
-    { 
-        id: 'ec-1', 
-        visitId: 'sv-3', 
-        engineerId: 'user-6', 
-        submissionDate: new Date(new Date().setDate(today.getDate() - 1)), 
-        totalAmount: 850, 
-        status: ExpenseClaimStatus.APPROVED,
-        items: [
-            { id: 'ei-1', type: 'Travel', description: 'Fuel for 50km travel', amount: 500 },
-            { id: 'ei-2', type: 'Parking', description: 'Site parking fee', amount: 150 },
-            { id: 'ei-3', type: 'Other', description: 'Client refreshment', amount: 200 },
-        ]
-    },
-    { 
-        id: 'ec-2', 
-        visitId: 'sv-5', 
-        engineerId: 'user-6', 
-        submissionDate: new Date(new Date().setDate(today.getDate() - 2)), 
-        totalAmount: 450, 
-        status: ExpenseClaimStatus.PAID,
-        items: [
-            { id: 'ei-4', type: 'Travel', description: 'Fuel for 30km travel', amount: 300 },
-            { id: 'ei-5', type: 'Other', description: 'Measuring Tape', amount: 150 },
-        ]
-    },
+    { id: 'ec-1', visitId: 'sv-3', engineerId: 'user-6', submissionDate: new Date(new Date().setDate(today.getDate() - 1)), totalAmount: 850, status: ExpenseClaimStatus.SUBMITTED, items: [{ id: 'ei-1', type: 'Travel', description: 'Fuel for visit', amount: 600 }, { id: 'ei-2', type: 'Parking', description: 'Parking at site', amount: 250 }] },
+    { id: 'ec-2', visitId: 'sv-5', engineerId: 'user-6', submissionDate: new Date(new Date().setDate(today.getDate() - 2)), totalAmount: 1200, status: ExpenseClaimStatus.APPROVED, items: [{ id: 'ei-3', type: 'Travel', description: 'Fuel for visit', amount: 900 }, { id: 'ei-4', type: 'Other', description: 'Client lunch', amount: 300 }] },
+];
+
+export const TASKS: Task[] = [
+    { id: 'task-1', title: 'Prepare proposal for Innovate Corp', userId: 'user-3', status: TaskStatus.IN_PROGRESS, timeSpent: 3600, priority: 'High', isPaused: false, startTime: Date.now() - 3600 * 1000 },
+    { id: 'task-2', title: 'Follow up with Global Ventures re: pantry', userId: 'user-3', status: TaskStatus.PENDING, timeSpent: 0, priority: 'Medium', isPaused: false },
+    { id: 'task-3', title: 'Update CRM with new contacts', userId: 'user-3', status: TaskStatus.COMPLETED, timeSpent: 1800, priority: 'Low', isPaused: false, endTime: Date.now() - 2 * 3600 * 1000 },
+    { id: 'task-4', title: '3D renders for Pantry Renovation', userId: 'user-4', status: TaskStatus.IN_PROGRESS, timeSpent: 7200, priority: 'High', isPaused: false, startTime: Date.now() - 7200 * 1000 },
+    { id: 'task-5', title: 'Draft floorplan for Server Room Layout', userId: 'user-4', status: TaskStatus.PENDING, timeSpent: 0, priority: 'Medium', isPaused: false },
+    { id: 'task-6', title: 'Revise quote for Art Studio Conversion', userId: 'user-5', status: TaskStatus.IN_PROGRESS, timeSpent: 900, priority: 'High', isPaused: false, startTime: Date.now() - 900 * 1000 },
+];
+
+export const ATTENDANCE_DATA: Record<string, Attendance[]> = {};
+const currentYear = now.getFullYear();
+const currentMonth = now.getMonth();
+const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+['user-2', 'user-3', 'user-4', 'user-5', 'user-6', 'user-7', 'user-8', 'user-9', 'user-10'].forEach(userId => {
+    ATTENDANCE_DATA[userId] = [];
+    for (let i = 1; i <= daysInMonth; i++) {
+        const date = new Date(currentYear, currentMonth, i);
+        if (date > now) continue; 
+        const dayOfWeek = date.getDay();
+        if (dayOfWeek === 0 || dayOfWeek === 6) continue; 
+        const rand = Math.random();
+        let status: AttendanceStatus;
+        if (rand < 0.85) { status = AttendanceStatus.PRESENT; } 
+        else if (rand < 0.9) { status = AttendanceStatus.HALF_DAY; } 
+        else if (rand < 0.95) { status = AttendanceStatus.LEAVE; } 
+        else { status = AttendanceStatus.ABSENT; }
+        ATTENDANCE_DATA[userId].push({ date, status });
+    }
+});
+
+export const CHAT_CHANNELS: ChatChannel[] = [
+    { id: 'channel-1', name: 'general', type: ChannelType.WORK_STREAM },
+    { id: 'channel-2', name: 'design-team', type: ChannelType.WORK_STREAM },
+    { id: 'channel-3', name: 'proj-104-fitout', type: ChannelType.WORK_STREAM, isProject: true },
+    { id: 'channel-4', name: 'sales-north', type: ChannelType.WORK_STREAM },
+    { id: 'channel-5', name: 'quick-clarify', type: ChannelType.QUICK_CLARIFY },
+    { id: 'dm-user-3-user-4', name: 'Emily Designer', type: ChannelType.DIRECT_MESSAGE, members: ['user-3', 'user-4'] },
+];
+
+export const CHAT_MESSAGES: ChatMessage[] = [
+    { id: 'msg-1', channelId: 'channel-1', senderId: 'user-2', content: 'Morning team! Let\'s have a great week.', timestamp: new Date(now.getTime() - 8 * 3600 * 1000) },
+    { id: 'msg-2', channelId: 'channel-2', senderId: 'user-4', content: 'Need feedback on the Pantry Renovation renders, please.', timestamp: new Date(now.getTime() - 2 * 3600 * 1000) },
+    { id: 'msg-3', channelId: 'dm-user-3-user-4', senderId: 'user-3', content: 'Hey Emily, client is asking for a quick update on the renders.', timestamp: new Date(now.getTime() - 1 * 3600 * 1000) },
+    { id: 'msg-4', channelId: 'dm-user-3-user-4', senderId: 'user-4', content: 'Just finishing them up, John. Will send over in an hour.', timestamp: new Date(now.getTime() - 55 * 60 * 1000) },
+];
+
+export const QUICK_CLARIFY_QUESTIONS: QuickClarifyQuestion[] = [
+    { id: 'qc-1', channelId: '#quick-clarify', senderId: 'user-6', timestamp: new Date(now.getTime() - 3 * 3600 * 1000), category: QuestionCategory.SITE, urgency: QuestionUrgency.HIGH, regarding: 'Enterprise Suites (proj-104)', question: 'Is the new electrical socket placement approved by the client? The diagram seems ambiguous.' },
+    { id: 'qc-2', channelId: '#quick-clarify', senderId: 'user-4', timestamp: new Date(now.getTime() - 24 * 3600 * 1000), category: QuestionCategory.DESIGN, urgency: QuestionUrgency.MEDIUM, regarding: 'HQ Remodel (proj-108)', question: 'What is the approved paint finish for the accent wall? (Matte/Satin/Gloss)' },
+];
+
+export const COMPLAINTS: Complaint[] = [
+    { id: 'comp-1', submittedBy: 'user-3', against: 'Emily Designer', type: ComplaintType.TIMELINE_VIOLATIONS, priority: ComplaintPriority.MEDIUM, status: ComplaintStatus.SUBMITTED, projectContext: 'HQ Remodel (proj-108)', description: 'Drawings were promised EOD yesterday but have not been received. This is delaying the client presentation.', evidence: ['Chat logs from yesterday'], resolutionAttempts: 'Followed up on chat twice, no response.', desiredResolution: 'Immediate delivery of the drawings.', submissionDate: new Date(now.getTime() - 18 * 3600 * 1000) },
+    { id: 'comp-2', submittedBy: 'user-8', against: UserRole.PROCUREMENT_TEAM, type: ComplaintType.WORKFLOW_BLOCKAGES, priority: ComplaintPriority.HIGH, status: ComplaintStatus.UNDER_REVIEW, projectContext: 'Full Floor Fit-out (proj-104)', description: 'Materials for the west wing are delayed by 3 days, causing a halt in work. No clear ETA provided by procurement.', evidence: ['Material request ticket', 'Email chain'], resolutionAttempts: 'Called procurement lead twice, was told they are "looking into it".', desiredResolution: 'A clear delivery date and a plan to expedite.', submissionDate: new Date(now.getTime() - 2 * 24 * 3600 * 1000) },
 ];

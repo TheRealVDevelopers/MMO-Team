@@ -6,12 +6,17 @@ import InvoicesPage from './accounts-team/InvoicesPage';
 import ExpensesPage from './accounts-team/ExpensesPage';
 import PaymentsPage from './accounts-team/PaymentsPage';
 import ReportsPage from './accounts-team/ReportsPage';
+import MyDayPage from './shared/MyDayPage';
+import CommunicationDashboard from '../communication/CommunicationDashboard';
+import EscalateIssuePage from '../escalation/EscalateIssuePage';
 
 const AccountsTeamDashboard: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState('overview');
+  const [currentPage, setCurrentPage] = useState('my-day');
 
   const renderPage = () => {
     switch (currentPage) {
+      case 'my-day':
+        return <MyDayPage />;
       case 'overview':
         return <AccountsOverviewPage setCurrentPage={setCurrentPage} />;
       case 'invoices':
@@ -22,15 +27,19 @@ const AccountsTeamDashboard: React.FC = () => {
         return <PaymentsPage setCurrentPage={setCurrentPage} />;
       case 'reports':
         return <ReportsPage setCurrentPage={setCurrentPage} />;
+      case 'communication':
+        return <CommunicationDashboard />;
+      case 'escalate-issue':
+        return <EscalateIssuePage setCurrentPage={setCurrentPage} />;
       default:
-        return <AccountsOverviewPage setCurrentPage={setCurrentPage} />;
+        return <MyDayPage />;
     }
   };
 
   return (
     <div className="flex h-full">
       <AccountsTeamSidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div className="flex-1 overflow-y-auto">
         {renderPage()}
       </div>
     </div>

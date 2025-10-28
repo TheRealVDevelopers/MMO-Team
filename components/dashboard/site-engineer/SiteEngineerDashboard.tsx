@@ -1,16 +1,17 @@
 
+
 import React, { useState } from 'react';
 import SiteEngineerSidebar from './site-engineer/SiteEngineerSidebar';
 import EngineerOverviewPage from './site-engineer/EngineerOverviewPage';
-import { SiteVisit, ExpenseClaim, SiteReport } from '../../types';
-import { SITE_VISITS, EXPENSE_CLAIMS } from '../../constants';
-import { useAuth } from '../../context/AuthContext';
+import { SiteVisit, ExpenseClaim, SiteReport } from '../../../types';
+import { SITE_VISITS, EXPENSE_CLAIMS } from '../../../constants';
+import { useAuth } from '../../../context/AuthContext';
 import ExpenseClaimsPage from './site-engineer/ExpenseClaimsPage';
 import SiteEngineerKPIPage from './site-engineer/SiteEngineerKPIPage';
 import VisitDetailModal from './site-engineer/VisitDetailModal';
-import MyDayPage from './shared/MyDayPage';
-import CommunicationDashboard from '../communication/CommunicationDashboard';
-import EscalateIssuePage from '../escalation/EscalateIssuePage';
+import MyDayPage from '../shared/MyDayPage';
+import CommunicationDashboard from '../../communication/CommunicationDashboard';
+import EscalateIssuePage from '../../escalation/EscalateIssuePage';
 
 const SiteEngineerDashboard: React.FC = () => {
   const { currentUser } = useAuth();

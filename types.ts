@@ -1,8 +1,5 @@
 
 
-
-
-
 export enum LeadPipelineStatus {
   NEW_NOT_CONTACTED = "New - Not Contacted",
   CONTACTED_CALL_DONE = "Contacted - Call Done",
@@ -471,4 +468,132 @@ export interface SiteReport {
     photos: { url: string; caption: string }[];
     notes: string;
     expenseClaimId?: string;
+}
+
+// New types for Productivity System
+export enum TaskStatus {
+  PENDING = "Pending",
+  IN_PROGRESS = "In Progress",
+  COMPLETED = "Completed",
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  userId: string;
+  status: TaskStatus;
+  startTime?: number; // timestamp
+  endTime?: number; // timestamp
+  timeSpent: number; // in seconds
+  priority: 'High' | 'Medium' | 'Low';
+  isPaused: boolean;
+}
+
+export enum AttendanceType {
+    ON_TIME = "On Time",
+    LATE = "Late",
+    HALF_DAY = "Half Day",
+    ABSENT = "Absent",
+}
+
+export interface DailyAttendance {
+    userId: string;
+    date: string; // YYYY-MM-DD
+    checkInTime: number; // timestamp
+    status: AttendanceType;
+}
+
+// New Communication Types
+export enum ChannelType {
+  WORK_STREAM = "Work Stream",
+  DIRECT_MESSAGE = "Direct Message",
+  QUICK_CLARIFY = "Quick Clarify",
+}
+
+export interface ChatChannel {
+  id: string;
+  name: string;
+  type: ChannelType;
+  members?: string[]; // user IDs
+  isProject?: boolean;
+}
+
+export interface ChatMessage {
+  id: string;
+  channelId: string;
+  senderId: string;
+  content: string;
+  timestamp: Date;
+  isQuestion?: boolean;
+}
+
+export enum QuestionCategory {
+  DESIGN = "Design Clarification",
+  SITE = "Site Conditions",
+  TECHNICAL = "Technical Specifications",
+  CLIENT = "Client Requirements",
+  PROCESS = "Process Questions",
+}
+
+export enum QuestionUrgency {
+  HIGH = "High",
+  MEDIUM = "Medium",
+  LOW = "Low",
+}
+
+export interface QuickClarifyQuestion {
+  id: string;
+  channelId: '#quick-clarify';
+  senderId: string;
+  timestamp: Date;
+  category: QuestionCategory;
+  urgency: QuestionUrgency;
+  regarding: string;
+  question: string;
+  deadline?: Date;
+}
+
+// New Complaint Escalation Types
+export enum ComplaintType {
+    WORK_NEGLECT = "Task Neglect",
+    QUALITY_ISSUES = "Quality Issues",
+    COMMUNICATION_BREAKDOWN = "Communication Breakdown",
+    TIMELINE_VIOLATIONS = "Timeline Violations",
+    COORDINATION_PROBLEMS = "Coordination Problems",
+    UNPROFESSIONAL_BEHAVIOR = "Unprofessional Behavior",
+    RESPONSIVENESS_ISSUES = "Responsiveness Issues",
+    ACCOUNTABILITY_PROBLEMS = "Accountability Problems",
+    TEAMWORK_CONCERNS = "Teamwork Concerns",
+    WORKFLOW_BLOCKAGES = "Workflow Blockages",
+    RESOURCE_ISSUES = "Resource Issues",
+    SYSTEM_PROBLEMS = "System Problems",
+}
+
+export enum ComplaintPriority {
+    MEDIUM = "Medium",
+    HIGH = "High",
+    CRITICAL = "Critical",
+}
+
+export enum ComplaintStatus {
+    SUBMITTED = "Submitted",
+    UNDER_REVIEW = "Under Review",
+    INVESTIGATION = "Investigation",
+    RESOLVED = "Resolved",
+    ESCALATED = "Escalated",
+}
+
+export interface Complaint {
+    id: string;
+    submittedBy: string; // User ID
+    against: string; // User ID or Department Name
+    type: ComplaintType;
+    priority: ComplaintPriority;
+    status: ComplaintStatus;
+    projectContext: string;
+    description: string;
+    evidence: string[]; // notes for mock
+    resolutionAttempts: string;
+    desiredResolution: string;
+    submissionDate: Date;
 }

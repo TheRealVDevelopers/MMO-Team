@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { Lead, LeadPipelineStatus, LeadHistory } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
-import LeadCard from './LeadCard';
 import LeadDetailModal from '../../shared/LeadDetailModal';
-import { PlusIcon, ChartBarIcon, FunnelIcon, CheckCircleIcon } from '../../icons/IconComponents';
+import { PlusIcon, ChartBarIcon, FunnelIcon, CheckCircleIcon, ChevronRightIcon } from '../../icons/IconComponents';
 import AddNewLeadModal from '../sales-manager/AddNewLeadModal';
-import { USERS } from '../../../constants';
+import { USERS, formatDateTime, formatLargeNumberINR } from '../../../constants';
+import StatusPill from '../../shared/StatusPill';
 
 interface MyLeadsPageProps {
   leads: Lead[];
@@ -23,52 +23,78 @@ const KpiCard: React.FC<{ title: string; value: string; icon: React.ReactNode }>
   </div>
 );
 
-const orderedColumnTitles: ('New Leads' | 'In Progress' | 'Won' | 'Lost')[] = [
-    'New Leads',
-    'In Progress',
-    'Won',
-    'Lost',
-];
+const LeadStatusPill: React.FC<{ status: LeadPipelineStatus }> = ({ status }) => {
+    const color = {
+        [LeadPipelineStatus.NEW_NOT_CONTACTED]: 'red',
+        [LeadPipelineStatus.CONTACTED_CALL_DONE]: 'amber',
+        [LeadPipelineStatus.SITE_VISIT_SCHEDULED]: 'purple',
+        [LeadPipelineStatus.WAITING_FOR_DRAWING]: 'slate',
+        [LeadPipelineStatus.QUOTATION_SENT]: 'blue',
+        [LeadPipelineStatus.NEGOTIATION]: 'amber',
+        [LeadPipelineStatus.IN_PROCUREMENT]: 'purple',
+        [LeadPipelineStatus.IN_EXECUTION]: 'amber',
+        [LeadPipelineStatus.WON]: 'green',
+        [LeadPipelineStatus.LOST]: 'slate',
+    }[status] as 'red' | 'amber' | 'purple' | 'slate' | 'blue' | 'green';
+    return <StatusPill color={color}>{status}</StatusPill>;
+};
 
-const MyLeadsPage: React.FC<MyLeadsPageProps> = ({ leads, onUpdateLead, onAddNewLead }) => {
-  const { currentUser } = useAuth();
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [isAddLeadModalOpen, setAddLeadModalOpen] = useState(false);
-  
-  const inProgressStatuses: LeadPipelineStatus[] = [
+const PriorityPill: React.FC<{ priority: 'High' | 'Medium' | 'Low' }> = ({ priority }) => {
+    const color = {
+        High: 'red',
+        Medium: 'amber',
+        Low: 'slate',
+    }[priority] as 'red' | 'amber' | 'slate';
+    return <StatusPill color={color}>{priority}</StatusPill>;
+};
+
+const funnelStages: LeadPipelineStatus[] = [
+    LeadPipelineStatus.NEW_NOT_CONTACTED,
     LeadPipelineStatus.CONTACTED_CALL_DONE,
     LeadPipelineStatus.SITE_VISIT_SCHEDULED,
     LeadPipelineStatus.WAITING_FOR_DRAWING,
     LeadPipelineStatus.QUOTATION_SENT,
     LeadPipelineStatus.NEGOTIATION,
-    LeadPipelineStatus.IN_PROCUREMENT,
-    LeadPipelineStatus.IN_EXECUTION,
-  ];
+];
 
-  const leadsByColumn = useMemo(() => {
-    const grouped: Record<string, Lead[]> = {
-      'New Leads': [],
-      'In Progress': [],
-      'Won': [],
-      'Lost': [],
+const FunnelStage: React.FC<{ stage: LeadPipelineStatus, count: number, isActive: boolean, onClick: () => void }> = ({ stage, count, isActive, onClick }) => {
+    const colorClasses: Record<LeadPipelineStatus, { bg: string, border: string, text: string }> = {
+        [LeadPipelineStatus.NEW_NOT_CONTACTED]: { bg: 'bg-error/10', border: 'border-error', text: 'text-error' },
+        [LeadPipelineStatus.CONTACTED_CALL_DONE]: { bg: 'bg-accent/10', border: 'border-accent', text: 'text-accent' },
+        [LeadPipelineStatus.SITE_VISIT_SCHEDULED]: { bg: 'bg-purple/10', border: 'border-purple', text: 'text-purple' },
+        [LeadPipelineStatus.WAITING_FOR_DRAWING]: { bg: 'bg-slate-500/10', border: 'border-slate-500', text: 'text-slate-500' },
+        [LeadPipelineStatus.QUOTATION_SENT]: { bg: 'bg-primary/10', border: 'border-primary', text: 'text-primary' },
+        [LeadPipelineStatus.NEGOTIATION]: { bg: 'bg-accent/10', border: 'border-accent', text: 'text-accent' },
+        [LeadPipelineStatus.IN_PROCUREMENT]: { bg: 'bg-purple/10', border: 'border-purple', text: 'text-purple' },
+        [LeadPipelineStatus.IN_EXECUTION]: { bg: 'bg-accent/10', border: 'border-accent', text: 'text-accent' },
+        [LeadPipelineStatus.WON]: { bg: 'bg-secondary/10', border: 'border-secondary', text: 'text-secondary' },
+        [LeadPipelineStatus.LOST]: { bg: 'bg-slate-400/10', border: 'border-slate-400', text: 'text-slate-400' },
     };
 
-    leads.forEach(lead => {
-      if (lead.status === LeadPipelineStatus.NEW_NOT_CONTACTED) {
-        grouped['New Leads'].push(lead);
-      } else if (inProgressStatuses.includes(lead.status)) {
-        grouped['In Progress'].push(lead);
-      } else if (lead.status === LeadPipelineStatus.WON) {
-        grouped['Won'].push(lead);
-      } else if (lead.status === LeadPipelineStatus.LOST) {
-        grouped['Lost'].push(lead);
-      }
-    });
+    const classes = colorClasses[stage] || { bg: 'bg-gray-100', border: 'border-gray-400', text: 'text-gray-600' };
 
-    return grouped;
-  }, [leads]);
+    return (
+        <button
+            onClick={onClick}
+            className={`flex-shrink-0 p-3 rounded-lg border-2 text-center transition-colors w-40 ${isActive ? `${classes.bg} ${classes.border}` : 'bg-surface border-border hover:border-gray-300'}`}
+        >
+            <div className={`text-2xl font-bold ${isActive ? classes.text : 'text-text-primary'}`}>{count}</div>
+            <div className={`text-xs font-semibold truncate ${isActive ? classes.text : 'text-text-secondary'}`}>{stage}</div>
+        </button>
+    );
+};
 
-  const handleAddLead = (newLeadData: Omit<Lead, 'id' | 'status' | 'inquiryDate' | 'history' | 'lastContacted'>) => {
+
+const MyLeadsPage: React.FC<MyLeadsPageProps> = ({ leads, onUpdateLead, onAddNewLead }) => {
+  const { currentUser } = useAuth();
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [isAddLeadModalOpen, setAddLeadModalOpen] = useState(false);
+  const [selectedStage, setSelectedStage] = useState<LeadPipelineStatus | 'All'>('All');
+  
+  const handleAddLead = (
+    newLeadData: Omit<Lead, 'id' | 'status' | 'inquiryDate' | 'history' | 'lastContacted'>,
+    reminder?: { date: string; notes: string }
+  ) => {
     const newLead: Lead = {
       ...newLeadData,
       id: `lead-${Date.now()}`,
@@ -86,14 +112,42 @@ const MyLeadsPage: React.FC<MyLeadsPageProps> = ({ leads, onUpdateLead, onAddNew
       reminders: [],
       tasks: {},
     };
+
+    if (reminder && reminder.date && reminder.notes) {
+        newLead.reminders = [{
+            id: `rem-${Date.now()}`,
+            date: new Date(reminder.date),
+            notes: reminder.notes,
+            completed: false,
+        }];
+        newLead.history.push({
+            action: 'Reminder set upon creation',
+            user: currentUser?.name || 'System',
+            timestamp: new Date(),
+            notes: `For ${new Date(reminder.date).toLocaleString()}: ${reminder.notes}`
+        });
+    }
+
     onAddNewLead(newLead);
   };
   
+  const pipelineCounts = useMemo(() => {
+    return leads.reduce((acc, lead) => {
+        acc[lead.status] = (acc[lead.status] || 0) + 1;
+        return acc;
+    }, {} as Record<LeadPipelineStatus, number>);
+  }, [leads]);
+
+  const filteredLeads = useMemo(() => {
+    if (selectedStage === 'All') return leads;
+    return leads.filter(lead => lead.status === selectedStage);
+  }, [leads, selectedStage]);
+
   // Stats calculation
   const totalLeads = leads.length;
   const wonLeads = leads.filter(l => l.status === LeadPipelineStatus.WON).length;
   const conversionRate = totalLeads > 0 ? (wonLeads / totalLeads) * 100 : 0;
-  const newLeadsCount = leadsByColumn['New Leads']?.length || 0;
+  const newLeadsCount = pipelineCounts[LeadPipelineStatus.NEW_NOT_CONTACTED] || 0;
 
   return (
     <>
@@ -114,23 +168,80 @@ const MyLeadsPage: React.FC<MyLeadsPageProps> = ({ leads, onUpdateLead, onAddNew
             </div>
         </div>
         
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 overflow-x-auto min-h-0 pb-4">
-          {orderedColumnTitles.map((title) => {
-            const columnLeads = leadsByColumn[title] || [];
-            return (
-              <div key={title} className="bg-background rounded-lg flex flex-col min-w-[300px]">
-                <div className="flex justify-between items-center p-3 border-b border-border sticky top-0 bg-background z-10">
-                  <h3 className="font-bold text-sm text-text-primary">{title}</h3>
-                  <span className="text-xs font-semibold bg-primary-subtle-background text-primary-subtle-text px-2 py-0.5 rounded-full">{columnLeads.length}</span>
+        <div className="mb-6 bg-surface p-4 rounded-lg shadow-sm">
+            <div className="flex items-center overflow-x-auto pb-2 space-x-2">
+                <button 
+                    onClick={() => setSelectedStage('All')}
+                    className={`flex-shrink-0 p-3 rounded-lg border-2 text-center transition-colors w-40 ${selectedStage === 'All' ? 'bg-primary/10 border-primary' : 'bg-surface border-border hover:border-gray-300'}`}
+                >
+                    <div className={`text-2xl font-bold ${selectedStage === 'All' ? 'text-primary' : 'text-text-primary'}`}>{leads.length}</div>
+                    <div className={`text-xs font-semibold truncate ${selectedStage === 'All' ? 'text-primary' : 'text-text-secondary'}`}>All Leads</div>
+                </button>
+                <ChevronRightIcon className="w-5 h-5 text-text-secondary/50 flex-shrink-0" />
+                
+                {funnelStages.map((stage, index) => (
+                    <React.Fragment key={stage}>
+                        <FunnelStage
+                            stage={stage}
+                            count={pipelineCounts[stage] || 0}
+                            isActive={selectedStage === stage}
+                            onClick={() => setSelectedStage(stage)}
+                        />
+                        {index < funnelStages.length - 1 && <ChevronRightIcon className="w-5 h-5 text-text-secondary/50 flex-shrink-0" />}
+                    </React.Fragment>
+                ))}
+                
+                <ChevronRightIcon className="w-5 h-5 text-text-secondary/50 flex-shrink-0" />
+                
+                <div className="flex flex-col space-y-2">
+                    <FunnelStage
+                        stage={LeadPipelineStatus.WON}
+                        count={pipelineCounts[LeadPipelineStatus.WON] || 0}
+                        isActive={selectedStage === LeadPipelineStatus.WON}
+                        onClick={() => setSelectedStage(LeadPipelineStatus.WON)}
+                    />
+                    <FunnelStage
+                        stage={LeadPipelineStatus.LOST}
+                        count={pipelineCounts[LeadPipelineStatus.LOST] || 0}
+                        isActive={selectedStage === LeadPipelineStatus.LOST}
+                        onClick={() => setSelectedStage(LeadPipelineStatus.LOST)}
+                    />
                 </div>
-                <div className="p-3 space-y-3 overflow-y-auto">
-                  {columnLeads.map(lead => (
-                    <LeadCard key={lead.id} lead={lead} onClick={() => setSelectedLead(lead)} />
-                  ))}
-                </div>
-              </div>
-            )
-          })}
+            </div>
+        </div>
+
+        <div className="bg-surface rounded-lg shadow-sm flex-1 flex flex-col min-h-0">
+            <h3 className="text-lg font-bold p-4 border-b border-border">
+                {selectedStage === 'All' ? 'All My Leads' : `Leads: ${selectedStage}`} ({filteredLeads.length})
+            </h3>
+            <div className="overflow-auto">
+                <table className="min-w-full divide-y divide-border">
+                    <thead className="bg-subtle-background sticky top-0">
+                        <tr>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Client / Project</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Priority</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Value</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Status</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Last Activity</th>
+                        </tr>
+                    </thead>
+                    <tbody className="bg-surface divide-y divide-border">
+                        {filteredLeads.map(lead => (
+                            <tr key={lead.id} onClick={() => setSelectedLead(lead)} className="cursor-pointer hover:bg-subtle-background">
+                                <td className="px-4 py-3 whitespace-nowrap">
+                                    <p className="text-sm font-bold text-text-primary">{lead.clientName}</p>
+                                    <p className="text-xs text-text-secondary">{lead.projectName}</p>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap"><PriorityPill priority={lead.priority} /></td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-text-primary">{formatLargeNumberINR(lead.value)}</td>
+                                <td className="px-4 py-3 whitespace-nowrap"><LeadStatusPill status={lead.status} /></td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-text-secondary">{lead.history.length > 0 ? formatDateTime(lead.history[lead.history.length - 1].timestamp) : 'N/A'}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+                 {filteredLeads.length === 0 && <div className="text-center py-10 text-text-secondary">No leads in this stage.</div>}
+            </div>
         </div>
       </div>
       {selectedLead && (

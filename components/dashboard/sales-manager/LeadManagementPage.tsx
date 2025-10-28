@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import Card from '../../shared/Card';
 import { USERS, formatDateTime, formatLargeNumberINR } from '../../../constants';
 import { Lead, LeadPipelineStatus, UserRole } from '../../../types';
-import { FunnelIcon, BanknotesIcon, ChartBarIcon, PhoneIcon } from '../../icons/IconComponents';
+import { FunnelIcon, BanknotesIcon, ChartBarIcon, PhoneIcon, MagnifyingGlassIcon } from '../../icons/IconComponents';
 import StatusPill from '../../shared/StatusPill';
 import LeadDetailModal from '../../shared/LeadDetailModal';
 
@@ -51,13 +51,17 @@ interface LeadManagementPageProps {
 const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leads, setLeads }) => {
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
     const [filter, setFilter] = useState<{ status: LeadPipelineStatus | 'all', rep: string | 'all' }>({ status: 'all', rep: 'all' });
+    const [searchTerm, setSearchTerm] = useState('');
 
     const filteredLeads = useMemo(() => {
+        const lowercasedSearchTerm = searchTerm.toLowerCase();
         return leads.filter(lead => 
             (filter.status === 'all' || lead.status === filter.status) &&
-            (filter.rep === 'all' || lead.assignedTo === filter.rep)
+            (filter.rep === 'all' || lead.assignedTo === filter.rep) &&
+            (lead.clientName.toLowerCase().includes(lowercasedSearchTerm) ||
+             lead.projectName.toLowerCase().includes(lowercasedSearchTerm))
         );
-    }, [filter, leads]);
+    }, [filter, leads, searchTerm]);
 
     const handleLeadUpdate = (updatedLead: Lead) => {
         setLeads(currentLeads => currentLeads.map(l => l.id === updatedLead.id ? updatedLead : l));
@@ -137,12 +141,22 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leads, setLeads
 
                     <div className="lg:col-span-3">
                         <Card>
-                            <div className="flex items-center space-x-4 mb-4">
-                                <select value={filter.status} onChange={e => setFilter(f => ({...f, status: e.target.value as any}))} className="bg-surface border-border rounded-md py-1 px-2 text-sm focus:ring-primary focus:border-primary">
+                            <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2 mb-4">
+                                <div className="relative flex-grow w-full">
+                                    <MagnifyingGlassIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary"/>
+                                    <input
+                                        type="text"
+                                        placeholder="Search by client or project..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-full pl-8 pr-4 py-1.5 border border-border rounded-md bg-surface text-sm focus:ring-primary focus:border-primary"
+                                    />
+                                </div>
+                                <select value={filter.status} onChange={e => setFilter(f => ({...f, status: e.target.value as any}))} className="w-full sm:w-auto bg-surface border-border rounded-md py-1.5 px-2 text-sm focus:ring-primary focus:border-primary">
                                     <option value="all">All Statuses</option>
                                     {Object.values(LeadPipelineStatus).map(s => <option key={s} value={s}>{s}</option>)}
                                 </select>
-                                <select value={filter.rep} onChange={e => setFilter(f => ({...f, rep: e.target.value}))} className="bg-surface border-border rounded-md py-1 px-2 text-sm focus:ring-primary focus:border-primary">
+                                <select value={filter.rep} onChange={e => setFilter(f => ({...f, rep: e.target.value}))} className="w-full sm:w-auto bg-surface border-border rounded-md py-1.5 px-2 text-sm focus:ring-primary focus:border-primary">
                                     <option value="all">All Sales Reps</option>
                                     {salesTeam.map(user => <option key={user.id} value={user.id}>{user.name}</option>)}
                                 </select>

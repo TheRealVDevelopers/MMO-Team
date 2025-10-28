@@ -1,6 +1,4 @@
 
-
-
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types';
@@ -14,6 +12,7 @@ import ProcurementTeamDashboard from './ProcurementTeamDashboard';
 import ExecutionTeamDashboard from './ExecutionTeamDashboard';
 import AccountsTeamDashboard from './AccountsTeamDashboard';
 import SuperAdminDashboard from './SuperAdminDashboard';
+import CommunicationDashboard from '../communication/CommunicationDashboard';
 
 
 const Dashboard: React.FC<{ currentPage: string; setCurrentPage?: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
@@ -25,6 +24,11 @@ const Dashboard: React.FC<{ currentPage: string; setCurrentPage?: (page: string)
         <p>Please select a user to view a dashboard.</p>
       </div>
     );
+  }
+
+  // Handle communication page separately as it's a full-screen take-over
+  if (currentPage === 'communication') {
+    return <CommunicationDashboard />;
   }
 
   const renderRoleDashboard = () => {

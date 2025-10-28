@@ -5,7 +5,10 @@ import {
     BanknotesIcon,
     ReceiptPercentIcon,
     BuildingLibraryIcon,
-    ChartPieIcon
+    ChartPieIcon,
+    ClockIcon,
+    ChatBubbleLeftRightIcon,
+    ShieldExclamationIcon
 } from '../../icons/IconComponents';
 
 interface SidebarProps {
@@ -40,11 +43,13 @@ const NavItem: React.FC<{
 
 const AccountsTeamSidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage }) => {
     const navItems = [
-        { id: 'overview', label: 'Dashboard', icon: <RectangleGroupIcon className="w-6 h-6" /> },
+        { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
         { id: 'invoices', label: 'Invoices', icon: <BanknotesIcon className="w-6 h-6" /> },
         { id: 'expenses', label: 'Expenses', icon: <ReceiptPercentIcon className="w-6 h-6" /> },
         { id: 'payments', label: 'Payments', icon: <BuildingLibraryIcon className="w-6 h-6" /> },
+        { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
         { id: 'reports', label: 'Reports', icon: <ChartPieIcon className="w-6 h-6" /> },
+        { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
     ];
 
     return (

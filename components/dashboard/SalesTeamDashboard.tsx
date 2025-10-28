@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useMemo } from 'react';
 import SalesTeamSidebar from './sales-team/SalesTeamSidebar';
 import MyLeadsPage from './sales-team/MyLeadsPage';
@@ -16,10 +14,13 @@ import ExecutionTasksPage from './sales-team/ExecutionTasksPage';
 import AccountsTasksPage from './sales-team/AccountsTasksPage';
 import MyPerformancePage from './sales-team/MyPerformancePage';
 import SalesOverviewPage from './sales-team/SalesOverviewPage';
+import MyDayPage from './shared/MyDayPage';
+import CommunicationDashboard from '../communication/CommunicationDashboard';
+import EscalateIssuePage from '../escalation/EscalateIssuePage';
 
 const SalesTeamDashboard: React.FC = () => {
   const { currentUser } = useAuth();
-  const [currentPage, setCurrentPage] = useState('overview');
+  const [currentPage, setCurrentPage] = useState('my-day');
   
   // Centralized state management for the sales user
   const [leads, setLeads] = useState<Lead[]>(() => LEADS.filter(l => l.assignedTo === currentUser?.id));
@@ -59,6 +60,8 @@ const SalesTeamDashboard: React.FC = () => {
 
   const renderPage = () => {
     switch (currentPage) {
+      case 'my-day':
+        return <MyDayPage />;
       case 'overview':
         return <SalesOverviewPage setCurrentPage={setCurrentPage} siteVisits={siteVisits} />;
       case 'leads':
@@ -77,8 +80,12 @@ const SalesTeamDashboard: React.FC = () => {
         return <AccountsTasksPage setCurrentPage={setCurrentPage} accountsRequests={accountsRequests} />;
        case 'performance':
         return <MyPerformancePage setCurrentPage={setCurrentPage} />;
+      case 'communication':
+        return <CommunicationDashboard />;
+      case 'escalate-issue':
+        return <EscalateIssuePage setCurrentPage={setCurrentPage} />;
       default:
-        return <SalesOverviewPage setCurrentPage={setCurrentPage} siteVisits={siteVisits} />;
+        return <MyDayPage />;
     }
   };
 

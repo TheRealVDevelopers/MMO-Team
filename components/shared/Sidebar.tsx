@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { 
     BuildingOfficeIcon,
@@ -5,7 +6,9 @@ import {
     UsersIcon,
     RectangleStackIcon,
     FunnelIcon,
-    ChartPieIcon
+    ChartPieIcon,
+    ChatBubbleLeftRightIcon,
+    ShieldExclamationIcon
 } from '../icons/IconComponents';
 
 interface SidebarProps {
@@ -45,7 +48,13 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage }) => {
         { id: 'team', label: 'Team', icon: <UsersIcon className="w-6 h-6" /> },
         { id: 'projects', label: 'Projects', icon: <RectangleStackIcon className="w-6 h-6" /> },
         { id: 'leads', label: 'Leads', icon: <FunnelIcon className="w-6 h-6" /> },
+        { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
         { id: 'reports', label: 'Reports', icon: <ChartPieIcon className="w-6 h-6" /> },
+    ];
+    
+    const adminNavItems = [
+        { id: 'complaints', label: 'Complaint Mgmt.', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
+        { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
     ];
 
     return (
@@ -68,6 +77,19 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage }) => {
                         />
                     ))}
                 </ul>
+                <div className="mt-4 pt-4 border-t border-border">
+                    <ul className="space-y-2">
+                         {adminNavItems.map(item => (
+                            <NavItem 
+                                key={item.id}
+                                label={item.label}
+                                icon={item.icon}
+                                isActive={currentPage === item.id}
+                                onClick={() => setCurrentPage(item.id)}
+                            />
+                        ))}
+                    </ul>
+                </div>
             </div>
         </aside>
     );

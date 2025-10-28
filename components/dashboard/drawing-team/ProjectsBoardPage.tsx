@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { PROJECTS } from '../../../constants';
 import { Project, ProjectStatus } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
-import { ClockIcon, FireIcon, PaperClipIcon, ArrowLeftIcon } from '../../icons/IconComponents';
+import { ClockIcon, FireIcon, PaperClipIcon, ArrowLeftIcon, EllipsisVerticalIcon } from '../../icons/IconComponents';
 
 const KANBAN_COLUMNS: { id: string, title: string, statuses: ProjectStatus[] }[] = [
     { id: 'todo', title: 'To Do', statuses: [ProjectStatus.AWAITING_DESIGN] },
@@ -15,15 +14,30 @@ const KANBAN_COLUMNS: { id: string, title: string, statuses: ProjectStatus[] }[]
 
 const ProjectCard: React.FC<{ project: Project; onSelect: () => void; }> = ({ project, onSelect }) => {
     const daysInStage = Math.floor((new Date().getTime() - project.startDate.getTime()) / (1000 * 3600 * 24));
+    
+    const handleActionClick = (e: React.MouseEvent) => {
+        e.stopPropagation(); // prevent card's onClick from firing
+        onSelect();
+    };
+
     return (
-        <div onClick={onSelect} className="bg-surface p-3 rounded-md border border-border space-y-3 cursor-pointer hover:shadow-lg transition-shadow">
+        <div onClick={onSelect} className="bg-surface p-3 rounded-md border border-border space-y-3 cursor-pointer hover:shadow-lg transition-all duration-200 hover:-translate-y-1 group relative">
             <div className="flex justify-between items-start">
                 <div>
-                    <p className="text-sm font-bold text-text-primary">{project.projectName}</p>
+                    <p className="text-sm font-bold text-text-primary pr-6">{project.projectName}</p>
                     <p className="text-xs text-text-secondary">{project.clientName}</p>
                 </div>
                 {project.priority === 'High' && <FireIcon className="text-error" />}
             </div>
+
+            <button 
+                onClick={handleActionClick}
+                className="absolute top-2 right-2 p-1 rounded-full text-text-secondary hover:bg-subtle-background hover:text-text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                aria-label="Open project details"
+            >
+                <EllipsisVerticalIcon className="w-5 h-5" />
+            </button>
+            
             <div className="flex justify-between items-center text-xs text-text-secondary border-t border-border pt-2">
                 <div className="flex items-center space-x-1">
                     <ClockIcon className="w-4 h-4" />

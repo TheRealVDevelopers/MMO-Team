@@ -1,13 +1,8 @@
-
 import React from 'react';
 import { 
     BuildingOfficeIcon,
-    RectangleGroupIcon,
     ViewColumnsIcon,
     ChartBarSquareIcon,
-    TagIcon,
-    ListBulletIcon,
-    PresentationChartLineIcon,
     ClockIcon,
     ChatBubbleLeftRightIcon,
     ShieldExclamationIcon
@@ -43,13 +38,10 @@ const NavItem: React.FC<{
     </li>
 );
 
-const QuotationTeamSidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage }) => {
+const ExecutionTeamSidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage }) => {
     const navItems = [
         { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
-        { id: 'negotiations', label: 'Quotations', icon: <ViewColumnsIcon className="w-6 h-6" /> },
-        { id: 'catalog', label: 'Items Catalog', icon: <TagIcon className="w-6 h-6" /> },
-        { id: 'templates', label: 'Templates', icon: <ListBulletIcon className="w-6 h-6" /> },
-        { id: 'analytics', label: 'Price Analytics', icon: <PresentationChartLineIcon className="w-6 h-6" /> },
+        { id: 'board', label: 'Project Board', icon: <ViewColumnsIcon className="w-6 h-6" /> },
         { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
         { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
         { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
@@ -61,7 +53,7 @@ const QuotationTeamSidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentP
                 <div className="flex items-center pl-2.5 mb-5 h-16 -mt-4">
                      <BuildingOfficeIcon className="h-8 w-8 text-primary" />
                      <h1 className="ml-3 text-xl font-bold text-text-primary tracking-tight">
-                        Quotation Hub
+                        Execution Hub
                     </h1>
                 </div>
                 <ul className="space-y-2">
@@ -80,4 +72,4 @@ const QuotationTeamSidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentP
     );
 }
 
-export default QuotationTeamSidebar;
+export default ExecutionTeamSidebar;
