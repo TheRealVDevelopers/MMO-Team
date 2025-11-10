@@ -1,33 +1,73 @@
 
+
 import React, { useState } from 'react';
 import Card from '../../shared/Card';
-import { VENDOR_BILLS, formatCurrencyINR, formatDate } from '../../../constants';
+import { formatCurrencyINR, formatDate } from '../../../constants';
 import StatusPill from '../../shared/StatusPill';
-import { ArrowLeftIcon } from '../../icons/IconComponents';
+import { ArrowLeftIcon, PlusIcon } from '../../icons/IconComponents';
+import { VendorBill, VendorBillStatus } from '../../../types';
+import VendorBillModal from './VendorBillModal';
 
-const BillStatusPill: React.FC<{ status: 'Pending' | 'Scheduled' | 'Paid' }> = ({ status }) => {
+const BillStatusPill: React.FC<{ status: VendorBillStatus }> = ({ status }) => {
     const color = {
-        'Pending': 'amber',
-        'Scheduled': 'blue',
+        'Pending Approval': 'amber',
+        'Approved': 'blue',
+        'Scheduled': 'purple',
         'Paid': 'green',
-    }[status] as 'amber' | 'blue' | 'green';
+        'Overdue': 'red',
+    }[status] as 'amber' | 'blue' | 'purple' | 'green' | 'red';
     return <StatusPill color={color}>{status}</StatusPill>;
 };
 
-const PaymentsPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
+interface PaymentsPageProps {
+  setCurrentPage: (page: string) => void;
+  vendorBills: VendorBill[];
+  onAddVendorBill: (bill: Omit<VendorBill, 'id'>) => void;
+  onUpdateVendorBill: (bill: VendorBill) => void;
+}
+
+const PaymentsPage: React.FC<PaymentsPageProps> = ({ setCurrentPage, vendorBills, onAddVendorBill, onUpdateVendorBill }) => {
     const [activeTab, setActiveTab] = useState<'vendors' | 'payroll'>('vendors');
-    
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedBill, setSelectedBill] = useState<VendorBill | null>(null);
+
+    const handleOpenModal = (bill: VendorBill | null) => {
+        setSelectedBill(bill);
+        setIsModalOpen(true);
+    };
+
+    const handleSaveBill = (billData: VendorBill | Omit<VendorBill, 'id'>) => {
+        if ('id' in billData) {
+            onUpdateVendorBill(billData);
+        } else {
+            onAddVendorBill(billData);
+        }
+    };
+
+    const handleAction = (bill: VendorBill, newStatus: VendorBillStatus) => {
+        onUpdateVendorBill({ ...bill, status: newStatus });
+    };
+
     return (
-        <div className="space-y-6">
-            <div className="flex items-center gap-4">
-                <button
-                    onClick={() => setCurrentPage('overview')}
-                    className="flex items-center space-x-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
-                >
-                    <ArrowLeftIcon className="w-5 h-5" />
-                    <span>Back</span>
-                </button>
-                <h2 className="text-2xl font-bold text-text-primary">Outgoing Payments</h2>
+        <>
+        <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+            <div className="sm:flex justify-between items-center">
+                 <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => setCurrentPage('my-day')}
+                        className="flex items-center space-x-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+                    >
+                        <ArrowLeftIcon className="w-5 h-5" />
+                        <span>Back</span>
+                    </button>
+                    <h2 className="text-2xl font-bold text-text-primary">Outgoing Payments</h2>
+                </div>
+                {activeTab === 'vendors' && (
+                    <button onClick={() => handleOpenModal(null)} className="flex items-center space-x-2 bg-primary text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 mt-2 sm:mt-0">
+                        <PlusIcon className="w-4 h-4" />
+                        <span>Add Vendor Bill</span>
+                    </button>
+                )}
             </div>
             
             <Card>
@@ -44,7 +84,7 @@ const PaymentsPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ se
 
                 {activeTab === 'vendors' && (
                     <div className="mt-4 overflow-x-auto">
-                         <table className="min-w-full divide-y divide-border">
+                        <table className="min-w-full divide-y divide-border">
                             <thead className="bg-subtle-background">
                                 <tr>
                                     <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Vendor</th>
@@ -52,16 +92,22 @@ const PaymentsPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ se
                                     <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Amount</th>
                                     <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Due Date</th>
                                     <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Status</th>
+                                    <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Action</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-surface divide-y divide-border">
-                                {VENDOR_BILLS.map(bill => (
-                                    <tr key={bill.id} className="hover:bg-subtle-background">
+                                {vendorBills.map(bill => (
+                                    <tr key={bill.id} onClick={() => handleOpenModal(bill)} className="cursor-pointer hover:bg-subtle-background">
                                         <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-text-primary">{bill.vendorName}</td>
                                         <td className="px-4 py-3 text-sm text-text-secondary">{bill.invoiceNumber}</td>
                                         <td className="px-4 py-3 text-sm font-medium text-text-primary">{formatCurrencyINR(bill.amount)}</td>
                                         <td className="px-4 py-3 text-sm text-text-secondary">{formatDate(bill.dueDate)}</td>
                                         <td className="px-4 py-3"><BillStatusPill status={bill.status} /></td>
+                                        <td className="px-4 py-3 space-x-2" onClick={e => e.stopPropagation()}>
+                                            {bill.status === 'Pending Approval' && <button onClick={() => handleAction(bill, 'Approved')} className="px-2 py-1 text-xs font-semibold text-primary bg-primary-subtle-background rounded-md hover:bg-primary/20">Approve</button>}
+                                            {bill.status === 'Approved' && <button onClick={() => handleAction(bill, 'Scheduled')} className="px-2 py-1 text-xs font-semibold text-purple bg-purple-subtle-background rounded-md hover:bg-purple/20">Schedule</button>}
+                                            {(bill.status === 'Approved' || bill.status === 'Scheduled' || bill.status === 'Overdue') && <button onClick={() => handleAction(bill, 'Paid')} className="px-2 py-1 text-xs font-semibold text-secondary bg-secondary-subtle-background rounded-md hover:bg-secondary/20">Pay Now</button>}
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -77,6 +123,15 @@ const PaymentsPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ se
                 )}
             </Card>
         </div>
+        {isModalOpen && (
+            <VendorBillModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                bill={selectedBill}
+                onSave={handleSaveBill}
+            />
+        )}
+        </>
     );
 };
 

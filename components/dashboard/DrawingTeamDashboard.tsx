@@ -1,6 +1,5 @@
 
 import React, { useState } from 'react';
-import DrawingTeamSidebar from './drawing-team/DrawingTeamSidebar';
 import DrawingOverviewPage from './drawing-team/DrawingOverviewPage';
 import ProjectsBoardPage from './drawing-team/ProjectsBoardPage';
 import MyPerformancePage from './drawing-team/MyPerformancePage';
@@ -10,8 +9,7 @@ import MyDayPage from './shared/MyDayPage';
 import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
 
-const DrawingTeamDashboard: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState('my-day');
+const DrawingTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   const handleProjectSelect = (project: Project) => {
@@ -39,12 +37,7 @@ const DrawingTeamDashboard: React.FC = () => {
 
   return (
     <>
-        <div className="flex h-full">
-            <DrawingTeamSidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
-            <div className="flex-1 overflow-y-auto">
-                {renderPage()}
-            </div>
-        </div>
+        {renderPage()}
         {selectedProject && (
             <ProjectDetailModal 
                 project={selectedProject}

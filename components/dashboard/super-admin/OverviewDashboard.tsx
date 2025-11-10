@@ -13,8 +13,11 @@ import { USERS, PROJECTS, PENDING_APPROVALS_COUNT, LEADS, ACTIVITIES, formatLarg
 import { ActivityStatus, UserRole, ProjectStatus, LeadPipelineStatus } from '../../../types';
 import TeamLiveStatusCard from './TeamLiveStatusCard';
 
-const MetricCard: React.FC<{ title: string; value: string; icon: React.ReactNode; subtext?: string; }> = ({ title, value, icon, subtext }) => (
-    <Card className="hover:shadow-md hover:border-primary transition-all border border-transparent">
+const MetricCard: React.FC<{ title: string; value: string; icon: React.ReactNode; subtext?: string; onClick?: () => void; }> = ({ title, value, icon, subtext, onClick }) => (
+    <Card 
+        className={`hover:shadow-md hover:border-primary transition-all border border-transparent ${onClick ? 'cursor-pointer' : ''}`}
+        onClick={onClick}
+    >
         <div className="flex items-center">
             <div className="p-3 rounded-full bg-primary-subtle-background text-primary">
                 {icon}
@@ -41,7 +44,11 @@ const AlertCard: React.FC<{ title: string; count: number; items: string[] }> = (
     </Card>
 );
 
-const OverviewDashboard: React.FC = () => {
+interface OverviewDashboardProps {
+    setCurrentPage: (page: string) => void;
+}
+
+const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage }) => {
     // KPI Calculations
     const totalProjects = PROJECTS.length;
     const activeProjects = PROJECTS.filter(p => p.status === ProjectStatus.IN_EXECUTION).length;
@@ -65,10 +72,34 @@ const OverviewDashboard: React.FC = () => {
       <h2 className="text-2xl font-bold text-text-primary">Super Admin Overview</h2>
       
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <MetricCard title="Total Projects" value={totalProjects.toString()} icon={<RectangleStackIcon />} subtext={`${activeProjects} active, ${completedProjects} completed`} />
-            <MetricCard title="Lead Conversion" value={`${conversionRate}%`} icon={<ChartBarIcon />} subtext={`${newLeadsThisWeek} new leads this week`} />
-            <MetricCard title="Team Members" value={teamMembers.toString()} icon={<UserGroupIcon />} subtext="Across all departments" />
-            <MetricCard title="Total Revenue (YTD)" value={formatLargeNumberINR(totalRevenue)} icon={<BanknotesIcon />} subtext="From all completed projects" />
+            <MetricCard 
+                title="Total Projects" 
+                value={totalProjects.toString()} 
+                icon={<RectangleStackIcon />} 
+                subtext={`${activeProjects} active, ${completedProjects} completed`} 
+                onClick={() => setCurrentPage('projects')}
+            />
+            <MetricCard 
+                title="Lead Conversion" 
+                value={`${conversionRate}%`} 
+                icon={<ChartBarIcon />} 
+                subtext={`${newLeadsThisWeek} new leads this week`}
+                onClick={() => setCurrentPage('leads')}
+            />
+            <MetricCard 
+                title="Team Members" 
+                value={teamMembers.toString()} 
+                icon={<UserGroupIcon />} 
+                subtext="Across all departments"
+                onClick={() => setCurrentPage('team')}
+            />
+            <MetricCard 
+                title="Total Revenue (YTD)" 
+                value={formatLargeNumberINR(totalRevenue)} 
+                icon={<BanknotesIcon />} 
+                subtext="From all completed projects"
+                onClick={() => setCurrentPage('reports')}
+            />
         </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

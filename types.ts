@@ -126,14 +126,22 @@ export interface CommunicationMessage {
     timestamp: Date;
 }
 
+export type ExpenseCategory = 'Travel' | 'Site' | 'Office' | 'Client Meeting' | 'Other';
+export type PaymentMethod = 'Cash' | 'Company Card' | 'Personal Card' | 'UPI';
+export type ExpenseStatus = 'Pending' | 'Approved' | 'Rejected' | 'Paid';
+
 export interface Expense {
     id: string;
-    projectId: string;
-    category: 'Vendor' | 'Material' | 'Labor' | 'Other';
+    userId: string;
+    projectId?: string;
+    category: ExpenseCategory;
     description: string;
     amount: number;
     date: Date;
-    status: 'Pending' | 'Approved' | 'Paid';
+    status: ExpenseStatus;
+    paymentMethod: PaymentMethod;
+    vendor?: string;
+    receiptUrl?: string; // a string for mock
 }
 
 export interface Document {
@@ -295,29 +303,65 @@ export interface MaterialOrder {
     status: 'Ordered' | 'Shipped' | 'Delivered';
 }
 
+export interface InvoiceItem {
+  id: string;
+  description: string;
+  hsn: string;
+  quantity: number;
+  rate: number;
+  taxRate: number; // e.g., 18 for 18%
+}
+
 export interface Invoice {
     id: string;
+    invoiceNumber: string;
     projectId: string;
     projectName: string;
     clientName: string;
-    amount: number;
-    paidAmount: number;
+    clientAddress: string;
+    clientGstin: string;
+    
     issueDate: Date;
     dueDate: Date;
+    
+    items: InvoiceItem[];
+    
+    subTotal: number;
+    discountValue: number; // as a value, not percentage
+    taxAmount: number;
+    total: number;
+    amountInWords: string;
+    paidAmount: number;
+    
     status: PaymentStatus;
+    
+    terms: string;
+    notes: string;
+    attachments?: Document[];
+    bankDetails: {
+        name: string;
+        bank: string;
+        accountNo: string;
+        ifsc: string;
+    }
 }
+
+export type VendorBillStatus = 'Pending Approval' | 'Approved' | 'Scheduled' | 'Paid' | 'Overdue';
 
 export interface VendorBill {
     id: string;
     vendorId: string;
     vendorName: string;
     invoiceNumber: string;
+    poReference?: string;
     amount: number;
     issueDate: Date;
     dueDate: Date;
-    status: 'Pending' | 'Scheduled' | 'Paid';
+    status: VendorBillStatus;
     projectId?: string;
+    paymentDate?: Date;
 }
+
 
 export enum ActivityStatus {
     DONE = "Done",
@@ -504,18 +548,13 @@ export interface DailyAttendance {
 }
 
 // New Communication Types
-export enum ChannelType {
-  WORK_STREAM = "Work Stream",
-  DIRECT_MESSAGE = "Direct Message",
-  QUICK_CLARIFY = "Quick Clarify",
-}
-
 export interface ChatChannel {
   id: string;
   name: string;
-  type: ChannelType;
-  members?: string[]; // user IDs
-  isProject?: boolean;
+  isGroup: boolean;
+  avatar: string;
+  members: string[]; // user IDs
+  lastMessage?: ChatMessage;
 }
 
 export interface ChatMessage {
@@ -524,33 +563,33 @@ export interface ChatMessage {
   senderId: string;
   content: string;
   timestamp: Date;
-  isQuestion?: boolean;
 }
 
+// Fix: Add missing types for the Quick Clarify communication feature.
 export enum QuestionCategory {
-  DESIGN = "Design Clarification",
-  SITE = "Site Conditions",
-  TECHNICAL = "Technical Specifications",
-  CLIENT = "Client Requirements",
-  PROCESS = "Process Questions",
+    DESIGN = "Design",
+    SITE = "Site",
+    TECHNICAL = "Technical",
+    CLIENT = "Client",
+    PROCESS = "Process",
 }
 
 export enum QuestionUrgency {
-  HIGH = "High",
-  MEDIUM = "Medium",
-  LOW = "Low",
+    LOW = "Low",
+    MEDIUM = "Medium",
+    HIGH = "High",
 }
 
 export interface QuickClarifyQuestion {
-  id: string;
-  channelId: '#quick-clarify';
-  senderId: string;
-  timestamp: Date;
-  category: QuestionCategory;
-  urgency: QuestionUrgency;
-  regarding: string;
-  question: string;
-  deadline?: Date;
+    id: string;
+    channelId: string;
+    senderId: string;
+    timestamp: Date;
+    category: QuestionCategory;
+    urgency: QuestionUrgency;
+    regarding?: string;
+    question: string;
+    deadline?: Date;
 }
 
 // New Complaint Escalation Types

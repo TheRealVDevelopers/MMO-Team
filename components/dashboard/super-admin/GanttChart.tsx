@@ -1,7 +1,12 @@
 import React, { useMemo } from 'react';
 import { Project } from '../../../types';
 
-const GanttChart: React.FC<{ projects: Project[] }> = ({ projects }) => {
+interface GanttChartProps {
+    projects: Project[];
+    onProjectSelect?: (project: Project) => void;
+}
+
+const GanttChart: React.FC<GanttChartProps> = ({ projects, onProjectSelect }) => {
     const { chartStartDate, totalDays, months } = useMemo(() => {
         if (projects.length === 0) {
             const now = new Date();
@@ -96,7 +101,8 @@ const GanttChart: React.FC<{ projects: Project[] }> = ({ projects }) => {
                         <div className="flex-1 h-full relative px-1">
                             <div
                                 title={`${project.projectName}\nProgress: ${project.progress}%`}
-                                className="absolute top-3 h-6 rounded group"
+                                className="absolute top-3 h-6 rounded group cursor-pointer"
+                                onClick={() => onProjectSelect && onProjectSelect(project)}
                                 style={{
                                     left: `${getPosition(project.startDate)}%`,
                                     width: `${getWidth(project.startDate, project.endDate)}%`,

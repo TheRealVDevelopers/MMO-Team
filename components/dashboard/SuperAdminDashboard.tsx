@@ -17,7 +17,7 @@ interface SuperAdminDashboardProps {
 const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ currentPage, setCurrentPage }) => {
     switch (currentPage) {
         case 'overview':
-            return <OverviewDashboard />;
+            return <OverviewDashboard setCurrentPage={setCurrentPage} />;
         case 'team':
             return <TeamManagementPage setCurrentPage={setCurrentPage} />;
         case 'projects':
@@ -33,7 +33,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ currentPage, 
         case 'escalate-issue':
             return <EscalateIssuePage setCurrentPage={setCurrentPage} />;
         default:
-            return <OverviewDashboard />;
+            return <OverviewDashboard setCurrentPage={setCurrentPage} />;
     }
 };
 

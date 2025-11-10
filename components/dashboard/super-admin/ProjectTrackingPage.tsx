@@ -87,31 +87,37 @@ const ProjectTrackingPage: React.FC<{ setCurrentPage: (page: string) => void }> 
                                 </tr>
                             </thead>
                             <tbody className="bg-surface divide-y divide-border">
-                                {filteredProjects.map((project) => (
-                                    <tr key={project.id} onClick={() => setSelectedProject(project)} className="hover:bg-subtle-background cursor-pointer">
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm font-medium text-text-primary">{project.projectName}</div>
-                                            <div className="text-xs text-text-secondary">{project.clientName}</div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <StatusPill color={getStatusPillColor(project.status)}>{project.status}</StatusPill>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="flex items-center">
-                                                <div className="w-32">
-                                                   <ProgressBar progress={project.progress} colorClass={getProgressColor(project.progress)} />
+                                {filteredProjects.map((project) => {
+                                    const progress = project.milestones.length > 0
+                                        ? Math.round((project.milestones.filter(m => m.completed).length / project.milestones.length) * 100)
+                                        : project.progress;
+
+                                    return (
+                                        <tr key={project.id} onClick={() => setSelectedProject(project)} className="hover:bg-subtle-background cursor-pointer">
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm font-medium text-text-primary">{project.projectName}</div>
+                                                <div className="text-xs text-text-secondary">{project.clientName}</div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <StatusPill color={getStatusPillColor(project.status)}>{project.status}</StatusPill>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="flex items-center">
+                                                    <div className="w-32">
+                                                    <ProgressBar progress={progress} colorClass={getProgressColor(progress)} />
+                                                    </div>
+                                                    <span className="text-sm ml-2 text-text-secondary">{progress}%</span>
                                                 </div>
-                                                <span className="text-sm ml-2 text-text-secondary">{project.progress}%</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
-                                            {formatDate(project.startDate)} - {formatDate(project.endDate)}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
-                                            {formatCurrencyINR(project.budget)}
-                                        </td>
-                                    </tr>
-                                ))}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
+                                                {formatDate(project.startDate)} - {formatDate(project.endDate)}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
+                                                {formatCurrencyINR(project.budget)}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>
@@ -121,7 +127,7 @@ const ProjectTrackingPage: React.FC<{ setCurrentPage: (page: string) => void }> 
             {view === 'gantt' && (
                 <Card className="p-0 overflow-hidden">
                     <div className="overflow-x-auto">
-                      <GanttChart projects={PROJECTS} />
+                      <GanttChart projects={filteredProjects} onProjectSelect={setSelectedProject} />
                     </div>
                 </Card>
             )}

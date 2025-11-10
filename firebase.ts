@@ -1,6 +1,8 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
+import { getFirestore } from "firebase/firestore";
+
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -18,7 +20,32 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 // Initialize Analytics only if in a browser environment
 const analytics = typeof window !== 'undefined' ? getAnalytics(app) : undefined;
 
-export { app, analytics };
+export { app, analytics, db };
+
+/*
+ACTION REQUIRED: How to fix "Missing or insufficient permissions" errors.
+
+This demo app is getting blocked by Firestore's default security rules.
+Because the app does not have user authentication, you must open your database
+for public access for the demo to work.
+
+1. Go to your Firebase Project Console.
+2. Navigate to Firestore Database > Rules.
+3. Replace the entire content of the rules editor with the following:
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
+
+CRITICAL SECURITY WARNING: The rules above make your database publicly accessible.
+This is ONLY for short-term demos. DO NOT use these rules in a production app.
+*/

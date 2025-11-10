@@ -1,6 +1,5 @@
 
 import React, { useState } from 'react';
-import QuotationTeamSidebar from './quotation-team/QuotationTeamSidebar';
 import QuotationOverviewPage from './quotation-team/QuotationOverviewPage';
 import NegotiationsBoardPage from './quotation-team/NegotiationsBoardPage';
 import MyPerformancePage from './quotation-team/MyPerformancePage';
@@ -13,8 +12,7 @@ import MyDayPage from './shared/MyDayPage';
 import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
 
-const QuotationTeamDashboard: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState('my-day');
+const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   const handleProjectSelect = (project: Project) => {
@@ -55,20 +53,15 @@ const QuotationTeamDashboard: React.FC = () => {
 
   return (
     <>
-        <div className="flex h-full">
-            <QuotationTeamSidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
-            <div className="flex-1 overflow-y-auto">
-                {renderPage()}
-            </div>
-        </div>
-        {selectedProject && (
-            <QuotationDetailModal 
-                project={selectedProject}
-                isOpen={!!selectedProject}
-                onClose={() => setSelectedProject(null)}
-                onUpdate={handleProjectUpdate}
-            />
-        )}
+      {renderPage()}
+      {selectedProject && (
+          <QuotationDetailModal 
+              project={selectedProject}
+              isOpen={!!selectedProject}
+              onClose={() => setSelectedProject(null)}
+              onUpdate={handleProjectUpdate}
+          />
+      )}
     </>
   );
 };

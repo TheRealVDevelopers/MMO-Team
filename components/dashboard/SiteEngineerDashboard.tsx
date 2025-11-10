@@ -1,6 +1,5 @@
 
 import React, { useState } from 'react';
-import SiteEngineerSidebar from './site-engineer/SiteEngineerSidebar';
 import EngineerOverviewPage from './site-engineer/EngineerOverviewPage';
 import { SiteVisit, ExpenseClaim, SiteReport } from '../../types';
 import { SITE_VISITS, EXPENSE_CLAIMS } from '../../constants';
@@ -12,9 +11,8 @@ import MyDayPage from './shared/MyDayPage';
 import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
 
-const SiteEngineerDashboard: React.FC = () => {
+const SiteEngineerDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
-  const [currentPage, setCurrentPage] = useState('my-day');
   const [selectedVisit, setSelectedVisit] = useState<SiteVisit | null>(null);
 
   const [siteVisits, setSiteVisits] = useState<SiteVisit[]>(() => 
@@ -72,12 +70,7 @@ const SiteEngineerDashboard: React.FC = () => {
 
   return (
     <>
-      <div className="flex h-screen max-h-screen overflow-hidden">
-        <SiteEngineerSidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
-        <div className="flex-1 overflow-y-auto">
-          {renderPage()}
-        </div>
-      </div>
+      {renderPage()}
       {selectedVisit && (
         <VisitDetailModal
           visit={selectedVisit}

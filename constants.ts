@@ -1,13 +1,13 @@
 
 
-import { User, Lead, UserRole, Project, ProjectStatus, Vendor, Invoice, PaymentStatus, Bid, LeadPipelineStatus, Activity, ActivityStatus, SiteVisit, SiteVisitStatus, MaterialRequest, MaterialRequestStatus, Issue, ChecklistItem, CommunicationMessage, Expense, VendorBill, Attendance, AttendanceStatus, Document, QuotationRequest, QuotationRequestStatus, DrawingRequest, DrawingRequestStatus, ProcurementRequest, ProcurementRequestStatus, ExecutionRequest, ExecutionRequestStatus, AccountsRequest, AccountsRequestStatus, Item, ProjectTemplate, ExpenseClaim, ExpenseClaimStatus, Task, TaskStatus, ChatChannel, ChannelType, ChatMessage, QuickClarifyQuestion, QuestionCategory, QuestionUrgency, Complaint, ComplaintType, ComplaintPriority, ComplaintStatus, SiteReport } from './types';
+import { User, Lead, UserRole, Project, ProjectStatus, Vendor, Invoice, PaymentStatus, Bid, LeadPipelineStatus, Activity, ActivityStatus, SiteVisit, SiteVisitStatus, MaterialRequest, MaterialRequestStatus, Issue, ChecklistItem, CommunicationMessage, Expense, VendorBill, Attendance, AttendanceStatus, Document, QuotationRequest, QuotationRequestStatus, DrawingRequest, DrawingRequestStatus, ProcurementRequest, ProcurementRequestStatus, ExecutionRequest, ExecutionRequestStatus, AccountsRequest, AccountsRequestStatus, Item, ProjectTemplate, ExpenseClaim, ExpenseClaimStatus, Task, TaskStatus, ChatChannel, ChatMessage, Complaint, ComplaintType, ComplaintPriority, ComplaintStatus, SiteReport } from './types';
 
 export const formatCurrencyINR = (value: number) => 
     new Intl.NumberFormat('en-IN', { 
         style: 'currency', 
         currency: 'INR', 
         minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
+        maximumFractionDigits: 2,
     }).format(value);
 
 export const formatLargeNumberINR = (value: number): string => {
@@ -24,7 +24,42 @@ export const formatDateTime = (date: Date) =>
     new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 
 export const formatDate = (date: Date) => 
-    new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium' }).format(date);
+    new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(date);
+
+export const numberToWordsINR = (num: number): string => {
+    const a = ['', 'one ', 'two ', 'three ', 'four ', 'five ', 'six ', 'seven ', 'eight ', 'nine ', 'ten ', 'eleven ', 'twelve ', 'thirteen ', 'fourteen ', 'fifteen ', 'sixteen ', 'seventeen ', 'eighteen ', 'nineteen '];
+    const b = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+    const number = parseFloat(num.toString()).toFixed(2).split('.');
+    const main = parseInt(number[0]);
+    
+    if (main.toString().length > 9) return 'overflow';
+    const n = ('000000000' + main).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+    if (!n) return '';
+    let str = '';
+    str += (parseInt(n[1]) != 0) ? (a[Number(n[1])] || b[n[1][0]] + ' ' + a[n[1][1]]) + 'crore ' : '';
+    str += (parseInt(n[2]) != 0) ? (a[Number(n[2])] || b[n[2][0]] + ' ' + a[n[2][1]]) + 'lakh ' : '';
+    str += (parseInt(n[3]) != 0) ? (a[Number(n[3])] || b[n[3][0]] + ' ' + a[n[3][1]]) + 'thousand ' : '';
+    str += (parseInt(n[4]) != 0) ? (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + 'hundred ' : '';
+    str += (parseInt(n[5]) != 0) ? str != '' ? 'and ' : '' + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) : '';
+    
+    return str.replace(/\s+/g, ' ').trim().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') + ' Rupees Only';
+}
+
+export const COMPANY_DETAILS = {
+    name: 'Make My Office Pvt Ltd',
+    logo: 'https://via.placeholder.com/150/3B82F6/FFFFFF?text=MMO',
+    address: '123 Business Avenue, Gurgaon, Haryana, 122001',
+    gstin: '06AAPDE1234F1Z5',
+    email: 'accounts@makemyoffice.com',
+    phone: '+91 987 654 3210'
+};
+
+export const BANK_DETAILS = {
+    name: 'Make My Office Pvt Ltd',
+    bank: 'HDFC Bank',
+    accountNo: '50100234567890',
+    ifsc: 'HDFC0000123'
+};
 
 
 const now = new Date();
@@ -238,12 +273,11 @@ export const COMMUNICATION: Record<string, CommunicationMessage[]> = {
 };
 
 export const EXPENSES: Expense[] = [
-    { id: 'exp-1', projectId: 'proj-104', category: 'Material', description: 'Paint Supplies from Paint Masters', amount: 200000, date: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000), status: 'Paid'},
-    { id: 'exp-2', projectId: 'proj-104', category: 'Vendor', description: 'Plumbing Subcontractor Invoice', amount: 600000, date: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000), status: 'Pending'},
-    { id: 'exp-3', projectId: 'proj-105', category: 'Material', description: 'AV Equipment from ElectroSource', amount: 1200000, date: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000), status: 'Paid'},
-    { id: 'exp-4', projectId: 'proj-106', category: 'Labor', description: 'On-site labor charges - Week 1', amount: 320000, date: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000), status: 'Paid'},
-    { id: 'exp-5', projectId: 'proj-104', category: 'Labor', description: 'Electrician hourly charges', amount: 256000, date: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000), status: 'Approved' },
-    { id: 'exp-6', projectId: 'proj-108', category: 'Material', description: 'Specialty light fixtures', amount: 440000, date: new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000), status: 'Paid' },
+    { id: 'exp-1', userId: 'user-8', projectId: 'proj-104', category: 'Site', description: 'Emergency purchase of extra wiring', amount: 8500, date: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000), status: 'Pending', paymentMethod: 'Personal Card' },
+    { id: 'exp-2', userId: 'user-6', projectId: 'proj-108', category: 'Travel', description: 'Fuel for client site visit', amount: 1200, date: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000), status: 'Approved', paymentMethod: 'Personal Card' },
+    { id: 'exp-3', userId: 'user-3', category: 'Client Meeting', description: 'Lunch with Innovate Corp team', amount: 4500, date: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000), status: 'Paid', paymentMethod: 'Company Card' },
+    { id: 'exp-4', userId: 'user-9', category: 'Office', description: 'Stationery and office supplies', amount: 2800, date: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000), status: 'Paid', paymentMethod: 'UPI', vendor: 'Office Needs Inc.' },
+    { id: 'exp-5', userId: 'user-6', projectId: 'proj-104', category: 'Travel', description: 'Taxi fare for site inspection', amount: 750, date: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000), status: 'Rejected', paymentMethod: 'Cash' },
 ];
 
 export const DOCUMENTS: Document[] = [
@@ -287,19 +321,64 @@ export const BIDS: Bid[] = [
 
 
 export const INVOICES: Invoice[] = [
-    { id: 'inv-001', projectId: 'proj-105', projectName: 'Conference Room AV', clientName: 'Legal Eagles LLP', amount: 3600000, paidAmount: 3600000, issueDate: new Date(now.getTime() - 45 * 24 * 60 * 60 * 1000), dueDate: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000), status: PaymentStatus.PAID },
-    { id: 'inv-002', projectId: 'proj-104', projectName: 'Full Floor Fit-out', clientName: 'Enterprise Suites', amount: 8000000, paidAmount: 4000000, issueDate: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000), dueDate: new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000), status: PaymentStatus.PARTIALLY_PAID },
-    { id: 'inv-003', projectId: 'proj-102', projectName: 'Server Room Layout', clientName: 'Data Systems Inc', amount: 840000, paidAmount: 0, issueDate: new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000), dueDate: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000), status: PaymentStatus.OVERDUE },
-    { id: 'inv-004', projectId: 'proj-106', projectName: 'Reception Area Redesign', clientName: 'Health First Clinic', amount: 1920000, paidAmount: 0, issueDate: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000), dueDate: new Date(now.getTime() + 28 * 24 * 60 * 60 * 1000), status: PaymentStatus.DRAFT },
-    { id: 'inv-005', projectId: 'proj-107', projectName: 'Executive Floor Interiors', clientName: 'Finance Partners', amount: 12000000, paidAmount: 12000000, issueDate: new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000), dueDate: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000), status: PaymentStatus.PAID },
-    { id: 'inv-006', projectId: 'proj-108', projectName: 'HQ Remodel', clientName: 'Innovate Corp', amount: 6000000, paidAmount: 0, issueDate: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000), dueDate: new Date(now.getTime() + 27 * 24 * 60 * 60 * 1000), status: PaymentStatus.SENT },
+    {
+        id: 'inv-001',
+        invoiceNumber: 'INV-2024-001',
+        projectId: 'proj-105',
+        projectName: 'Conference Room AV',
+        clientName: 'Legal Eagles LLP',
+        clientAddress: '212 Law Chambers, Pune',
+        clientGstin: '27AAAAA0000A1Z5',
+        issueDate: new Date(now.getTime() - 45 * 24 * 60 * 60 * 1000),
+        dueDate: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000),
+        items: [
+            { id: 'item-1', description: '85" 4K Display Panel', hsn: '8528', quantity: 1, rate: 250000, taxRate: 18 },
+            { id: 'item-2', description: 'Video Conferencing System', hsn: '8517', quantity: 1, rate: 450000, taxRate: 18 },
+            { id: 'item-3', description: 'Installation & Labor', hsn: '9987', quantity: 20, rate: 2000, taxRate: 18 }
+        ],
+        subTotal: 740000,
+        discountValue: 0,
+        taxAmount: 133200,
+        total: 873200,
+        amountInWords: 'Eight Lakh Seventy-Three Thousand Two Hundred Only',
+        paidAmount: 873200,
+        status: PaymentStatus.PAID,
+        terms: 'Payment due within 30 days.',
+        notes: 'Thank you for your business.',
+        bankDetails: BANK_DETAILS,
+    },
+    {
+        id: 'inv-002',
+        invoiceNumber: 'INV-2024-002',
+        projectId: 'proj-104',
+        projectName: 'Full Floor Fit-out',
+        clientName: 'Enterprise Suites',
+        clientAddress: '101 Corporate Towers, Gurgaon',
+        clientGstin: '06BBBBB1111B1Z2',
+        issueDate: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000),
+        dueDate: new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000),
+        items: [
+            { id: 'item-1', description: 'Phase 2 - Civil Work', hsn: '9954', quantity: 1, rate: 1500000, taxRate: 18 },
+        ],
+        subTotal: 1500000,
+        discountValue: 0,
+        taxAmount: 270000,
+        total: 1770000,
+        amountInWords: 'Seventeen Lakh Seventy Thousand Rupees Only',
+        paidAmount: 1000000,
+        status: PaymentStatus.PARTIALLY_PAID,
+        terms: 'As per contract milestones.',
+        notes: '',
+        bankDetails: BANK_DETAILS,
+    },
 ];
 
 export const VENDOR_BILLS: VendorBill[] = [
-    { id: 'vb-001', vendorId: 'ven-3', vendorName: 'Paint Masters', invoiceNumber: 'PM-8372', amount: 200000, issueDate: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000), dueDate: new Date(now.getTime() + 20 * 24 * 60 * 60 * 1000), status: 'Paid', projectId: 'proj-104' },
-    { id: 'vb-002', vendorId: 'ven-4', vendorName: 'ElectroSource', invoiceNumber: 'ES-2910', amount: 1200000, issueDate: new Date(now.getTime() - 40 * 24 * 60 * 60 * 1000), dueDate: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000), status: 'Paid', projectId: 'proj-105' },
-    { id: 'vb-003', vendorId: 'ven-1', vendorName: 'Furniture World', invoiceNumber: 'FW-4401', amount: 1760000, issueDate: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000), dueDate: new Date(now.getTime() + 25 * 24 * 60 * 60 * 1000), status: 'Pending', projectId: 'proj-108' },
-    { id: 'vb-004', vendorId: 'ven-2', vendorName: 'Lighting Fast', invoiceNumber: 'LF-9182', amount: 656000, issueDate: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000), dueDate: new Date(now.getTime() + 28 * 24 * 60 * 60 * 1000), status: 'Scheduled', projectId: 'proj-106' },
+    { id: 'vb-001', vendorId: 'ven-3', vendorName: 'Paint Masters', invoiceNumber: 'PM-8372', amount: 200000, issueDate: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000), dueDate: new Date(now.getTime() + 20 * 24 * 60 * 60 * 1000), status: 'Approved', projectId: 'proj-104', poReference: 'PO-00123' },
+    { id: 'vb-002', vendorId: 'ven-4', vendorName: 'ElectroSource', invoiceNumber: 'ES-2910', amount: 1200000, issueDate: new Date(now.getTime() - 40 * 24 * 60 * 60 * 1000), dueDate: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000), status: 'Paid', projectId: 'proj-105', paymentDate: new Date(now.getTime() - 9 * 24 * 60 * 60 * 1000) },
+    { id: 'vb-003', vendorId: 'ven-1', vendorName: 'Furniture World', invoiceNumber: 'FW-4401', amount: 1760000, issueDate: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000), dueDate: new Date(now.getTime() + 25 * 24 * 60 * 60 * 1000), status: 'Pending Approval', projectId: 'proj-108' },
+    { id: 'vb-004', vendorId: 'ven-2', vendorName: 'Lighting Fast', invoiceNumber: 'LF-9182', amount: 656000, issueDate: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000), dueDate: new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000), status: 'Overdue', projectId: 'proj-106' },
+    { id: 'vb-005', vendorId: 'ven-1', vendorName: 'Furniture World', invoiceNumber: 'FW-4590', amount: 840000, issueDate: new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000), dueDate: new Date(now.getTime() + 22 * 24 * 60 * 60 * 1000), status: 'Scheduled', projectId: 'proj-101', paymentDate: new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000) },
 ];
 
 export const PENDING_APPROVALS_COUNT = 3;
@@ -419,26 +498,57 @@ const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
     }
 });
 
-export const CHAT_CHANNELS: ChatChannel[] = [
-    { id: 'channel-1', name: 'general', type: ChannelType.WORK_STREAM },
-    { id: 'channel-2', name: 'design-team', type: ChannelType.WORK_STREAM },
-    { id: 'channel-3', name: 'proj-104-fitout', type: ChannelType.WORK_STREAM, isProject: true },
-    { id: 'channel-4', name: 'sales-north', type: ChannelType.WORK_STREAM },
-    { id: 'channel-5', name: 'quick-clarify', type: ChannelType.QUICK_CLARIFY },
-    { id: 'dm-user-3-user-4', name: 'Emily Designer', type: ChannelType.DIRECT_MESSAGE, members: ['user-3', 'user-4'] },
+export const CHAT_CHANNELS: Omit<ChatChannel, 'lastMessage'>[] = [
+    { 
+        id: 'channel-1', 
+        name: 'General', 
+        isGroup: true, 
+        avatar: 'https://i.pravatar.cc/150?u=group-general',
+        members: ['user-2', 'user-3', 'user-4', 'user-5', 'user-6', 'user-7', 'user-8', 'user-9', 'user-10'] 
+    },
+    { 
+        id: 'channel-3', 
+        name: 'Project: Enterprise Fitout', 
+        isGroup: true, 
+        avatar: 'https://i.pravatar.cc/150?u=group-proj-104',
+        members: ['user-2', 'user-6', 'user-8', 'user-4'] 
+    },
+    { 
+        id: 'dm-user-3-user-4', 
+        name: 'Emily Designer', 
+        isGroup: false, 
+        avatar: USERS.find(u => u.id === 'user-4')?.avatar || '',
+        members: ['user-3', 'user-4'] 
+    },
+    { 
+        id: 'dm-user-10-user-2', 
+        name: 'Sarah Manager', 
+        isGroup: false, 
+        avatar: USERS.find(u => u.id === 'user-2')?.avatar || '',
+        members: ['user-10', 'user-2'] 
+    },
 ];
 
 export const CHAT_MESSAGES: ChatMessage[] = [
-    { id: 'msg-1', channelId: 'channel-1', senderId: 'user-2', content: 'Morning team! Let\'s have a great week.', timestamp: new Date(now.getTime() - 8 * 3600 * 1000) },
-    { id: 'msg-2', channelId: 'channel-2', senderId: 'user-4', content: 'Need feedback on the Pantry Renovation renders, please.', timestamp: new Date(now.getTime() - 2 * 3600 * 1000) },
+    // General channel
+    { id: 'msg-1', channelId: 'channel-1', senderId: 'user-2', content: 'Morning team! Let\'s have a great week.', timestamp: new Date(now.getTime() - 24 * 3600 * 1000) },
+    { id: 'msg-g2', channelId: 'channel-1', senderId: 'user-7', content: 'Morning! Anyone have an update on the vendor for the HQ Remodel?', timestamp: new Date(now.getTime() - 23 * 3600 * 1000) },
+    { id: 'msg-g3', channelId: 'channel-1', senderId: 'user-3', content: 'I believe we are finalizing with Furniture World today.', timestamp: new Date(now.getTime() - 22 * 3600 * 1000) },
+
+    // Project channel
+    { id: 'msg-p1', channelId: 'channel-3', senderId: 'user-6', content: 'Team, I\'m on-site at Enterprise. The client is asking about the revised lighting plan.', timestamp: new Date(now.getTime() - 5 * 3600 * 1000) },
+    { id: 'msg-p2', channelId: 'channel-3', senderId: 'user-4', content: 'I\'m sending it over now, David. Just finished the renders.', timestamp: new Date(now.getTime() - 4 * 3600 * 1000) },
+    { id: 'msg-p3', channelId: 'channel-3', senderId: 'user-2', content: 'Great work, team. Keep the client updated.', timestamp: new Date(now.getTime() - 3 * 3600 * 1000) },
+
+    // DM between John Sales (user-3) and Emily Designer (user-4)
     { id: 'msg-3', channelId: 'dm-user-3-user-4', senderId: 'user-3', content: 'Hey Emily, client is asking for a quick update on the renders.', timestamp: new Date(now.getTime() - 1 * 3600 * 1000) },
     { id: 'msg-4', channelId: 'dm-user-3-user-4', senderId: 'user-4', content: 'Just finishing them up, John. Will send over in an hour.', timestamp: new Date(now.getTime() - 55 * 60 * 1000) },
+
+    // DM between Jane Doe (user-10) and Sarah Manager (user-2)
+    { id: 'msg-d2-1', channelId: 'dm-user-10-user-2', senderId: 'user-10', content: 'Hi Sarah, I need your approval on the discount for the Tech Solutions deal.', timestamp: new Date(now.getTime() - 2 * 24 * 3600 * 1000) },
+    { id: 'msg-d2-2', channelId: 'dm-user-10-user-2', senderId: 'user-2', content: 'Looks good, Jane. Proceed with 10%.', timestamp: new Date(now.getTime() - 2 * 24 * 3600 * 1000 + 5 * 60 * 1000) },
 ];
 
-export const QUICK_CLARIFY_QUESTIONS: QuickClarifyQuestion[] = [
-    { id: 'qc-1', channelId: '#quick-clarify', senderId: 'user-6', timestamp: new Date(now.getTime() - 3 * 3600 * 1000), category: QuestionCategory.SITE, urgency: QuestionUrgency.HIGH, regarding: 'Enterprise Suites (proj-104)', question: 'Is the new electrical socket placement approved by the client? The diagram seems ambiguous.' },
-    { id: 'qc-2', channelId: '#quick-clarify', senderId: 'user-4', timestamp: new Date(now.getTime() - 24 * 3600 * 1000), category: QuestionCategory.DESIGN, urgency: QuestionUrgency.MEDIUM, regarding: 'HQ Remodel (proj-108)', question: 'What is the approved paint finish for the accent wall? (Matte/Satin/Gloss)' },
-];
 
 export const COMPLAINTS: Complaint[] = [
     { id: 'comp-1', submittedBy: 'user-3', against: 'Emily Designer', type: ComplaintType.TIMELINE_VIOLATIONS, priority: ComplaintPriority.MEDIUM, status: ComplaintStatus.SUBMITTED, projectContext: 'HQ Remodel (proj-108)', description: 'Drawings were promised EOD yesterday but have not been received. This is delaying the client presentation.', evidence: ['Chat logs from yesterday'], resolutionAttempts: 'Followed up on chat twice, no response.', desiredResolution: 'Immediate delivery of the drawings.', submissionDate: new Date(now.getTime() - 18 * 3600 * 1000) },

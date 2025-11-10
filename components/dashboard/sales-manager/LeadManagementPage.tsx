@@ -5,6 +5,7 @@ import { Lead, LeadPipelineStatus, UserRole } from '../../../types';
 import { FunnelIcon, BanknotesIcon, ChartBarIcon, PhoneIcon, MagnifyingGlassIcon } from '../../icons/IconComponents';
 import StatusPill from '../../shared/StatusPill';
 import LeadDetailModal from '../../shared/LeadDetailModal';
+import { updateLead } from '../../../hooks/useLeads';
 
 const salesTeam = USERS.filter(u => u.role === UserRole.SALES_TEAM_MEMBER);
 
@@ -45,10 +46,9 @@ const PriorityPill: React.FC<{ priority: 'High' | 'Medium' | 'Low' }> = ({ prior
 
 interface LeadManagementPageProps {
     leads: Lead[];
-    setLeads: React.Dispatch<React.SetStateAction<Lead[]>>;
 }
 
-const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leads, setLeads }) => {
+const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leads }) => {
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
     const [filter, setFilter] = useState<{ status: LeadPipelineStatus | 'all', rep: string | 'all' }>({ status: 'all', rep: 'all' });
     const [searchTerm, setSearchTerm] = useState('');
@@ -63,8 +63,8 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leads, setLeads
         );
     }, [filter, leads, searchTerm]);
 
-    const handleLeadUpdate = (updatedLead: Lead) => {
-        setLeads(currentLeads => currentLeads.map(l => l.id === updatedLead.id ? updatedLead : l));
+    const handleLeadUpdate = async (updatedLead: Lead) => {
+        await updateLead(updatedLead.id, updatedLead);
         setSelectedLead(updatedLead);
     };
 
