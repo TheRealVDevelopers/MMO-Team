@@ -6,6 +6,7 @@ import Header from './components/shared/Header';
 import Dashboard from './components/dashboard/Dashboard';
 import SettingsPage from './components/settings/SettingsPage';
 import Sidebar from './components/shared/Sidebar';
+import MobileMenu from './components/shared/MobileMenu';
 import LandingPage from './components/landing/LandingPage';
 import { useAuth } from './context/AuthContext';
 import { User, UserRole } from './types';
@@ -136,10 +137,12 @@ const AppContent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState('overview');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showApp, setShowApp] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleSetPage = (page: string) => {
     setCurrentPage(page);
     setIsSettingsOpen(false);
+    setIsMobileMenuOpen(false);
   }
 
   const handleOpenSettings = () => {
@@ -148,6 +151,10 @@ const AppContent: React.FC = () => {
   
   const handleCloseSettings = () => {
     setIsSettingsOpen(false);
+  }
+  
+  const handleMobileMenuToggle = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
   }
 
   const handleLogin = (user: User) => {
@@ -174,19 +181,40 @@ const AppContent: React.FC = () => {
   const needsSidebar = !!currentNavConfig && !isSettingsOpen;
 
   return (
-    <div className="min-h-screen flex text-text-primary bg-subtle-background">
+    <div className="min-h-screen flex text-text-primary bg-background">
+      {/* Desktop Sidebar - Hidden on mobile */}
       {needsSidebar && currentNavConfig && (
-          <Sidebar 
-            title={currentNavConfig.title}
-            currentPage={currentPage} 
-            setCurrentPage={handleSetPage}
-            navItems={currentNavConfig.navItems}
-            secondaryNavItems={currentNavConfig.secondaryNavItems}
-          />
+          <div className="hidden lg:block">
+            <Sidebar 
+              title={currentNavConfig.title}
+              currentPage={currentPage} 
+              setCurrentPage={handleSetPage}
+              navItems={currentNavConfig.navItems}
+              secondaryNavItems={currentNavConfig.secondaryNavItems}
+            />
+          </div>
       )}
+      
+      {/* Mobile Menu - Hidden on desktop */}
+      {needsSidebar && currentNavConfig && (
+        <MobileMenu
+          isOpen={isMobileMenuOpen}
+          onClose={() => setIsMobileMenuOpen(false)}
+          currentPage={currentPage}
+          setCurrentPage={handleSetPage}
+          navItems={currentNavConfig.navItems}
+          secondaryNavItems={currentNavConfig.secondaryNavItems}
+          title={currentNavConfig.title}
+          showFooter={true}
+        />
+      )}
+      
       <div className="flex-1 flex flex-col min-w-0 h-screen">
-        <Header openSettings={handleOpenSettings} />
-        <main className="flex-grow overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <Header 
+          openSettings={handleOpenSettings} 
+          onMenuToggle={handleMobileMenuToggle}
+        />
+        <main className="flex-grow overflow-y-auto p-4 md:p-6 lg:p-8 bg-subtle-background dark:bg-subtle-background">
           {isSettingsOpen ? (
             <SettingsPage onClose={handleCloseSettings} />
           ) : (

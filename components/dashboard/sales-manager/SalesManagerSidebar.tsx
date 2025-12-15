@@ -8,7 +8,8 @@ import {
     ChartPieIcon,
     ChartBarSquareIcon,
     ChatBubbleLeftRightIcon,
-    ShieldExclamationIcon
+    ShieldExclamationIcon,
+    BriefcaseIcon
 } from '../../icons/IconComponents';
 
 interface SidebarProps {
@@ -46,6 +47,7 @@ const SalesManagerSidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPa
     const navItems = [
         { id: 'overview', label: 'Dashboard', icon: <RectangleGroupIcon className="w-6 h-6" /> },
         { id: 'leads', label: 'Leads', icon: <FunnelIcon className="w-6 h-6" /> },
+        { id: 'client-projects', label: 'Client Projects', icon: <BriefcaseIcon className="w-6 h-6" /> },
         { id: 'team', label: 'Team', icon: <UsersIcon className="w-6 h-6" /> },
         { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
         { id: 'reports', label: 'Reports', icon: <ChartPieIcon className="w-6 h-6" /> },

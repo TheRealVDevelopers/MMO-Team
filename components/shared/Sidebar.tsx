@@ -31,18 +31,28 @@ const NavItem: React.FC<{
                 e.preventDefault();
                 onClick();
             }}
-            className={`flex items-center justify-between p-2 text-base font-normal rounded-lg transition-colors duration-150 group ${
+            className={`group flex items-center justify-between px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
                 isActive 
-                ? 'bg-primary/10 text-primary' 
-                : 'text-text-secondary hover:bg-subtle-background hover:text-text-primary'
+                ? 'bg-gradient-to-r from-kurchi-gold-500 to-kurchi-gold-600 text-white shadow-lg scale-[1.02]' 
+                : 'text-text-secondary hover:bg-subtle-background hover:text-kurchi-espresso-900 hover:translate-x-1'
             }`}
         >
-            <div className="flex items-center">
-                {icon}
-                <span className="ml-3">{label}</span>
+            <div className="flex items-center space-x-3">
+                <div className={`${
+                    isActive 
+                    ? 'text-white' 
+                    : 'text-text-secondary group-hover:text-kurchi-gold-600'
+                } transition-colors`}>
+                    {icon}
+                </div>
+                <span className="font-medium">{label}</span>
             </div>
              {count !== undefined && (
-                <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${isActive ? 'bg-primary text-white' : 'bg-subtle-background group-hover:bg-border'}`}>
+                <span className={`px-2.5 py-1 text-xs font-bold rounded-full transition-colors ${
+                    isActive 
+                    ? 'bg-white/20 text-white' 
+                    : 'bg-kurchi-gold-500/10 text-kurchi-gold-600 group-hover:bg-kurchi-gold-500/20'
+                }`}>
                     {count}
                 </span>
             )}
@@ -52,16 +62,27 @@ const NavItem: React.FC<{
 
 const Sidebar: React.FC<SidebarProps> = ({ title, currentPage, setCurrentPage, navItems, secondaryNavItems }) => {
     return (
-        <aside className="w-64 bg-surface border-r border-border flex-shrink-0" aria-label="Sidebar">
-            <div className="h-full px-3 py-4 overflow-y-auto flex flex-col">
-                <div className="flex items-center pl-2.5 mb-5 h-16 -mt-4 flex-shrink-0">
-                     <BuildingOfficeIcon className="h-8 w-8 text-primary" />
-                     <h1 className="ml-3 text-xl font-bold text-text-primary tracking-tight">
-                        {title}
-                    </h1>
+        <aside className="w-72 bg-white border-r border-border/50 flex-shrink-0 shadow-sm" aria-label="Sidebar">
+            <div className="h-full px-4 py-6 overflow-y-auto flex flex-col">
+                {/* Enhanced Sidebar Header */}
+                <div className="flex items-center pl-2 mb-8 h-16 -mt-2 flex-shrink-0">
+                     <div className="w-10 h-10 bg-gradient-to-br from-kurchi-gold-500 to-kurchi-espresso-900 rounded-xl flex items-center justify-center shadow-md">
+                        <BuildingOfficeIcon className="h-6 w-6 text-white" />
+                     </div>
+                     <div className="ml-3">
+                        <h1 className="text-base font-bold text-kurchi-espresso-900 tracking-tight">
+                            {title}
+                        </h1>
+                        <p className="text-xs text-text-secondary font-light -mt-0.5">Dashboard</p>
+                     </div>
                 </div>
+                
+                {/* Main Navigation */}
                 <div className="flex-grow">
-                    <ul className="space-y-2">
+                    <div className="mb-2">
+                        <p className="px-4 mb-3 text-xs font-bold text-text-secondary uppercase tracking-wider">Main Menu</p>
+                    </div>
+                    <ul className="space-y-1.5">
                         {navItems.map(item => (
                             <NavItem 
                                 key={item.id}
@@ -74,9 +95,14 @@ const Sidebar: React.FC<SidebarProps> = ({ title, currentPage, setCurrentPage, n
                         ))}
                     </ul>
                 </div>
+                
+                {/* Secondary Navigation */}
                 {secondaryNavItems && secondaryNavItems.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-border flex-shrink-0">
-                        <ul className="space-y-2">
+                    <div className="mt-6 pt-6 border-t border-border/50 flex-shrink-0">
+                        <div className="mb-2">
+                            <p className="px-4 mb-3 text-xs font-bold text-text-secondary uppercase tracking-wider">Quick Actions</p>
+                        </div>
+                        <ul className="space-y-1.5">
                              {secondaryNavItems.map(item => (
                                 <NavItem 
                                     key={item.id}

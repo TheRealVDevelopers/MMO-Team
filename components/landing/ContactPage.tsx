@@ -1,11 +1,21 @@
-
 import React, { useState, useEffect, useRef } from 'react';
-import { PhoneIcon, GlobeAltIcon, EnvelopeIcon, MapPinIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { 
+    PhoneIcon, 
+    GlobeAltIcon, 
+    EnvelopeIcon, 
+    MapPinIcon, 
+    ClockIcon,
+    BuildingOfficeIcon,
+    ChatBubbleLeftRightIcon,
+    UserGroupIcon,
+    QuestionMarkCircleIcon,
+    CheckCircleIcon
+} from '@heroicons/react/24/outline';
 import { addLead } from '../../hooks/useLeads';
 import { LeadPipelineStatus } from '../../types';
 import { USERS } from '../../constants';
 
-// --- Animation Hook ---
+// Animation Hook
 const useOnScreen = (options: IntersectionObserverInit) => {
     const ref = useRef<HTMLDivElement>(null);
     const [isVisible, setIsVisible] = useState(false);
@@ -39,14 +49,23 @@ const FadeInSection: React.FC<{ children: React.ReactNode; delay?: string; class
 };
 
 const ContactPage: React.FC = () => {
-    const [formData, setFormData] = useState({ name: '', email: '', phone: '', subject: '', message: '' });
+    const [formData, setFormData] = useState({ 
+        name: '', 
+        email: '', 
+        phone: '+91 ', 
+        company: '',
+        projectType: '',
+        budget: '',
+        timeline: '',
+        subject: '', 
+        message: '' 
+    });
     const [formStatus, setFormStatus] = useState<'idle' | 'submitting' | 'success'>('idle');
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setFormStatus('submitting');
 
-        // Simulate network delay for effect
         setTimeout(async () => {
             const newLead = {
                 clientName: formData.name,
@@ -62,7 +81,7 @@ const ContactPage: React.FC = () => {
                         action: 'Inquiry Received',
                         user: 'System',
                         timestamp: new Date(),
-                        notes: `Email: ${formData.email} | Phone: ${formData.phone} | Msg: ${formData.message}`
+                        notes: `Email: ${formData.email} | Phone: ${formData.phone} | Company: ${formData.company} | Type: ${formData.projectType} | Budget: ${formData.budget} | Timeline: ${formData.timeline} | Msg: ${formData.message}`
                     }
                 ],
                 tasks: {},
@@ -72,119 +91,353 @@ const ContactPage: React.FC = () => {
 
             await addLead(newLead);
             setFormStatus('success');
-            setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+            setFormData({ name: '', email: '', phone: '+91 ', company: '', projectType: '', budget: '', timeline: '', subject: '', message: '' });
             setTimeout(() => setFormStatus('idle'), 5000);
         }, 1500);
     };
 
     return (
         <div className="bg-background min-h-screen pt-20">
-            {/* Hero Text */}
-            <section className="bg-kurchi-espresso-950 text-white py-24 px-6 lg:px-12 text-center">
-                <FadeInSection>
-                    <span className="text-kurchi-gold-500 font-bold uppercase tracking-[0.2em] text-xs">Get In Touch</span>
-                    <h1 className="text-5xl md:text-7xl font-serif font-medium mt-6 mb-6">Let's Create Together</h1>
-                    <p className="text-gray-400 text-lg font-light max-w-2xl mx-auto leading-relaxed">
-                        Whether you are looking to renovate an existing office or build a new headquarters from the ground up, our team is ready to realize your vision.
-                    </p>
-                </FadeInSection>
+            {/* Hero Section */}
+            <section className="bg-gradient-to-br from-kurchi-espresso-950 to-kurchi-espresso-900 text-white py-20 px-6">
+                <div className="max-w-7xl mx-auto text-center">
+                    <FadeInSection>
+                        <span className="text-kurchi-gold-500 font-bold uppercase tracking-[0.2em] text-xs">Connect With Us</span>
+                        <h1 className="text-5xl md:text-7xl font-serif font-medium mt-6 mb-6">Get In Touch</h1>
+                        <p className="text-gray-300 text-lg font-light max-w-3xl mx-auto leading-relaxed">
+                            Whether you have a question, want to start a project, or just want to connect — we'd love to hear from you. Our team is ready to bring your vision to life.
+                        </p>
+                    </FadeInSection>
+                </div>
             </section>
 
-            <div className="max-w-7xl mx-auto px-6 lg:px-12 -mt-16 pb-24 relative z-10">
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            {/* Contact Methods Grid */}
+            <section className="max-w-7xl mx-auto px-6 -mt-12 relative z-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+                    <FadeInSection delay="100ms">
+                        <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-700 transform hover:scale-105 border border-border">
+                            <div className="w-14 h-14 bg-kurchi-gold-500/10 rounded-xl flex items-center justify-center mb-6">
+                                <MapPinIcon className="w-7 h-7 text-kurchi-gold-500" />
+                            </div>
+                            <h3 className="text-lg font-bold text-kurchi-espresso-900 mb-2">Visit Us</h3>
+                            <p className="text-sm text-text-secondary font-light leading-relaxed">
+                                Experience our showroom and discuss your project in person
+                            </p>
+                        </div>
+                    </FadeInSection>
+
+                    <FadeInSection delay="200ms">
+                        <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-700 transform hover:scale-105 border border-border">
+                            <div className="w-14 h-14 bg-kurchi-gold-500/10 rounded-xl flex items-center justify-center mb-6">
+                                <PhoneIcon className="w-7 h-7 text-kurchi-gold-500" />
+                            </div>
+                            <h3 className="text-lg font-bold text-kurchi-espresso-900 mb-2">Call Us</h3>
+                            <p className="text-sm text-text-secondary font-light leading-relaxed">
+                                Speak directly with our design consultants
+                            </p>
+                        </div>
+                    </FadeInSection>
+
+                    <FadeInSection delay="300ms">
+                        <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-700 transform hover:scale-105 border border-border">
+                            <div className="w-14 h-14 bg-kurchi-gold-500/10 rounded-xl flex items-center justify-center mb-6">
+                                <EnvelopeIcon className="w-7 h-7 text-kurchi-gold-500" />
+                            </div>
+                            <h3 className="text-lg font-bold text-kurchi-espresso-900 mb-2">Email Us</h3>
+                            <p className="text-sm text-text-secondary font-light leading-relaxed">
+                                Send us your detailed requirements and specifications
+                            </p>
+                        </div>
+                    </FadeInSection>
+
+                    <FadeInSection delay="400ms">
+                        <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-700 transform hover:scale-105 border border-border">
+                            <div className="w-14 h-14 bg-kurchi-gold-500/10 rounded-xl flex items-center justify-center mb-6">
+                                <ChatBubbleLeftRightIcon className="w-7 h-7 text-kurchi-gold-500" />
+                            </div>
+                            <h3 className="text-lg font-bold text-kurchi-espresso-900 mb-2">Live Chat</h3>
+                            <p className="text-sm text-text-secondary font-light leading-relaxed">
+                                Get instant answers to your quick questions
+                            </p>
+                        </div>
+                    </FadeInSection>
+                </div>
+            </section>
+
+            {/* Main Content: Form + Contact Details */}
+            <section className="max-w-7xl mx-auto px-6 pb-24">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
                     
-                    {/* Contact Info Column */}
-                    <div className="lg:col-span-2 space-y-4">
-                        <FadeInSection delay="100ms">
-                            <div className="bg-kurchi-espresso-900 text-white p-10 h-full shadow-2xl flex flex-col justify-between min-h-[500px]">
-                                <div>
-                                    <h3 className="text-2xl font-serif mb-8">Contact Information</h3>
-                                    
-                                    <div className="space-y-8">
-                                        <div className="flex items-start">
-                                            <MapPinIcon className="w-6 h-6 text-kurchi-gold-500 mt-1 flex-shrink-0" />
-                                            <div className="ml-4">
-                                                <p className="text-xs uppercase tracking-widest text-gray-400 mb-1">Visit Us</p>
-                                                <p className="font-light">123 Design District<br/>Cyber City, Gurgaon<br/>Haryana 122002</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-start">
-                                            <PhoneIcon className="w-6 h-6 text-kurchi-gold-500 mt-1 flex-shrink-0" />
-                                            <div className="ml-4">
-                                                <p className="text-xs uppercase tracking-widest text-gray-400 mb-1">Call Us</p>
-                                                <p className="font-light">+91 (555) 123-4567</p>
-                                                <p className="font-light text-sm text-gray-500 mt-1">Mon-Sat, 9am - 7pm</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-start">
-                                            <EnvelopeIcon className="w-6 h-6 text-kurchi-gold-500 mt-1 flex-shrink-0" />
-                                            <div className="ml-4">
-                                                <p className="text-xs uppercase tracking-widest text-gray-400 mb-1">Email Us</p>
-                                                <p className="font-light">projects@kurchi.com</p>
-                                                <p className="font-light text-sm text-gray-500 mt-1">careers@kurchi.com</p>
-                                            </div>
-                                        </div>
-                                    </div>
+                    {/* Left Column - Contact Details */}
+                    <div className="lg:col-span-1 space-y-8">
+                        {/* Headquarters */}
+                        <FadeInSection>
+                            <div className="bg-kurchi-espresso-900 text-white p-8 rounded-2xl shadow-lg">
+                                <div className="flex items-center space-x-3 mb-6">
+                                    <BuildingOfficeIcon className="w-6 h-6 text-kurchi-gold-500" />
+                                    <h3 className="text-xl font-serif font-bold">Headquarters</h3>
                                 </div>
-
-                                <div className="mt-12">
-                                    <div className="w-full h-40 bg-white/5 rounded-sm flex items-center justify-center border border-white/10">
-                                        <span className="text-xs uppercase tracking-widest text-gray-500">[ Map Placeholder ]</span>
+                                <div className="space-y-4 text-sm font-light">
+                                    <p className="text-gray-300 leading-relaxed">
+                                        123 Design District<br/>
+                                        Cyber City, Sector 18<br/>
+                                        Gurgaon, Haryana 122002<br/>
+                                        India
+                                    </p>
+                                    <div className="pt-4 border-t border-white/10">
+                                        <p className="text-xs uppercase tracking-wider text-gray-400 mb-2">Phone</p>
+                                        <p className="text-white">+91 (555) 123-4567</p>
+                                    </div>
+                                    <div className="pt-2">
+                                        <p className="text-xs uppercase tracking-wider text-gray-400 mb-2">Email</p>
+                                        <p className="text-white">projects@kurchi.com</p>
                                     </div>
                                 </div>
                             </div>
                         </FadeInSection>
+
+                        {/* Working Hours */}
+                        <FadeInSection delay="100ms">
+                            <div className="bg-white p-8 rounded-2xl shadow-lg border border-border">
+                                <div className="flex items-center space-x-3 mb-6">
+                                    <ClockIcon className="w-6 h-6 text-kurchi-gold-500" />
+                                    <h3 className="text-xl font-serif font-bold text-kurchi-espresso-900">Working Hours</h3>
+                                </div>
+                                <div className="space-y-3 text-sm">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-text-secondary">Monday - Friday</span>
+                                        <span className="font-bold text-kurchi-espresso-900">9:00 AM - 7:00 PM</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-text-secondary">Saturday</span>
+                                        <span className="font-bold text-kurchi-espresso-900">10:00 AM - 5:00 PM</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-text-secondary">Sunday</span>
+                                        <span className="font-bold text-red-600">Closed</span>
+                                    </div>
+                                </div>
+                                <div className="mt-6 pt-6 border-t border-border">
+                                    <p className="text-xs text-text-secondary">
+                                        <CheckCircleIcon className="w-4 h-4 inline text-green-600 mr-1" />
+                                        Response within 24 hours
+                                    </p>
+                                </div>
+                            </div>
+                        </FadeInSection>
+
+                        {/* Regional Offices */}
+                        <FadeInSection delay="200ms">
+                            <div className="bg-white p-8 rounded-2xl shadow-lg border border-border">
+                                <div className="flex items-center space-x-3 mb-6">
+                                    <UserGroupIcon className="w-6 h-6 text-kurchi-gold-500" />
+                                    <h3 className="text-xl font-serif font-bold text-kurchi-espresso-900">Regional Offices</h3>
+                                </div>
+                                <div className="space-y-4 text-sm">
+                                    <div>
+                                        <p className="font-bold text-kurchi-espresso-900 mb-1">Mumbai Office</p>
+                                        <p className="text-text-secondary font-light">BKC, Mumbai - 400051</p>
+                                        <p className="text-text-secondary text-xs mt-1">+91 (555) 234-5678</p>
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-kurchi-espresso-900 mb-1">Bangalore Office</p>
+                                        <p className="text-text-secondary font-light">Whitefield, Bangalore - 560066</p>
+                                        <p className="text-text-secondary text-xs mt-1">+91 (555) 345-6789</p>
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-kurchi-espresso-900 mb-1">Delhi Office</p>
+                                        <p className="text-text-secondary font-light">Connaught Place, Delhi - 110001</p>
+                                        <p className="text-text-secondary text-xs mt-1">+91 (555) 456-7890</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </FadeInSection>
+
+                        {/* FAQ Quick Links */}
+                        <FadeInSection delay="300ms">
+                            <div className="bg-subtle-background p-8 rounded-2xl border border-border">
+                                <div className="flex items-center space-x-3 mb-4">
+                                    <QuestionMarkCircleIcon className="w-6 h-6 text-kurchi-gold-500" />
+                                    <h3 className="text-lg font-bold text-kurchi-espresso-900">Quick Questions?</h3>
+                                </div>
+                                <p className="text-sm text-text-secondary mb-4">Common inquiries we receive:</p>
+                                <ul className="space-y-2 text-sm">
+                                    <li className="flex items-start space-x-2">
+                                        <span className="text-kurchi-gold-500">•</span>
+                                        <span className="text-text-secondary">What's your typical project timeline?</span>
+                                    </li>
+                                    <li className="flex items-start space-x-2">
+                                        <span className="text-kurchi-gold-500">•</span>
+                                        <span className="text-text-secondary">Do you handle turnkey projects?</span>
+                                    </li>
+                                    <li className="flex items-start space-x-2">
+                                        <span className="text-kurchi-gold-500">•</span>
+                                        <span className="text-text-secondary">Can I see your portfolio?</span>
+                                    </li>
+                                    <li className="flex items-start space-x-2">
+                                        <span className="text-kurchi-gold-500">•</span>
+                                        <span className="text-text-secondary">What's the minimum project size?</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </FadeInSection>
                     </div>
 
-                    {/* Form Column */}
-                    <div className="lg:col-span-3">
-                        <FadeInSection delay="300ms">
-                            <div className="bg-surface p-10 lg:p-16 h-full shadow-luxury border border-border">
-                                <h3 className="text-3xl font-serif font-bold text-kurchi-espresso-900 mb-2">Send a Message</h3>
-                                <p className="text-text-secondary font-light mb-10">Fill out the form below, and our design team will contact you within 24 hours.</p>
+                    {/* Right Column - Enhanced Form */}
+                    <div className="lg:col-span-2">
+                        <FadeInSection delay="400ms">
+                            <div className="bg-white p-10 lg:p-12 rounded-2xl shadow-2xl border border-border">
+                                <h2 className="text-3xl font-serif font-bold text-kurchi-espresso-900 mb-3">Send Us a Message</h2>
+                                <p className="text-text-secondary font-light mb-8">Fill out the form below with your project details, and our team will get back to you within 24 hours.</p>
 
                                 {formStatus === 'success' ? (
-                                    <div className="bg-green-50 border border-green-200 text-green-800 p-8 text-center rounded-sm animate-fade-in">
-                                        <h4 className="text-xl font-bold mb-2">Message Sent Successfully</h4>
-                                        <p>Thank you for reaching out. We look forward to building your legacy.</p>
+                                    <div className="bg-green-50 border-2 border-green-500 text-green-800 p-10 text-center rounded-xl animate-fade-in">
+                                        <CheckCircleIcon className="w-16 h-16 text-green-600 mx-auto mb-4" />
+                                        <h4 className="text-2xl font-bold mb-3">Message Sent Successfully!</h4>
+                                        <p className="text-green-700 leading-relaxed">Thank you for reaching out. Our design team will review your requirements and contact you within 24 hours.</p>
                                     </div>
                                 ) : (
-                                    <form onSubmit={handleSubmit} className="space-y-8">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                            <div className="group">
-                                                <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2 group-focus-within:text-kurchi-gold-500 transition-colors">Full Name</label>
-                                                <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-transparent border-b border-gray-300 py-2 focus:border-kurchi-gold-500 outline-none transition-all placeholder-gray-300" placeholder="John Doe" />
+                                    <form onSubmit={handleSubmit} className="space-y-6">
+                                        {/* Personal Info */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div>
+                                                <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Full Name *</label>
+                                                <input 
+                                                    type="text" 
+                                                    required 
+                                                    value={formData.name} 
+                                                    onChange={e => setFormData({...formData, name: e.target.value})} 
+                                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-kurchi-gold-500 outline-none transition-colors"
+                                                    placeholder="John Doe"
+                                                />
                                             </div>
-                                            <div className="group">
-                                                <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2 group-focus-within:text-kurchi-gold-500 transition-colors">Phone Number</label>
-                                                <input type="tel" required value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full bg-transparent border-b border-gray-300 py-2 focus:border-kurchi-gold-500 outline-none transition-all placeholder-gray-300" placeholder="+91 98765 43210" />
+                                            <div>
+                                                <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Company Name</label>
+                                                <input 
+                                                    type="text" 
+                                                    value={formData.company} 
+                                                    onChange={e => setFormData({...formData, company: e.target.value})} 
+                                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-kurchi-gold-500 outline-none transition-colors"
+                                                    placeholder="Your Company Ltd."
+                                                />
                                             </div>
-                                        </div>
-                                        
-                                        <div className="group">
-                                            <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2 group-focus-within:text-kurchi-gold-500 transition-colors">Email Address</label>
-                                            <input type="email" required value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full bg-transparent border-b border-gray-300 py-2 focus:border-kurchi-gold-500 outline-none transition-all placeholder-gray-300" placeholder="john@company.com" />
                                         </div>
 
-                                        <div className="group">
-                                            <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2 group-focus-within:text-kurchi-gold-500 transition-colors">Project Type / Subject</label>
-                                            <input type="text" value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})} className="w-full bg-transparent border-b border-gray-300 py-2 focus:border-kurchi-gold-500 outline-none transition-all placeholder-gray-300" placeholder="e.g. Corporate Office Fit-out" />
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div>
+                                                <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Email Address *</label>
+                                                <input 
+                                                    type="email" 
+                                                    required 
+                                                    value={formData.email} 
+                                                    onChange={e => setFormData({...formData, email: e.target.value})} 
+                                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-kurchi-gold-500 outline-none transition-colors"
+                                                    placeholder="john@company.com"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Phone Number *</label>
+                                                <input 
+                                                    type="tel" 
+                                                    required 
+                                                    value={formData.phone} 
+                                                    onChange={e => setFormData({...formData, phone: e.target.value})} 
+                                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-kurchi-gold-500 outline-none transition-colors"
+                                                    placeholder="+91 98765 43210"
+                                                />
+                                            </div>
                                         </div>
 
-                                        <div className="group">
-                                            <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2 group-focus-within:text-kurchi-gold-500 transition-colors">Message</label>
-                                            <textarea required rows={4} value={formData.message} onChange={e => setFormData({...formData, message: e.target.value})} className="w-full bg-transparent border-b border-gray-300 py-2 focus:border-kurchi-gold-500 outline-none transition-all placeholder-gray-300" placeholder="Tell us about your requirements, timeline, and estimated budget..." />
+                                        {/* Project Details */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div>
+                                                <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Project Type</label>
+                                                <select 
+                                                    value={formData.projectType} 
+                                                    onChange={e => setFormData({...formData, projectType: e.target.value})}
+                                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-kurchi-gold-500 outline-none transition-colors"
+                                                >
+                                                    <option value="">Select type</option>
+                                                    <option value="Office Interior">Office Interior</option>
+                                                    <option value="Commercial Space">Commercial Space</option>
+                                                    <option value="Home Interior">Home Interior</option>
+                                                    <option value="Custom Furniture">Custom Furniture</option>
+                                                    <option value="Consultation">Consultation Only</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Budget Range</label>
+                                                <select 
+                                                    value={formData.budget} 
+                                                    onChange={e => setFormData({...formData, budget: e.target.value})}
+                                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-kurchi-gold-500 outline-none transition-colors"
+                                                >
+                                                    <option value="">Select budget</option>
+                                                    <option value="Under ₹5 Lakhs">Under ₹5 Lakhs</option>
+                                                    <option value="₹5 - 10 Lakhs">₹5 - 10 Lakhs</option>
+                                                    <option value="₹10 - 25 Lakhs">₹10 - 25 Lakhs</option>
+                                                    <option value="₹25 - 50 Lakhs">₹25 - 50 Lakhs</option>
+                                                    <option value="Above ₹50 Lakhs">Above ₹50 Lakhs</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div>
+                                                <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Timeline</label>
+                                                <select 
+                                                    value={formData.timeline} 
+                                                    onChange={e => setFormData({...formData, timeline: e.target.value})}
+                                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-kurchi-gold-500 outline-none transition-colors"
+                                                >
+                                                    <option value="">Select timeline</option>
+                                                    <option value="Urgent (Within 1 month)">Urgent (Within 1 month)</option>
+                                                    <option value="1-3 months">1-3 months</option>
+                                                    <option value="3-6 months">3-6 months</option>
+                                                    <option value="Flexible">Flexible</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Subject</label>
+                                                <input 
+                                                    type="text" 
+                                                    value={formData.subject} 
+                                                    onChange={e => setFormData({...formData, subject: e.target.value})} 
+                                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-kurchi-gold-500 outline-none transition-colors"
+                                                    placeholder="e.g., Office Renovation"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Your Message *</label>
+                                            <textarea 
+                                                required 
+                                                rows={5} 
+                                                value={formData.message} 
+                                                onChange={e => setFormData({...formData, message: e.target.value})} 
+                                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-kurchi-gold-500 outline-none transition-colors"
+                                                placeholder="Tell us about your project requirements, timeline expectations, and any specific design preferences..."
+                                            />
                                         </div>
 
                                         <div className="pt-4">
                                             <button 
                                                 type="submit" 
                                                 disabled={formStatus === 'submitting'}
-                                                className="w-full md:w-auto px-10 py-4 bg-kurchi-espresso-900 text-white font-bold text-sm uppercase tracking-widest hover:bg-kurchi-gold-500 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg"
+                                                className="w-full md:w-auto px-10 py-4 bg-kurchi-espresso-900 text-white font-bold text-sm uppercase tracking-widest rounded-xl hover:bg-kurchi-gold-500 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
                                             >
-                                                {formStatus === 'submitting' ? 'Sending...' : 'Send Message'}
+                                                {formStatus === 'submitting' ? (
+                                                    <span className="flex items-center justify-center">
+                                                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                        </svg>
+                                                        Sending Message...
+                                                    </span>
+                                                ) : (
+                                                    'Send Message'
+                                                )}
                                             </button>
                                         </div>
                                     </form>
@@ -193,7 +446,24 @@ const ContactPage: React.FC = () => {
                         </FadeInSection>
                     </div>
                 </div>
-            </div>
+            </section>
+
+            {/* Map Section */}
+            <section className="bg-subtle-background py-16 px-6">
+                <div className="max-w-7xl mx-auto">
+                    <FadeInSection>
+                        <div className="bg-white p-4 rounded-2xl shadow-lg">
+                            <div className="w-full h-96 bg-gray-100 rounded-xl flex items-center justify-center border-2 border-dashed border-gray-300">
+                                <div className="text-center">
+                                    <MapPinIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                                    <p className="text-lg font-bold text-text-secondary">Interactive Map</p>
+                                    <p className="text-sm text-gray-400 mt-2">Cyber City, Sector 18, Gurgaon</p>
+                                </div>
+                            </div>
+                        </div>
+                    </FadeInSection>
+                </div>
+            </section>
         </div>
     );
 };

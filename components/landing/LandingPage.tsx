@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { PhoneIcon, GlobeAltIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
+import { PhoneIcon, GlobeAltIcon, EnvelopeIcon, Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 import LoginModal from './LoginModal';
 import { User } from '../../types';
 import HomePage from './HomePage';
@@ -8,6 +8,9 @@ import PortfolioPage from './PortfolioPage';
 import AboutPage from './AboutPage';
 import ContactPage from './ContactPage';
 import ServicesPage from './ServicesPage';
+import StartProjectPage from './StartProjectPage';
+import ClientLoginPage from './ClientLoginPage';
+import ClientDashboardPage from './ClientDashboardPage';
 
 interface LandingPageProps {
   onLogin: (user: User) => void;
@@ -15,12 +18,15 @@ interface LandingPageProps {
 
 const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [currentView, setCurrentView] = useState<'home' | 'services' | 'portfolio' | 'about' | 'contact'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'services' | 'portfolio' | 'about' | 'contact' | 'start-project' | 'client-login' | 'client-dashboard'>('home');
   const [isScrolled, setIsScrolled] = useState(false);
+  const [clientProjectId, setClientProjectId] = useState<string>('');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Scroll to top when view changes
   useEffect(() => {
     window.scrollTo(0, 0);
+    setIsMobileMenuOpen(false); // Close mobile menu on navigation
   }, [currentView]);
 
   // Handle scroll effect for navbar shadow
@@ -32,8 +38,30 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isMobileMenuOpen]);
+
   const handleNavigate = (page: string) => {
       setCurrentView(page as any);
+  };
+
+  const handleClientLogin = (projectId: string) => {
+      setClientProjectId(projectId);
+      setCurrentView('client-dashboard');
+  };
+
+  const handleClientLogout = () => {
+      setClientProjectId('');
+      setCurrentView('home');
   };
 
   const renderContent = () => {
@@ -42,6 +70,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
           case 'portfolio': return <PortfolioPage onNavigate={handleNavigate} />;
           case 'about': return <AboutPage onNavigate={handleNavigate} />;
           case 'contact': return <ContactPage />;
+          case 'start-project': return <StartProjectPage />;
+          case 'client-login': return <ClientLoginPage onLoginSuccess={handleClientLogin} />;
+          case 'client-dashboard': return <ClientDashboardPage projectId={clientProjectId} onLogout={handleClientLogout} />;
           default: return <HomePage onNavigate={handleNavigate} />;
       }
   };
@@ -63,12 +94,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
   return (
     <div className="min-h-screen bg-background text-text-primary font-sans overflow-x-hidden flex flex-col selection:bg-kurchi-gold-500 selection:text-white">
       
-      {/* 1. HEADER + TOP BAR */}
-      <nav 
-        className={`fixed top-0 w-full z-50 bg-surface border-b border-border/50 transition-all duration-500 ${
-            isScrolled ? 'py-4 shadow-luxury' : 'py-6'
-        }`}
-      >
+      {/* 1. HEADER + TOP BAR - Hide on client dashboard */}
+      {currentView !== 'client-dashboard' && (
+        <nav 
+          className={`fixed top-0 w-full z-50 bg-surface border-b border-border/50 transition-all duration-500 ${
+              isScrolled ? 'py-4 shadow-luxury' : 'py-6'
+          }`}
+        >
         <div className="max-w-7xl mx-auto px-6 lg:px-12">
           <div className="flex justify-between items-center">
             
@@ -83,8 +115,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
               </div>
             </div>
 
-            {/* Navigation - Centered */}
-            <div className="hidden md:flex space-x-8 items-center">
+            {/* Navigation - Centered - Hidden on mobile */}
+            <div className="hidden lg:flex space-x-8 items-center">
               <NavLink view="home" label="Home" />
               <NavLink view="about" label="Studio" />
               <NavLink view="services" label="Services" />
@@ -92,8 +124,15 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
               <NavLink view="contact" label="Contact" />
             </div>
 
-            {/* Actions - Right */}
-            <div className="hidden md:flex items-center space-x-6">
+            {/* Actions - Right - Hidden on mobile */}
+            <div className="hidden lg:flex items-center space-x-6">
+              <button 
+                onClick={() => setCurrentView('client-login')}
+                className="text-xs font-medium text-kurchi-gold-500 hover:text-kurchi-espresso-900 transition-colors"
+              >
+                Client Login
+              </button>
+              
               <button 
                 onClick={() => setIsLoginModalOpen(true)}
                 className="text-xs font-medium text-text-secondary hover:text-kurchi-gold-500 transition-colors"
@@ -102,22 +141,154 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
               </button>
 
               <button 
-                onClick={() => setCurrentView('contact')} 
+                onClick={() => setCurrentView('start-project')} 
                 className="px-6 py-3 bg-kurchi-espresso-900 text-white text-xs font-bold uppercase tracking-widest hover:bg-kurchi-gold-500 transition-all duration-500 shadow-lg hover:shadow-kurchi-gold-500/20"
               >
-                Book Consultation
+                Start Your Project
               </button>
             </div>
+            
+            {/* Mobile Hamburger Menu Button */}
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="lg:hidden p-2 rounded-xl text-kurchi-espresso-900 hover:bg-kurchi-gold-500/10 transition-all"
+              aria-label="Toggle menu"
+            >
+              {isMobileMenuOpen ? <XMarkIcon className="h-6 w-6" /> : <Bars3Icon className="h-6 w-6" />}
+            </button>
           </div>
         </div>
-      </nav>
+        </nav>
+      )}
+      
+      {/* Mobile Slide-in Menu */}
+      {currentView !== 'client-dashboard' && (
+        <>
+          {/* Backdrop */}
+          {isMobileMenuOpen && (
+            <div 
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+              onClick={() => setIsMobileMenuOpen(false)}
+              aria-hidden="true"
+            />
+          )}
+          
+          {/* Slide-in Menu */}
+          <div className={`fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] bg-white dark:bg-surface border-l border-border dark:border-border shadow-2xl z-50 lg:hidden transform transition-transform duration-300 ease-out ${
+            isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}>
+            <div className="h-full flex flex-col overflow-hidden">
+              {/* Menu Header */}
+              <div className="flex items-center justify-between p-6 border-b border-border dark:border-border bg-gradient-to-r from-kurchi-gold-500 to-kurchi-espresso-900">
+                <div>
+                  <h2 className="text-lg font-bold text-white">Menu</h2>
+                  <p className="text-xs text-white/80 mt-0.5">Kurchi Interior Studio</p>
+                </div>
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all"
+                  aria-label="Close menu"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+              {/* Navigation Items */}
+              <div className="flex-1 overflow-y-auto py-6 px-4">
+                <div className="mb-8">
+                  <p className="px-4 mb-4 text-xs font-bold text-text-secondary dark:text-text-secondary uppercase tracking-wider">
+                    Navigation
+                  </p>
+                  <nav className="space-y-2">
+                    {[
+                      { view: 'home', label: 'Home' },
+                      { view: 'about', label: 'Our Studio' },
+                      { view: 'services', label: 'Services' },
+                      { view: 'portfolio', label: 'Portfolio' },
+                      { view: 'contact', label: 'Contact Us' }
+                    ].map(item => (
+                      <button
+                        key={item.view}
+                        onClick={() => setCurrentView(item.view as any)}
+                        className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-left transition-all duration-200 ${
+                          currentView === item.view
+                            ? 'bg-gradient-to-r from-kurchi-gold-500 to-kurchi-gold-600 text-white shadow-lg'
+                            : 'text-text-primary dark:text-text-primary hover:bg-subtle-background dark:hover:bg-background'
+                        }`}
+                      >
+                        <span className="font-medium">{item.label}</span>
+                      </button>
+                    ))}
+                  </nav>
+                </div>
+
+                {/* Quick Actions */}
+                <div className="pt-6 border-t border-border dark:border-border">
+                  <p className="px-4 mb-4 text-xs font-bold text-text-secondary dark:text-text-secondary uppercase tracking-wider">
+                    Quick Actions
+                  </p>
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => setCurrentView('start-project')}
+                      className="w-full px-4 py-4 bg-kurchi-espresso-900 text-white text-sm font-bold uppercase tracking-widest hover:bg-kurchi-gold-500 transition-all duration-300 rounded-xl shadow-lg"
+                    >
+                      Start Your Project
+                    </button>
+                    <button
+                      onClick={() => { setCurrentView('client-login'); setIsMobileMenuOpen(false); }}
+                      className="w-full px-4 py-3 border-2 border-kurchi-gold-500 text-kurchi-gold-600 text-sm font-semibold hover:bg-kurchi-gold-500 hover:text-white transition-all duration-300 rounded-xl"
+                    >
+                      Client Login
+                    </button>
+                    <button
+                      onClick={() => { setIsLoginModalOpen(true); setIsMobileMenuOpen(false); }}
+                      className="w-full px-4 py-3 border border-border text-text-secondary text-sm font-medium hover:border-kurchi-gold-500 hover:text-kurchi-gold-600 transition-all duration-300 rounded-xl"
+                    >
+                      Staff Login
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Contact Info */}
+              <div className="border-t border-border dark:border-border bg-subtle-background dark:bg-background p-6 space-y-4">
+                <div>
+                  <p className="text-xs font-bold text-text-secondary dark:text-text-secondary uppercase tracking-wider mb-3">
+                    Contact Us
+                  </p>
+                  <div className="space-y-3">
+                    <a href="tel:+915551234567" className="flex items-center space-x-3 text-sm text-text-primary dark:text-text-primary hover:text-kurchi-gold-600 transition-colors">
+                      <PhoneIcon className="w-5 h-5 text-kurchi-gold-600" />
+                      <span>+91 (555) 123-4567</span>
+                    </a>
+                    <a href="mailto:projects@kurchi.com" className="flex items-center space-x-3 text-sm text-text-primary dark:text-text-primary hover:text-kurchi-gold-600 transition-colors">
+                      <EnvelopeIcon className="w-5 h-5 text-kurchi-gold-600" />
+                      <span>projects@kurchi.com</span>
+                    </a>
+                    <div className="flex items-start space-x-3 text-sm text-text-secondary dark:text-text-secondary">
+                      <GlobeAltIcon className="w-5 h-5 text-kurchi-gold-600 flex-shrink-0 mt-0.5" />
+                      <span className="leading-relaxed">Cyber City, Sector 18<br/>Gurgaon, Haryana 122002</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="pt-4 border-t border-border dark:border-border">
+                  <p className="text-xs text-text-secondary dark:text-text-secondary text-center">
+                    © 2025 Kurchi - Make My Office
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Main Content Area */}
       <main className="flex-grow">
           {renderContent()}
       </main>
 
-      {/* 14. FOOTER */}
+      {/* 14. FOOTER - Hide on client dashboard and client login */}
+      {currentView !== 'client-dashboard' && currentView !== 'client-login' && (
       <footer className="bg-kurchi-espresso-950 pt-24 pb-12 text-white/80 border-t-4 border-kurchi-gold-500">
         <div className="max-w-7xl mx-auto px-6 lg:px-12">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-20">
@@ -184,6 +355,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
             </div>
         </div>
       </footer>
+      )}
       
       <LoginModal 
         isOpen={isLoginModalOpen} 

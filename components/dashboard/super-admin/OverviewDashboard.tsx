@@ -13,34 +13,58 @@ import { USERS, PROJECTS, PENDING_APPROVALS_COUNT, LEADS, ACTIVITIES, formatLarg
 import { ActivityStatus, UserRole, ProjectStatus, LeadPipelineStatus } from '../../../types';
 import TeamLiveStatusCard from './TeamLiveStatusCard';
 
-const MetricCard: React.FC<{ title: string; value: string; icon: React.ReactNode; subtext?: string; onClick?: () => void; }> = ({ title, value, icon, subtext, onClick }) => (
+const MetricCard: React.FC<{ title: string; value: string; icon: React.ReactNode; subtext?: string; onClick?: () => void; gradient?: string }> = ({ title, value, icon, subtext, onClick, gradient = 'from-kurchi-gold-500 to-kurchi-gold-600' }) => (
     <Card 
-        className={`hover:shadow-md hover:border-primary transition-all border border-transparent ${onClick ? 'cursor-pointer' : ''}`}
+        hover={!!onClick}
+        className={`${onClick ? 'cursor-pointer' : ''} overflow-hidden relative group`}
         onClick={onClick}
     >
-        <div className="flex items-center">
-            <div className="p-3 rounded-full bg-primary-subtle-background text-primary">
-                {icon}
+        <div className="absolute top-0 right-0 w-32 h-32 opacity-5">
+            <div className={`w-full h-full bg-gradient-to-br ${gradient} rounded-full transform translate-x-12 -translate-y-12`}></div>
+        </div>
+        <div className="relative">
+            <div className="flex items-start justify-between mb-4">
+                <div className={`p-3.5 rounded-xl bg-gradient-to-br ${gradient} text-white shadow-md group-hover:scale-110 transition-transform`}>
+                    {icon}
+                </div>
+                <div className="text-right">
+                    <p className="text-3xl font-bold text-kurchi-espresso-900 group-hover:text-kurchi-gold-600 transition-colors">{value}</p>
+                </div>
             </div>
-            <div className="ml-4">
-                <p className="text-sm font-medium text-text-secondary">{title}</p>
-                <p className="text-2xl font-bold text-text-primary">{value}</p>
+            <div>
+                <p className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-1">{title}</p>
+                {subtext && <p className="text-xs text-text-secondary font-light mt-2">{subtext}</p>}
             </div>
         </div>
-        {subtext && <p className="text-xs text-text-secondary mt-2">{subtext}</p>}
     </Card>
 );
 
 const AlertCard: React.FC<{ title: string; count: number; items: string[] }> = ({ title, count, items }) => (
-    <Card>
-        <h3 className="text-lg font-bold text-error flex items-center">
-            <ExclamationTriangleIcon className="w-5 h-5 mr-2" />
-            {title} ({count})
-        </h3>
-        <ul className="mt-4 space-y-2 text-sm list-disc list-inside text-text-primary">
-           {items.slice(0, 3).map((item, index) => <li key={index}>{item}</li>)}
-           {items.length > 3 && <li className="text-xs text-text-secondary">...and {items.length - 3} more</li>}
-        </ul>
+    <Card className="border-l-4 border-error">
+        <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-error flex items-center">
+                <div className="p-2 rounded-lg bg-error/10 mr-3">
+                    <ExclamationTriangleIcon className="w-5 h-5" />
+                </div>
+                {title}
+            </h3>
+            <span className="px-3 py-1 bg-error/10 text-error rounded-full text-sm font-bold">{count}</span>
+        </div>
+        {items.length > 0 ? (
+            <ul className="space-y-3">
+                {items.slice(0, 3).map((item, index) => (
+                    <li key={index} className="flex items-start space-x-2 text-sm">
+                        <span className="w-1.5 h-1.5 rounded-full bg-error mt-1.5 flex-shrink-0"></span>
+                        <span className="text-text-primary font-medium">{item}</span>
+                    </li>
+                ))}
+                {items.length > 3 && (
+                    <li className="text-xs text-text-secondary italic pl-3.5">+ {items.length - 3} more items</li>
+                )}
+            </ul>
+        ) : (
+            <p className="text-sm text-text-secondary italic">No pending items</p>
+        )}
     </Card>
 );
 
@@ -68,42 +92,57 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage })
 
 
     return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-text-primary">Super Admin Overview</h2>
+    <div className="space-y-8">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
+        <div>
+            <h2 className="text-3xl font-serif font-bold text-kurchi-espresso-900 mb-2">Dashboard Overview</h2>
+            <p className="text-text-secondary font-light">Welcome back! Here's what's happening today.</p>
+        </div>
+        <div className="text-right">
+            <p className="text-xs text-text-secondary uppercase tracking-wider mb-1">Current Period</p>
+            <p className="text-sm font-bold text-kurchi-espresso-900">December 2025</p>
+        </div>
+      </div>
       
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <MetricCard 
                 title="Total Projects" 
                 value={totalProjects.toString()} 
-                icon={<RectangleStackIcon />} 
-                subtext={`${activeProjects} active, ${completedProjects} completed`} 
+                icon={<RectangleStackIcon className="w-6 h-6" />} 
+                subtext={`${activeProjects} active · ${completedProjects} completed`} 
                 onClick={() => setCurrentPage('projects')}
+                gradient="from-blue-500 to-blue-600"
             />
             <MetricCard 
                 title="Lead Conversion" 
                 value={`${conversionRate}%`} 
-                icon={<ChartBarIcon />} 
+                icon={<ChartBarIcon className="w-6 h-6" />} 
                 subtext={`${newLeadsThisWeek} new leads this week`}
                 onClick={() => setCurrentPage('leads')}
+                gradient="from-purple-500 to-purple-600"
             />
             <MetricCard 
                 title="Team Members" 
                 value={teamMembers.toString()} 
-                icon={<UserGroupIcon />} 
+                icon={<UserGroupIcon className="w-6 h-6" />} 
                 subtext="Across all departments"
                 onClick={() => setCurrentPage('team')}
+                gradient="from-orange-500 to-orange-600"
             />
             <MetricCard 
                 title="Total Revenue (YTD)" 
                 value={formatLargeNumberINR(totalRevenue)} 
-                icon={<BanknotesIcon />} 
-                subtext="From all completed projects"
+                icon={<BanknotesIcon className="w-6 h-6" />} 
+                subtext="From completed projects"
                 onClick={() => setCurrentPage('reports')}
+                gradient="from-green-500 to-green-600"
             />
         </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2">
             <TeamLiveStatusCard />
         </div>
         <div className="lg:col-span-1 space-y-6">

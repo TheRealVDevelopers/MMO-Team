@@ -6,7 +6,7 @@ import TeamManagementPage from './sales-manager/TeamManagementPage';
 import ReportsPage from './sales-manager/ReportsPage';
 import { Lead, LeadHistory, LeadPipelineStatus } from '../../types';
 import { USERS } from '../../constants';
-import { UserPlusIcon, UsersIcon, ArrowDownTrayIcon, ArrowLeftIcon } from '../icons/IconComponents';
+import { UserPlusIcon, UsersIcon, ArrowDownTrayIcon } from '../icons/IconComponents';
 import AddNewLeadModal from './sales-manager/AddNewLeadModal';
 import AssignLeadModal from './sales-manager/AssignLeadModal';
 import { useAuth } from '../../context/AuthContext';
@@ -14,6 +14,7 @@ import PerformancePage from './sales-manager/PerformancePage';
 import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
 import { useLeads, addLead, updateLead } from '../../hooks/useLeads';
+import BackButton from '../shared/BackButton';
 
 const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
@@ -154,15 +155,12 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
     <>
       <div className="flex flex-col h-full">
          <div>
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
                 <div className="flex items-center gap-4">
                   {currentPage !== 'overview' && (
-                      <button onClick={() => setCurrentPage('overview')} className="flex items-center space-x-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors">
-                          <ArrowLeftIcon className="w-5 h-5" />
-                          <span>Back</span>
-                      </button>
+                      <BackButton onClick={() => setCurrentPage('overview')} />
                   )}
-                  <h2 className="text-2xl font-bold text-text-primary">{pageTitles[currentPage]}</h2>
+                  <h2 className="text-2xl md:text-3xl font-serif font-bold text-text-primary dark:text-white">{pageTitles[currentPage]}</h2>
                 </div>
                 {showHeader && (
                   <div className="flex items-center space-x-2">

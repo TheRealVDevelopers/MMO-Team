@@ -4,15 +4,33 @@ import React from 'react';
 import Card from '../../shared/Card';
 import { USERS, formatCurrencyINR } from '../../../constants';
 import { Lead, LeadPipelineStatus, UserRole } from '../../../types';
-import { ExclamationTriangleIcon } from '../../icons/IconComponents';
+import { ExclamationTriangleIcon, FunnelIcon, ChartBarIcon, CheckCircleIcon, BanknotesIcon } from '../../icons/IconComponents';
 
 const salesTeam = USERS.filter(u => u.role === UserRole.SALES_TEAM_MEMBER);
 const pipelineOrder = Object.values(LeadPipelineStatus);
 
-const KpiCard: React.FC<{ title: string; value: string; onClick?: () => void }> = ({ title, value, onClick }) => (
-    <Card className={`flex flex-col justify-between ${onClick ? 'cursor-pointer hover:shadow-md hover:border-primary transition-all' : ''} border border-transparent`} onClick={onClick}>
-      <p className="text-sm font-medium text-text-secondary">{title}</p>
-      <p className="text-3xl font-bold text-text-primary tracking-tight">{value}</p>
+const KpiCard: React.FC<{ title: string; value: string; onClick?: () => void; gradient?: string; icon?: React.ReactNode }> = ({ title, value, onClick, gradient = 'from-kurchi-gold-500 to-kurchi-gold-600', icon }) => (
+    <Card 
+        hover={!!onClick}
+        className={`${onClick ? 'cursor-pointer' : ''} overflow-hidden relative group`} 
+        onClick={onClick}
+    >
+        <div className="absolute top-0 right-0 w-24 h-24 opacity-5">
+            <div className={`w-full h-full bg-gradient-to-br ${gradient} rounded-full transform translate-x-8 -translate-y-8`}></div>
+        </div>
+        <div className="relative">
+            <div className="flex items-start justify-between">
+                <div>
+                    <p className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-2">{title}</p>
+                    <p className="text-4xl font-bold text-kurchi-espresso-900 tracking-tight group-hover:text-kurchi-gold-600 transition-colors">{value}</p>
+                </div>
+                {icon && (
+                    <div className={`p-2.5 rounded-lg bg-gradient-to-br ${gradient} text-white shadow-sm`}>
+                        {icon}
+                    </div>
+                )}
+            </div>
+        </div>
     </Card>
 );
 
@@ -32,61 +50,131 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; lead
     const urgentAlerts = leads.filter(l => l.status === LeadPipelineStatus.NEW_NOT_CONTACTED && (new Date().getTime() - l.inquiryDate.getTime()) > 24 * 60 * 60 * 1000);
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8">
+            {/* Enhanced Page Header */}
+            <div>
+                <h2 className="text-3xl font-serif font-bold text-kurchi-espresso-900 mb-2">Sales Dashboard</h2>
+                <p className="text-text-secondary font-light">Track your team's performance and pipeline status</p>
+            </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <KpiCard title="New Leads (Month)" value={totalLeads.toString()} onClick={() => setCurrentPage('leads')} />
-                <KpiCard title="Conversion Rate" value={`${conversionRate}%`} />
-                <KpiCard title="Projects Won (Month)" value={projectsWon.toString()} onClick={() => setCurrentPage('leads')}/>
-                <KpiCard title="Revenue (Month)" value={formatCurrencyINR(totalRevenue)} />
+            {/* Enhanced KPI Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <KpiCard 
+                    title="New Leads (Month)" 
+                    value={totalLeads.toString()} 
+                    onClick={() => setCurrentPage('leads')}
+                    gradient="from-blue-500 to-blue-600"
+                    icon={<FunnelIcon className="w-5 h-5" />}
+                />
+                <KpiCard 
+                    title="Conversion Rate" 
+                    value={`${conversionRate}%`}
+                    gradient="from-purple-500 to-purple-600"
+                    icon={<ChartBarIcon className="w-5 h-5" />}
+                />
+                <KpiCard 
+                    title="Projects Won (Month)" 
+                    value={projectsWon.toString()} 
+                    onClick={() => setCurrentPage('leads')}
+                    gradient="from-green-500 to-green-600"
+                    icon={<CheckCircleIcon className="w-5 h-5" />}
+                />
+                <KpiCard 
+                    title="Revenue (Month)" 
+                    value={formatCurrencyINR(totalRevenue)}
+                    gradient="from-kurchi-gold-500 to-kurchi-gold-600"
+                    icon={<BanknotesIcon className="w-5 h-5" />}
+                />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Enhanced Sales Pipeline */}
                 <div className="lg:col-span-2">
                     <Card className="h-full">
-                        <h3 className="text-lg font-bold">Sales Pipeline</h3>
-                        <div className="mt-4 space-y-4">
-                            {pipelineOrder.map(status => (
-                                <div key={status} className="space-y-1 cursor-pointer" onClick={() => setCurrentPage('leads')}>
-                                    <div className="flex justify-between text-sm font-medium">
-                                        <span className="text-text-secondary">{status}</span>
-                                        <span className="text-text-primary">{pipelineCounts[status] || 0} Leads</span>
+                        <div className="mb-6">
+                            <h3 className="text-xl font-serif font-bold text-kurchi-espresso-900 mb-2">Sales Pipeline</h3>
+                            <p className="text-sm text-text-secondary font-light">Overview of all leads across different stages</p>
+                        </div>
+                        <div className="space-y-4">
+                            {pipelineOrder.map(status => {
+                                const count = pipelineCounts[status] || 0;
+                                const percentage = leads.length > 0 ? (count / leads.length) * 100 : 0;
+                                return (
+                                    <div key={status} className="group cursor-pointer hover:bg-subtle-background/50 p-3 rounded-xl transition-all" onClick={() => setCurrentPage('leads')}>
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-sm font-semibold text-kurchi-espresso-900 group-hover:text-kurchi-gold-600 transition-colors">{status}</span>
+                                            <div className="flex items-center space-x-3">
+                                                <span className="text-xs text-text-secondary">{percentage.toFixed(0)}%</span>
+                                                <span className="text-sm font-bold text-kurchi-espresso-900 min-w-[3rem] text-right">{count} Lead{count !== 1 ? 's' : ''}</span>
+                                            </div>
+                                        </div>
+                                        <div className="w-full bg-subtle-background rounded-full h-2.5 overflow-hidden">
+                                            <div 
+                                                className="bg-gradient-to-r from-kurchi-gold-500 to-kurchi-gold-600 h-2.5 rounded-full transition-all duration-500 shadow-sm" 
+                                                style={{width: `${percentage}%`}}
+                                            ></div>
+                                        </div>
                                     </div>
-                                    <div className="w-full bg-subtle-background rounded-full h-4">
-                                        <div className="bg-primary h-4 rounded-full" style={{width: `${((pipelineCounts[status] || 0) / leads.length) * 100}%`}}></div>
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </Card>
                 </div>
+                
+                {/* Right Column - Team Performance & Alerts */}
                 <div className="lg:col-span-1 space-y-6">
+                    {/* Enhanced Team Performance */}
                     <Card>
-                        <h3 className="text-lg font-bold">Team Performance</h3>
-                        <ul className="mt-4 space-y-3">
-                            {salesTeam.map((member) => (
-                                <li key={member.id} className="flex items-center justify-between">
-                                    <div className="flex items-center">
-                                        <img src={member.avatar} alt={member.name} className="w-8 h-8 rounded-full"/>
-                                        <span className="ml-3 text-sm font-medium">{member.name}</span>
-                                    </div>
-                                    <div className="text-sm font-bold text-secondary">
-                                        {leads.filter(l => l.assignedTo === member.id && l.status === LeadPipelineStatus.WON).length} Won
-                                    </div>
-                                </li>
-                            ))}
+                        <h3 className="text-lg font-serif font-bold text-kurchi-espresso-900 mb-4">Top Performers</h3>
+                        <ul className="space-y-3">
+                            {salesTeam.map((member) => {
+                                const wonCount = leads.filter(l => l.assignedTo === member.id && l.status === LeadPipelineStatus.WON).length;
+                                return (
+                                    <li key={member.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-subtle-background transition-colors">
+                                        <div className="flex items-center space-x-3">
+                                            <img src={member.avatar} alt={member.name} className="w-10 h-10 rounded-full ring-2 ring-border shadow-sm"/>
+                                            <div>
+                                                <span className="text-sm font-bold text-kurchi-espresso-900 block">{member.name}</span>
+                                                <span className="text-xs text-text-secondary">Sales Team</span>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="px-3 py-1 bg-green-500/10 text-green-600 rounded-full text-xs font-bold">
+                                                {wonCount} Won
+                                            </div>
+                                        </div>
+                                    </li>
+                                );
+                            })}
                         </ul>
                     </Card>
-                    <Card>
-                        <h3 className="text-lg font-bold text-error flex items-center"><ExclamationTriangleIcon className="w-5 h-5 mr-2"/> Urgent Alerts</h3>
-                        <ul className="mt-4 space-y-3">
-                            {urgentAlerts.length > 0 ? urgentAlerts.map(alert => (
-                                <li key={alert.id} className="text-sm">
-                                    <p className="font-medium text-text-primary">{alert.clientName}</p>
-                                    <p className="text-xs text-text-secondary">New lead uncontacted for &gt; 24 hours.</p>
-                                </li>
-                            )) : <p className="text-sm text-text-secondary">No urgent alerts.</p>}
-                        </ul>
+                    
+                    {/* Enhanced Urgent Alerts */}
+                    <Card className="border-l-4 border-error">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-bold text-error flex items-center">
+                                <div className="p-2 rounded-lg bg-error/10 mr-3">
+                                    <ExclamationTriangleIcon className="w-5 h-5"/>
+                                </div>
+                                Urgent Alerts
+                            </h3>
+                            <span className="px-3 py-1 bg-error/10 text-error rounded-full text-sm font-bold">{urgentAlerts.length}</span>
+                        </div>
+                        {urgentAlerts.length > 0 ? (
+                            <ul className="space-y-3">
+                                {urgentAlerts.map(alert => (
+                                    <li key={alert.id} className="flex items-start space-x-2 text-sm">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-error mt-1.5 flex-shrink-0"></span>
+                                        <div>
+                                            <p className="font-bold text-kurchi-espresso-900">{alert.clientName}</p>
+                                            <p className="text-xs text-text-secondary mt-0.5">Uncontacted for &gt; 24 hours</p>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p className="text-sm text-text-secondary italic">No urgent alerts - Great job!</p>
+                        )}
                     </Card>
                 </div>
             </div>

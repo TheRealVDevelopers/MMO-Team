@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import SalesOverviewPage from './sales-manager/SalesOverviewPage';
-import LeadManagementPage from './sales-manager/LeadManagementPage';
-import TeamManagementPage from './sales-manager/TeamManagementPage';
-import ReportsPage from './sales-manager/ReportsPage';
+import SalesOverviewPage from './SalesOverviewPage';
+import LeadManagementPage from './LeadManagementPage';
+import TeamManagementPage from './TeamManagementPage';
+import ReportsPage from './ReportsPage';
+import ClientProjectsPage from './ClientProjectsPage';
 import { Lead, LeadHistory, LeadPipelineStatus } from '../../../types';
 import { USERS } from '../../../constants';
 import { UserPlusIcon, UsersIcon, ArrowDownTrayIcon, ArrowLeftIcon, ShieldExclamationIcon } from '../../icons/IconComponents';
-import AddNewLeadModal from './sales-manager/AddNewLeadModal';
-import AssignLeadModal from './sales-manager/AssignLeadModal';
+import AddNewLeadModal from './AddNewLeadModal';
+import AssignLeadModal from './AssignLeadModal';
 import { useAuth } from '../../../context/AuthContext';
-import PerformancePage from './sales-manager/PerformancePage';
+import PerformancePage from './PerformancePage';
 import CommunicationDashboard from '../../communication/CommunicationDashboard';
 import EscalateIssuePage from '../../escalation/EscalateIssuePage';
 import { useLeads, addLead, updateLead } from '../../../hooks/useLeads';
@@ -24,6 +25,7 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
   const pageTitles: { [key: string]: string } = {
     overview: 'Sales Dashboard',
     leads: 'Lead Management',
+    'client-projects': 'Client Projects',
     team: 'Team Performance',
     reports: 'Reports & Analytics',
     performance: 'My Performance',
@@ -173,6 +175,8 @@ service cloud.firestore {
         return <SalesOverviewPage setCurrentPage={setCurrentPage} leads={leads} />;
       case 'leads':
         return <LeadManagementPage leads={leads} />;
+      case 'client-projects':
+        return <ClientProjectsPage />;
       case 'team':
         return <TeamManagementPage leads={leads} />;
       case 'reports':
@@ -188,7 +192,7 @@ service cloud.firestore {
     }
   };
 
-  const showHeader = !['performance', 'communication', 'escalate-issue'].includes(currentPage);
+  const showHeader = !['performance', 'communication', 'escalate-issue', 'client-projects'].includes(currentPage);
 
 
   return (
