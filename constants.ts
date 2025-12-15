@@ -1,5 +1,8 @@
 
 
+
+
+
 import { User, Lead, UserRole, Project, ProjectStatus, Vendor, Invoice, PaymentStatus, Bid, LeadPipelineStatus, Activity, ActivityStatus, SiteVisit, SiteVisitStatus, MaterialRequest, MaterialRequestStatus, Issue, ChecklistItem, CommunicationMessage, Expense, VendorBill, Attendance, AttendanceStatus, Document, QuotationRequest, QuotationRequestStatus, DrawingRequest, DrawingRequestStatus, ProcurementRequest, ProcurementRequestStatus, ExecutionRequest, ExecutionRequestStatus, AccountsRequest, AccountsRequestStatus, Item, ProjectTemplate, ExpenseClaim, ExpenseClaimStatus, Task, TaskStatus, ChatChannel, ChatMessage, Complaint, ComplaintType, ComplaintPriority, ComplaintStatus, SiteReport } from './types';
 
 export const formatCurrencyINR = (value: number) => 
@@ -469,12 +472,12 @@ export const EXPENSE_CLAIMS: ExpenseClaim[] = [
 ];
 
 export const TASKS: Task[] = [
-    { id: 'task-1', title: 'Prepare proposal for Innovate Corp', userId: 'user-3', status: TaskStatus.IN_PROGRESS, timeSpent: 3600, priority: 'High', isPaused: false, startTime: Date.now() - 3600 * 1000 },
-    { id: 'task-2', title: 'Follow up with Global Ventures re: pantry', userId: 'user-3', status: TaskStatus.PENDING, timeSpent: 0, priority: 'Medium', isPaused: false },
-    { id: 'task-3', title: 'Update CRM with new contacts', userId: 'user-3', status: TaskStatus.COMPLETED, timeSpent: 1800, priority: 'Low', isPaused: false, endTime: Date.now() - 2 * 3600 * 1000 },
-    { id: 'task-4', title: '3D renders for Pantry Renovation', userId: 'user-4', status: TaskStatus.IN_PROGRESS, timeSpent: 7200, priority: 'High', isPaused: false, startTime: Date.now() - 7200 * 1000 },
-    { id: 'task-5', title: 'Draft floorplan for Server Room Layout', userId: 'user-4', status: TaskStatus.PENDING, timeSpent: 0, priority: 'Medium', isPaused: false },
-    { id: 'task-6', title: 'Revise quote for Art Studio Conversion', userId: 'user-5', status: TaskStatus.IN_PROGRESS, timeSpent: 900, priority: 'High', isPaused: false, startTime: Date.now() - 900 * 1000 },
+    { id: 'task-1', title: 'Prepare proposal for Innovate Corp', userId: 'user-3', status: TaskStatus.IN_PROGRESS, timeSpent: 3600, priority: 'High', isPaused: false, startTime: Date.now() - 3600 * 1000, date: new Date().toISOString().split('T')[0] },
+    { id: 'task-2', title: 'Follow up with Global Ventures re: pantry', userId: 'user-3', status: TaskStatus.PENDING, timeSpent: 0, priority: 'Medium', isPaused: false, date: new Date().toISOString().split('T')[0] },
+    { id: 'task-3', title: 'Update CRM with new contacts', userId: 'user-3', status: TaskStatus.COMPLETED, timeSpent: 1800, priority: 'Low', isPaused: false, endTime: Date.now() - 2 * 3600 * 1000, date: new Date().toISOString().split('T')[0] },
+    { id: 'task-4', title: '3D renders for Pantry Renovation', userId: 'user-4', status: TaskStatus.IN_PROGRESS, timeSpent: 7200, priority: 'High', isPaused: false, startTime: Date.now() - 7200 * 1000, date: new Date().toISOString().split('T')[0] },
+    { id: 'task-5', title: 'Draft floorplan for Server Room Layout', userId: 'user-4', status: TaskStatus.PENDING, timeSpent: 0, priority: 'Medium', isPaused: false, date: new Date().toISOString().split('T')[0] },
+    { id: 'task-6', title: 'Revise quote for Art Studio Conversion', userId: 'user-5', status: TaskStatus.IN_PROGRESS, timeSpent: 900, priority: 'High', isPaused: false, startTime: Date.now() - 900 * 1000, date: new Date().toISOString().split('T')[0] },
 ];
 
 export const ATTENDANCE_DATA: Record<string, Attendance[]> = {};

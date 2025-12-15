@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, ReactNode } from 'react';
 import { User } from '../types';
 import { USERS } from '../constants';
@@ -17,10 +18,7 @@ const loadUserWithAvatar = (user: User): User => {
 
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [currentUser, _setCurrentUser] = useState<User | null>(() => {
-      const initialUser = USERS[0]; // Default to Super Admin
-      return loadUserWithAvatar(initialUser);
-  });
+  const [currentUser, _setCurrentUser] = useState<User | null>(null); // Default to null for Landing Page
 
   const setCurrentUser = (user: User | null) => {
     _setCurrentUser(user ? loadUserWithAvatar(user) : null);

@@ -531,6 +531,7 @@ export interface Task {
   timeSpent: number; // in seconds
   priority: 'High' | 'Medium' | 'Low';
   isPaused: boolean;
+  date: string; // YYYY-MM-DD to link to calendar
 }
 
 export enum AttendanceType {

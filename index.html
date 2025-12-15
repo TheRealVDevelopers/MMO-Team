@@ -1,41 +1,99 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Make My Office - Internal Management System</title>
+    <title>Kurchi - Make My Office | Premium Interior Solutions</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
     <style>
       :root {
-        --color-primary: 37 99 235;
-        --color-secondary: 5 150 105;
-        --color-accent: 217 119 6;
-        --color-error: 220 38 38;
-        --color-purple: 139 92 246;
-        --color-background: 248 250 252;
-        --color-surface: 255 255 255;
-        --color-text-primary: 31 41 55;
-        --color-text-secondary: 107 114 128;
-        --color-border: 229 231 235;
-        --color-subtle-background: 249 250 251;
-        --color-toggle-background: 209 213 219;
+        /* 
+           THEME DEFINITION: Light · Smooth · Luxury · Architectural 
+           Based on: Soft daylight falling on wood, stone, and fabric.
+        */
+        
+        /* Primary Accent: Soft Warm Gold */
+        --color-primary: 196 163 90; /* #C4A35A */
+        
+        /* Secondary Accent: Warm Walnut (Used for strong text/dividers) */
+        --color-secondary: 122 90 58; /* #7A5A3A */
+        
+        /* Neutral Accent: Sage Grey */
+        --color-accent: 191 194 184; /* #BFC2B8 */
+        
+        /* Semantic Colors */
+        --color-error: 185 28 28;
+        --color-purple: 109 40 217;
 
-        --color-primary-subtle-background: 219 234 254;
-        --color-primary-subtle-text: 59 130 246;
-        --color-secondary-subtle-background: 220 252 231;
-        --color-secondary-subtle-text: 22 163 74;
-        --color-accent-subtle-background: 254 243 199;
-        --color-accent-subtle-text: 245 158 11;
-        --color-error-subtle-background: 254 226 226;
-        --color-error-subtle-text: 220 38 38;
-        --color-purple-subtle-background: 233 213 255;
-        --color-purple-subtle-text: 139 92 246;
+        /* Main Background: Soft Ivory */
+        --color-background: 246 244 240; /* #F6F4F0 */
+        
+        /* Section Background: Light Stone */
+        --color-subtle-background: 238 234 227; /* #EEEAE3 */
+        
+        /* Card Background: Pure Soft White */
+        --color-surface: 255 255 255; /* #FFFFFF */
+        
+        /* Text Colors */
+        --color-text-primary: 42 42 42; /* #2A2A2A - Soft Charcoal */
+        --color-text-secondary: 110 110 110; /* #6E6E6E - Muted Grey */
+        
+        /* Borders */
+        --color-border: 224 224 224; /* Soft Grey */
+        
+        --color-toggle-background: 200 200 200;
+
+        /* Subtle States */
+        --color-primary-subtle-background: 245 240 230; 
+        --color-primary-subtle-text: 196 163 90;
+        
+        --color-secondary-subtle-background: 240 235 230;
+        --color-secondary-subtle-text: 122 90 58;
+        
+        --color-accent-subtle-background: 240 242 240;
+        --color-accent-subtle-text: 100 100 100;
+        
+        --color-error-subtle-background: 254 242 242;
+        --color-error-subtle-text: 153 27 27;
+        
+        --color-purple-subtle-background: 243 232 255;
+        --color-purple-subtle-text: 107 33 168;
+        
         --color-slate-subtle-background: 241 245 249;
-        --color-slate-subtle-text: 71 85 105;
+        --color-slate-subtle-text: 51 65 85;
+      }
+      
+      /* Smooth Scrolling with heavy dampening */
+      html {
+        scroll-behavior: smooth;
+      }
+      
+      .font-serif {
+        font-family: 'Playfair Display', serif;
+      }
+      .font-sans {
+        font-family: 'Inter', sans-serif;
+      }
+
+      /* Hide Scrollbar for horizontal scroll areas */
+      .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+      }
+      .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+      }
+      
+      /* Luxury Text Rendering */
+      body {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
       }
     </style>
     <script>
@@ -44,6 +102,7 @@
           extend: {
             fontFamily: {
               sans: ['Inter', 'sans-serif'],
+              serif: ['Playfair Display', 'serif'],
             },
             colors: {
               primary: 'rgb(var(--color-primary) / <alpha-value>)',
@@ -57,20 +116,49 @@
               'text-secondary': 'rgb(var(--color-text-secondary) / <alpha-value>)',
               border: 'rgb(var(--color-border) / <alpha-value>)',
               'subtle-background': 'rgb(var(--color-subtle-background) / <alpha-value>)',
-              'toggle-background': 'rgb(var(--color-toggle-background) / <alpha-value>)',
-
-              'primary-subtle-background': 'rgb(var(--color-primary-subtle-background) / <alpha-value>)',
-              'primary-subtle-text': 'rgb(var(--color-primary-subtle-text) / <alpha-value>)',
-              'secondary-subtle-background': 'rgb(var(--color-secondary-subtle-background) / <alpha-value>)',
-              'secondary-subtle-text': 'rgb(var(--color-secondary-subtle-text) / <alpha-value>)',
-              'accent-subtle-background': 'rgb(var(--color-accent-subtle-background) / <alpha-value>)',
-              'accent-subtle-text': 'rgb(var(--color-accent-subtle-text) / <alpha-value>)',
-              'error-subtle-background': 'rgb(var(--color-error-subtle-background) / <alpha-value>)',
-              'error-subtle-text': 'rgb(var(--color-error-subtle-text) / <alpha-value>)',
-              'purple-subtle-background': 'rgb(var(--color-purple-subtle-background) / <alpha-value>)',
-              'purple-subtle-text': 'rgb(var(--color-purple-subtle-text) / <alpha-value>)',
-              'slate-subtle-background': 'rgb(var(--color-slate-subtle-background) / <alpha-value>)',
-              'slate-subtle-text': 'rgb(var(--color-slate-subtle-text) / <alpha-value>)',
+              
+              /* Semantic Mapping to New Theme for existing components */
+              'kurchi-gold': {
+                400: '#D4B875',
+                500: '#C4A35A', // Primary Accent
+                600: '#A88A45',
+              },
+              'kurchi-espresso': {
+                800: '#4A4A4A',
+                900: '#2A2A2A', // Primary Text (Soft Charcoal)
+                950: '#222222', // Deep Charcoal (No harsh black)
+              }
+            },
+            boxShadow: {
+              'luxury': '0px 8px 24px rgba(0, 0, 0, 0.06)',
+              'luxury-hover': '0px 12px 32px rgba(0, 0, 0, 0.08)',
+            },
+            borderRadius: {
+              'lg': '12px',
+              'md': '8px',
+              'sm': '4px',
+            },
+            animation: {
+              'luxury-reveal': 'luxury-reveal 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards',
+              'image-settle': 'image-settle 1.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards',
+              'slow-fade': 'fade-in 1.2s ease-out forwards',
+            },
+            keyframes: {
+              'luxury-reveal': {
+                '0%': { transform: 'translateY(20px)', opacity: '0' },
+                '100%': { transform: 'translateY(0)', opacity: '1' },
+              },
+              'image-settle': {
+                '0%': { transform: 'scale(1.05)', opacity: '0', filter: 'blur(5px)' },
+                '100%': { transform: 'scale(1)', opacity: '1', filter: 'blur(0px)' },
+              },
+              'fade-in': {
+                '0%': { opacity: '0' },
+                '100%': { opacity: '1' },
+              }
+            },
+            transitionTimingFunction: {
+              'luxury': 'cubic-bezier(0.2, 0.8, 0.2, 1)',
             }
           }
         }
@@ -87,12 +175,13 @@
     "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js",
     "firebase/": "https://aistudiocdn.com/firebase@^12.4.0/",
     "react-dom": "https://aistudiocdn.com/react-dom@^19.2.0",
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^0.14.0"
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^0.14.0",
+    "@heroicons/react/": "https://aistudiocdn.com/@heroicons/react@^2.2.0/"
   }
 }
 </script>
 </head>
-  <body class="bg-background font-sans text-text-primary transition-colors duration-300">
+  <body class="bg-background font-sans text-text-primary transition-colors duration-500 antialiased selection:bg-kurchi-gold-500 selection:text-white">
     <div id="root"></div>
     <div id="modal-root"></div>
     <script type="module" src="/index.tsx"></script>

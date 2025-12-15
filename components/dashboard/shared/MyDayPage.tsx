@@ -1,10 +1,12 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { TASKS, LEADS, formatDateTime } from '../../../constants';
-import { Task, TaskStatus, DailyAttendance, AttendanceType, UserRole, Lead, Reminder } from '../../../types';
+import { TASKS, LEADS, formatDateTime, ATTENDANCE_DATA } from '../../../constants';
+import { Task, TaskStatus, AttendanceType, UserRole, Reminder, AttendanceStatus } from '../../../types';
 import TaskCard from './TaskCard';
 import Card from '../../shared/Card';
-import { BoltIcon, CalendarDaysIcon, BellIcon } from '../../icons/IconComponents';
+import { BoltIcon, CalendarDaysIcon, BellIcon, PlusIcon, CheckCircleIcon } from '../../icons/IconComponents';
+import PersonalCalendar from './PersonalCalendar';
 
 // Define a type for the reminder with its associated lead info
 interface EnrichedReminder extends Reminder {
@@ -54,8 +56,9 @@ const ReminderItem: React.FC<{ reminder: EnrichedReminder, onToggle: (id: string
 const MyDayPage: React.FC = () => {
     const { currentUser } = useAuth();
     const [tasks, setTasks] = useState<Task[]>([]);
-    const [attendance, setAttendance] = useState<DailyAttendance | null>(null);
     const [reminders, setReminders] = useState<EnrichedReminder[]>([]);
+    const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+    const [newTaskTitle, setNewTaskTitle] = useState('');
 
     useEffect(() => {
         if (currentUser) {
@@ -86,9 +89,6 @@ const MyDayPage: React.FC = () => {
             } else {
                 setReminders([]); // Clear reminders for other roles
             }
-            
-            // Reset attendance on user change
-            setAttendance(null); 
         }
     }, [currentUser]);
 
@@ -102,7 +102,6 @@ const MyDayPage: React.FC = () => {
                     if (newStatus === TaskStatus.IN_PROGRESS) {
                         updatedTask.startTime = now;
                         updatedTask.isPaused = false;
-                        checkAndSetAttendance(now);
                     }
 
                     if (newStatus === TaskStatus.COMPLETED) {
@@ -124,7 +123,6 @@ const MyDayPage: React.FC = () => {
             const updated = prevReminders.map(r => 
                 r.id === reminderId ? { ...r, completed: !r.completed } : r
             );
-            // Re-sort after toggling
             updated.sort((a, b) => {
                 if (a.completed !== b.completed) {
                     return a.completed ? 1 : -1;
@@ -135,43 +133,49 @@ const MyDayPage: React.FC = () => {
         });
     };
 
-    const checkAndSetAttendance = (startTime: number) => {
-        if (attendance) return; // Already checked in for the day
+    const handleAddTask = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newTaskTitle.trim() || !currentUser) return;
 
-        const checkInTime = new Date(startTime);
-        const todayStr = checkInTime.toISOString().split('T')[0];
-        const shiftStart = new Date(todayStr);
-        shiftStart.setHours(9, 0, 0, 0); // 9 AM shift start
+        const newTask: Task = {
+            id: `task-${Date.now()}`,
+            title: newTaskTitle,
+            userId: currentUser.id,
+            status: TaskStatus.PENDING,
+            timeSpent: 0,
+            priority: 'Medium',
+            isPaused: false,
+            date: selectedDate,
+        };
 
-        const hoursLate = (checkInTime.getTime() - shiftStart.getTime()) / (1000 * 60 * 60);
-
-        let status: AttendanceType;
-        if (hoursLate <= 1) status = AttendanceType.ON_TIME;
-        else if (hoursLate <= 2) status = AttendanceType.LATE;
-        else status = AttendanceType.HALF_DAY;
-
-        setAttendance({
-            userId: currentUser!.id,
-            date: todayStr,
-            checkInTime: startTime,
-            status: status
-        });
+        setTasks(prev => [...prev, newTask]);
+        setNewTaskTitle('');
     };
 
-    const { pending, inProgress, completed } = useMemo(() => {
-        return tasks.reduce((acc, task) => {
-            if (task.status === TaskStatus.PENDING) {
-                acc.pending.push(task);
-            } else if (task.status === TaskStatus.IN_PROGRESS) {
-                acc.inProgress.push(task);
-            } else if (task.status === TaskStatus.COMPLETED) {
-                acc.completed.push(task);
-            }
-            return acc;
-        }, { pending: [], inProgress: [], completed: [] } as { pending: Task[], inProgress: Task[], completed: Task[] });
-    }, [tasks]);
+    // Filter tasks for the selected date
+    const daysTasks = useMemo(() => {
+        return tasks.filter(task => task.date === selectedDate);
+    }, [tasks, selectedDate]);
 
-    const productivityScore = tasks.length > 0 ? (completed.length / tasks.length) * 100 : 0;
+    // Attendance Stats
+    const attendanceStats = useMemo(() => {
+        if (!currentUser) return null;
+        const userAttendance = ATTENDANCE_DATA[currentUser.id] || [];
+        const currentMonth = new Date().getMonth();
+        const monthlyData = userAttendance.filter(a => new Date(a.date).getMonth() === currentMonth);
+        
+        const present = monthlyData.filter(a => a.status === AttendanceStatus.PRESENT).length;
+        const absent = monthlyData.filter(a => a.status === AttendanceStatus.ABSENT).length;
+        const halfDay = monthlyData.filter(a => a.status === AttendanceStatus.HALF_DAY).length;
+        const leave = monthlyData.filter(a => a.status === AttendanceStatus.LEAVE).length;
+
+        return { present, absent, halfDay, leave };
+    }, [currentUser]);
+
+    const formattedDateHeader = useMemo(() => {
+        const date = new Date(selectedDate);
+        return date.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
+    }, [selectedDate]);
     
     if (!currentUser) return null;
 
@@ -180,64 +184,100 @@ const MyDayPage: React.FC = () => {
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
                 <div>
                     <h2 className="text-3xl font-bold text-text-primary">My Day</h2>
-                    <p className="text-text-secondary">Here are your tasks for today. Let's get things done!</p>
+                    <p className="text-text-secondary">Manage your calendar and daily tasks.</p>
                 </div>
-                <div className="flex gap-4">
-                    {attendance && (
-                        <Card className="p-3 text-center">
-                            <div className="flex items-center gap-2">
-                                <CalendarDaysIcon className="w-6 h-6 text-primary"/>
-                                <div>
-                                    <p className="text-xs font-bold text-text-secondary">ATTENDANCE</p>
-                                    <p className="text-sm font-bold text-primary">{attendance.status}</p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left Column: Calendar & Attendance */}
+                <div className="space-y-6">
+                    <PersonalCalendar 
+                        userId={currentUser.id} 
+                        onDateSelect={setSelectedDate}
+                        tasks={tasks}
+                    />
+                    
+                    {attendanceStats && (
+                        <Card>
+                            <h3 className="text-lg font-bold flex items-center mb-4">
+                                <CalendarDaysIcon className="w-5 h-5 mr-2 text-primary"/>
+                                This Month's Attendance
+                            </h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-secondary-subtle-background p-3 rounded-lg text-center">
+                                    <p className="text-secondary font-bold text-2xl">{attendanceStats.present}</p>
+                                    <p className="text-xs text-secondary-subtle-text uppercase font-semibold">Present</p>
+                                </div>
+                                <div className="bg-error-subtle-background p-3 rounded-lg text-center">
+                                    <p className="text-error font-bold text-2xl">{attendanceStats.absent}</p>
+                                    <p className="text-xs text-error-subtle-text uppercase font-semibold">Absent</p>
+                                </div>
+                                <div className="bg-accent-subtle-background p-3 rounded-lg text-center">
+                                    <p className="text-accent font-bold text-2xl">{attendanceStats.halfDay}</p>
+                                    <p className="text-xs text-accent-subtle-text uppercase font-semibold">Half Day</p>
+                                </div>
+                                <div className="bg-purple-subtle-background p-3 rounded-lg text-center">
+                                    <p className="text-purple font-bold text-2xl">{attendanceStats.leave}</p>
+                                    <p className="text-xs text-purple-subtle-text uppercase font-semibold">Leave</p>
                                 </div>
                             </div>
                         </Card>
                     )}
-                     <Card className="p-3 text-center">
-                        <div className="flex items-center gap-2">
-                            <BoltIcon className="w-6 h-6 text-accent"/>
-                            <div>
-                                <p className="text-xs font-bold text-text-secondary">PRODUCTIVITY</p>
-                                <p className="text-sm font-bold text-accent">{productivityScore.toFixed(0)}%</p>
-                            </div>
-                        </div>
-                    </Card>
                 </div>
-            </div>
-            
-            {currentUser.role === UserRole.SALES_TEAM_MEMBER && reminders.length > 0 && (
-                <Card className="mb-6">
-                    <h3 className="text-lg font-bold flex items-center mb-4">
-                        <BellIcon className="w-5 h-5 mr-2 text-primary" />
-                        Upcoming Reminders
-                    </h3>
-                    <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
-                        {reminders.map(reminder => (
-                            <ReminderItem key={reminder.id} reminder={reminder} onToggle={handleToggleReminder} />
-                        ))}
-                    </div>
-                </Card>
-            )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Pending */}
-                <div className="space-y-4">
-                    <h3 className="flex items-center text-lg font-bold"><span className="w-3 h-3 rounded-full bg-error mr-2"></span>Pending ({pending.length})</h3>
-                    {pending.map(task => <TaskCard key={task.id} task={task} onUpdateStatus={handleUpdateStatus} />)}
-                     {pending.length === 0 && <p className="text-sm text-center text-text-secondary pt-4">No pending tasks.</p>}
-                </div>
-                {/* In Progress */}
-                <div className="space-y-4">
-                    <h3 className="flex items-center text-lg font-bold"><span className="w-3 h-3 rounded-full bg-accent mr-2"></span>In Progress ({inProgress.length})</h3>
-                     {inProgress.map(task => <TaskCard key={task.id} task={task} onUpdateStatus={handleUpdateStatus} />)}
-                     {inProgress.length === 0 && <p className="text-sm text-center text-text-secondary pt-4">No tasks in progress.</p>}
-                </div>
-                {/* Completed */}
-                <div className="space-y-4">
-                    <h3 className="flex items-center text-lg font-bold"><span className="w-3 h-3 rounded-full bg-secondary mr-2"></span>Completed ({completed.length})</h3>
-                     {completed.map(task => <TaskCard key={task.id} task={task} onUpdateStatus={handleUpdateStatus} />)}
-                     {completed.length === 0 && <p className="text-sm text-center text-text-secondary pt-4">No tasks completed today.</p>}
+                {/* Right Column: Task List for Selected Day */}
+                <div className="lg:col-span-2 space-y-6">
+                    {/* Agenda Header */}
+                    <div className="bg-surface p-6 rounded-lg border border-border shadow-sm">
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h3 className="text-xl font-bold text-text-primary">Agenda</h3>
+                                <p className="text-text-secondary">{formattedDateHeader}</p>
+                            </div>
+                            {/* Add Task Form */}
+                            <form onSubmit={handleAddTask} className="flex w-full max-w-sm ml-4">
+                                <input 
+                                    type="text" 
+                                    placeholder="Add a meeting or task..." 
+                                    value={newTaskTitle}
+                                    onChange={(e) => setNewTaskTitle(e.target.value)}
+                                    className="flex-grow p-2 border border-border rounded-l-md bg-subtle-background focus:ring-primary focus:border-primary"
+                                />
+                                <button type="submit" className="bg-primary text-white px-4 py-2 rounded-r-md hover:bg-blue-700 transition-colors">
+                                    <PlusIcon className="w-5 h-5"/>
+                                </button>
+                            </form>
+                        </div>
+
+                        <div className="space-y-4">
+                            {daysTasks.length > 0 ? (
+                                daysTasks.map(task => (
+                                    <TaskCard key={task.id} task={task} onUpdateStatus={handleUpdateStatus} />
+                                ))
+                            ) : (
+                                <div className="text-center py-12 border-2 border-dashed border-border rounded-lg bg-subtle-background">
+                                    <CheckCircleIcon className="w-12 h-12 text-text-secondary/30 mx-auto mb-2" />
+                                    <p className="text-text-secondary">No tasks scheduled for this day.</p>
+                                    <p className="text-xs text-text-secondary/70">Use the input above to add one.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Reminders (Only shown if active user is Sales and viewing Today - logically reminders are 'due' based on time not just calendar date selection, but keeping it simple) */}
+                    {currentUser.role === UserRole.SALES_TEAM_MEMBER && reminders.length > 0 && (
+                        <Card>
+                            <h3 className="text-lg font-bold flex items-center mb-4">
+                                <BellIcon className="w-5 h-5 mr-2 text-primary" />
+                                Upcoming Reminders
+                            </h3>
+                            <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
+                                {reminders.map(reminder => (
+                                    <ReminderItem key={reminder.id} reminder={reminder} onToggle={handleToggleReminder} />
+                                ))}
+                            </div>
+                        </Card>
+                    )}
                 </div>
             </div>
         </div>

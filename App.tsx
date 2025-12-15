@@ -1,19 +1,21 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import Header from './components/shared/Header';
 import Dashboard from './components/dashboard/Dashboard';
 import SettingsPage from './components/settings/SettingsPage';
 import Sidebar from './components/shared/Sidebar';
+import LandingPage from './components/landing/LandingPage';
 import { useAuth } from './context/AuthContext';
-import { UserRole } from './types';
+import { User, UserRole } from './types';
 // Fix: Imported missing CalendarDaysIcon and BanknotesIcon components.
 import { 
     BuildingOfficeIcon, RectangleGroupIcon, UsersIcon, RectangleStackIcon, FunnelIcon, ChartPieIcon, ChatBubbleLeftRightIcon, ShieldExclamationIcon,
     ClockIcon, MapPinIcon, PaintBrushIcon, CalculatorIcon, TruckIcon, WrenchScrewdriverIcon, CreditCardIcon, ChartBarSquareIcon, CalendarDaysIcon, BanknotesIcon,
     ViewColumnsIcon, TagIcon, ListBulletIcon, PresentationChartLineIcon, ReceiptPercentIcon, BuildingStorefrontIcon, BuildingLibraryIcon
 } from './components/icons/IconComponents';
+import { USERS } from './constants';
 
 const navConfig = {
     [UserRole.SUPER_ADMIN]: {
@@ -130,9 +132,10 @@ const navConfig = {
 };
 
 const AppContent: React.FC = () => {
-  const { currentUser } = useAuth();
-  const [currentPage, setCurrentPage] = React.useState('overview');
-  const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
+  const { currentUser, setCurrentUser } = useAuth();
+  const [currentPage, setCurrentPage] = useState('overview');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [showApp, setShowApp] = useState(false);
 
   const handleSetPage = (page: string) => {
     setCurrentPage(page);
@@ -146,15 +149,28 @@ const AppContent: React.FC = () => {
   const handleCloseSettings = () => {
     setIsSettingsOpen(false);
   }
+
+  const handleLogin = (user: User) => {
+      setCurrentUser(user);
+      setShowApp(true);
+  }
   
-  React.useEffect(() => {
+  useEffect(() => {
     if (currentUser) {
         const defaultPage = navConfig[currentUser.role]?.navItems[0]?.id || 'overview';
         setCurrentPage(defaultPage);
+        setShowApp(true);
+    } else {
+        setShowApp(false);
     }
   }, [currentUser?.role]);
 
-  const currentNavConfig = currentUser ? navConfig[currentUser.role] : null;
+  // If we are not in "App Mode" or not logged in, show Landing Page
+  if (!showApp || !currentUser) {
+      return <LandingPage onLogin={handleLogin} />;
+  }
+
+  const currentNavConfig = navConfig[currentUser.role];
   const needsSidebar = !!currentNavConfig && !isSettingsOpen;
 
   return (
@@ -168,7 +184,7 @@ const AppContent: React.FC = () => {
             secondaryNavItems={currentNavConfig.secondaryNavItems}
           />
       )}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 h-screen">
         <Header openSettings={handleOpenSettings} />
         <main className="flex-grow overflow-y-auto p-4 sm:p-6 lg:p-8">
           {isSettingsOpen ? (
