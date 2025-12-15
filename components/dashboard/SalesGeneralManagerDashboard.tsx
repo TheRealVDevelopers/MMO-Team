@@ -14,13 +14,19 @@ import PerformancePage from './sales-manager/PerformancePage';
 import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
 import { useLeads, addLead, updateLead } from '../../hooks/useLeads';
+import { useNewEnquiries, useEnquiries } from '../../hooks/useEnquiries';
+import EnquiryNotificationBanner from './EnquiryNotificationBanner';
+import EnquiriesListModal from './EnquiriesListModal';
 import BackButton from '../shared/BackButton';
 
 const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
   const { leads, loading: leadsLoading, error: leadsError } = useLeads();
+  const { newEnquiries } = useNewEnquiries(currentUser?.id);
+  const { enquiries } = useEnquiries();
   const [isAddLeadModalOpen, setAddLeadModalOpen] = useState(false);
   const [isAssignLeadModalOpen, setAssignLeadModalOpen] = useState(false);
+  const [showEnquiriesModal, setShowEnquiriesModal] = useState(false);
 
   const pageTitles: { [key: string]: string } = {
     overview: 'Sales Dashboard',
@@ -155,6 +161,14 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
     <>
       <div className="flex flex-col h-full">
          <div>
+            {/* Enquiry Notification Banner */}
+            {currentPage === 'overview' && (
+              <EnquiryNotificationBanner 
+                newEnquiries={newEnquiries}
+                onViewEnquiries={() => setShowEnquiriesModal(true)}
+              />
+            )}
+            
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
                 <div className="flex items-center gap-4">
                   {currentPage !== 'overview' && (
@@ -194,6 +208,12 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
         onClose={() => setAssignLeadModalOpen(false)}
         leads={leads}
         onAssignLead={handleAssignLead}
+      />
+      <EnquiriesListModal
+        isOpen={showEnquiriesModal}
+        onClose={() => setShowEnquiriesModal(false)}
+        enquiries={enquiries}
+        currentUserId={currentUser?.id || ''}
       />
     </>
   );

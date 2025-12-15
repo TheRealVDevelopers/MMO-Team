@@ -16,7 +16,8 @@ import {
 } from '@heroicons/react/24/outline';
 import { addLead } from '../../hooks/useLeads';
 import { addClientProject } from '../../hooks/useClientProjects';
-import { LeadPipelineStatus } from '../../types';
+import { createEnquiry, generateEnquiryId } from '../../hooks/useEnquiries';
+import { LeadPipelineStatus, EnquiryStatus } from '../../types';
 import { USERS } from '../../constants';
 
 // Animation Hook
@@ -147,19 +148,14 @@ const StartProjectPage: React.FC = () => {
     };
 
     const handleSubmit = async () => {
-        // Generate project ID
-        const newProjectId = generateProjectId(formData.projectType);
-        setProjectId(newProjectId);
+        // Generate enquiry ID (not project ID yet - that comes after conversion)
+        const newEnquiryId = generateEnquiryId();
+        setProjectId(newEnquiryId); // Show enquiry ID to user
 
-        // Calculate expected completion date (3 months from now as default)
-        const expectedDate = new Date();
-        expectedDate.setMonth(expectedDate.getMonth() + 3);
-        const expectedCompletion = expectedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-
-        // Create client project entry in Firebase
+        // Create enquiry entry in Firebase
         try {
-            await addClientProject({
-                projectId: newProjectId,
+            await createEnquiry({
+                enquiryId: newEnquiryId,
                 clientName: formData.fullName,
                 email: formData.email,
                 mobile: formData.mobile,
@@ -174,41 +170,16 @@ const StartProjectPage: React.FC = () => {
                 startTime: formData.startTime,
                 completionTimeline: formData.completionTimeline,
                 additionalNotes: formData.additionalNotes,
-                currentStage: 1, // Start at Consultation
-                expectedCompletion: expectedCompletion,
-                consultant: USERS[2].name, // Default consultant
-                consultantId: USERS[2].id,
-                hasPassword: false,
-                updatedAt: new Date(),
+                status: EnquiryStatus.NEW,
+                viewedBy: [],
+                isNew: true,
             });
+
+            console.log('Enquiry created successfully:', newEnquiryId);
         } catch (error) {
-            console.error('Error creating client project:', error);
+            console.error('Error creating enquiry:', error);
         }
 
-        // Also create lead entry for sales team
-        const newLead = {
-            clientName: formData.fullName,
-            projectName: `${formData.projectType} - ${formData.city}`,
-            status: LeadPipelineStatus.NEW_NOT_CONTACTED,
-            lastContacted: 'Just now',
-            assignedTo: USERS[2].id,
-            inquiryDate: new Date(),
-            value: 0,
-            source: 'Start Project Form',
-            history: [
-                {
-                    action: 'Project Initiated',
-                    user: 'System',
-                    timestamp: new Date(),
-                    notes: `Project ID: ${newProjectId} | Type: ${formData.projectType} | Budget: ${formData.budgetRange} | Timeline: ${formData.completionTimeline}`
-                }
-            ],
-            tasks: {},
-            reminders: [],
-            priority: 'High' as const,
-        };
-
-        await addLead(newLead);
         setSubmitted(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -241,14 +212,14 @@ const StartProjectPage: React.FC = () => {
                             <CheckCircleIcon className="w-12 h-12 text-green-600" />
                         </div>
                         <h1 className="text-4xl font-serif font-bold text-kurchi-espresso-900 mb-4">
-                            Project ID Created Successfully!
+                            Enquiry Submitted Successfully!
                         </h1>
                         <div className="inline-block px-8 py-4 bg-kurchi-gold-500/10 rounded-xl mb-6">
-                            <p className="text-sm text-text-secondary mb-2">Your Project ID</p>
+                            <p className="text-sm text-text-secondary mb-2">Your Enquiry ID</p>
                             <p className="text-3xl font-serif font-bold text-kurchi-espresso-900">{projectId}</p>
                         </div>
                         <p className="text-lg text-text-secondary mb-8 leading-relaxed">
-                            Thank you for choosing Kurchi. Our sales consultant will contact you within 24 hours to discuss your project and share your secure login credentials.
+                            Thank you for your interest. Our sales team has received your enquiry and will contact you within 24 hours to discuss your project requirements.
                         </p>
                         <div className="space-y-4 text-left bg-subtle-background p-6 rounded-xl">
                             <h3 className="font-bold text-kurchi-espresso-900 mb-3">What happens next?</h3>

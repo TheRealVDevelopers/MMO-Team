@@ -7,6 +7,7 @@ import {
     ExclamationCircleIcon,
     CheckCircleIcon
 } from '@heroicons/react/24/outline';
+import { verifyClientCredentials } from '../../services/authService';
 
 // Animation Hook
 const useOnScreen = (options: IntersectionObserverInit) => {
@@ -56,25 +57,29 @@ const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => 
         setError('');
         setIsLoading(true);
 
-        // Simulate authentication
-        setTimeout(() => {
-            // For demo purposes - in production, this would validate against Firebase
-            if (projectId && password) {
-                // Validate project ID format
-                const projectIdPattern = /^(OFF|HOM|COM|CUS)-\d{4}-\d{5}$/;
-                if (!projectIdPattern.test(projectId)) {
-                    setError('Invalid Project ID format. Please check your credentials.');
-                    setIsLoading(false);
-                    return;
-                }
+        try {
+            // Validate project ID format
+            const projectIdPattern = /^(OFF|HOM|COM|CUS)-\d{4}-\d{5}$/;
+            if (!projectIdPattern.test(projectId)) {
+                setError('Invalid Project ID format. Please check your credentials.');
+                setIsLoading(false);
+                return;
+            }
 
-                // Success - navigate to dashboard
+            // Verify credentials with Firebase
+            const isValid = await verifyClientCredentials(projectId, password);
+            
+            if (isValid) {
                 onLoginSuccess(projectId);
             } else {
-                setError('Please enter both Project ID and Password');
-                setIsLoading(false);
+                setError('Invalid Project ID or Password. Please check your credentials.');
             }
-        }, 1500);
+        } catch (error) {
+            setError('Unable to verify credentials. Please try again later.');
+            console.error('Client login error:', error);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (

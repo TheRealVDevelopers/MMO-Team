@@ -1,0 +1,226 @@
+import { useState, useEffect } from 'react';
+import { 
+  collection, 
+  query, 
+  where, 
+  onSnapshot, 
+  addDoc, 
+  updateDoc, 
+  doc, 
+  serverTimestamp,
+  orderBy,
+  Timestamp
+} from 'firebase/firestore';
+import { db } from '../firebase';
+import { ApprovalRequest, ApprovalRequestType, ApprovalStatus, UserRole } from '../types';
+
+// Get all approval requests (for Admin)
+export const useApprovalRequests = (filterStatus?: ApprovalStatus) => {
+  const [requests, setRequests] = useState<ApprovalRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let q = query(
+      collection(db, 'approvalRequests'),
+      orderBy('requestedAt', 'desc')
+    );
+
+    if (filterStatus) {
+      q = query(
+        collection(db, 'approvalRequests'),
+        where('status', '==', filterStatus),
+        orderBy('requestedAt', 'desc')
+      );
+    }
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const approvalRequests: ApprovalRequest[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        approvalRequests.push({
+          id: doc.id,
+          requestType: data.requestType,
+          requesterId: data.requesterId,
+          requesterName: data.requesterName,
+          requesterRole: data.requesterRole,
+          title: data.title,
+          description: data.description,
+          startDate: data.startDate ? (data.startDate as Timestamp).toDate() : undefined,
+          endDate: data.endDate ? (data.endDate as Timestamp).toDate() : undefined,
+          duration: data.duration,
+          status: data.status,
+          requestedAt: (data.requestedAt as Timestamp).toDate(),
+          reviewedAt: data.reviewedAt ? (data.reviewedAt as Timestamp).toDate() : undefined,
+          reviewedBy: data.reviewedBy,
+          reviewerName: data.reviewerName,
+          reviewerComments: data.reviewerComments,
+          attachments: data.attachments || [],
+          priority: data.priority || 'Medium',
+        });
+      });
+      setRequests(approvalRequests);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [filterStatus]);
+
+  return { requests, loading };
+};
+
+// Get approval requests for specific user
+export const useMyApprovalRequests = (userId: string) => {
+  const [myRequests, setMyRequests] = useState<ApprovalRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+
+    const q = query(
+      collection(db, 'approvalRequests'),
+      where('requesterId', '==', userId),
+      orderBy('requestedAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const approvalRequests: ApprovalRequest[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        approvalRequests.push({
+          id: doc.id,
+          requestType: data.requestType,
+          requesterId: data.requesterId,
+          requesterName: data.requesterName,
+          requesterRole: data.requesterRole,
+          title: data.title,
+          description: data.description,
+          startDate: data.startDate ? (data.startDate as Timestamp).toDate() : undefined,
+          endDate: data.endDate ? (data.endDate as Timestamp).toDate() : undefined,
+          duration: data.duration,
+          status: data.status,
+          requestedAt: (data.requestedAt as Timestamp).toDate(),
+          reviewedAt: data.reviewedAt ? (data.reviewedAt as Timestamp).toDate() : undefined,
+          reviewedBy: data.reviewedBy,
+          reviewerName: data.reviewerName,
+          reviewerComments: data.reviewerComments,
+          attachments: data.attachments || [],
+          priority: data.priority || 'Medium',
+        });
+      });
+      setMyRequests(approvalRequests);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [userId]);
+
+  return { myRequests, loading };
+};
+
+// Get pending approvals count (for notifications)
+export const usePendingApprovalsCount = () => {
+  const [count, setCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const q = query(
+      collection(db, 'approvalRequests'),
+      where('status', '==', ApprovalStatus.PENDING)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setCount(snapshot.size);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  return { count, loading };
+};
+
+// Create new approval request
+export const createApprovalRequest = async (
+  requestData: Omit<ApprovalRequest, 'id' | 'requestedAt' | 'status'>
+) => {
+  try {
+    const docRef = await addDoc(collection(db, 'approvalRequests'), {
+      ...requestData,
+      status: ApprovalStatus.PENDING,
+      requestedAt: serverTimestamp(),
+      startDate: requestData.startDate ? Timestamp.fromDate(requestData.startDate) : null,
+      endDate: requestData.endDate ? Timestamp.fromDate(requestData.endDate) : null,
+    });
+    return docRef.id;
+  } catch (error) {
+    console.error('Error creating approval request:', error);
+    throw error;
+  }
+};
+
+// Approve request
+export const approveRequest = async (
+  requestId: string,
+  reviewerId: string,
+  reviewerName: string,
+  comments?: string
+) => {
+  try {
+    const requestRef = doc(db, 'approvalRequests', requestId);
+    await updateDoc(requestRef, {
+      status: ApprovalStatus.APPROVED,
+      reviewedAt: serverTimestamp(),
+      reviewedBy: reviewerId,
+      reviewerName: reviewerName,
+      reviewerComments: comments || '',
+    });
+  } catch (error) {
+    console.error('Error approving request:', error);
+    throw error;
+  }
+};
+
+// Reject request
+export const rejectRequest = async (
+  requestId: string,
+  reviewerId: string,
+  reviewerName: string,
+  comments: string
+) => {
+  try {
+    const requestRef = doc(db, 'approvalRequests', requestId);
+    await updateDoc(requestRef, {
+      status: ApprovalStatus.REJECTED,
+      reviewedAt: serverTimestamp(),
+      reviewedBy: reviewerId,
+      reviewerName: reviewerName,
+      reviewerComments: comments,
+    });
+  } catch (error) {
+    console.error('Error rejecting request:', error);
+    throw error;
+  }
+};
+
+// Get statistics
+export const getApprovalStats = (requests: ApprovalRequest[]) => {
+  const pending = requests.filter(r => r.status === ApprovalStatus.PENDING).length;
+  const approved = requests.filter(r => r.status === ApprovalStatus.APPROVED).length;
+  const rejected = requests.filter(r => r.status === ApprovalStatus.REJECTED).length;
+  
+  const byType = requests.reduce((acc, request) => {
+    acc[request.requestType] = (acc[request.requestType] || 0) + 1;
+    return acc;
+  }, {} as Record<ApprovalRequestType, number>);
+
+  return {
+    total: requests.length,
+    pending,
+    approved,
+    rejected,
+    byType,
+  };
+};

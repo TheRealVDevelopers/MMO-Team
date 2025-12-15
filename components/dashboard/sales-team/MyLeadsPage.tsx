@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Lead, LeadPipelineStatus, LeadHistory } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import LeadDetailModal from '../../shared/LeadDetailModal';
+import LeadManagementModal from '../LeadManagementModal';
 import { PlusIcon, ChartBarIcon, FunnelIcon, CheckCircleIcon, ChevronRightIcon } from '../../icons/IconComponents';
 import AddNewLeadModal from '../sales-manager/AddNewLeadModal';
 import { USERS, formatDateTime, formatLargeNumberINR } from '../../../constants';
@@ -88,6 +89,8 @@ const FunnelStage: React.FC<{ stage: LeadPipelineStatus, count: number, isActive
 const MyLeadsPage: React.FC<MyLeadsPageProps> = ({ leads, onUpdateLead, onAddNewLead }) => {
   const { currentUser } = useAuth();
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [showManagementModal, setShowManagementModal] = useState(false);
   const [isAddLeadModalOpen, setAddLeadModalOpen] = useState(false);
   const [selectedStage, setSelectedStage] = useState<LeadPipelineStatus | 'All'>('All');
   
@@ -223,12 +226,13 @@ const MyLeadsPage: React.FC<MyLeadsPageProps> = ({ leads, onUpdateLead, onAddNew
                             <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Value</th>
                             <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Status</th>
                             <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Last Activity</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="bg-surface divide-y divide-border">
                         {filteredLeads.map(lead => (
-                            <tr key={lead.id} onClick={() => setSelectedLead(lead)} className="cursor-pointer hover:bg-subtle-background">
-                                <td className="px-4 py-3 whitespace-nowrap">
+                            <tr key={lead.id} className="hover:bg-subtle-background">
+                                <td className="px-4 py-3 whitespace-nowrap cursor-pointer" onClick={() => setSelectedLead(lead)}>
                                     <p className="text-sm font-bold text-text-primary">{lead.clientName}</p>
                                     <p className="text-xs text-text-secondary">{lead.projectName}</p>
                                 </td>
@@ -236,6 +240,17 @@ const MyLeadsPage: React.FC<MyLeadsPageProps> = ({ leads, onUpdateLead, onAddNew
                                 <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-text-primary">{formatLargeNumberINR(lead.value)}</td>
                                 <td className="px-4 py-3 whitespace-nowrap"><LeadStatusPill status={lead.status} /></td>
                                 <td className="px-4 py-3 whitespace-nowrap text-sm text-text-secondary">{lead.history.length > 0 ? formatDateTime(lead.history[lead.history.length - 1].timestamp) : 'N/A'}</td>
+                                <td className="px-4 py-3 whitespace-nowrap">
+                                    <button
+                                        onClick={() => {
+                                            setSelectedLeadId(lead.id);
+                                            setShowManagementModal(true);
+                                        }}
+                                        className="bg-kurchi-gold-500 text-white px-3 py-1 rounded-lg text-xs font-semibold hover:bg-kurchi-gold-600 transition-all"
+                                    >
+                                        Manage
+                                    </button>
+                                </td>
                             </tr>
                         ))}
                     </tbody>
@@ -252,6 +267,16 @@ const MyLeadsPage: React.FC<MyLeadsPageProps> = ({ leads, onUpdateLead, onAddNew
           onUpdate={(updatedLead) => {
             onUpdateLead(updatedLead);
             setSelectedLead(updatedLead);
+          }}
+        />
+      )}
+      {selectedLeadId && (
+        <LeadManagementModal
+          isOpen={showManagementModal}
+          leadId={selectedLeadId}
+          onClose={() => {
+            setShowManagementModal(false);
+            setSelectedLeadId(null);
           }}
         />
       )}

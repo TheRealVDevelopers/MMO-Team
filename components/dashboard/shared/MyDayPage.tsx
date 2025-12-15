@@ -7,6 +7,9 @@ import TaskCard from './TaskCard';
 import Card from '../../shared/Card';
 import { BoltIcon, CalendarDaysIcon, BellIcon, PlusIcon, CheckCircleIcon } from '../../icons/IconComponents';
 import PersonalCalendar from './PersonalCalendar';
+import ClockInOutWidget from '../ClockInOutWidget';
+import TimeTrackingSummary from '../TimeTrackingSummary';
+import RequestApprovalModal from './RequestApprovalModal';
 
 // Define a type for the reminder with its associated lead info
 interface EnrichedReminder extends Reminder {
@@ -59,6 +62,7 @@ const MyDayPage: React.FC = () => {
     const [reminders, setReminders] = useState<EnrichedReminder[]>([]);
     const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [newTaskTitle, setNewTaskTitle] = useState('');
+    const [showRequestApprovalModal, setShowRequestApprovalModal] = useState(false);
 
     useEffect(() => {
         if (currentUser) {
@@ -186,11 +190,21 @@ const MyDayPage: React.FC = () => {
                     <h2 className="text-3xl font-bold text-text-primary">My Day</h2>
                     <p className="text-text-secondary">Manage your calendar and daily tasks.</p>
                 </div>
+                <button
+                    onClick={() => setShowRequestApprovalModal(true)}
+                    className="bg-kurchi-gold-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-kurchi-gold-600 transition-all flex items-center gap-2"
+                >
+                    <CheckCircleIcon className="w-5 h-5" />
+                    Request Approval
+                </button>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left Column: Calendar & Attendance */}
+                {/* Left Column: Calendar & Attendance & Time Tracking */}
                 <div className="space-y-6">
+                    {/* Time Tracking Widget */}
+                    <ClockInOutWidget userId={currentUser.id} userName={currentUser.name} />
+                    
                     <PersonalCalendar 
                         userId={currentUser.id} 
                         onDateSelect={setSelectedDate}
@@ -227,6 +241,9 @@ const MyDayPage: React.FC = () => {
 
                 {/* Right Column: Task List for Selected Day */}
                 <div className="lg:col-span-2 space-y-6">
+                    {/* Time Tracking Summary */}
+                    <TimeTrackingSummary userId={currentUser.id} />
+                    
                     {/* Agenda Header */}
                     <div className="bg-surface p-6 rounded-lg border border-border shadow-sm">
                         <div className="flex justify-between items-center mb-6">
@@ -280,6 +297,12 @@ const MyDayPage: React.FC = () => {
                     )}
                 </div>
             </div>
+            
+            {/* Request Approval Modal */}
+            <RequestApprovalModal
+                isOpen={showRequestApprovalModal}
+                onClose={() => setShowRequestApprovalModal(false)}
+            />
         </div>
     );
 };

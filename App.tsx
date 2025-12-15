@@ -14,7 +14,7 @@ import { User, UserRole } from './types';
 import { 
     BuildingOfficeIcon, RectangleGroupIcon, UsersIcon, RectangleStackIcon, FunnelIcon, ChartPieIcon, ChatBubbleLeftRightIcon, ShieldExclamationIcon,
     ClockIcon, MapPinIcon, PaintBrushIcon, CalculatorIcon, TruckIcon, WrenchScrewdriverIcon, CreditCardIcon, ChartBarSquareIcon, CalendarDaysIcon, BanknotesIcon,
-    ViewColumnsIcon, TagIcon, ListBulletIcon, PresentationChartLineIcon, ReceiptPercentIcon, BuildingStorefrontIcon, BuildingLibraryIcon
+    ViewColumnsIcon, TagIcon, ListBulletIcon, PresentationChartLineIcon, ReceiptPercentIcon, BuildingStorefrontIcon, BuildingLibraryIcon, CheckCircleIcon
 } from './components/icons/IconComponents';
 import { USERS } from './constants';
 
@@ -26,6 +26,7 @@ const navConfig = {
             { id: 'team', label: 'Team', icon: <UsersIcon className="w-6 h-6" /> },
             { id: 'projects', label: 'Projects', icon: <RectangleStackIcon className="w-6 h-6" /> },
             { id: 'leads', label: 'Leads', icon: <FunnelIcon className="w-6 h-6" /> },
+            { id: 'approvals', label: 'Approvals', icon: <CheckCircleIcon className="w-6 h-6" /> },
             { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
             { id: 'reports', label: 'Reports', icon: <ChartPieIcon className="w-6 h-6" /> },
         ],
@@ -172,8 +173,11 @@ const AppContent: React.FC = () => {
     }
   }, [currentUser?.role]);
 
+  // TEMPORARY: Auto-show app (authentication disabled)
   // If we are not in "App Mode" or not logged in, show Landing Page
-  if (!showApp || !currentUser) {
+  // For now, always show app since authentication is disabled
+  if (!currentUser) {
+      // Fallback: show landing if somehow currentUser is null
       return <LandingPage onLogin={handleLogin} />;
   }
 

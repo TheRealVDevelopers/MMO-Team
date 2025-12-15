@@ -12,6 +12,78 @@ export enum LeadPipelineStatus {
   WON = "Won",
   LOST = "Lost",
 }
+
+// Project Enquiry Status
+export enum EnquiryStatus {
+  NEW = "New",
+  ASSIGNED = "Assigned",
+  CONVERTED_TO_LEAD = "Converted to Lead",
+  REJECTED = "Rejected",
+}
+
+// Time Tracking Status
+export enum TimeTrackingStatus {
+  CLOCKED_OUT = "Clocked Out",
+  CLOCKED_IN = "Clocked In",
+  ON_BREAK = "On Break",
+}
+
+export interface TimeEntry {
+  id: string;
+  userId: string;
+  userName: string;
+  clockIn: Date;
+  clockOut?: Date;
+  breaks: BreakEntry[];
+  totalWorkHours?: number;
+  totalBreakMinutes?: number;
+  date: string; // YYYY-MM-DD format
+  status: TimeTrackingStatus;
+}
+
+export interface BreakEntry {
+  id: string;
+  startTime: Date;
+  endTime?: Date;
+  durationMinutes?: number;
+}
+
+export interface CurrentTimeStatus {
+  userId: string;
+  status: TimeTrackingStatus;
+  currentEntryId?: string;
+  clockInTime?: Date;
+  currentBreakStartTime?: Date;
+}
+
+// Project Enquiry (from "Start Your Project" form)
+export interface ProjectEnquiry {
+  id: string;
+  enquiryId: string; // ENQ-2025-00123
+  clientName: string;
+  email: string;
+  mobile: string;
+  city: string;
+  projectType: string;
+  spaceType: string;
+  area: string;
+  numberOfZones?: string;
+  isRenovation: string;
+  designStyle: string;
+  budgetRange: string;
+  startTime: string;
+  completionTimeline: string;
+  additionalNotes?: string;
+  status: EnquiryStatus;
+  assignedTo?: string; // User ID
+  assignedToName?: string; // User name
+  clientPassword?: string; // Set when assigning
+  convertedLeadId?: string; // Lead ID after conversion
+  createdAt: Date;
+  updatedAt?: Date;
+  viewedBy: string[]; // Array of user IDs who viewed this
+  isNew: boolean; // Notification flag
+}
 // Fix: Removed self-import of 'Document' which conflicts with the local declaration.
 export interface Reminder {
   id: string;
@@ -75,6 +147,14 @@ export interface Lead {
     executionRequests?: string[];
     accountsRequests?: string[];
   }
+  // Project tracking fields
+  clientEmail?: string;
+  clientMobile?: string;
+  currentStage?: number; // 1-8 project stages
+  deadline?: Date;
+  milestones?: ProjectMilestone[];
+  communicationMessages?: LeadCommunicationMessage[];
+  files?: LeadFile[];
 }
 
 export enum ProjectStatus {
@@ -124,6 +204,80 @@ export interface CommunicationMessage {
     avatar: string;
     message: string;
     timestamp: Date;
+}
+
+export interface LeadCommunicationMessage {
+  id: string;
+  leadId: string;
+  senderId: string;
+  senderName: string;
+  senderRole: 'sales' | 'client';
+  message: string;
+  timestamp: Date;
+  read: boolean;
+}
+
+export interface LeadFile {
+  id: string;
+  leadId: string;
+  fileName: string;
+  fileUrl: string;
+  fileType: string; // 'image' | 'document' | 'other'
+  uploadedBy: string;
+  uploadedByName: string;
+  uploadedAt: Date;
+}
+
+export interface ProjectMilestone {
+  id: string;
+  leadId: string;
+  stage: number; // 1-8
+  stageName: string;
+  status: 'pending' | 'in-progress' | 'completed';
+  deadline?: Date;
+  completedAt?: Date;
+  notes?: string;
+  updatedBy?: string;
+  updatedAt?: Date;
+}
+
+// Approval Request Types
+export enum ApprovalRequestType {
+  LEAVE = "Leave Request",
+  EARLY_DEPARTURE = "Early Departure",
+  LATE_ARRIVAL = "Late Arrival",
+  WORK_FROM_HOME = "Work From Home",
+  TIME_OFF = "Time Off",
+  OVERTIME = "Overtime Approval",
+  EXPENSE = "Expense Approval",
+  OTHER = "Other",
+}
+
+export enum ApprovalStatus {
+  PENDING = "Pending",
+  APPROVED = "Approved",
+  REJECTED = "Rejected",
+}
+
+export interface ApprovalRequest {
+  id: string;
+  requestType: ApprovalRequestType;
+  requesterId: string;
+  requesterName: string;
+  requesterRole: UserRole;
+  title: string;
+  description: string;
+  startDate?: Date;
+  endDate?: Date;
+  duration?: string; // e.g., "2 days", "4 hours"
+  status: ApprovalStatus;
+  requestedAt: Date;
+  reviewedAt?: Date;
+  reviewedBy?: string;
+  reviewerName?: string;
+  reviewerComments?: string;
+  attachments?: string[]; // URLs to uploaded documents
+  priority: 'High' | 'Medium' | 'Low';
 }
 
 export type ExpenseCategory = 'Travel' | 'Site' | 'Office' | 'Client Meeting' | 'Other';
