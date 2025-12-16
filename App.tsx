@@ -28,7 +28,6 @@ const navConfig = {
             { id: 'leads', label: 'Leads', icon: <FunnelIcon className="w-6 h-6" /> },
             { id: 'approvals', label: 'Approvals', icon: <CheckCircleIcon className="w-6 h-6" /> },
             { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
-            { id: 'reports', label: 'Reports', icon: <ChartPieIcon className="w-6 h-6" /> },
         ],
         secondaryNavItems: [
             { id: 'complaints', label: 'Complaint Mgmt.', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
@@ -41,7 +40,6 @@ const navConfig = {
             { id: 'leads', label: 'Leads', icon: <FunnelIcon className="w-6 h-6" /> },
             { id: 'team', label: 'Team', icon: <UsersIcon className="w-6 h-6" /> },
             { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
-            { id: 'reports', label: 'Reports', icon: <ChartPieIcon className="w-6 h-6" /> },
             { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
             { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
         ]
@@ -127,17 +125,16 @@ const navConfig = {
             { id: 'expenses', label: 'Expenses', icon: <ReceiptPercentIcon className="w-6 h-6" /> },
             { id: 'payments', label: 'Payments', icon: <BuildingLibraryIcon className="w-6 h-6" /> },
             { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
-            { id: 'reports', label: 'Reports', icon: <ChartPieIcon className="w-6 h-6" /> },
             { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
         ]
     }
 };
 
 const AppContent: React.FC = () => {
-  const { currentUser, setCurrentUser } = useAuth();
+  const { currentUser, setCurrentUser, loading } = useAuth();
   const [currentPage, setCurrentPage] = useState('overview');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [showApp, setShowApp] = useState(false);
+  const [showApp, setIsShowApp] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleSetPage = (page: string) => {
@@ -160,26 +157,35 @@ const AppContent: React.FC = () => {
 
   const handleLogin = (user: User) => {
       setCurrentUser(user);
-      setShowApp(true);
+      setIsShowApp(true);
   }
   
   useEffect(() => {
     if (currentUser) {
         const defaultPage = navConfig[currentUser.role]?.navItems[0]?.id || 'overview';
         setCurrentPage(defaultPage);
-        setShowApp(true);
+        setIsShowApp(true);
     } else {
-        setShowApp(false);
+        setIsShowApp(false);
     }
   }, [currentUser?.role]);
 
-  // TEMPORARY: Auto-show app (authentication disabled)
-  // If we are not in "App Mode" or not logged in, show Landing Page
-  // For now, always show app since authentication is disabled
-  if (!currentUser) {
-      // Fallback: show landing if somehow currentUser is null
-      return <LandingPage onLogin={handleLogin} />;
+  // Show landing page if not logged in
+  if (!currentUser && !loading) {
+    return <LandingPage onLogin={handleLogin} />;
   }
+
+  // Show loading state while checking auth
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-kurchi-gold-600"></div>
+      </div>
+    );
+  }
+
+  // Show app content when logged in
+  if (currentUser) {
 
   const currentNavConfig = navConfig[currentUser.role];
   const needsSidebar = !!currentNavConfig && !isSettingsOpen;
@@ -228,6 +234,7 @@ const AppContent: React.FC = () => {
       </div>
     </div>
   )
+  }
 }
 
 

@@ -1,7 +1,9 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { User, UserRole } from '../types';
-import { USERS } from '../constants';
+import { onAuthStateChange, convertToAppUser } from '../services/authService';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../firebase';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -12,13 +14,18 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// TEMPORARY: Mock user for development (no authentication)
-const MOCK_ADMIN_USER = USERS[0]; // Admin user
-
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // TEMPORARY: Auto-login as Admin for development (no authentication required)
-  const [currentUser, setCurrentUser] = useState<User | null>(MOCK_ADMIN_USER);
-  const [loading, setLoading] = useState(false); // No loading needed
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChange((user) => {
+      setCurrentUser(user);
+      setLoading(false);
+    });
+    
+    return () => unsubscribe();
+  }, []);
 
   const updateCurrentUserAvatar = (avatarDataUrl: string) => {
     if (currentUser) {

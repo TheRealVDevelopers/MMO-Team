@@ -1,48 +1,51 @@
 /**
- * Script to initialize staff users in Firebase Auth and Firestore
- * 
+ * Simple script to initialize staff users in Firebase Auth and Firestore
  * This script creates all staff members with default password "123456"
- * Run this ONCE to populate the database with initial staff accounts
- * 
- * Usage:
- * 1. Make sure Firebase is configured
- * 2. Run: npx ts-node scripts/initializeStaffUsers.ts
- * 3. Or integrate into your app's initial setup
  */
 
-import { createStaffAccount, DEFAULT_STAFF_PASSWORD } from '../services/authService.ts';
-import { UserRole } from '../types.ts';
-import { auth } from '../firebase.ts';
-import { signOut } from 'firebase/auth';
+const { initializeApp } = require('firebase/app');
+const { getAuth, createUserWithEmailAndPassword, signOut } = require('firebase/auth');
+const { getFirestore, doc, setDoc, serverTimestamp } = require('firebase/firestore');
 
-interface StaffMember {
-    email: string;
-    name: string;
-    role: UserRole;
-    avatar: string;
-    phone: string;
-    region?: string;
-}
+// Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyAJr5z0XiOL-SRHA6hgM3V2NHJbN3BolPQ",
+  authDomain: "kurchi-app.firebaseapp.com",
+  projectId: "kurchi-app",
+  storageBucket: "kurchi-app.firebasestorage.app",
+  messagingSenderId: "140677067488",
+  appId: "1:140677067488:web:803d5ec5f091bdfc015685",
+  measurementId: "G-1D13ZD3C2F"
+};
 
-const STAFF_MEMBERS: StaffMember[] = [
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+// Default password for all new staff accounts
+const DEFAULT_STAFF_PASSWORD = '123456';
+
+// Staff members data
+const STAFF_MEMBERS = [
     {
         email: 'admin@makemyoffice.com',
         name: 'Admin',
-        role: UserRole.SUPER_ADMIN,
+        role: 'Super Admin',
         avatar: 'https://i.pravatar.cc/150?u=user-1',
         phone: '+91 98765 43210',
     },
     {
         email: 'sarah.m@makemyoffice.com',
         name: 'Sarah Manager',
-        role: UserRole.SALES_GENERAL_MANAGER,
+        role: 'Sales General Manager',
         avatar: 'https://i.pravatar.cc/150?u=user-2',
         phone: '+91 98765 43211',
     },
     {
         email: 'john.s@makemyoffice.com',
         name: 'John Sales',
-        role: UserRole.SALES_TEAM_MEMBER,
+        role: 'Sales Team Member',
         avatar: 'https://i.pravatar.cc/150?u=user-3',
         phone: '+91 98765 43212',
         region: 'North',
@@ -50,62 +53,92 @@ const STAFF_MEMBERS: StaffMember[] = [
     {
         email: 'emily.d@makemyoffice.com',
         name: 'Emily Designer',
-        role: UserRole.DRAWING_TEAM,
+        role: 'Drawing Team',
         avatar: 'https://i.pravatar.cc/150?u=user-4',
         phone: '+91 98765 43213',
     },
     {
         email: 'mike.q@makemyoffice.com',
         name: 'Mike Quote',
-        role: UserRole.QUOTATION_TEAM,
+        role: 'Quotation Team',
         avatar: 'https://i.pravatar.cc/150?u=user-5',
         phone: '+91 98765 43214',
     },
     {
         email: 'david.e@makemyoffice.com',
         name: 'David Engineer',
-        role: UserRole.SITE_ENGINEER,
+        role: 'Site Engineer',
         avatar: 'https://i.pravatar.cc/150?u=user-6',
         phone: '+91 98765 43215',
     },
     {
         email: 'anna.p@makemyoffice.com',
         name: 'Anna Procurement',
-        role: UserRole.PROCUREMENT_TEAM,
+        role: 'Procurement Team',
         avatar: 'https://i.pravatar.cc/150?u=user-7',
         phone: '+91 98765 43216',
     },
     {
         email: 'chris.e@makemyoffice.com',
         name: 'Chris Executor',
-        role: UserRole.EXECUTION_TEAM,
+        role: 'Execution Team',
         avatar: 'https://i.pravatar.cc/150?u=user-8',
         phone: '+91 98765 43217',
     },
     {
         email: 'olivia.a@makemyoffice.com',
         name: 'Olivia Accounts',
-        role: UserRole.ACCOUNTS_TEAM,
+        role: 'Accounts Team',
         avatar: 'https://i.pravatar.cc/150?u=user-9',
         phone: '+91 98765 43218',
     },
     {
         email: 'jane.d@makemyoffice.com',
         name: 'Jane Doe',
-        role: UserRole.SALES_TEAM_MEMBER,
+        role: 'Sales Team Member',
         avatar: 'https://i.pravatar.cc/150?u=user-10',
         phone: '+91 98765 43219',
         region: 'South',
     },
 ];
 
-export const initializeAllStaffUsers = async () => {
+async function createStaffAccount(email, name, role, avatar, phone, region) {
+    try {
+        // Create Firebase Auth account
+        const userCredential = await createUserWithEmailAndPassword(
+            auth,
+            email,
+            DEFAULT_STAFF_PASSWORD
+        );
+
+        // Create Firestore document
+        await setDoc(doc(db, 'staffUsers', userCredential.user.uid), {
+            email,
+            name,
+            role,
+            avatar,
+            phone,
+            region: region || null,
+            currentTask: '',
+            lastUpdateTimestamp: serverTimestamp(),
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        });
+
+        return userCredential.user.uid;
+    } catch (error) {
+        console.error('Error creating staff account:', error);
+        throw error;
+    }
+}
+
+async function initializeAllStaffUsers() {
     console.log('🔄 Starting staff user initialization...');
     console.log(`📝 Creating ${STAFF_MEMBERS.length} staff accounts with password: ${DEFAULT_STAFF_PASSWORD}\n`);
 
     const results = {
-        success: [] as string[],
-        failed: [] as { email: string; error: string }[],
+        success: [],
+        failed: [],
     };
 
     for (const member of STAFF_MEMBERS) {
@@ -126,7 +159,7 @@ export const initializeAllStaffUsers = async () => {
 
             results.success.push(member.email);
             console.log(`✅ Successfully created: ${member.name}\n`);
-        } catch (error: any) {
+        } catch (error) {
             const errorMessage = error.message || 'Unknown error';
             results.failed.push({ email: member.email, error: errorMessage });
             console.error(`❌ Failed to create ${member.email}: ${errorMessage}\n`);
@@ -165,20 +198,15 @@ export const initializeAllStaffUsers = async () => {
     console.log('='.repeat(60));
 
     return results;
-};
-
-// Export individual staff data for reference
-export { STAFF_MEMBERS, DEFAULT_STAFF_PASSWORD };
-
-// If running directly (not imported)
-if (require.main === module) {
-    initializeAllStaffUsers()
-        .then(() => {
-            console.log('\n✅ Initialization complete!');
-            process.exit(0);
-        })
-        .catch((error) => {
-            console.error('\n❌ Initialization failed:', error);
-            process.exit(1);
-        });
 }
+
+// Run the initialization
+initializeAllStaffUsers()
+    .then(() => {
+        console.log('\n✅ Initialization complete!');
+        process.exit(0);
+    })
+    .catch((error) => {
+        console.error('\n❌ Initialization failed:', error);
+        process.exit(1);
+    });
