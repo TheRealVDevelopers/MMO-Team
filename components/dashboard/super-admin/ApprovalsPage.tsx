@@ -1,18 +1,22 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  CheckCircleIcon, 
-  XCircleIcon, 
+import {
+  CheckCircleIcon,
+  XCircleIcon,
   ClockIcon,
-  FunnelIcon,
-  ChartBarIcon,
   DocumentTextIcon,
   CalendarDaysIcon,
   UserIcon,
+  ShieldCheckIcon,
+  BoltIcon,
+  AdjustmentsHorizontalIcon,
+  ArchiveBoxIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../../context/AuthContext';
 import { useApprovalRequests, approveRequest, rejectRequest, getApprovalStats } from '../../../hooks/useApprovals';
 import { ApprovalRequest, ApprovalStatus, ApprovalRequestType } from '../../../types';
 import { formatDateTime } from '../../../constants';
+import { ContentCard, StatCard, SectionHeader, cn, staggerContainer } from '../shared/DashboardUI';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const ApprovalsPage: React.FC = () => {
   const { currentUser } = useAuth();
@@ -43,7 +47,7 @@ const ApprovalsPage: React.FC = () => {
     if (!selectedRequest || !currentUser) return;
 
     if (reviewAction === 'reject' && !reviewComments.trim()) {
-      alert('Please provide a reason for rejection');
+      alert('Strategic Protocol: A rejection reason is mandatory.');
       return;
     }
 
@@ -70,7 +74,7 @@ const ApprovalsPage: React.FC = () => {
       setReviewComments('');
     } catch (error) {
       console.error('Error reviewing request:', error);
-      alert('Failed to process request. Please try again.');
+      alert('Connectivity Failure: Failed to process authorization protocol.');
     } finally {
       setProcessing(false);
     }
@@ -92,306 +96,253 @@ const ApprovalsPage: React.FC = () => {
     }
   };
 
-  const getStatusColor = (status: ApprovalStatus) => {
-    switch (status) {
-      case ApprovalStatus.PENDING:
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
-      case ApprovalStatus.APPROVED:
-        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
-      case ApprovalStatus.REJECTED:
-        return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'High':
-        return 'text-red-600 dark:text-red-400';
-      case 'Medium':
-        return 'text-yellow-600 dark:text-yellow-400';
-      case 'Low':
-        return 'text-green-600 dark:text-green-400';
-      default:
-        return 'text-gray-600 dark:text-gray-400';
-    }
-  };
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-kurchi-gold-600"></div>
+      <div className="flex flex-col items-center justify-center h-full space-y-4">
+        <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+        <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Accessing Authorization Vault...</p>
       </div>
     );
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-subtle-background h-full overflow-y-auto">
+    <motion.div
+      variants={staggerContainer}
+      initial="initial"
+      animate="animate"
+      className="space-y-8"
+    >
       {/* Header */}
-      <div className="mb-6">
-        <h2 className="text-3xl font-bold text-text-primary">Approval Requests</h2>
-        <p className="text-text-secondary">Review and manage team approval requests</p>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <h2 className="text-4xl font-serif font-black text-text-primary tracking-tighter">Authorization Registry</h2>
+          <p className="text-text-tertiary text-sm font-medium mt-1 uppercase tracking-[0.15em]">Personnel Protocol Queue</p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="flex bg-surface border border-border/60 p-1 rounded-2xl shadow-sm">
+            {(['All', ApprovalStatus.PENDING, ApprovalStatus.APPROVED, ApprovalStatus.REJECTED] as const).map((status) => (
+              <button
+                key={status}
+                onClick={() => setFilterStatus(status)}
+                className={cn(
+                  "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                  filterStatus === status
+                    ? "bg-primary text-white shadow-lg shadow-primary/20"
+                    : "text-text-tertiary hover:text-text-primary hover:bg-subtle-background"
+                )}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white dark:bg-kurchi-espresso-800 rounded-xl shadow-md p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Total Requests</p>
-              <p className="text-2xl font-bold text-kurchi-espresso-900 dark:text-white">{stats.total}</p>
-            </div>
-            <div className="bg-blue-100 dark:bg-blue-900/30 rounded-full p-3">
-              <DocumentTextIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-kurchi-espresso-800 rounded-xl shadow-md p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Pending</p>
-              <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{stats.pending}</p>
-            </div>
-            <div className="bg-yellow-100 dark:bg-yellow-900/30 rounded-full p-3">
-              <ClockIcon className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-kurchi-espresso-800 rounded-xl shadow-md p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Approved</p>
-              <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.approved}</p>
-            </div>
-            <div className="bg-green-100 dark:bg-green-900/30 rounded-full p-3">
-              <CheckCircleIcon className="w-6 h-6 text-green-600 dark:text-green-400" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-kurchi-espresso-800 rounded-xl shadow-md p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Rejected</p>
-              <p className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.rejected}</p>
-            </div>
-            <div className="bg-red-100 dark:bg-red-900/30 rounded-full p-3">
-              <XCircleIcon className="w-6 h-6 text-red-600 dark:text-red-400" />
-            </div>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <StatCard
+          label="Total Protocols"
+          value={stats.total}
+          icon={ArchiveBoxIcon}
+          trend={{ value: 'Fleet Scale', isPositive: true }}
+        />
+        <StatCard
+          label="Pending Sync"
+          value={stats.pending}
+          icon={ClockIcon}
+          trend={{ value: 'Action Required', isPositive: false }}
+          className="ring-1 ring-yellow-500/20"
+        />
+        <StatCard
+          label="Authorized"
+          value={stats.approved}
+          icon={ShieldCheckIcon}
+          trend={{ value: 'Successful', isPositive: true }}
+          className="ring-1 ring-green-500/20"
+        />
+        <StatCard
+          label="Rejected"
+          value={stats.rejected}
+          icon={XCircleIcon}
+          trend={{ value: 'Discontinued', isPositive: false }}
+          className="ring-1 ring-red-500/20"
+        />
       </div>
 
-      {/* Filters */}
-      <div className="bg-white dark:bg-kurchi-espresso-800 rounded-xl shadow-md p-4 mb-6">
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setFilterStatus('All')}
-            className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-              filterStatus === 'All'
-                ? 'bg-kurchi-gold-500 text-white'
-                : 'bg-gray-100 dark:bg-kurchi-espresso-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-kurchi-espresso-600'
-            }`}
-          >
-            All ({stats.total})
-          </button>
-          <button
-            onClick={() => setFilterStatus(ApprovalStatus.PENDING)}
-            className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-              filterStatus === ApprovalStatus.PENDING
-                ? 'bg-yellow-500 text-white'
-                : 'bg-gray-100 dark:bg-kurchi-espresso-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-kurchi-espresso-600'
-            }`}
-          >
-            Pending ({stats.pending})
-          </button>
-          <button
-            onClick={() => setFilterStatus(ApprovalStatus.APPROVED)}
-            className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-              filterStatus === ApprovalStatus.APPROVED
-                ? 'bg-green-500 text-white'
-                : 'bg-gray-100 dark:bg-kurchi-espresso-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-kurchi-espresso-600'
-            }`}
-          >
-            Approved ({stats.approved})
-          </button>
-          <button
-            onClick={() => setFilterStatus(ApprovalStatus.REJECTED)}
-            className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-              filterStatus === ApprovalStatus.REJECTED
-                ? 'bg-red-500 text-white'
-                : 'bg-gray-100 dark:bg-kurchi-espresso-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-kurchi-espresso-600'
-            }`}
-          >
-            Rejected ({stats.rejected})
-          </button>
-        </div>
-      </div>
-
-      {/* Requests List */}
+      {/* Requests Registry */}
       <div className="space-y-4">
-        {filteredRequests.length > 0 ? (
-          filteredRequests.map(request => (
-            <div
-              key={request.id}
-              className="bg-white dark:bg-kurchi-espresso-800 rounded-xl shadow-md p-6 hover:shadow-lg transition-all"
-            >
-              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                {/* Request Info */}
-                <div className="flex-1">
-                  <div className="flex items-start gap-3 mb-3">
-                    <div className="bg-kurchi-gold-100 dark:bg-kurchi-gold-900/30 rounded-full p-2 text-kurchi-gold-600 dark:text-kurchi-gold-400">
-                      {getRequestTypeIcon(request.requestType)}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-lg font-bold text-kurchi-espresso-900 dark:text-white">
-                          {request.title}
-                        </h3>
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(request.status)}`}>
-                          {request.status}
-                        </span>
-                        <span className={`text-xs font-semibold ${getPriorityColor(request.priority)}`}>
-                          {request.priority} Priority
-                        </span>
+        <AnimatePresence mode="popLayout">
+          {filteredRequests.length > 0 ? (
+            filteredRequests.map((request, idx) => (
+              <motion.div
+                key={request.id}
+                layout
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ delay: idx * 0.05 }}
+              >
+                <ContentCard className="group hover:border-primary/30 transition-all duration-500">
+                  <div className="flex flex-col lg:flex-row lg:items-center gap-6">
+                    {/* Icon & Primary Info */}
+                    <div className="flex items-start gap-4 flex-1">
+                      <div className="w-14 h-14 rounded-2xl bg-subtle-background flex items-center justify-center text-text-tertiary group-hover:bg-primary/10 group-hover:text-primary transition-all duration-500 border border-border/40">
+                        {getRequestTypeIcon(request.requestType)}
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        {request.requestType} • {request.requesterName} ({request.requesterRole})
-                      </p>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-3">
+                          <h3 className="text-xl font-serif font-black text-text-primary tracking-tight">{request.title}</h3>
+                          <span className={cn(
+                            "px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border",
+                            request.status === ApprovalStatus.PENDING ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20" :
+                              request.status === ApprovalStatus.APPROVED ? "bg-green-500/10 text-green-600 border-green-500/20" :
+                                "bg-red-500/10 text-red-600 border-red-500/20"
+                          )}>
+                            {request.status}
+                          </span>
+                        </div>
+                        <p className="text-xs text-text-tertiary font-bold uppercase tracking-wider">
+                          {request.requesterName} <span className="opacity-40">/</span> {request.requesterRole}
+                        </p>
+                      </div>
                     </div>
-                  </div>
 
-                  <p className="text-kurchi-espresso-900 dark:text-white mb-3">{request.description}</p>
+                    {/* Metadata & Description */}
+                    <div className="lg:w-1/3 space-y-2">
+                      <p className="text-sm text-text-secondary line-clamp-2 italic font-medium">"{request.description}"</p>
+                      <div className="flex items-center gap-4 text-[10px] font-black text-text-tertiary uppercase tracking-widest">
+                        <div className="flex items-center gap-1.5">
+                          <BoltIcon className="w-3 h-3 text-primary" />
+                          <span>{request.priority} Priority</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <CalendarDaysIcon className="w-3 h-3" />
+                          <span>{formatDateTime(request.requestedAt)}</span>
+                        </div>
+                      </div>
+                    </div>
 
-                  {/* Date Range */}
-                  {(request.startDate || request.endDate) && (
-                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      <CalendarDaysIcon className="w-4 h-4" />
-                      {request.startDate && (
-                        <span>{request.startDate.toLocaleDateString()}</span>
-                      )}
-                      {request.endDate && (
+                    {/* Actions / Review Status */}
+                    <div className="lg:w-1/4 flex items-center justify-end gap-3 min-w-[200px]">
+                      {request.status === ApprovalStatus.PENDING ? (
                         <>
-                          <span>→</span>
-                          <span>{request.endDate.toLocaleDateString()}</span>
+                          <button
+                            onClick={() => handleReview(request, 'reject')}
+                            className="flex-1 lg:flex-none px-5 py-3 rounded-2xl border border-border text-[10px] font-black uppercase tracking-widest hover:bg-error hover:text-white hover:border-error transition-all"
+                          >
+                            Deny
+                          </button>
+                          <button
+                            onClick={() => handleReview(request, 'approve')}
+                            className="flex-1 lg:flex-none px-5 py-3 rounded-2xl bg-primary text-white text-[10px] font-black uppercase tracking-widest hover:bg-secondary shadow-lg shadow-primary/20 transition-all"
+                          >
+                            Authorize
+                          </button>
                         </>
-                      )}
-                      {request.duration && (
-                        <span className="ml-2 font-semibold">({request.duration})</span>
-                      )}
-                    </div>
-                  )}
-
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Requested: {formatDateTime(request.requestedAt)}
-                  </p>
-
-                  {/* Review Info */}
-                  {request.status !== ApprovalStatus.PENDING && (
-                    <div className="mt-3 p-3 bg-gray-50 dark:bg-kurchi-espresso-700 rounded-lg">
-                      <p className="text-sm font-semibold text-kurchi-espresso-900 dark:text-white">
-                        {request.status === ApprovalStatus.APPROVED ? 'Approved' : 'Rejected'} by {request.reviewerName}
-                      </p>
-                      {request.reviewedAt && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {formatDateTime(request.reviewedAt)}
-                        </p>
-                      )}
-                      {request.reviewerComments && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                          "{request.reviewerComments}"
-                        </p>
+                      ) : (
+                        <div className="text-right">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-1">Reviewed By</p>
+                          <p className="text-sm font-bold text-text-primary">{request.reviewerName}</p>
+                        </div>
                       )}
                     </div>
-                  )}
-                </div>
-
-                {/* Action Buttons */}
-                {request.status === ApprovalStatus.PENDING && (
-                  <div className="flex md:flex-col gap-2">
-                    <button
-                      onClick={() => handleReview(request, 'approve')}
-                      className="flex-1 md:flex-initial bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 transition-all flex items-center justify-center gap-2"
-                    >
-                      <CheckCircleIcon className="w-5 h-5" />
-                      Approve
-                    </button>
-                    <button
-                      onClick={() => handleReview(request, 'reject')}
-                      className="flex-1 md:flex-initial bg-red-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-600 transition-all flex items-center justify-center gap-2"
-                    >
-                      <XCircleIcon className="w-5 h-5" />
-                      Reject
-                    </button>
                   </div>
-                )}
-              </div>
-            </div>
-          ))
-        ) : (
-          <div className="text-center py-12 bg-white dark:bg-kurchi-espresso-800 rounded-xl">
-            <DocumentTextIcon className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
-            <p className="text-gray-500 dark:text-gray-400">No {filterStatus !== 'All' ? filterStatus.toLowerCase() : ''} requests found</p>
-          </div>
-        )}
+                </ContentCard>
+              </motion.div>
+            ))
+          ) : (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex flex-col items-center justify-center py-20 bg-surface/50 border border-dashed border-border/60 rounded-[2rem]"
+            >
+              <ShieldCheckIcon className="w-16 h-16 text-text-tertiary opacity-10 mb-4" />
+              <p className="text-text-tertiary font-serif italic text-lg">"Registry clear. All protocols synchronized."</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Review Modal */}
-      {showReviewModal && selectedRequest && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowReviewModal(false)} />
-          <div className="relative min-h-screen flex items-center justify-center p-4">
-            <div className="relative bg-white dark:bg-kurchi-espresso-800 rounded-2xl shadow-2xl w-full max-w-lg p-6">
-              <h3 className="text-2xl font-bold text-kurchi-espresso-900 dark:text-white mb-4">
-                {reviewAction === 'approve' ? 'Approve Request' : 'Reject Request'}
-              </h3>
+      <AnimatePresence>
+        {showReviewModal && selectedRequest && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-background/80 backdrop-blur-md"
+              onClick={() => setShowReviewModal(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-lg bg-surface border border-border rounded-[2.5rem] shadow-2xl overflow-hidden"
+            >
+              <div className="p-10">
+                <div className="flex items-center gap-4 mb-8">
+                  <div className={cn(
+                    "w-12 h-12 rounded-2xl flex items-center justify-center",
+                    reviewAction === 'approve' ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-600"
+                  )}>
+                    {reviewAction === 'approve' ? <ShieldCheckIcon className="w-6 h-6" /> : <XCircleIcon className="w-6 h-6" />}
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-serif font-black text-text-primary tracking-tight">
+                      {reviewAction === 'approve' ? 'Execution Approval' : 'Authorization Denial'}
+                    </h3>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-text-tertiary">Final Override Confirmation</p>
+                  </div>
+                </div>
 
-              <div className="mb-4 p-4 bg-gray-50 dark:bg-kurchi-espresso-700 rounded-lg">
-                <p className="font-semibold text-kurchi-espresso-900 dark:text-white">{selectedRequest.title}</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{selectedRequest.requesterName}</p>
-              </div>
+                <div className="mb-8 p-6 bg-subtle-background/50 rounded-3xl border border-border/40">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-1">Subject Protocol</p>
+                  <p className="text-lg font-bold text-text-primary mb-1">{selectedRequest.title}</p>
+                  <p className="text-xs text-text-secondary font-medium italic">Requested by {selectedRequest.requesterName}</p>
+                </div>
 
-              <div className="mb-4">
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Comments {reviewAction === 'reject' && <span className="text-red-500">*</span>}
-                </label>
-                <textarea
-                  value={reviewComments}
-                  onChange={(e) => setReviewComments(e.target.value)}
-                  rows={4}
-                  className="w-full p-3 border border-border rounded-lg bg-surface focus:ring-2 focus:ring-kurchi-gold-500"
-                  placeholder={reviewAction === 'approve' ? 'Add optional comments...' : 'Please provide reason for rejection...'}
-                />
-              </div>
+                <div className="space-y-3 mb-10">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-tertiary px-1">
+                    Strategic Feedback {reviewAction === 'reject' && <span className="text-error">*</span>}
+                  </label>
+                  <textarea
+                    value={reviewComments}
+                    onChange={(e) => setReviewComments(e.target.value)}
+                    rows={4}
+                    className="w-full p-6 border border-border rounded-3xl bg-subtle-background/30 focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium placeholder:text-text-tertiary/50"
+                    placeholder={reviewAction === 'approve' ? 'Optional authorization notes...' : 'Required justification for protocol denial...'}
+                  />
+                </div>
 
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowReviewModal(false)}
-                  className="flex-1 bg-gray-100 dark:bg-kurchi-espresso-700 text-gray-700 dark:text-gray-300 px-4 py-3 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-kurchi-espresso-600"
-                  disabled={processing}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSubmitReview}
-                  disabled={processing || (reviewAction === 'reject' && !reviewComments.trim())}
-                  className={`flex-1 px-4 py-3 rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                    reviewAction === 'approve'
-                      ? 'bg-green-500 text-white hover:bg-green-600'
-                      : 'bg-red-500 text-white hover:bg-red-600'
-                  }`}
-                >
-                  {processing ? 'Processing...' : reviewAction === 'approve' ? 'Approve' : 'Reject'}
-                </button>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() => setShowReviewModal(false)}
+                    className="p-5 rounded-2xl border border-border text-[10px] font-black uppercase tracking-widest hover:bg-subtle-background transition-all"
+                    disabled={processing}
+                  >
+                    Abort
+                  </button>
+                  <button
+                    onClick={handleSubmitReview}
+                    disabled={processing || (reviewAction === 'reject' && !reviewComments.trim())}
+                    className={cn(
+                      "p-5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl disabled:opacity-50",
+                      reviewAction === 'approve'
+                        ? "bg-primary text-white hover:bg-secondary shadow-primary/20"
+                        : "bg-error text-white hover:bg-red-600 shadow-error/20"
+                    )}
+                  >
+                    {processing ? 'Processing...' : reviewAction === 'approve' ? 'Confirm Authorize' : 'Confirm Deny'}
+                  </button>
+                </div>
               </div>
-            </div>
+            </motion.div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 };
 

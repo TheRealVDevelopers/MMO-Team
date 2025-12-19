@@ -6,7 +6,6 @@ import TeamManagementPage from './sales-manager/TeamManagementPage';
 import ReportsPage from './sales-manager/ReportsPage';
 import { Lead, LeadHistory, LeadPipelineStatus } from '../../types';
 import { USERS } from '../../constants';
-import { UserPlusIcon, UsersIcon, ArrowDownTrayIcon } from '../icons/IconComponents';
 import AddNewLeadModal from './sales-manager/AddNewLeadModal';
 import AssignLeadModal from './sales-manager/AssignLeadModal';
 import { useAuth } from '../../context/AuthContext';
@@ -17,7 +16,8 @@ import { useLeads, addLead, updateLead } from '../../hooks/useLeads';
 import { useNewEnquiries, useEnquiries } from '../../hooks/useEnquiries';
 import EnquiryNotificationBanner from './EnquiryNotificationBanner';
 import EnquiriesListModal from './EnquiriesListModal';
-import BackButton from '../shared/BackButton';
+import { SectionHeader, PrimaryButton, SecondaryButton } from './shared/DashboardUI';
+import { UserPlusIcon, UsersIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 
 const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
@@ -29,67 +29,67 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
   const [showEnquiriesModal, setShowEnquiriesModal] = useState(false);
 
   const pageTitles: { [key: string]: string } = {
-    overview: 'Sales Dashboard',
+    overview: 'Sales Overview',
     leads: 'Lead Management',
-    team: 'Team Performance',
-    reports: 'Reports & Analytics',
-    performance: 'My Performance',
-    communication: 'Team Communication',
-    'escalate-issue': 'Escalate an Issue',
+    team: 'Team Analytics',
+    reports: 'Business Reports',
+    performance: 'Personal Performance',
+    communication: 'Team Chat',
+    'escalate-issue': 'Issue Escalation',
   };
-  
+
   const handleAddLead = async (
     newLeadData: Omit<Lead, 'id' | 'status' | 'inquiryDate' | 'history' | 'lastContacted'>,
     reminder?: { date: string; notes: string }
   ) => {
     const newLead: Omit<Lead, 'id'> = {
-        ...newLeadData,
-        status: LeadPipelineStatus.NEW_NOT_CONTACTED,
-        inquiryDate: new Date(),
-        lastContacted: 'Just now',
-        history: [
-            {
-                action: 'Lead Created',
-                user: currentUser?.name || 'System',
-                timestamp: new Date(),
-                notes: `Assigned to ${USERS.find(u => u.id === newLeadData.assignedTo)?.name}`
-            }
-        ],
-        tasks: {},
-        reminders: [],
+      ...newLeadData,
+      status: LeadPipelineStatus.NEW_NOT_CONTACTED,
+      inquiryDate: new Date(),
+      lastContacted: 'Just now',
+      history: [
+        {
+          action: 'Lead Created',
+          user: currentUser?.name || 'System',
+          timestamp: new Date(),
+          notes: `Assigned to ${USERS.find(u => u.id === newLeadData.assignedTo)?.name}`
+        }
+      ],
+      tasks: {},
+      reminders: [],
     };
 
     if (reminder && reminder.date && reminder.notes) {
-        newLead.reminders = [{
-            id: `rem-${Date.now()}`,
-            date: new Date(reminder.date),
-            notes: reminder.notes,
-            completed: false,
-        }];
-        newLead.history.push({
-            action: 'Reminder set upon creation',
-            user: currentUser?.name || 'System',
-            timestamp: new Date(),
-            notes: `For ${new Date(reminder.date).toLocaleString()}: ${reminder.notes}`
-        });
+      newLead.reminders = [{
+        id: `rem-${Date.now()}`,
+        date: new Date(reminder.date),
+        notes: reminder.notes,
+        completed: false,
+      }];
+      newLead.history.push({
+        action: 'Reminder set upon creation',
+        user: currentUser?.name || 'System',
+        timestamp: new Date(),
+        notes: `For ${new Date(reminder.date).toLocaleString()}: ${reminder.notes}`
+      });
     }
     await addLead(newLead);
   };
 
   const handleAssignLead = async (leadId: string, newOwnerId: string) => {
     const lead = leads.find(l => l.id === leadId);
-    if(lead) {
+    if (lead) {
       const newOwner = USERS.find(u => u.id === newOwnerId);
       const newHistoryItem: LeadHistory = {
-          action: `Lead assigned to ${newOwner?.name || 'Unknown'}`,
-          user: currentUser?.name || 'System',
-          timestamp: new Date(),
+        action: `Lead assigned to ${newOwner?.name || 'Unknown'}`,
+        user: currentUser?.name || 'System',
+        timestamp: new Date(),
       };
       const updatedHistory = [...lead.history, newHistoryItem];
       await updateLead(leadId, { assignedTo: newOwnerId, history: updatedHistory });
     }
   };
-  
+
   const handleExportLeads = () => {
     if (leads.length === 0) return;
     const headers = Object.keys(leads[0]).filter(h => !['history', 'reminders'].includes(h));
@@ -110,7 +110,7 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
       }
       return str;
     };
-    
+
     const csvData = convertToCSV(leads);
     const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
@@ -125,13 +125,17 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
     }
   };
 
-
   const renderPage = () => {
     if (leadsLoading) {
-        return <div className="p-8 text-center">Loading leads...</div>;
+      return (
+        <div className="flex flex-col items-center justify-center h-64">
+          <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
+          <p className="text-text-secondary animate-pulse">Synchronizing leads...</p>
+        </div>
+      );
     }
     if (leadsError) {
-        return <div className="p-8 text-center text-error">Error loading leads.</div>;
+      return <div className="p-8 text-center text-error bg-error/5 rounded-3xl border border-error/20">Error synchronizing lead data. Please try again.</div>;
     }
 
     switch (currentPage) {
@@ -154,51 +158,40 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
     }
   };
 
-  const showHeader = !['performance', 'communication', 'escalate-issue'].includes(currentPage);
-
-
   return (
-    <>
-      <div className="flex flex-col h-full">
-         <div>
-            {/* Enquiry Notification Banner */}
-            {currentPage === 'overview' && (
-              <EnquiryNotificationBanner 
-                newEnquiries={newEnquiries}
-                onViewEnquiries={() => setShowEnquiriesModal(true)}
-              />
-            )}
-            
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
-                <div className="flex items-center gap-4">
-                  {currentPage !== 'overview' && (
-                      <BackButton onClick={() => setCurrentPage('overview')} />
-                  )}
-                  <h2 className="text-2xl md:text-3xl font-serif font-bold text-text-primary dark:text-white">{pageTitles[currentPage]}</h2>
-                </div>
-                {showHeader && (
-                  <div className="flex items-center space-x-2">
-                      <button onClick={() => setAddLeadModalOpen(true)} className="flex items-center space-x-2 bg-primary text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700">
-                          <UserPlusIcon className="w-4 h-4" />
-                          <span>Add New Lead</span>
-                      </button>
-                      <button onClick={() => setAssignLeadModalOpen(true)} className="flex items-center space-x-2 bg-surface border border-border text-text-primary px-3 py-2 rounded-md text-sm font-medium hover:bg-subtle-background">
-                          <UsersIcon className="w-4 h-4" />
-                          <span>Assign Lead</span>
-                      </button>
-                     <button onClick={handleExportLeads} className="flex items-center space-x-2 bg-surface border border-border text-text-primary px-3 py-2 rounded-md text-sm font-medium hover:bg-subtle-background">
-                        <ArrowDownTrayIcon className="w-4 h-4" />
-                        <span>Export Report</span>
-                    </button>
-                  </div>
-                )}
-            </div>
-        </div>
-        <div className="flex-1 overflow-y-auto mt-6">
-          {renderPage()}
-        </div>
+    <div className="max-w-[1600px] mx-auto">
+      {currentPage === 'overview' && (
+        <EnquiryNotificationBanner
+          newEnquiries={newEnquiries}
+          onViewEnquiries={() => setShowEnquiriesModal(true)}
+        />
+      )}
+
+      <SectionHeader
+        title={pageTitles[currentPage]}
+        subtitle={currentPage === 'overview' ? `Welcome back, ${currentUser?.name.split(' ')[0]}. Here's what's happening today.` : undefined}
+        actions={
+          currentPage === 'overview' || currentPage === 'leads' ? (
+            <>
+              <PrimaryButton onClick={() => setAddLeadModalOpen(true)} icon={<UserPlusIcon className="w-4 h-4" />}>
+                Add Lead
+              </PrimaryButton>
+              <SecondaryButton onClick={() => setAssignLeadModalOpen(true)} icon={<UsersIcon className="w-4 h-4" />}>
+                Assign
+              </SecondaryButton>
+              <SecondaryButton onClick={handleExportLeads} icon={<ArrowDownTrayIcon className="w-4 h-4" />}>
+                Export
+              </SecondaryButton>
+            </>
+          ) : undefined
+        }
+      />
+
+      <div className="mt-8">
+        {renderPage()}
       </div>
-      <AddNewLeadModal 
+
+      <AddNewLeadModal
         isOpen={isAddLeadModalOpen}
         onClose={() => setAddLeadModalOpen(false)}
         onAddLead={handleAddLead}
@@ -215,7 +208,7 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
         enquiries={enquiries}
         currentUserId={currentUser?.id || ''}
       />
-    </>
+    </div>
   );
 };
 

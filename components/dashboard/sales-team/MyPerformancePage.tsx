@@ -1,21 +1,72 @@
 import React, { useMemo } from 'react';
-import Card from '../../shared/Card';
 import { LEADS } from '../../../constants';
 import { LeadPipelineStatus } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
-import { ArrowLeftIcon, TrophyIcon, SparklesIcon } from '../../icons/IconComponents';
-import PerformanceCard from '../../shared/PerformanceCard';
+import {
+    ArrowLeftIcon,
+    TrophyIcon,
+    SparklesIcon,
+    PresentationChartLineIcon,
+    ClockIcon,
+    FaceSmileIcon,
+    CheckBadgeIcon,
+    CurrencyRupeeIcon,
+    UserCircleIcon
+} from '@heroicons/react/24/outline';
+import { ContentCard, cn, staggerContainer } from '../shared/DashboardUI';
+import { motion } from 'framer-motion';
 
 const getStatus = (value: number, green: number, yellow: number): 'green' | 'yellow' | 'red' => {
-  if (value >= green) return 'green';
-  if (value >= yellow) return 'yellow';
-  return 'red';
+    if (value >= green) return 'green';
+    if (value >= yellow) return 'yellow';
+    return 'red';
 };
 
 const getStatusInverted = (value: number, green: number, yellow: number): 'green' | 'yellow' | 'red' => {
-  if (value <= green) return 'green';
-  if (value <= yellow) return 'yellow';
-  return 'red';
+    if (value <= green) return 'green';
+    if (value <= yellow) return 'yellow';
+    return 'red';
+};
+
+const PerformanceMetric: React.FC<{
+    name: string;
+    value: string;
+    status: 'green' | 'yellow' | 'red';
+    icon: React.ElementType;
+    description: string;
+}> = ({ name, value, status, icon: Icon, description }) => {
+    const statusConfig = {
+        green: 'text-green-500 bg-green-500/10 border-green-500/20',
+        yellow: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        red: 'text-error bg-error/10 border-error/20',
+    };
+
+    return (
+        <ContentCard className="relative overflow-hidden group">
+            <div className="flex items-start justify-between">
+                <div>
+                    <p className="text-[10px] font-black text-text-secondary uppercase tracking-widest mb-1">{name}</p>
+                    <h3 className="text-2xl font-serif font-black text-text-primary">{value}</h3>
+                </div>
+                <div className={cn("p-3 rounded-xl", statusConfig[status])}>
+                    <Icon className="w-5 h-5" />
+                </div>
+            </div>
+            <div className="mt-4 flex items-center gap-2">
+                <div className="flex-1 h-1 bg-border/40 rounded-full overflow-hidden">
+                    <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: status === 'green' ? '100%' : status === 'yellow' ? '60%' : '30%' }}
+                        className={cn(
+                            "h-full rounded-full",
+                            status === 'green' ? 'bg-green-500' : status === 'yellow' ? 'bg-amber-500' : 'bg-error'
+                        )}
+                    />
+                </div>
+                <span className="text-[10px] font-medium text-text-tertiary italic">{description}</span>
+            </div>
+        </ContentCard>
+    );
 };
 
 const MyPerformancePage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
@@ -25,18 +76,15 @@ const MyPerformancePage: React.FC<{ setCurrentPage: (page: string) => void }> = 
     const myLeads = useMemo(() => LEADS.filter(l => l.assignedTo === currentUser.id), [currentUser.id]);
 
     const metrics = useMemo(() => {
-        // MOCK data where not available
-        const responseTime = 1.5; // hours
-        const clientSatisfaction = 4.7; // out of 5
-        const taskCompletion = 85; // percentage
+        const responseTime = 1.5;
+        const clientSatisfaction = 4.7;
+        const taskCompletion = 85;
 
-        // CALCULATED data
         const totalLeads = myLeads.length;
         const siteVisitLeads = myLeads.filter(l => l.history.some(h => h.action.includes('Site Visit'))).length;
         const conversionRate = totalLeads > 0 ? (siteVisitLeads / totalLeads) * 100 : 0;
         const revenueGenerated = myLeads.filter(l => l.status === LeadPipelineStatus.WON).reduce((sum, l) => sum + l.value, 0);
-        
-        // Target is mocked for this example
+
         const revenueTarget = 5000000;
         const revenuePercentage = revenueTarget > 0 ? (revenueGenerated / revenueTarget) * 100 : 0;
 
@@ -55,92 +103,128 @@ const MyPerformancePage: React.FC<{ setCurrentPage: (page: string) => void }> = 
         (metrics.clientSatisfaction.status === 'green' ? 100 : metrics.clientSatisfaction.status === 'yellow' ? 60 : 20) * 0.20 +
         (metrics.taskCompletion.status === 'green' ? 100 : metrics.taskCompletion.status === 'yellow' ? 60 : 20) * 0.15 +
         (metrics.revenueGenerated.status === 'green' ? 100 : metrics.revenueGenerated.status === 'yellow' ? 60 : 20) * 0.10;
-        
+
     const overallStatus = getStatus(overallScore, 80, 50);
     const overallLabel = overallStatus === 'green' ? 'High Performer' : overallStatus === 'yellow' ? 'Solid Performer' : 'Needs Improvement';
     const overallColor = overallStatus === 'green' ? 'text-secondary' : overallStatus === 'yellow' ? 'text-accent' : 'text-error';
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 space-y-6">
-            <div className="flex items-center gap-4">
-                <button onClick={() => setCurrentPage('leads')} className="flex items-center space-x-2 text-sm font-medium text-text-secondary hover:text-text-primary">
-                    <ArrowLeftIcon className="w-5 h-5" /><span>Back</span>
-                </button>
-                <h2 className="text-2xl font-bold text-text-primary">My Performance Scorecard</h2>
-            </div>
-
-            <Card className={`bg-gradient-to-br from-surface to-subtle-background`}>
-                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                        <img src={currentUser.avatar} alt={currentUser.name} className="w-16 h-16 rounded-full ring-4 ring-primary/20"/>
+        <motion.div
+            variants={staggerContainer}
+            initial="initial"
+            animate="animate"
+            className="space-y-8"
+        >
+            <ContentCard className="bg-gradient-to-br from-surface to-subtle-background border-primary/20">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+                    <div className="flex items-center gap-6">
+                        <div className="relative">
+                            <img src={currentUser.avatar} alt={currentUser.name} className="w-20 h-20 rounded-2xl object-cover ring-4 ring-primary/20 shadow-xl" />
+                            <div className="absolute -bottom-2 -right-2 bg-secondary text-white p-1.5 rounded-lg shadow-lg">
+                                <CheckBadgeIcon className="w-4 h-4" />
+                            </div>
+                        </div>
                         <div>
-                            <h3 className="text-xl font-bold">{currentUser.name}</h3>
-                            <p className="text-sm text-text-secondary">{currentUser.role}</p>
+                            <h3 className="text-2xl font-serif font-black text-text-primary">{currentUser.name}</h3>
+                            <p className="text-sm font-medium text-text-tertiary flex items-center gap-2 mt-1">
+                                <UserCircleIcon className="w-4 h-4" />
+                                {currentUser.role}
+                            </p>
                         </div>
                     </div>
-                     <div className={`text-center p-4 rounded-lg ${overallStatus === 'green' ? 'bg-secondary/10' : overallStatus === 'yellow' ? 'bg-accent/10' : 'bg-error/10'}`}>
-                        <p className={`text-sm font-bold ${overallColor}`}>OVERALL RATING</p>
-                        <p className={`text-3xl font-bold ${overallColor}`}>{overallLabel}</p>
+
+                    <div className={cn(
+                        "text-center p-6 rounded-3xl border min-w-[200px] transition-all",
+                        overallStatus === 'green' ? 'bg-secondary/5 border-secondary/20 shadow-lg shadow-secondary/5' :
+                            overallStatus === 'yellow' ? 'bg-accent/5 border-accent/20 shadow-lg shadow-accent/5' :
+                                'bg-error/5 border-error/20 shadow-lg shadow-error/5'
+                    )}>
+                        <p className={cn("text-[10px] font-black uppercase tracking-[0.2em] mb-1", overallColor)}>Overall Index</p>
+                        <p className={cn("text-2xl font-black", overallColor)}>{overallLabel}</p>
                     </div>
                 </div>
-            </Card>
+            </ContentCard>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                 <PerformanceCard 
-                    metricName="Response Time"
-                    metricValue={`${metrics.responseTime.value.toFixed(1)} hrs`}
-                    weightage={25}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <PerformanceMetric
+                    name="Pulse Period"
+                    value={`${metrics.responseTime.value.toFixed(1)} hrs`}
                     status={metrics.responseTime.status}
-                    description={<>🟢 &lt; 2h, 🟡 2-6h, 🔴 &gt; 6h</>}
-                 />
-                 <PerformanceCard 
-                    metricName="Lead Conversion"
-                    metricValue={`${metrics.conversionRate.value.toFixed(1)}%`}
-                    weightage={30}
+                    icon={ClockIcon}
+                    description="Response time metric"
+                />
+                <PerformanceMetric
+                    name="Conversion Velocity"
+                    value={`${metrics.conversionRate.value.toFixed(1)}%`}
                     status={metrics.conversionRate.status}
-                    description={<>🟢 &gt; 25%, 🟡 15-25%, 🔴 &lt; 15%</>}
-                 />
-                 <PerformanceCard 
-                    metricName="Client Satisfaction"
-                    metricValue={`${metrics.clientSatisfaction.value.toFixed(1)}/5`}
-                    weightage={20}
+                    icon={PresentationChartLineIcon}
+                    description="Lead to site visit ratio"
+                />
+                <PerformanceMetric
+                    name="Client Sentiment"
+                    value={`${metrics.clientSatisfaction.value.toFixed(1)}/5`}
                     status={metrics.clientSatisfaction.status}
-                    description={<>🟢 &gt; 4.5, 🟡 3.5-4.5, 🔴 &lt; 3.5</>}
-                 />
-                 <PerformanceCard 
-                    metricName="Task Completion"
-                    metricValue={`${metrics.taskCompletion.value}%`}
-                    weightage={15}
+                    icon={FaceSmileIcon}
+                    description="Post-interaction feedback"
+                />
+                <PerformanceMetric
+                    name="Objective Completion"
+                    value={`${metrics.taskCompletion.value}%`}
                     status={metrics.taskCompletion.status}
-                    description={<>🟢 &gt; 90%, 🟡 75-90%, 🔴 &lt; 75%</>}
-                 />
-                 <PerformanceCard 
-                    metricName="Revenue Target"
-                    metricValue={`${metrics.revenueGenerated.value.toFixed(0)}%`}
-                    weightage={10}
+                    icon={CheckBadgeIcon}
+                    description="Task fulfillment rate"
+                />
+                <PerformanceMetric
+                    name="Fiscal Contribution"
+                    value={`${metrics.revenueGenerated.value.toFixed(0)}%`}
                     status={metrics.revenueGenerated.status}
-                    description={<>🟢 &gt; 120%, 🟡 80-120%, 🔴 &lt; 80%</>}
-                 />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <Card>
-                    <h3 className="text-lg font-bold flex items-center"><TrophyIcon className="w-5 h-5 mr-2 text-accent"/> Achievements</h3>
-                    <ul className="mt-4 list-disc pl-5 space-y-1 text-sm text-text-secondary">
-                        <li>'Rapid Responder' badge for consistent &lt; 2-hour response times.</li>
-                        <li>'Top Converter' for Q2 with a 28% conversion rate.</li>
-                    </ul>
-                </Card>
-                 <Card>
-                    <h3 className="text-lg font-bold flex items-center"><SparklesIcon className="w-5 h-5 mr-2 text-primary"/> Improvement Suggestions</h3>
-                    <ul className="mt-4 list-disc pl-5 space-y-1 text-sm text-text-secondary">
-                        <li>Focus on completing tasks on time to move from Yellow to Green.</li>
-                        <li>Explore upselling opportunities to exceed revenue targets.</li>
-                    </ul>
-                </Card>
+                    icon={CurrencyRupeeIcon}
+                    description="Quarterly revenue target"
+                />
             </div>
 
-        </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <ContentCard>
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
+                            <TrophyIcon className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-lg font-serif font-bold text-text-primary">Accolades</h3>
+                    </div>
+                    <ul className="space-y-4">
+                        {[
+                            "'Rapid Responder' for consistent < 2-hour response times.",
+                            "'Top Converter' for Q2 with a 28% conversion excellence."
+                        ].map((achievement, i) => (
+                            <li key={i} className="flex items-start gap-3 group">
+                                <div className="mt-1 w-1.5 h-1.5 rounded-full bg-accent group-hover:scale-150 transition-transform" />
+                                <span className="text-sm text-text-secondary leading-relaxed font-medium italic">{achievement}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </ContentCard>
+
+                <ContentCard>
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                            <SparklesIcon className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-lg font-serif font-bold text-text-primary">Growth Trajectory</h3>
+                    </div>
+                    <ul className="space-y-4">
+                        {[
+                            "Optimize task synchronization to elevate completion metrics.",
+                            "Leverage strategic cross-selling to surpass fiscal targets."
+                        ].map((suggestion, i) => (
+                            <li key={i} className="flex items-start gap-3 group">
+                                <div className="mt-1 w-1.5 h-1.5 rounded-full bg-primary group-hover:scale-150 transition-transform" />
+                                <span className="text-sm text-text-secondary leading-relaxed font-medium italic">{suggestion}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </ContentCard>
+            </div>
+        </motion.div>
     );
 };
 

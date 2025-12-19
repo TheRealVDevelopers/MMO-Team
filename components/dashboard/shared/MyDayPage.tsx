@@ -1,21 +1,31 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { TASKS, LEADS, formatDateTime, ATTENDANCE_DATA } from '../../../constants';
 import { Task, TaskStatus, AttendanceType, UserRole, Reminder, AttendanceStatus } from '../../../types';
 import TaskCard from './TaskCard';
-import Card from '../../shared/Card';
-import { BoltIcon, CalendarDaysIcon, BellIcon, PlusIcon, CheckCircleIcon } from '../../icons/IconComponents';
+import {
+    BoltIcon,
+    CalendarDaysIcon,
+    BellIcon,
+    PlusIcon,
+    CheckCircleIcon,
+    ArrowPathIcon,
+    ClockIcon,
+    CalendarIcon,
+    SparklesIcon
+} from '@heroicons/react/24/outline';
 import PersonalCalendar from './PersonalCalendar';
 import ClockInOutWidget from '../ClockInOutWidget';
 import TimeTrackingSummary from '../TimeTrackingSummary';
 import RequestApprovalModal from './RequestApprovalModal';
+import { ContentCard, PrimaryButton, SecondaryButton, cn, staggerContainer } from '../shared/DashboardUI';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Define a type for the reminder with its associated lead info
 interface EnrichedReminder extends Reminder {
-  leadId: string;
-  leadName: string;
-  projectName: string;
+    leadId: string;
+    leadName: string;
+    projectName: string;
 }
 
 const isOverdue = (date: Date) => {
@@ -30,28 +40,44 @@ const isOverdue = (date: Date) => {
 const ReminderItem: React.FC<{ reminder: EnrichedReminder, onToggle: (id: string) => void }> = ({ reminder, onToggle }) => {
     const overdue = !reminder.completed && isOverdue(reminder.date);
     return (
-        <div className={`flex items-start p-3 rounded-md transition-colors ${reminder.completed ? 'bg-surface' : 'bg-subtle-background hover:bg-border'}`}>
-            <input
-                type="checkbox"
-                checked={reminder.completed}
-                onChange={() => onToggle(reminder.id)}
-                className="h-5 w-5 mt-0.5 text-primary focus:ring-primary border-border rounded"
-                aria-label={`Mark reminder for ${reminder.leadName} as ${reminder.completed ? 'incomplete' : 'complete'}`}
-            />
-            <div className="ml-3 flex-1">
-                <p className={`text-sm font-medium ${reminder.completed ? 'line-through text-text-secondary' : 'text-text-primary'}`}>
+        <motion.div
+            whileHover={{ x: 4 }}
+            className={cn(
+                "flex items-start p-4 rounded-2xl transition-all border",
+                reminder.completed
+                    ? 'bg-subtle-background/30 border-transparent opacity-60'
+                    : 'bg-surface border-border hover:border-primary/30 shadow-sm'
+            )}
+        >
+            <div className="relative flex items-center h-5">
+                <input
+                    type="checkbox"
+                    checked={reminder.completed}
+                    onChange={() => onToggle(reminder.id)}
+                    className="h-5 w-5 text-primary focus:ring-primary border-border rounded-lg cursor-pointer transition-all"
+                />
+            </div>
+            <div className="ml-3 flex-1 min-w-0">
+                <p className={cn(
+                    "text-sm font-semibold transition-all",
+                    reminder.completed ? 'line-through text-text-tertiary' : 'text-text-primary'
+                )}>
                     {reminder.notes}
                 </p>
-                <p className={`text-xs ${reminder.completed ? 'text-text-secondary/70' : 'text-text-secondary'}`}>
-                    For lead: <strong>{reminder.leadName}</strong> ({reminder.projectName})
-                </p>
+                <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[10px] font-medium text-text-tertiary uppercase tracking-wider">Lead:</span>
+                    <span className="text-[10px] font-bold text-primary truncate max-w-[150px]">{reminder.leadName}</span>
+                </div>
             </div>
-            <div className="text-right ml-2">
-                 <p className={`text-xs font-semibold whitespace-nowrap ${reminder.completed ? 'text-text-secondary/70' : overdue ? 'text-error' : 'text-text-secondary'}`}>
+            <div className="ml-4 text-right">
+                <p className={cn(
+                    "text-[10px] font-black uppercase tracking-tighter whitespace-nowrap px-2 py-1 rounded-md",
+                    reminder.completed ? 'text-text-tertiary bg-subtle-background' : overdue ? 'text-error bg-error/10' : 'text-text-tertiary bg-subtle-background'
+                )}>
                     {formatDateTime(new Date(reminder.date))}
                 </p>
             </div>
-        </div>
+        </motion.div>
     );
 };
 
@@ -66,15 +92,12 @@ const MyDayPage: React.FC = () => {
 
     useEffect(() => {
         if (currentUser) {
-            // In a real app, this would be a fetch call.
-            // We clone the tasks to avoid mutating the constant.
-            const userTasks = TASKS.filter(t => t.userId === currentUser.id).map(t => ({...t}));
+            const userTasks = TASKS.filter(t => t.userId === currentUser.id).map(t => ({ ...t }));
             setTasks(userTasks);
 
-            // Fetch reminders for Sales Team members
             if (currentUser.role === UserRole.SALES_TEAM_MEMBER) {
                 const userLeads = LEADS.filter(lead => lead.assignedTo === currentUser.id);
-                const allReminders: EnrichedReminder[] = userLeads.flatMap(lead => 
+                const allReminders: EnrichedReminder[] = userLeads.flatMap(lead =>
                     (lead.reminders || []).map(reminder => ({
                         ...reminder,
                         leadId: lead.id,
@@ -82,7 +105,6 @@ const MyDayPage: React.FC = () => {
                         projectName: lead.projectName
                     }))
                 );
-                // Sort reminders: incomplete first, then by date (soonest first)
                 allReminders.sort((a, b) => {
                     if (a.completed !== b.completed) {
                         return a.completed ? 1 : -1;
@@ -91,7 +113,7 @@ const MyDayPage: React.FC = () => {
                 });
                 setReminders(allReminders);
             } else {
-                setReminders([]); // Clear reminders for other roles
+                setReminders([]);
             }
         }
     }, [currentUser]);
@@ -121,10 +143,10 @@ const MyDayPage: React.FC = () => {
             });
         });
     };
-    
+
     const handleToggleReminder = (reminderId: string) => {
         setReminders(prevReminders => {
-            const updated = prevReminders.map(r => 
+            const updated = prevReminders.map(r =>
                 r.id === reminderId ? { ...r, completed: !r.completed } : r
             );
             updated.sort((a, b) => {
@@ -156,18 +178,16 @@ const MyDayPage: React.FC = () => {
         setNewTaskTitle('');
     };
 
-    // Filter tasks for the selected date
     const daysTasks = useMemo(() => {
         return tasks.filter(task => task.date === selectedDate);
     }, [tasks, selectedDate]);
 
-    // Attendance Stats
     const attendanceStats = useMemo(() => {
         if (!currentUser) return null;
         const userAttendance = ATTENDANCE_DATA[currentUser.id] || [];
         const currentMonth = new Date().getMonth();
         const monthlyData = userAttendance.filter(a => new Date(a.date).getMonth() === currentMonth);
-        
+
         const present = monthlyData.filter(a => a.status === AttendanceStatus.PRESENT).length;
         const absent = monthlyData.filter(a => a.status === AttendanceStatus.ABSENT).length;
         const halfDay = monthlyData.filter(a => a.status === AttendanceStatus.HALF_DAY).length;
@@ -180,130 +200,142 @@ const MyDayPage: React.FC = () => {
         const date = new Date(selectedDate);
         return date.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
     }, [selectedDate]);
-    
+
     if (!currentUser) return null;
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 bg-subtle-background h-full overflow-y-auto">
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
+        <motion.div
+            variants={staggerContainer}
+            initial="initial"
+            animate="animate"
+            className="space-y-8"
+        >
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-6">
                 <div>
-                    <h2 className="text-3xl font-bold text-text-primary">My Day</h2>
-                    <p className="text-text-secondary">Manage your calendar and daily tasks.</p>
+                    <h2 className="text-3xl font-serif font-black text-text-primary tracking-tight">Today's Focus</h2>
+                    <p className="text-text-secondary font-light">Optimize your daily workflow and objectives.</p>
                 </div>
-                <button
+                <PrimaryButton
                     onClick={() => setShowRequestApprovalModal(true)}
-                    className="bg-kurchi-gold-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-kurchi-gold-600 transition-all flex items-center gap-2"
+                    icon={<SparklesIcon className="w-4 h-4" />}
                 >
-                    <CheckCircleIcon className="w-5 h-5" />
-                    Request Approval
-                </button>
+                    Request Validation
+                </PrimaryButton>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left Column: Calendar & Attendance & Time Tracking */}
-                <div className="space-y-6">
-                    {/* Time Tracking Widget */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Left Column: Clocking & Calendar */}
+                <div className="space-y-8">
                     <ClockInOutWidget userId={currentUser.id} userName={currentUser.name} />
-                    
-                    <PersonalCalendar 
-                        userId={currentUser.id} 
+
+                    <PersonalCalendar
+                        userId={currentUser.id}
                         onDateSelect={setSelectedDate}
                         tasks={tasks}
                     />
-                    
+
                     {attendanceStats && (
-                        <Card>
-                            <h3 className="text-lg font-bold flex items-center mb-4">
-                                <CalendarDaysIcon className="w-5 h-5 mr-2 text-primary"/>
-                                This Month's Attendance
-                            </h3>
+                        <ContentCard>
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                                    <CalendarDaysIcon className="w-5 h-5" />
+                                </div>
+                                <h3 className="text-lg font-serif font-bold text-text-primary tracking-tight">Monthly Presence</h3>
+                            </div>
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-secondary-subtle-background p-3 rounded-lg text-center">
-                                    <p className="text-secondary font-bold text-2xl">{attendanceStats.present}</p>
-                                    <p className="text-xs text-secondary-subtle-text uppercase font-semibold">Present</p>
+                                <div className="bg-secondary/5 border border-secondary/10 p-4 rounded-3xl text-center group hover:bg-secondary/10 transition-colors">
+                                    <p className="text-secondary font-black text-2xl tracking-tighter">{attendanceStats.present}</p>
+                                    <p className="text-[10px] text-secondary font-black uppercase tracking-widest mt-1">Present</p>
                                 </div>
-                                <div className="bg-error-subtle-background p-3 rounded-lg text-center">
-                                    <p className="text-error font-bold text-2xl">{attendanceStats.absent}</p>
-                                    <p className="text-xs text-error-subtle-text uppercase font-semibold">Absent</p>
+                                <div className="bg-error/5 border border-error/10 p-4 rounded-3xl text-center group hover:bg-error/10 transition-colors">
+                                    <p className="text-error font-black text-2xl tracking-tighter">{attendanceStats.absent}</p>
+                                    <p className="text-[10px] text-error font-black uppercase tracking-widest mt-1">Absent</p>
                                 </div>
-                                <div className="bg-accent-subtle-background p-3 rounded-lg text-center">
-                                    <p className="text-accent font-bold text-2xl">{attendanceStats.halfDay}</p>
-                                    <p className="text-xs text-accent-subtle-text uppercase font-semibold">Half Day</p>
+                                <div className="bg-accent/5 border border-accent/10 p-4 rounded-3xl text-center group hover:bg-accent/10 transition-colors">
+                                    <p className="text-accent font-black text-2xl tracking-tighter">{attendanceStats.halfDay}</p>
+                                    <p className="text-[10px] text-accent font-black uppercase tracking-widest mt-1">Half Day</p>
                                 </div>
-                                <div className="bg-purple-subtle-background p-3 rounded-lg text-center">
-                                    <p className="text-purple font-bold text-2xl">{attendanceStats.leave}</p>
-                                    <p className="text-xs text-purple-subtle-text uppercase font-semibold">Leave</p>
+                                <div className="bg-purple/5 border border-purple/10 p-4 rounded-3xl text-center group hover:bg-purple/10 transition-colors">
+                                    <p className="text-purple font-black text-2xl tracking-tighter">{attendanceStats.leave}</p>
+                                    <p className="text-[10px] text-purple font-black uppercase tracking-widest mt-1">Leave</p>
                                 </div>
                             </div>
-                        </Card>
+                        </ContentCard>
                     )}
                 </div>
 
-                {/* Right Column: Task List for Selected Day */}
-                <div className="lg:col-span-2 space-y-6">
-                    {/* Time Tracking Summary */}
+                {/* Right Column: Execution Hub */}
+                <div className="lg:col-span-2 space-y-8">
                     <TimeTrackingSummary userId={currentUser.id} />
-                    
-                    {/* Agenda Header */}
-                    <div className="bg-surface p-6 rounded-lg border border-border shadow-sm">
-                        <div className="flex justify-between items-center mb-6">
+
+                    <ContentCard>
+                        <div className="flex flex-col md:flex-row justify-between md:items-center gap-6 mb-8 pb-8 border-b border-border/40">
                             <div>
-                                <h3 className="text-xl font-bold text-text-primary">Agenda</h3>
-                                <p className="text-text-secondary">{formattedDateHeader}</p>
+                                <h3 className="text-2xl font-serif font-bold text-text-primary tracking-tight">Execution Stream</h3>
+                                <p className="text-sm text-text-tertiary font-medium mt-1">{formattedDateHeader}</p>
                             </div>
-                            {/* Add Task Form */}
-                            <form onSubmit={handleAddTask} className="flex w-full max-w-sm ml-4">
-                                <input 
-                                    type="text" 
-                                    placeholder="Add a meeting or task..." 
+                            <form onSubmit={handleAddTask} className="flex-1 max-w-md relative group">
+                                <input
+                                    type="text"
+                                    placeholder="Add objective..."
                                     value={newTaskTitle}
                                     onChange={(e) => setNewTaskTitle(e.target.value)}
-                                    className="flex-grow p-2 border border-border rounded-l-md bg-subtle-background focus:ring-primary focus:border-primary"
+                                    className="w-full pl-6 pr-14 py-4 bg-subtle-background border border-border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-text-tertiary"
                                 />
-                                <button type="submit" className="bg-primary text-white px-4 py-2 rounded-r-md hover:bg-blue-700 transition-colors">
-                                    <PlusIcon className="w-5 h-5"/>
+                                <button type="submit" className="absolute right-2 top-2 bottom-2 px-3 bg-primary text-white rounded-xl hover:bg-secondary transition-colors shadow-lg shadow-primary/20">
+                                    <PlusIcon className="w-5 h-5" />
                                 </button>
                             </form>
                         </div>
 
                         <div className="space-y-4">
-                            {daysTasks.length > 0 ? (
-                                daysTasks.map(task => (
-                                    <TaskCard key={task.id} task={task} onUpdateStatus={handleUpdateStatus} />
-                                ))
-                            ) : (
-                                <div className="text-center py-12 border-2 border-dashed border-border rounded-lg bg-subtle-background">
-                                    <CheckCircleIcon className="w-12 h-12 text-text-secondary/30 mx-auto mb-2" />
-                                    <p className="text-text-secondary">No tasks scheduled for this day.</p>
-                                    <p className="text-xs text-text-secondary/70">Use the input above to add one.</p>
-                                </div>
-                            )}
+                            <AnimatePresence mode="popLayout">
+                                {daysTasks.length > 0 ? (
+                                    daysTasks.map(task => (
+                                        <TaskCard key={task.id} task={task} onUpdateStatus={handleUpdateStatus} />
+                                    ))
+                                ) : (
+                                    <motion.div
+                                        initial={{ opacity: 0, scale: 0.95 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        className="text-center py-20 border-2 border-dashed border-border/40 rounded-3xl bg-subtle-background/30"
+                                    >
+                                        <div className="w-16 h-16 bg-surface rounded-2xl flex items-center justify-center mx-auto mb-4 border border-border shadow-sm">
+                                            <CheckCircleIcon className="w-8 h-8 text-text-tertiary opacity-20" />
+                                        </div>
+                                        <p className="text-text-secondary font-medium italic">No objectives recorded for this period.</p>
+                                        <p className="text-[10px] text-text-tertiary uppercase tracking-widest mt-2">Initialize your stream above.</p>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </div>
-                    </div>
+                    </ContentCard>
 
-                    {/* Reminders (Only shown if active user is Sales and viewing Today - logically reminders are 'due' based on time not just calendar date selection, but keeping it simple) */}
                     {currentUser.role === UserRole.SALES_TEAM_MEMBER && reminders.length > 0 && (
-                        <Card>
-                            <h3 className="text-lg font-bold flex items-center mb-4">
-                                <BellIcon className="w-5 h-5 mr-2 text-primary" />
-                                Upcoming Reminders
-                            </h3>
-                            <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
-                                {reminders.map(reminder => (
-                                    <ReminderItem key={reminder.id} reminder={reminder} onToggle={handleToggleReminder} />
-                                ))}
+                        <ContentCard>
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
+                                    <BellIcon className="w-5 h-5" />
+                                </div>
+                                <h3 className="text-xl font-serif font-bold text-text-primary tracking-tight">Objective Alarms</h3>
                             </div>
-                        </Card>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <AnimatePresence>
+                                    {reminders.map(reminder => (
+                                        <ReminderItem key={reminder.id} reminder={reminder} onToggle={handleToggleReminder} />
+                                    ))}
+                                </AnimatePresence>
+                            </div>
+                        </ContentCard>
                     )}
                 </div>
             </div>
-            
-            {/* Request Approval Modal */}
+
             <RequestApprovalModal
                 isOpen={showRequestApprovalModal}
                 onClose={() => setShowRequestApprovalModal(false)}
             />
-        </div>
+        </motion.div>
     );
 };
 

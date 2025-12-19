@@ -1,13 +1,22 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-    LockClosedIcon, 
+import {
+    LockClosedIcon,
     IdentificationIcon,
     ArrowRightIcon,
     ExclamationCircleIcon,
     CheckCircleIcon
 } from '@heroicons/react/24/outline';
 import { verifyClientCredentials } from '../../services/authService';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+/**
+ * Utility function to merge tailwind classes
+ */
+function cn(...inputs: ClassValue[]) {
+    return twMerge(clsx(inputs));
+}
 
 // Animation Hook
 const useOnScreen = (options: IntersectionObserverInit) => {
@@ -18,7 +27,7 @@ const useOnScreen = (options: IntersectionObserverInit) => {
         const observer = new IntersectionObserver(([entry]) => {
             if (entry.isIntersecting) {
                 setIsVisible(true);
-                observer.disconnect(); 
+                observer.disconnect();
             }
         }, options);
 
@@ -32,7 +41,7 @@ const useOnScreen = (options: IntersectionObserverInit) => {
 const FadeInSection: React.FC<{ children: React.ReactNode; delay?: string; className?: string }> = ({ children, delay = '0ms', className = '' }) => {
     const [ref, isVisible] = useOnScreen({ threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
     return (
-        <div 
+        <div
             ref={ref}
             style={{ animationDelay: delay }}
             className={`${className} ${isVisible ? 'animate-luxury-reveal opacity-100' : 'opacity-0 translate-y-8'}`}
@@ -58,9 +67,9 @@ const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => 
         setIsLoading(true);
 
         try {
-            // Validate project ID format
+            // Validate project ID format (except for default credential)
             const projectIdPattern = /^(OFF|HOM|COM|CUS)-\d{4}-\d{5}$/;
-            if (!projectIdPattern.test(projectId)) {
+            if (projectId !== 'a@mmo.com' && !projectIdPattern.test(projectId)) {
                 setError('Invalid Project ID format. Please check your credentials.');
                 setIsLoading(false);
                 return;
@@ -68,7 +77,7 @@ const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => 
 
             // Verify credentials with Firebase
             const isValid = await verifyClientCredentials(projectId, password);
-            
+
             if (isValid) {
                 onLoginSuccess(projectId);
             } else {
@@ -83,7 +92,7 @@ const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => 
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-kurchi-espresso-950 via-kurchi-espresso-900 to-kurchi-espresso-950 flex items-center justify-center px-6 py-20">
+        <div className="min-h-screen bg-background flex items-center justify-center px-6 py-20 relative overflow-hidden">
             {/* Background Pattern */}
             <div className="absolute inset-0 opacity-5">
                 <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:4rem_4rem]"></div>
@@ -94,57 +103,55 @@ const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => 
                     {/* Logo & Brand */}
                     <div className="text-center mb-12">
                         <div className="inline-flex items-center justify-center mb-6">
-                            <div className="w-16 h-16 bg-kurchi-gold-500 rounded-2xl flex items-center justify-center shadow-2xl">
-                                <span className="text-white font-serif font-bold text-3xl">K</span>
+                            <div className="w-20 h-20 bg-primary rounded-3xl flex items-center justify-center shadow-luxury transform hover:rotate-6 transition-transform duration-500">
+                                <span className="text-white font-serif font-bold text-4xl">K</span>
                             </div>
                         </div>
-                        <h1 className="text-4xl font-serif font-bold text-white mb-3">View My Project</h1>
-                        <p className="text-gray-400 font-light">Track your interior journey securely</p>
+                        <h1 className="text-4xl md:text-5xl font-serif font-bold text-text-primary mb-3">View My Project</h1>
+                        <p className="text-text-secondary font-light text-lg">Track your interior journey securely</p>
                     </div>
 
                     {/* Login Card */}
-                    <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-10">
+                    <div className="bg-surface border border-border rounded-[2.5rem] shadow-luxury p-8 md:p-12">
                         <form onSubmit={handleLogin} className="space-y-6">
-                            {/* Project ID Input */}
                             <div>
-                                <label className="block text-sm font-bold text-text-secondary uppercase tracking-wider mb-3">
+                                <label className="block text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] mb-4">
                                     Project ID
                                 </label>
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                        <IdentificationIcon className="w-5 h-5 text-gray-400" />
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-text-secondary/50 group-focus-within:text-primary transition-colors">
+                                        <IdentificationIcon className="w-5 h-5" />
                                     </div>
-                                    <input 
-                                        type="text" 
+                                    <input
+                                        type="text"
                                         value={projectId}
-                                        onChange={(e) => setProjectId(e.target.value.toUpperCase())}
+                                        onChange={(e) => setProjectId(e.target.value)}
                                         placeholder="OFF-2025-00123"
-                                        className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:border-kurchi-gold-500 outline-none transition-colors text-lg font-mono"
+                                        className="w-full pl-14 pr-6 py-5 bg-background border-2 border-border rounded-2xl focus:border-primary outline-none transition-all text-text-primary font-mono text-lg placeholder:text-text-secondary/20"
                                         required
                                     />
                                 </div>
-                                <p className="text-xs text-gray-500 mt-2">Format: XXX-YYYY-NNNNN</p>
+                                <p className="text-[10px] uppercase tracking-widest text-text-secondary/40 mt-3 ml-1">Format: XXX-YYYY-NNNNN or Default ID</p>
                             </div>
 
-                            {/* Password Input */}
                             <div>
-                                <label className="block text-sm font-bold text-text-secondary uppercase tracking-wider mb-3">
+                                <label className="block text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] mb-4">
                                     Password
                                 </label>
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                        <LockClosedIcon className="w-5 h-5 text-gray-400" />
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-text-secondary/50 group-focus-within:text-primary transition-colors">
+                                        <LockClosedIcon className="w-5 h-5" />
                                     </div>
-                                    <input 
-                                        type="password" 
+                                    <input
+                                        type="password"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         placeholder="Enter your password"
-                                        className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:border-kurchi-gold-500 outline-none transition-colors text-lg"
+                                        className="w-full pl-14 pr-6 py-5 bg-background border-2 border-border rounded-2xl focus:border-primary outline-none transition-all text-text-primary text-lg placeholder:text-text-secondary/20"
                                         required
                                     />
                                 </div>
-                                <p className="text-xs text-gray-500 mt-2">Provided by your sales consultant</p>
+                                <p className="text-[10px] uppercase tracking-widest text-text-secondary/40 mt-3 ml-1">Provided by your sales consultant</p>
                             </div>
 
                             {/* Error Message */}
@@ -155,44 +162,43 @@ const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => 
                                 </div>
                             )}
 
-                            {/* Submit Button */}
                             <button
                                 type="submit"
                                 disabled={isLoading}
-                                className="w-full py-4 bg-kurchi-espresso-900 text-white font-bold text-sm uppercase tracking-widest rounded-xl hover:bg-kurchi-gold-500 transition-all duration-300 shadow-lg disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center"
+                                className="w-full py-5 bg-primary text-white font-black text-[10px] uppercase tracking-[0.3em] rounded-full hover:bg-secondary transition-all duration-500 shadow-xl hover:shadow-primary/20 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center group"
                             >
                                 {isLoading ? (
-                                    <>
-                                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <div className="flex items-center">
+                                        <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                         </svg>
                                         Authenticating...
-                                    </>
+                                    </div>
                                 ) : (
                                     <>
-                                        Access My Project
-                                        <ArrowRightIcon className="w-5 h-5 ml-2" />
+                                        Access Project
+                                        <ArrowRightIcon className="w-4 h-4 ml-3 group-hover:translate-x-1 transition-transform" />
                                     </>
                                 )}
                             </button>
                         </form>
 
                         {/* Help Section */}
-                        <div className="mt-8 pt-8 border-t border-gray-200">
-                            <h4 className="text-sm font-bold text-kurchi-espresso-900 mb-4">Need Help?</h4>
-                            <div className="space-y-3 text-sm text-text-secondary">
-                                <div className="flex items-start space-x-2">
-                                    <CheckCircleIcon className="w-4 h-4 text-kurchi-gold-500 flex-shrink-0 mt-0.5" />
-                                    <p>Your Project ID was sent via email after project initiation</p>
+                        <div className="mt-10 pt-10 border-t border-border">
+                            <h4 className="text-[10px] font-black text-text-primary uppercase tracking-widest mb-6">Need Assistance?</h4>
+                            <div className="space-y-4 text-sm text-text-secondary">
+                                <div className="flex items-start space-x-3">
+                                    <CheckCircleIcon className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                                    <p className="font-light">Your Project ID was sent via email after project initiation</p>
                                 </div>
-                                <div className="flex items-start space-x-2">
-                                    <CheckCircleIcon className="w-4 h-4 text-kurchi-gold-500 flex-shrink-0 mt-0.5" />
-                                    <p>Password is shared personally by your sales consultant</p>
+                                <div className="flex items-start space-x-3">
+                                    <CheckCircleIcon className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                                    <p className="font-light">Password is shared personally by your sales consultant</p>
                                 </div>
-                                <div className="flex items-start space-x-2">
-                                    <CheckCircleIcon className="w-4 h-4 text-kurchi-gold-500 flex-shrink-0 mt-0.5" />
-                                    <p>For support, contact: <span className="font-medium text-kurchi-gold-500">+91 (555) 123-4567</span></p>
+                                <div className="flex items-start space-x-3">
+                                    <CheckCircleIcon className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                                    <p className="font-light">For support: <span className="font-bold text-primary">+91 (555) 123-4567</span></p>
                                 </div>
                             </div>
                         </div>

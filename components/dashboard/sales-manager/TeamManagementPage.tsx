@@ -1,10 +1,16 @@
-
-
 import React, { useState, useMemo } from 'react';
-import Card from '../../shared/Card';
 import { USERS, formatCurrencyINR } from '../../../constants';
 import { User, UserRole, LeadPipelineStatus, Lead } from '../../../types';
-import { MapPinIcon, FunnelIcon } from '../../icons/IconComponents';
+import {
+    MapPinIcon,
+    FunnelIcon,
+    ChartBarIcon,
+    WalletIcon,
+    BoltIcon,
+    ChevronRightIcon
+} from '@heroicons/react/24/outline';
+import { ContentCard, cn, staggerContainer } from '../shared/DashboardUI';
+import { motion } from 'framer-motion';
 
 const salesTeam = USERS.filter(u => u.role === UserRole.SALES_TEAM_MEMBER);
 
@@ -16,32 +22,51 @@ const TeamMemberCard: React.FC<{ member: User; leads: Lead[] }> = ({ member, lea
     const revenue = memberLeads.filter(l => l.status === LeadPipelineStatus.WON).reduce((sum, l) => sum + l.value, 0);
 
     return (
-        <Card className="flex flex-col">
-            <div className="flex items-start space-x-4">
-                <img src={member.avatar} alt={member.name} className="w-12 h-12 rounded-full" />
-                <div>
-                    <h4 className="text-md font-bold text-text-primary">{member.name}</h4>
-                    <p className="text-sm text-text-secondary flex items-center">
-                        <MapPinIcon className="w-4 h-4 mr-1"/> {member.region}
-                    </p>
+        <ContentCard className="flex flex-col group hover:border-primary/30 transition-all">
+            <div className="flex items-start justify-between">
+                <div className="flex items-center space-x-4">
+                    <div className="relative">
+                        <img src={member.avatar} alt={member.name} className="w-14 h-14 rounded-2xl object-cover ring-2 ring-transparent group-hover:ring-primary/20 transition-all shadow-sm" />
+                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-surface rounded-full shadow-sm" />
+                    </div>
+                    <div>
+                        <h4 className="text-md font-bold text-text-primary group-hover:text-primary transition-colors">{member.name}</h4>
+                        <div className="flex items-center text-[10px] uppercase tracking-widest text-text-secondary mt-1">
+                            <MapPinIcon className="w-3 h-3 mr-1 text-primary/60" /> {member.region}
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div className="mt-4 grid grid-cols-2 gap-4 text-sm flex-grow">
-                <div>
-                    <p className="text-text-secondary">Active Leads</p>
-                    <p className="font-bold text-lg text-text-primary">{activeLeads}</p>
+
+            <div className="mt-8 grid grid-cols-2 gap-4">
+                <div className="p-3 bg-subtle-background rounded-2xl">
+                    <p className="text-[10px] font-black uppercase text-text-secondary mb-1">Active Pipeline</p>
+                    <div className="flex items-center justify-between">
+                        <span className="text-lg font-bold text-text-primary">{activeLeads}</span>
+                        <BoltIcon className="w-4 h-4 text-accent/50" />
+                    </div>
                 </div>
-                <div>
-                    <p className="text-text-secondary">Conversion</p>
-                    <p className="font-bold text-lg text-text-primary">{conversionRate.toFixed(1)}%</p>
+                <div className="p-3 bg-subtle-background rounded-2xl">
+                    <p className="text-[10px] font-black uppercase text-text-secondary mb-1">Conversion</p>
+                    <div className="flex items-center justify-between">
+                        <span className="text-lg font-bold text-text-primary">{conversionRate.toFixed(1)}%</span>
+                        <ChartBarIcon className="w-4 h-4 text-purple/50" />
+                    </div>
                 </div>
-                <div className="col-span-2">
-                    <p className="text-text-secondary">Revenue Generated</p>
-                    <p className="font-bold text-lg text-secondary">{formatCurrencyINR(revenue)}</p>
+                <div className="col-span-2 p-3 bg-primary/5 rounded-2xl border border-primary/10">
+                    <p className="text-[10px] font-black uppercase text-primary/80 mb-1">Revenue Performance</p>
+                    <div className="flex items-center justify-between">
+                        <span className="text-lg font-bold text-primary">{formatCurrencyINR(revenue)}</span>
+                        <WalletIcon className="w-4 h-4 text-primary/40" />
+                    </div>
                 </div>
             </div>
-            <button className="mt-4 w-full py-1.5 bg-subtle-background text-text-primary text-sm font-semibold rounded-md hover:bg-border">View Details</button>
-        </Card>
+
+            <button className="mt-6 w-full py-3 bg-background border border-border text-text-secondary text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-primary hover:text-white hover:border-primary transition-all flex items-center justify-center gap-2 group/btn">
+                Analysis Details
+                <ChevronRightIcon className="w-3 h-3 group-hover/btn:translate-x-1 transition-transform" />
+            </button>
+        </ContentCard>
     );
 };
 
@@ -52,32 +77,43 @@ const TeamManagementPage: React.FC<{ leads: Lead[] }> = ({ leads }) => {
         if (regionFilter === 'all') return salesTeam;
         return salesTeam.filter(member => member.region === regionFilter);
     }, [regionFilter]);
-    
+
     const regions = [...new Set(salesTeam.map(m => m.region).filter(Boolean))] as string[];
 
     return (
-        <div className="space-y-6">
-            <div className="sm:flex justify-between items-center">
-                <div/>
-                <div className="flex items-center space-x-2 mt-2 sm:mt-0">
-                    <FunnelIcon className="w-5 h-5 text-text-secondary" />
-                    <select 
-                        value={regionFilter} 
+        <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+            className="space-y-6"
+        >
+            <div className="flex justify-end items-center mb-8">
+                <div className="relative group">
+                    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                        <FunnelIcon className="w-4 h-4 text-text-secondary group-hover:text-primary transition-colors" />
+                    </div>
+                    <select
+                        value={regionFilter}
                         onChange={e => setRegionFilter(e.target.value)}
-                        className="px-3 py-1.5 border border-border rounded-md text-sm bg-surface focus:ring-primary focus:border-primary"
+                        className="pl-10 pr-8 py-2.5 bg-background border border-border rounded-xl text-xs font-bold text-text-primary focus:ring-1 focus:ring-primary focus:border-primary transition-all appearance-none cursor-pointer outline-none min-w-[160px]"
                     >
-                        <option value="all">All Regions</option>
+                        <option value="all">Global Regions</option>
                         {regions.map(region => <option key={region} value={region}>{region}</option>)}
                     </select>
                 </div>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+
+            <motion.div
+                layout
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+            >
                 {filteredTeam.map(member => (
-                    <TeamMemberCard key={member.id} member={member} leads={leads} />
+                    <motion.div layout key={member.id}>
+                        <TeamMemberCard member={member} leads={leads} />
+                    </motion.div>
                 ))}
-            </div>
-        </div>
+            </motion.div>
+        </motion.div>
     );
 };
 

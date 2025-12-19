@@ -56,7 +56,22 @@ export const convertToAppUser = async (firebaseUser: FirebaseUser): Promise<User
 /**
  * Sign in staff member with email and password
  */
-export const signInStaff = async (email: string, password: string): Promise<User | null> => {
+export const signInStaff = async (email: string, password: string, designation?: string): Promise<User | null> => {
+    // Simplified Auth for Development
+    if (email === 'a@mmo.com' && password === '123456') {
+        console.log(`Simplified staff login as ${designation || 'Staff'}`);
+        return {
+            id: 'mock-staff-id',
+            name: `Test ${designation || 'Staff Member'}`,
+            role: (designation?.toUpperCase() as UserRole) || UserRole.MANAGER,
+            email: 'a@mmo.com',
+            phone: '+91 0000000000',
+            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=mock',
+            currentTask: 'Development Testing',
+            lastUpdateTimestamp: new Date(),
+        };
+    }
+
     try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         return await convertToAppUser(userCredential.user);
@@ -241,6 +256,11 @@ export const verifyClientCredentials = async (
     projectId: string,
     password: string
 ): Promise<boolean> => {
+    // Simplified Auth for Development
+    if (projectId === 'a@mmo.com' && password === '123456') {
+        return true;
+    }
+
     try {
         const projectsRef = collection(db, 'clientProjects');
         const q = query(projectsRef, where('projectId', '==', projectId));

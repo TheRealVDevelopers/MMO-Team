@@ -94,6 +94,8 @@ export interface Reminder {
 
 export enum UserRole {
   SUPER_ADMIN = "Super Admin",
+  MANAGER = "Manager",
+  DESIGNER = "Designer",
   SALES_GENERAL_MANAGER = "Sales General Manager",
   SALES_TEAM_MEMBER = "Sales Team Member",
   DRAWING_TEAM = "Drawing Team",
@@ -120,10 +122,10 @@ export interface User {
 
 
 export interface LeadHistory {
-    action: string;
-    user: string;
-    timestamp: Date;
-    notes?: string;
+  action: string;
+  user: string;
+  timestamp: Date;
+  notes?: string;
 }
 
 export interface Lead {
@@ -158,52 +160,52 @@ export interface Lead {
 }
 
 export enum ProjectStatus {
-    AWAITING_DESIGN = "Awaiting Design",
-    DESIGN_IN_PROGRESS = "Design In Progress",
-    PENDING_REVIEW = "Pending Review",
-    REVISIONS_REQUESTED = "Revisions Requested",
-    AWAITING_QUOTATION = "Awaiting Quotation",
-    QUOTATION_SENT = "Quotation Sent",
-    NEGOTIATING = "Negotiating",
-    APPROVED = "Approved",
-    REJECTED = "Rejected",
-    PROCUREMENT = "Procurement",
-    IN_EXECUTION = "In Execution",
-    COMPLETED = "Completed",
-    ON_HOLD = "On Hold",
+  AWAITING_DESIGN = "Awaiting Design",
+  DESIGN_IN_PROGRESS = "Design In Progress",
+  PENDING_REVIEW = "Pending Review",
+  REVISIONS_REQUESTED = "Revisions Requested",
+  AWAITING_QUOTATION = "Awaiting Quotation",
+  QUOTATION_SENT = "Quotation Sent",
+  NEGOTIATING = "Negotiating",
+  APPROVED = "Approved",
+  REJECTED = "Rejected",
+  PROCUREMENT = "Procurement",
+  IN_EXECUTION = "In Execution",
+  COMPLETED = "Completed",
+  ON_HOLD = "On Hold",
 }
 
 export enum PaymentStatus {
-    PENDING = "Pending",
-    PAID = "Paid",
-    OVERDUE = "Overdue",
-    DRAFT = "Draft",
-    SENT = "Sent",
-    PARTIALLY_PAID = "Partially Paid",
+  PENDING = "Pending",
+  PAID = "Paid",
+  OVERDUE = "Overdue",
+  DRAFT = "Draft",
+  SENT = "Sent",
+  PARTIALLY_PAID = "Partially Paid",
 }
 
 export interface Issue {
-    id: string;
-    projectId: string;
-    title: string;
-    status: 'Open' | 'In Progress' | 'Resolved';
-    priority: 'High' | 'Medium' | 'Low';
-    reportedBy: string;
-    timestamp: Date;
+  id: string;
+  projectId: string;
+  title: string;
+  status: 'Open' | 'In Progress' | 'Resolved';
+  priority: 'High' | 'Medium' | 'Low';
+  reportedBy: string;
+  timestamp: Date;
 }
 
 export interface ChecklistItem {
-    id: string;
-    text: string;
-    completed: boolean;
+  id: string;
+  text: string;
+  completed: boolean;
 }
 
 export interface CommunicationMessage {
-    id: string;
-    user: string;
-    avatar: string;
-    message: string;
-    timestamp: Date;
+  id: string;
+  user: string;
+  avatar: string;
+  message: string;
+  timestamp: Date;
 }
 
 export interface LeadCommunicationMessage {
@@ -285,17 +287,17 @@ export type PaymentMethod = 'Cash' | 'Company Card' | 'Personal Card' | 'UPI';
 export type ExpenseStatus = 'Pending' | 'Approved' | 'Rejected' | 'Paid';
 
 export interface Expense {
-    id: string;
-    userId: string;
-    projectId?: string;
-    category: ExpenseCategory;
-    description: string;
-    amount: number;
-    date: Date;
-    status: ExpenseStatus;
-    paymentMethod: PaymentMethod;
-    vendor?: string;
-    receiptUrl?: string; // a string for mock
+  id: string;
+  userId: string;
+  projectId?: string;
+  category: ExpenseCategory;
+  description: string;
+  amount: number;
+  date: Date;
+  status: ExpenseStatus;
+  paymentMethod: PaymentMethod;
+  vendor?: string;
+  receiptUrl?: string; // a string for mock
 }
 
 export interface Document {
@@ -308,101 +310,101 @@ export interface Document {
 }
 
 export interface Project {
-    id: string;
-    clientName: string;
-    projectName: string;
-    status: ProjectStatus;
-    deadline?: string;
-    priority: 'High' | 'Medium' | 'Low';
-    budget: number;
-    advancePaid: number;
-    clientAddress: string;
-    clientContact: { name: string; phone: string; };
-    progress: number; // 0-100
-    assignedTeam: {
-        drawing?: string;
-        quotation?: string;
-        site_engineer?: string;
-        execution?: string[];
-    };
-    milestones: { name: string; completed: boolean }[];
-    startDate: Date;
-    endDate: Date;
-    issues?: Issue[];
-    checklists?: {
-        daily: ChecklistItem[];
-        quality: ChecklistItem[];
-    };
-    communication?: CommunicationMessage[];
-    totalExpenses?: number;
-    documents?: Document[];
-    salespersonId?: string; // User ID of the salesperson who won the deal
+  id: string;
+  clientName: string;
+  projectName: string;
+  status: ProjectStatus;
+  deadline?: string;
+  priority: 'High' | 'Medium' | 'Low';
+  budget: number;
+  advancePaid: number;
+  clientAddress: string;
+  clientContact: { name: string; phone: string; };
+  progress: number; // 0-100
+  assignedTeam: {
+    drawing?: string;
+    quotation?: string;
+    site_engineer?: string;
+    execution?: string[];
+  };
+  milestones: { name: string; completed: boolean }[];
+  startDate: Date;
+  endDate: Date;
+  issues?: Issue[];
+  checklists?: {
+    daily: ChecklistItem[];
+    quality: ChecklistItem[];
+  };
+  communication?: CommunicationMessage[];
+  totalExpenses?: number;
+  documents?: Document[];
+  salespersonId?: string; // User ID of the salesperson who won the deal
 }
 
 export enum SiteVisitStatus {
-    SCHEDULED = "Scheduled",
-    TRAVELING = "Traveling",
-    ON_SITE = "On Site",
-    COMPLETED = "Completed",
-    REPORT_SUBMITTED = "Report Submitted",
+  SCHEDULED = "Scheduled",
+  TRAVELING = "Traveling",
+  ON_SITE = "On Site",
+  COMPLETED = "Completed",
+  REPORT_SUBMITTED = "Report Submitted",
 }
 
 export type SiteType = 'Apartment' | 'Office' | 'School' | 'Hospital' | 'Other';
 
 export interface SiteVisit {
-    id: string;
-    leadId: string;
-    projectName: string;
-    clientName: string;
-    date: Date;
-    status: SiteVisitStatus;
-    requesterId: string; // The sales person who requested it
-    assigneeId: string; // The site engineer assigned
-    siteAddress?: string;
-    siteType?: SiteType;
-    priority?: 'High' | 'Medium' | 'Low';
-    notes?: {
-        keyPoints?: string;
-        measurements?: string;
-        clientPreferences?: string;
-        potentialChallenges?: string;
-        photosRequired?: boolean;
-    };
-    attachments?: Document[];
-    reportId?: string;
-    travelStartTime?: Date;
-    onSiteTime?: Date;
-    completionTime?: Date;
+  id: string;
+  leadId: string;
+  projectName: string;
+  clientName: string;
+  date: Date;
+  status: SiteVisitStatus;
+  requesterId: string; // The sales person who requested it
+  assigneeId: string; // The site engineer assigned
+  siteAddress?: string;
+  siteType?: SiteType;
+  priority?: 'High' | 'Medium' | 'Low';
+  notes?: {
+    keyPoints?: string;
+    measurements?: string;
+    clientPreferences?: string;
+    potentialChallenges?: string;
+    photosRequired?: boolean;
+  };
+  attachments?: Document[];
+  reportId?: string;
+  travelStartTime?: Date;
+  onSiteTime?: Date;
+  completionTime?: Date;
 }
 
 export enum QuotationRequestStatus {
-    REQUESTED = "Requested",
-    IN_PROGRESS = "In Progress",
-    COMPLETED = "Completed",
+  REQUESTED = "Requested",
+  IN_PROGRESS = "In Progress",
+  COMPLETED = "Completed",
 }
 
 export interface QuotationRequest {
-    id: string;
-    leadId: string;
-    projectName: string;
-    clientName: string;
-    requesterId: string; // Sales Team Member
-    assigneeId: string; // Quotation Team Member
-    status: QuotationRequestStatus;
-    requestDate: Date;
-    deadline?: Date;
-    scopeOfWork?: {
-        projectType?: string;
-        materialQuality?: string;
-        designStyle?: string;
-        budgetRange?: string;
-        timeline?: string;
-        exclusions?: string;
-        clientRequests?: string;
-    };
-    attachments?: Document[];
-    notes?: string; // General notes
-    quotedAmount?: number;
+  id: string;
+  leadId: string;
+  projectName: string;
+  clientName: string;
+  requesterId: string; // Sales Team Member
+  assigneeId: string; // Quotation Team Member
+  status: QuotationRequestStatus;
+  requestDate: Date;
+  deadline?: Date;
+  scopeOfWork?: {
+    projectType?: string;
+    materialQuality?: string;
+    designStyle?: string;
+    budgetRange?: string;
+    timeline?: string;
+    exclusions?: string;
+    clientRequests?: string;
+  };
+  attachments?: Document[];
+  notes?: string; // General notes
+  quotedAmount?: number;
 }
 
 // Fix: Add missing Item interface for QuotationDetailModal
@@ -416,45 +418,45 @@ export interface Item {
 
 
 export interface Vendor {
-    id: string;
-    name: string;
-    category: string;
-    rating: number;
+  id: string;
+  name: string;
+  category: string;
+  rating: number;
 }
 
 export interface Bid {
-    vendorId: string;
-    vendorName: string;
-    amount: number;
-    timestamp: string;
+  vendorId: string;
+  vendorName: string;
+  amount: number;
+  timestamp: string;
 }
 
 export enum MaterialRequestStatus {
-    RFQ_PENDING = "RFQ Pending",
-    BIDDING_OPEN = "Bidding Open",
-    UNDER_EVALUATION = "Under Evaluation",
-    NEGOTIATION = "Negotiation",
-    PO_READY = "PO Ready",
-    ORDER_PLACED = "Order Placed",
-    DELIVERED = "Delivered",
+  RFQ_PENDING = "RFQ Pending",
+  BIDDING_OPEN = "Bidding Open",
+  UNDER_EVALUATION = "Under Evaluation",
+  NEGOTIATION = "Negotiation",
+  PO_READY = "PO Ready",
+  ORDER_PLACED = "Order Placed",
+  DELIVERED = "Delivered",
 }
 
 export interface MaterialRequest {
-    id: string;
-    projectId: string;
-    projectName: string;
-    materials: { name:string, spec:string }[];
-    requiredBy: Date;
-    status: MaterialRequestStatus;
-    priority: 'High' | 'Medium' | 'Low';
+  id: string;
+  projectId: string;
+  projectName: string;
+  materials: { name: string, spec: string }[];
+  requiredBy: Date;
+  status: MaterialRequestStatus;
+  priority: 'High' | 'Medium' | 'Low';
 }
 
 export interface MaterialOrder {
-    id: string;
-    material: string;
-    quantity: number;
-    vendorId: string;
-    status: 'Ordered' | 'Shipped' | 'Delivered';
+  id: string;
+  material: string;
+  quantity: number;
+  vendorId: string;
+  status: 'Ordered' | 'Shipped' | 'Delivered';
 }
 
 export interface InvoiceItem {
@@ -467,153 +469,153 @@ export interface InvoiceItem {
 }
 
 export interface Invoice {
-    id: string;
-    invoiceNumber: string;
-    projectId: string;
-    projectName: string;
-    clientName: string;
-    clientAddress: string;
-    clientGstin: string;
-    
-    issueDate: Date;
-    dueDate: Date;
-    
-    items: InvoiceItem[];
-    
-    subTotal: number;
-    discountValue: number; // as a value, not percentage
-    taxAmount: number;
-    total: number;
-    amountInWords: string;
-    paidAmount: number;
-    
-    status: PaymentStatus;
-    
-    terms: string;
-    notes: string;
-    attachments?: Document[];
-    bankDetails: {
-        name: string;
-        bank: string;
-        accountNo: string;
-        ifsc: string;
-    }
+  id: string;
+  invoiceNumber: string;
+  projectId: string;
+  projectName: string;
+  clientName: string;
+  clientAddress: string;
+  clientGstin: string;
+
+  issueDate: Date;
+  dueDate: Date;
+
+  items: InvoiceItem[];
+
+  subTotal: number;
+  discountValue: number; // as a value, not percentage
+  taxAmount: number;
+  total: number;
+  amountInWords: string;
+  paidAmount: number;
+
+  status: PaymentStatus;
+
+  terms: string;
+  notes: string;
+  attachments?: Document[];
+  bankDetails: {
+    name: string;
+    bank: string;
+    accountNo: string;
+    ifsc: string;
+  }
 }
 
 export type VendorBillStatus = 'Pending Approval' | 'Approved' | 'Scheduled' | 'Paid' | 'Overdue';
 
 export interface VendorBill {
-    id: string;
-    vendorId: string;
-    vendorName: string;
-    invoiceNumber: string;
-    poReference?: string;
-    amount: number;
-    issueDate: Date;
-    dueDate: Date;
-    status: VendorBillStatus;
-    projectId?: string;
-    paymentDate?: Date;
+  id: string;
+  vendorId: string;
+  vendorName: string;
+  invoiceNumber: string;
+  poReference?: string;
+  amount: number;
+  issueDate: Date;
+  dueDate: Date;
+  status: VendorBillStatus;
+  projectId?: string;
+  paymentDate?: Date;
 }
 
 
 export enum ActivityStatus {
-    DONE = "Done",
-    IN_PROGRESS = "In Progress",
-    PENDING = "Pending",
+  DONE = "Done",
+  IN_PROGRESS = "In Progress",
+  PENDING = "Pending",
 }
 
 export interface Activity {
-    id: string;
-    description: string;
-    team: UserRole;
-    userId: string;
-    timestamp: Date;
-    status: ActivityStatus;
-    projectId?: string;
+  id: string;
+  description: string;
+  team: UserRole;
+  userId: string;
+  timestamp: Date;
+  status: ActivityStatus;
+  projectId?: string;
 }
 
 export enum AttendanceStatus {
-    PRESENT = "Present",
-    ABSENT = "Absent",
-    HALF_DAY = "Half-day",
-    LEAVE = "Leave",
+  PRESENT = "Present",
+  ABSENT = "Absent",
+  HALF_DAY = "Half-day",
+  LEAVE = "Leave",
 }
 
 export interface Attendance {
-    date: Date;
-    status: AttendanceStatus;
+  date: Date;
+  status: AttendanceStatus;
 }
 export enum DrawingRequestStatus {
-    REQUESTED = "Requested",
-    IN_PROGRESS = "In Progress",
-    COMPLETED = "Completed",
+  REQUESTED = "Requested",
+  IN_PROGRESS = "In Progress",
+  COMPLETED = "Completed",
 }
 
 export interface DrawingRequest {
-    id: string;
-    leadId: string;
-    projectName: string;
-    clientName: string;
-    requesterId: string;
-    assigneeId: string;
-    status: DrawingRequestStatus;
-    requestDate: Date;
-    deadline?: Date;
-    notes?: string;
+  id: string;
+  leadId: string;
+  projectName: string;
+  clientName: string;
+  requesterId: string;
+  assigneeId: string;
+  status: DrawingRequestStatus;
+  requestDate: Date;
+  deadline?: Date;
+  notes?: string;
 }
 
 export enum ProcurementRequestStatus {
-    REQUESTED = "Requested",
-    IN_PROGRESS = "In Progress",
-    COMPLETED = "Completed",
+  REQUESTED = "Requested",
+  IN_PROGRESS = "In Progress",
+  COMPLETED = "Completed",
 }
 
 export interface ProcurementRequest {
-    id: string;
-    leadId: string;
-    projectName: string;
-    requesterId: string;
-    assigneeId: string;
-    status: ProcurementRequestStatus;
-    requestDate: Date;
-    requiredByDate?: Date;
-    materials: string;
+  id: string;
+  leadId: string;
+  projectName: string;
+  requesterId: string;
+  assigneeId: string;
+  status: ProcurementRequestStatus;
+  requestDate: Date;
+  requiredByDate?: Date;
+  materials: string;
 }
 
 export enum ExecutionRequestStatus {
-    REQUESTED = "Requested",
-    IN_PROGRESS = "In Progress",
-    COMPLETED = "Completed",
+  REQUESTED = "Requested",
+  IN_PROGRESS = "In Progress",
+  COMPLETED = "Completed",
 }
 
 export interface ExecutionRequest {
-    id: string;
-    leadId: string;
-    projectName: string;
-    requesterId: string;
-    assigneeId: string;
-    status: ExecutionRequestStatus;
-    requestDate: Date;
-    notes?: string;
+  id: string;
+  leadId: string;
+  projectName: string;
+  requesterId: string;
+  assigneeId: string;
+  status: ExecutionRequestStatus;
+  requestDate: Date;
+  notes?: string;
 }
 
 export enum AccountsRequestStatus {
-    REQUESTED = "Requested",
-    IN_PROGRESS = "In Progress",
-    COMPLETED = "Completed",
+  REQUESTED = "Requested",
+  IN_PROGRESS = "In Progress",
+  COMPLETED = "Completed",
 }
 
 export interface AccountsRequest {
-    id: string;
-    leadId: string;
-    projectName: string;
-    requesterId: string;
-    assigneeId: string;
-    status: AccountsRequestStatus;
-    requestDate: Date;
-    notes?: string;
-    task: 'Generate Proforma' | 'Verify Payment Terms' | 'Client Credit Check';
+  id: string;
+  leadId: string;
+  projectName: string;
+  requesterId: string;
+  assigneeId: string;
+  status: AccountsRequestStatus;
+  requestDate: Date;
+  notes?: string;
+  task: 'Generate Proforma' | 'Verify Payment Terms' | 'Client Credit Check';
 }
 
 export interface ProjectTemplate {
@@ -626,46 +628,46 @@ export interface ProjectTemplate {
 }
 
 export enum ExpenseClaimStatus {
-    SUBMITTED = "Submitted",
-    UNDER_REVIEW = "Under Review",
-    APPROVED = "Approved",
-    REJECTED = "Rejected",
-    PAID = "Paid",
+  SUBMITTED = "Submitted",
+  UNDER_REVIEW = "Under Review",
+  APPROVED = "Approved",
+  REJECTED = "Rejected",
+  PAID = "Paid",
 }
 
 export interface ExpenseItem {
-    id: string;
-    type: 'Travel' | 'Parking' | 'Materials' | 'Other';
-    description: string;
-    amount: number;
-    receiptUrl?: string;
+  id: string;
+  type: 'Travel' | 'Parking' | 'Materials' | 'Other';
+  description: string;
+  amount: number;
+  receiptUrl?: string;
 }
 
 export interface ExpenseClaim {
-    id: string;
-    visitId: string;
-    engineerId: string;
-    submissionDate: Date;
-    totalAmount: number;
-    status: ExpenseClaimStatus;
-    items: ExpenseItem[];
+  id: string;
+  visitId: string;
+  engineerId: string;
+  submissionDate: Date;
+  totalAmount: number;
+  status: ExpenseClaimStatus;
+  items: ExpenseItem[];
 }
 
 export interface SiteMeasurement {
-    roomName: string;
-    length: number;
-    width: number;
-    height: number;
+  roomName: string;
+  length: number;
+  width: number;
+  height: number;
 }
 
 export interface SiteReport {
-    id: string;
-    visitId: string;
-    checklistItems: { text: string; checked: boolean }[];
-    measurements: SiteMeasurement[];
-    photos: { url: string; caption: string }[];
-    notes: string;
-    expenseClaimId?: string;
+  id: string;
+  visitId: string;
+  checklistItems: { text: string; checked: boolean }[];
+  measurements: SiteMeasurement[];
+  photos: { url: string; caption: string }[];
+  notes: string;
+  expenseClaimId?: string;
 }
 
 // New types for Productivity System
@@ -689,17 +691,17 @@ export interface Task {
 }
 
 export enum AttendanceType {
-    ON_TIME = "On Time",
-    LATE = "Late",
-    HALF_DAY = "Half Day",
-    ABSENT = "Absent",
+  ON_TIME = "On Time",
+  LATE = "Late",
+  HALF_DAY = "Half Day",
+  ABSENT = "Absent",
 }
 
 export interface DailyAttendance {
-    userId: string;
-    date: string; // YYYY-MM-DD
-    checkInTime: number; // timestamp
-    status: AttendanceType;
+  userId: string;
+  date: string; // YYYY-MM-DD
+  checkInTime: number; // timestamp
+  status: AttendanceType;
 }
 
 // New Communication Types
@@ -722,72 +724,72 @@ export interface ChatMessage {
 
 // Fix: Add missing types for the Quick Clarify communication feature.
 export enum QuestionCategory {
-    DESIGN = "Design",
-    SITE = "Site",
-    TECHNICAL = "Technical",
-    CLIENT = "Client",
-    PROCESS = "Process",
+  DESIGN = "Design",
+  SITE = "Site",
+  TECHNICAL = "Technical",
+  CLIENT = "Client",
+  PROCESS = "Process",
 }
 
 export enum QuestionUrgency {
-    LOW = "Low",
-    MEDIUM = "Medium",
-    HIGH = "High",
+  LOW = "Low",
+  MEDIUM = "Medium",
+  HIGH = "High",
 }
 
 export interface QuickClarifyQuestion {
-    id: string;
-    channelId: string;
-    senderId: string;
-    timestamp: Date;
-    category: QuestionCategory;
-    urgency: QuestionUrgency;
-    regarding?: string;
-    question: string;
-    deadline?: Date;
+  id: string;
+  channelId: string;
+  senderId: string;
+  timestamp: Date;
+  category: QuestionCategory;
+  urgency: QuestionUrgency;
+  regarding?: string;
+  question: string;
+  deadline?: Date;
 }
 
 // New Complaint Escalation Types
 export enum ComplaintType {
-    WORK_NEGLECT = "Task Neglect",
-    QUALITY_ISSUES = "Quality Issues",
-    COMMUNICATION_BREAKDOWN = "Communication Breakdown",
-    TIMELINE_VIOLATIONS = "Timeline Violations",
-    COORDINATION_PROBLEMS = "Coordination Problems",
-    UNPROFESSIONAL_BEHAVIOR = "Unprofessional Behavior",
-    RESPONSIVENESS_ISSUES = "Responsiveness Issues",
-    ACCOUNTABILITY_PROBLEMS = "Accountability Problems",
-    TEAMWORK_CONCERNS = "Teamwork Concerns",
-    WORKFLOW_BLOCKAGES = "Workflow Blockages",
-    RESOURCE_ISSUES = "Resource Issues",
-    SYSTEM_PROBLEMS = "System Problems",
+  WORK_NEGLECT = "Task Neglect",
+  QUALITY_ISSUES = "Quality Issues",
+  COMMUNICATION_BREAKDOWN = "Communication Breakdown",
+  TIMELINE_VIOLATIONS = "Timeline Violations",
+  COORDINATION_PROBLEMS = "Coordination Problems",
+  UNPROFESSIONAL_BEHAVIOR = "Unprofessional Behavior",
+  RESPONSIVENESS_ISSUES = "Responsiveness Issues",
+  ACCOUNTABILITY_PROBLEMS = "Accountability Problems",
+  TEAMWORK_CONCERNS = "Teamwork Concerns",
+  WORKFLOW_BLOCKAGES = "Workflow Blockages",
+  RESOURCE_ISSUES = "Resource Issues",
+  SYSTEM_PROBLEMS = "System Problems",
 }
 
 export enum ComplaintPriority {
-    MEDIUM = "Medium",
-    HIGH = "High",
-    CRITICAL = "Critical",
+  MEDIUM = "Medium",
+  HIGH = "High",
+  CRITICAL = "Critical",
 }
 
 export enum ComplaintStatus {
-    SUBMITTED = "Submitted",
-    UNDER_REVIEW = "Under Review",
-    INVESTIGATION = "Investigation",
-    RESOLVED = "Resolved",
-    ESCALATED = "Escalated",
+  SUBMITTED = "Submitted",
+  UNDER_REVIEW = "Under Review",
+  INVESTIGATION = "Investigation",
+  RESOLVED = "Resolved",
+  ESCALATED = "Escalated",
 }
 
 export interface Complaint {
-    id: string;
-    submittedBy: string; // User ID
-    against: string; // User ID or Department Name
-    type: ComplaintType;
-    priority: ComplaintPriority;
-    status: ComplaintStatus;
-    projectContext: string;
-    description: string;
-    evidence: string[]; // notes for mock
-    resolutionAttempts: string;
-    desiredResolution: string;
-    submissionDate: Date;
+  id: string;
+  submittedBy: string; // User ID
+  against: string; // User ID or Department Name
+  type: ComplaintType;
+  priority: ComplaintPriority;
+  status: ComplaintStatus;
+  projectContext: string;
+  description: string;
+  evidence: string[]; // notes for mock
+  resolutionAttempts: string;
+  desiredResolution: string;
+  submissionDate: Date;
 }

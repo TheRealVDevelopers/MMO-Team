@@ -1,6 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { PhoneIcon, GlobeAltIcon, EnvelopeIcon, Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import { motion, AnimatePresence } from 'framer-motion';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 import LoginModal from './LoginModal';
 import { User } from '../../types';
 import HomePage from './HomePage';
@@ -11,6 +14,13 @@ import ServicesPage from './ServicesPage';
 import StartProjectPage from './StartProjectPage';
 import ClientLoginPage from './ClientLoginPage';
 import ClientDashboardPage from './ClientDashboardPage';
+
+/**
+ * Utility function to merge tailwind classes
+ */
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 interface LandingPageProps {
   onLogin: (user: User) => void;
@@ -32,7 +42,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
   // Handle scroll effect for navbar shadow
   useEffect(() => {
     const handleScroll = () => {
-        setIsScrolled(window.scrollY > 20);
+      setIsScrolled(window.scrollY > 20);
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
@@ -51,142 +61,162 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
   }, [isMobileMenuOpen]);
 
   const handleNavigate = (page: string) => {
-      setCurrentView(page as any);
+    setCurrentView(page as any);
   };
 
   const handleClientLogin = (projectId: string) => {
-      setClientProjectId(projectId);
-      setCurrentView('client-dashboard');
+    setClientProjectId(projectId);
+    setCurrentView('client-dashboard');
   };
 
   const handleClientLogout = () => {
-      setClientProjectId('');
-      setCurrentView('home');
+    setClientProjectId('');
+    setCurrentView('home');
   };
 
   const renderContent = () => {
-      switch(currentView) {
-          case 'services': return <ServicesPage onNavigate={handleNavigate} />;
-          case 'portfolio': return <PortfolioPage onNavigate={handleNavigate} />;
-          case 'about': return <AboutPage onNavigate={handleNavigate} />;
-          case 'contact': return <ContactPage />;
-          case 'start-project': return <StartProjectPage />;
-          case 'client-login': return <ClientLoginPage onLoginSuccess={handleClientLogin} />;
-          case 'client-dashboard': return <ClientDashboardPage projectId={clientProjectId} onLogout={handleClientLogout} />;
-          default: return <HomePage onNavigate={handleNavigate} />;
-      }
+    switch (currentView) {
+      case 'services': return <ServicesPage onNavigate={handleNavigate} />;
+      case 'portfolio': return <PortfolioPage onNavigate={handleNavigate} />;
+      case 'about': return <AboutPage onNavigate={handleNavigate} />;
+      case 'contact': return <ContactPage />;
+      case 'start-project': return <StartProjectPage />;
+      case 'client-login': return <ClientLoginPage onLoginSuccess={handleClientLogin} />;
+      case 'client-dashboard': return <ClientDashboardPage projectId={clientProjectId} onLogout={handleClientLogout} />;
+      default: return <HomePage onNavigate={handleNavigate} />;
+    }
   };
 
   const NavLink = ({ view, label }: { view: string, label: string }) => (
-      <button 
-        onClick={() => setCurrentView(view as any)} 
-        className={`text-xs font-medium uppercase tracking-[0.15em] transition-all duration-300 relative group px-2 py-1 ${
-            currentView === view 
-            ? 'text-kurchi-gold-500' 
-            : 'text-text-primary hover:text-kurchi-gold-500'
-        }`}
-      >
-        {label}
-        <span className={`absolute -bottom-1 left-0 w-full h-[1px] bg-kurchi-gold-500 transform scale-x-0 transition-transform duration-500 ease-luxury group-hover:scale-x-100 ${currentView === view ? 'scale-x-100' : ''}`}></span>
-      </button>
+    <button
+      onClick={() => setCurrentView(view as any)}
+      className={cn(
+        "text-[10px] font-bold uppercase tracking-[0.2em] transition-all duration-300 relative group px-3 py-2",
+        currentView === view
+          ? 'text-primary'
+          : 'text-text-primary/70 hover:text-primary'
+      )}
+    >
+      <span className="relative z-10">{label}</span>
+      {currentView === view && (
+        <motion.span
+          layoutId="nav-underline"
+          className="absolute inset-0 bg-primary/5 rounded-full -z-0"
+          transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+        />
+      )}
+      <span className={cn(
+        "absolute -bottom-1 left-3 right-3 h-[2px] bg-primary transform scale-x-0 transition-transform duration-500 ease-luxury group-hover:scale-x-100",
+        currentView === view ? 'scale-x-100' : ''
+      )}></span>
+    </button>
   );
 
   return (
-    <div className="min-h-screen bg-background text-text-primary font-sans overflow-x-hidden flex flex-col selection:bg-kurchi-gold-500 selection:text-white">
-      
+    <div className="min-h-screen bg-background text-text-primary font-sans overflow-x-hidden flex flex-col selection:bg-primary selection:text-white">
+
       {/* 1. HEADER + TOP BAR - Hide on client dashboard */}
       {currentView !== 'client-dashboard' && (
-        <nav 
-          className={`fixed top-0 w-full z-50 bg-surface border-b border-border/50 transition-all duration-500 ${
-              isScrolled ? 'py-4 shadow-luxury' : 'py-6'
-          }`}
+        <nav
+          className={cn(
+            "fixed top-0 w-full z-50 transition-all duration-500",
+            isScrolled
+              ? "py-3 bg-surface/80 backdrop-blur-xl border-b border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.04)]"
+              : "py-6 bg-transparent"
+          )}
         >
-        <div className="max-w-7xl mx-auto px-6 lg:px-12">
-          <div className="flex justify-between items-center">
-            
-            {/* Logo */}
-            <div className="flex items-center cursor-pointer group" onClick={() => setCurrentView('home')}>
-              <div className="w-10 h-10 flex items-center justify-center font-serif font-bold text-xl bg-kurchi-espresso-900 text-white transition-colors duration-500 group-hover:bg-kurchi-gold-500">
-                K
+          <div className="max-w-7xl mx-auto px-6 lg:px-12">
+            <div className="flex justify-between items-center">
+
+              {/* Logo */}
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="flex items-center cursor-pointer group"
+                onClick={() => setCurrentView('home')}
+              >
+                <div className="w-10 h-10 flex items-center justify-center font-serif font-bold text-xl bg-primary text-white transition-all duration-500 group-hover:bg-secondary group-hover:shadow-[0_0_20px_rgba(var(--color-primary),0.3)] rounded-lg">
+                  K
+                </div>
+                <div className="ml-3 flex flex-col">
+                  <span className="text-xl font-serif font-black tracking-tighter leading-none text-text-primary bg-clip-text text-transparent bg-gradient-to-r from-text-primary to-text-primary/70">KURCHI</span>
+                  <span className="text-[0.6rem] uppercase tracking-[0.4em] text-primary font-bold mt-1 opacity-80">Interior Studio</span>
+                </div>
+              </motion.div>
+
+              {/* Navigation - Centered - Hidden on mobile */}
+              <div className="hidden lg:flex space-x-8 items-center">
+                <NavLink view="home" label="Home" />
+                <NavLink view="about" label="Studio" />
+                <NavLink view="services" label="Services" />
+                <NavLink view="portfolio" label="Works" />
+                <NavLink view="contact" label="Contact" />
               </div>
-              <div className="ml-3 flex flex-col">
-                <span className="text-lg font-serif font-bold tracking-wide leading-none text-kurchi-espresso-900">KURCHI</span>
-                <span className="text-[0.6rem] uppercase tracking-[0.3em] text-text-secondary font-medium mt-0.5">Interior Studio</span>
+
+              {/* Actions - Right - Hidden on mobile */}
+              <div className="hidden lg:flex items-center space-x-6">
+                <button
+                  onClick={() => setCurrentView('client-login')}
+                  className="text-[10px] uppercase tracking-[0.1em] font-bold text-primary hover:text-secondary transition-colors"
+                >
+                  Client Login
+                </button>
+
+                <button
+                  onClick={() => setIsLoginModalOpen(true)}
+                  className="text-[10px] uppercase tracking-[0.1em] font-bold text-text-secondary hover:text-primary transition-colors"
+                >
+                  Staff Login
+                </button>
+
+                <motion.button
+                  whileHover={{ scale: 1.05, boxShadow: "0 10px 25px -5px rgba(var(--color-primary), 0.3)" }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setCurrentView('start-project')}
+                  className="px-6 py-3 bg-primary text-white text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-secondary transition-all duration-500 rounded-full"
+                >
+                  Start Your Project
+                </motion.button>
               </div>
-            </div>
 
-            {/* Navigation - Centered - Hidden on mobile */}
-            <div className="hidden lg:flex space-x-8 items-center">
-              <NavLink view="home" label="Home" />
-              <NavLink view="about" label="Studio" />
-              <NavLink view="services" label="Services" />
-              <NavLink view="portfolio" label="Works" />
-              <NavLink view="contact" label="Contact" />
-            </div>
-
-            {/* Actions - Right - Hidden on mobile */}
-            <div className="hidden lg:flex items-center space-x-6">
-              <button 
-                onClick={() => setCurrentView('client-login')}
-                className="text-xs font-medium text-kurchi-gold-500 hover:text-kurchi-espresso-900 transition-colors"
+              {/* Mobile Hamburger Menu Button */}
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="lg:hidden p-2 rounded-xl text-text-primary hover:bg-primary/10 transition-all"
+                aria-label="Toggle menu"
               >
-                Client Login
-              </button>
-              
-              <button 
-                onClick={() => setIsLoginModalOpen(true)}
-                className="text-xs font-medium text-text-secondary hover:text-kurchi-gold-500 transition-colors"
-              >
-                Staff Login
-              </button>
-
-              <button 
-                onClick={() => setCurrentView('start-project')} 
-                className="px-6 py-3 bg-kurchi-espresso-900 text-white text-xs font-bold uppercase tracking-widest hover:bg-kurchi-gold-500 transition-all duration-500 shadow-lg hover:shadow-kurchi-gold-500/20"
-              >
-                Start Your Project
+                {isMobileMenuOpen ? <XMarkIcon className="h-6 w-6" /> : <Bars3Icon className="h-6 w-6" />}
               </button>
             </div>
-            
-            {/* Mobile Hamburger Menu Button */}
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden p-2 rounded-xl text-kurchi-espresso-900 hover:bg-kurchi-gold-500/10 transition-all"
-              aria-label="Toggle menu"
-            >
-              {isMobileMenuOpen ? <XMarkIcon className="h-6 w-6" /> : <Bars3Icon className="h-6 w-6" />}
-            </button>
           </div>
-        </div>
         </nav>
       )}
-      
+
       {/* Mobile Slide-in Menu */}
       {currentView !== 'client-dashboard' && (
         <>
           {/* Backdrop */}
           {isMobileMenuOpen && (
-            <div 
+            <div
               className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
               onClick={() => setIsMobileMenuOpen(false)}
               aria-hidden="true"
             />
           )}
-          
+
           {/* Slide-in Menu */}
-          <div className={`fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] bg-white dark:bg-surface border-l border-border dark:border-border shadow-2xl z-50 lg:hidden transform transition-transform duration-300 ease-out ${
-            isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
-          }`}>
+          <div className={`fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] bg-white dark:bg-surface border-l border-border dark:border-border shadow-2xl z-50 lg:hidden transform transition-transform duration-300 ease-out ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+            }`}>
             <div className="h-full flex flex-col overflow-hidden">
               {/* Menu Header */}
-              <div className="flex items-center justify-between p-6 border-b border-border dark:border-border bg-gradient-to-r from-kurchi-gold-500 to-kurchi-espresso-900">
+              <div className="flex items-center justify-between p-6 border-b border-border bg-gradient-to-r from-primary to-secondary">
                 <div>
-                  <h2 className="text-lg font-bold text-white">Menu</h2>
-                  <p className="text-xs text-white/80 mt-0.5">Kurchi Interior Studio</p>
+                  <h2 className="text-lg font-bold text-white uppercase tracking-widest">Kurchi</h2>
+                  <p className="text-xs text-white/70 font-light mt-0.5 tracking-wide">Elite Interior Systems</p>
                 </div>
                 <button
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all"
+                  className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all backdrop-blur-md"
                   aria-label="Close menu"
                 >
                   <XMarkIcon className="h-6 w-6" />
@@ -210,13 +240,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                       <button
                         key={item.view}
                         onClick={() => setCurrentView(item.view as any)}
-                        className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-left transition-all duration-200 ${
+                        className={cn(
+                          "w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-left transition-all duration-300",
                           currentView === item.view
-                            ? 'bg-gradient-to-r from-kurchi-gold-500 to-kurchi-gold-600 text-white shadow-lg'
-                            : 'text-text-primary dark:text-text-primary hover:bg-subtle-background dark:hover:bg-background'
-                        }`}
+                            ? 'bg-primary text-white shadow-luxury'
+                            : 'text-text-primary hover:bg-primary/5 hover:text-primary'
+                        )}
                       >
-                        <span className="font-medium">{item.label}</span>
+                        <span className="font-bold text-sm uppercase tracking-widest">{item.label}</span>
                       </button>
                     ))}
                   </nav>
@@ -229,22 +260,22 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                   </p>
                   <div className="space-y-3">
                     <button
-                      onClick={() => setCurrentView('start-project')}
-                      className="w-full px-4 py-4 bg-kurchi-espresso-900 text-white text-sm font-bold uppercase tracking-widest hover:bg-kurchi-gold-500 transition-all duration-300 rounded-xl shadow-lg"
+                      onClick={() => { setCurrentView('start-project'); setIsMobileMenuOpen(false); }}
+                      className="w-full px-4 py-4 bg-primary text-white text-[10px] font-black uppercase tracking-[0.2em] hover:bg-secondary transition-all duration-300 rounded-xl shadow-luxury"
                     >
                       Start Your Project
                     </button>
                     <button
                       onClick={() => { setCurrentView('client-login'); setIsMobileMenuOpen(false); }}
-                      className="w-full px-4 py-3 border-2 border-kurchi-gold-500 text-kurchi-gold-600 text-sm font-semibold hover:bg-kurchi-gold-500 hover:text-white transition-all duration-300 rounded-xl"
+                      className="w-full px-4 py-3 border-2 border-primary/20 text-primary text-[10px] font-black uppercase tracking-[0.2em] hover:bg-primary hover:text-white transition-all duration-300 rounded-xl text-center"
                     >
-                      Client Login
+                      Client Portal
                     </button>
                     <button
                       onClick={() => { setIsLoginModalOpen(true); setIsMobileMenuOpen(false); }}
-                      className="w-full px-4 py-3 border border-border text-text-secondary text-sm font-medium hover:border-kurchi-gold-500 hover:text-kurchi-gold-600 transition-all duration-300 rounded-xl"
+                      className="w-full px-4 py-3 border border-border text-text-secondary text-[10px] font-black uppercase tracking-[0.2em] hover:border-primary hover:text-primary transition-all duration-300 rounded-xl"
                     >
-                      Staff Login
+                      Staff Access
                     </button>
                   </div>
                 </div>
@@ -257,17 +288,17 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                     Contact Us
                   </p>
                   <div className="space-y-3">
-                    <a href="tel:+915551234567" className="flex items-center space-x-3 text-sm text-text-primary dark:text-text-primary hover:text-kurchi-gold-600 transition-colors">
-                      <PhoneIcon className="w-5 h-5 text-kurchi-gold-600" />
-                      <span>+91 (555) 123-4567</span>
+                    <a href="tel:+915551234567" className="flex items-center space-x-3 text-sm text-text-primary hover:text-primary transition-colors">
+                      <PhoneIcon className="w-5 h-5 text-primary/50" />
+                      <span className="font-light">+91 (555) 123-4567</span>
                     </a>
-                    <a href="mailto:projects@kurchi.com" className="flex items-center space-x-3 text-sm text-text-primary dark:text-text-primary hover:text-kurchi-gold-600 transition-colors">
-                      <EnvelopeIcon className="w-5 h-5 text-kurchi-gold-600" />
-                      <span>projects@kurchi.com</span>
+                    <a href="mailto:projects@kurchi.com" className="flex items-center space-x-3 text-sm text-text-primary hover:text-primary transition-colors">
+                      <EnvelopeIcon className="w-5 h-5 text-primary/50" />
+                      <span className="font-light">projects@kurchi.com</span>
                     </a>
-                    <div className="flex items-start space-x-3 text-sm text-text-secondary dark:text-text-secondary">
-                      <GlobeAltIcon className="w-5 h-5 text-kurchi-gold-600 flex-shrink-0 mt-0.5" />
-                      <span className="leading-relaxed">Cyber City, Sector 18<br/>Gurgaon, Haryana 122002</span>
+                    <div className="flex items-start space-x-3 text-sm text-text-secondary">
+                      <GlobeAltIcon className="w-5 h-5 text-primary/50 flex-shrink-0 mt-0.5" />
+                      <span className="leading-relaxed font-light">Cyber City, Sector 18<br />Gurgaon, Haryana 122002</span>
                     </div>
                   </div>
                 </div>
@@ -284,83 +315,83 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
 
       {/* Main Content Area */}
       <main className="flex-grow">
-          {renderContent()}
+        {renderContent()}
       </main>
 
       {/* 14. FOOTER - Hide on client dashboard and client login */}
       {currentView !== 'client-dashboard' && currentView !== 'client-login' && (
-      <footer className="bg-kurchi-espresso-950 pt-24 pb-12 text-white/80 border-t-4 border-kurchi-gold-500">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12">
+        <footer className="bg-surface pt-24 pb-12 text-text-primary border-t border-border">
+          <div className="max-w-7xl mx-auto px-6 lg:px-12">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-20">
-                
-                {/* Brand Column */}
-                <div className="space-y-6">
-                    <div className="flex items-center">
-                        <div className="w-8 h-8 bg-kurchi-gold-500 flex items-center justify-center text-white font-serif font-bold text-lg">K</div>
-                        <span className="ml-3 text-2xl font-serif font-bold text-white tracking-wide">KURCHI</span>
-                    </div>
-                    <p className="text-sm font-light leading-relaxed text-gray-400">
-                        Bridging the gap between aesthetic vision and engineering precision. We create workspaces that define legacies.
-                    </p>
-                </div>
 
-                {/* Explore */}
-                <div>
-                    <h3 className="text-white font-serif text-lg mb-6">Explore</h3>
-                    <ul className="space-y-3 text-sm font-light text-gray-400">
-                        <li><button onClick={() => setCurrentView('home')} className="hover:text-kurchi-gold-500 transition-colors duration-300">Home</button></li>
-                        <li><button onClick={() => setCurrentView('about')} className="hover:text-kurchi-gold-500 transition-colors duration-300">Our Studio</button></li>
-                        <li><button onClick={() => setCurrentView('portfolio')} className="hover:text-kurchi-gold-500 transition-colors duration-300">Selected Works</button></li>
-                        <li><button onClick={() => setCurrentView('services')} className="hover:text-kurchi-gold-500 transition-colors duration-300">Expertise</button></li>
-                    </ul>
+              {/* Brand Column */}
+              <div className="space-y-6">
+                <div className="flex items-center">
+                  <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-serif font-bold text-lg">K</div>
+                  <span className="ml-3 text-2xl font-serif font-bold text-text-primary tracking-wide">KURCHI</span>
                 </div>
+                <p className="text-sm font-light leading-relaxed text-text-secondary max-w-xs">
+                  Bridging the gap between aesthetic vision and engineering precision. We create workspaces that define legacies and empower minds.
+                </p>
+              </div>
 
-                {/* Services */}
-                <div>
-                    <h3 className="text-white font-serif text-lg mb-6">Services</h3>
-                    <ul className="space-y-3 text-sm font-light text-gray-400">
-                        <li><a href="#" className="hover:text-kurchi-gold-500 transition-colors duration-300">Turnkey Interiors</a></li>
-                        <li><a href="#" className="hover:text-kurchi-gold-500 transition-colors duration-300">Custom Manufacturing</a></li>
-                        <li><a href="#" className="hover:text-kurchi-gold-500 transition-colors duration-300">Corporate Fit-outs</a></li>
-                        <li><a href="#" className="hover:text-kurchi-gold-500 transition-colors duration-300">Design Consultancy</a></li>
-                    </ul>
-                </div>
+              {/* Explore */}
+              <div>
+                <h3 className="text-text-primary font-serif font-bold text-lg mb-6">Explore</h3>
+                <ul className="space-y-3 text-sm font-medium text-text-secondary">
+                  <li><button onClick={() => setCurrentView('home')} className="hover:text-primary transition-colors duration-300">Home</button></li>
+                  <li><button onClick={() => setCurrentView('about')} className="hover:text-primary transition-colors duration-300">Our Studio</button></li>
+                  <li><button onClick={() => setCurrentView('portfolio')} className="hover:text-primary transition-colors duration-300">Selected Works</button></li>
+                  <li><button onClick={() => setCurrentView('services')} className="hover:text-primary transition-colors duration-300">Expertise</button></li>
+                </ul>
+              </div>
 
-                {/* Contact */}
-                <div>
-                    <h3 className="text-white font-serif text-lg mb-6">Contact</h3>
-                    <ul className="space-y-4 text-sm font-light text-gray-400">
-                        <li className="flex items-start group">
-                            <GlobeAltIcon className="w-5 h-5 text-kurchi-gold-500 mt-0.5 group-hover:text-white transition-colors"/>
-                            <span className="ml-3">123 Design District, Metro City</span>
-                        </li>
-                        <li className="flex items-center group">
-                            <PhoneIcon className="w-5 h-5 text-kurchi-gold-500 group-hover:text-white transition-colors"/>
-                            <span className="ml-3">+91 (555) 123-4567</span>
-                        </li>
-                        <li className="flex items-center group">
-                            <EnvelopeIcon className="w-5 h-5 text-kurchi-gold-500 group-hover:text-white transition-colors"/>
-                            <span className="ml-3">projects@kurchi.com</span>
-                        </li>
-                    </ul>
-                </div>
+              {/* Services */}
+              <div>
+                <h3 className="text-text-primary font-serif font-bold text-lg mb-6">Services</h3>
+                <ul className="space-y-3 text-sm font-medium text-text-secondary">
+                  <li><a href="#" className="hover:text-primary transition-colors duration-300">Turnkey Interiors</a></li>
+                  <li><a href="#" className="hover:text-primary transition-colors duration-300">Custom Manufacturing</a></li>
+                  <li><a href="#" className="hover:text-primary transition-colors duration-300">Corporate Fit-outs</a></li>
+                  <li><a href="#" className="hover:text-primary transition-colors duration-300">Design Consultancy</a></li>
+                </ul>
+              </div>
+
+              {/* Contact */}
+              <div>
+                <h3 className="text-text-primary font-serif font-bold text-lg mb-6">Contact</h3>
+                <ul className="space-y-4 text-sm font-medium text-text-secondary">
+                  <li className="flex items-start group">
+                    <GlobeAltIcon className="w-5 h-5 text-primary mt-0.5 group-hover:scale-110 transition-transform" />
+                    <span className="ml-3">123 Design District, Metro City</span>
+                  </li>
+                  <li className="flex items-center group">
+                    <PhoneIcon className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
+                    <span className="ml-3">+91 (555) 123-4567</span>
+                  </li>
+                  <li className="flex items-center group">
+                    <EnvelopeIcon className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
+                    <span className="ml-3">projects@kurchi.com</span>
+                  </li>
+                </ul>
+              </div>
             </div>
 
-            <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center text-xs font-light text-gray-500">
-                <p>&copy; 2025 Kurchi Interiors. All rights reserved.</p>
-                <div className="flex space-x-8 mt-4 md:mt-0">
-                    <a href="#" className="hover:text-kurchi-gold-500">Privacy Policy</a>
-                    <a href="#" className="hover:text-kurchi-gold-500">Terms of Use</a>
-                </div>
+            <div className="pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center text-[10px] font-bold uppercase tracking-widest text-text-secondary/50">
+              <p>&copy; 2025 Kurchi Interiors. All rights reserved.</p>
+              <div className="flex space-x-8 mt-4 md:mt-0">
+                <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>
+                <a href="#" className="hover:text-primary transition-colors">Terms of Use</a>
+              </div>
             </div>
-        </div>
-      </footer>
+          </div>
+        </footer>
       )}
-      
-      <LoginModal 
-        isOpen={isLoginModalOpen} 
-        onClose={() => setIsLoginModalOpen(false)} 
-        onLogin={onLogin} 
+
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onLogin={onLogin}
       />
     </div>
   );

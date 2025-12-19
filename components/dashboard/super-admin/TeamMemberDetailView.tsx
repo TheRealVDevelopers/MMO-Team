@@ -1,36 +1,57 @@
 import React, { useState, useMemo } from 'react';
-import Card from '../../shared/Card';
 import { User, UserRole, LeadPipelineStatus, ActivityStatus } from '../../../types';
 import { ACTIVITIES, LEADS, PROJECTS, ATTENDANCE_DATA, formatCurrencyINR, formatDateTime } from '../../../constants';
-import { ChartBarSquareIcon, CheckCircleIcon, DocumentCheckIcon, FunnelIcon, UserCircleIcon, CalendarDaysIcon, PhoneIcon, ArrowDownIcon, ArrowUpIcon, ClockIcon } from '../../icons/IconComponents';
+import {
+    PresentationChartBarIcon,
+    CheckCircleIcon,
+    DocumentCheckIcon,
+    FunnelIcon,
+    UserCircleIcon,
+    CalendarIcon,
+    PhoneIcon,
+    ArrowTrendingUpIcon,
+    ClockIcon,
+    BriefcaseIcon
+} from '@heroicons/react/24/outline';
 import AttendanceCalendar from './AttendanceCalendar';
+import { ContentCard, cn, staggerContainer } from '../shared/DashboardUI';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const TabButton: React.FC<{
-    icon: React.ReactNode;
+    icon: React.ElementType;
     label: string;
     isActive: boolean;
     onClick: () => void;
-}> = ({ icon, label, isActive, onClick }) => (
+}> = ({ icon: Icon, label, isActive, onClick }) => (
     <button
         onClick={onClick}
-        className={`flex items-center space-x-2 px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 ${
+        className={cn(
+            "flex items-center gap-2 px-6 py-4 text-xs font-black uppercase tracking-widest transition-all relative",
             isActive
-                ? 'border-primary text-primary'
-                : 'border-transparent text-text-secondary hover:text-text-primary hover:border-border'
-        }`}
+                ? "text-primary"
+                : "text-text-tertiary hover:text-text-primary"
+        )}
     >
-        {icon}
+        <Icon className="w-4 h-4" />
         <span>{label}</span>
+        {isActive && (
+            <motion.div
+                layoutId="activeTabUnderline"
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
+            />
+        )}
     </button>
 );
 
-const KpiCard: React.FC<{ title: string; value: string | number; icon: React.ReactNode }> = ({ title, value, icon }) => (
-    <div className="bg-subtle-background p-3 rounded-lg flex items-start space-x-3">
-        <div className="flex-shrink-0 text-primary">{icon}</div>
-        <div>
-            <p className="text-sm text-text-secondary">{title}</p>
-            <p className="text-xl font-bold text-text-primary">{value}</p>
+const UserMetric: React.FC<{ title: string; value: string | number; icon: React.ElementType }> = ({ title, value, icon: Icon }) => (
+    <div className="bg-subtle-background p-4 rounded-2xl border border-border/40 group hover:border-primary/20 transition-all">
+        <div className="flex items-center gap-3 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                <Icon className="w-4 h-4" />
+            </div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">{title}</p>
         </div>
+        <p className="text-xl font-serif font-black text-text-primary tracking-tight">{value}</p>
     </div>
 );
 
@@ -38,9 +59,9 @@ const KpiCard: React.FC<{ title: string; value: string | number; icon: React.Rea
 const TeamMemberDetailView: React.FC<{ user: User }> = ({ user }) => {
     const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'attendance'>('overview');
 
-    const userActivities = useMemo(() => 
-        ACTIVITIES.filter(a => a.userId === user.id).sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime()),
-    [user.id]);
+    const userActivities = useMemo(() =>
+        ACTIVITIES.filter(a => a.userId === user.id).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()),
+        [user.id]);
 
     const userKPIs = useMemo(() => {
         if (user.role === UserRole.SALES_TEAM_MEMBER) {
@@ -49,19 +70,19 @@ const TeamMemberDetailView: React.FC<{ user: User }> = ({ user }) => {
             const conversionRate = memberLeads.length > 0 ? (wonLeads / memberLeads.length) * 100 : 0;
             const revenue = memberLeads.filter(l => l.status === LeadPipelineStatus.WON).reduce((sum, l) => sum + l.value, 0);
             return [
-                { title: 'Leads Assigned', value: memberLeads.length, icon: <FunnelIcon className="w-6 h-6" /> },
-                { title: 'Conversion Rate', value: `${conversionRate.toFixed(1)}%`, icon: <ChartBarSquareIcon className="w-6 h-6" /> },
-                { title: 'Revenue Generated', value: formatCurrencyINR(revenue), icon: <ArrowUpIcon className="w-6 h-6 text-secondary"/> },
+                { title: 'Leads Pipeline', value: memberLeads.length, icon: FunnelIcon },
+                { title: 'Yield Rate', value: `${conversionRate.toFixed(1)}%`, icon: PresentationChartBarIcon },
+                { title: 'Revenue Flow', value: formatCurrencyINR(revenue), icon: ArrowTrendingUpIcon },
             ];
         }
         if (user.role === UserRole.DRAWING_TEAM) {
-             const memberProjects = PROJECTS.filter(p => p.assignedTeam.drawing === user.id);
-             const completed = memberProjects.filter(p => p.status === 'Completed').length;
-             return [
-                { title: 'Projects Assigned', value: memberProjects.length, icon: <DocumentCheckIcon className="w-6 h-6" /> },
-                { title: 'Designs Completed', value: completed, icon: <CheckCircleIcon className="w-6 h-6 text-secondary" /> },
-                { title: 'Avg. Turnaround', value: '3.5 Days', icon: <ClockIcon className="w-6 h-6" /> },
-             ];
+            const memberProjects = PROJECTS.filter(p => p.assignedTeam.drawing === user.id);
+            const completed = memberProjects.filter(p => p.status === ProjectStatus.COMPLETED).length;
+            return [
+                { title: 'Project Load', value: memberProjects.length, icon: DocumentCheckIcon },
+                { title: 'Design Release', value: completed, icon: CheckCircleIcon },
+                { title: 'Velocity', value: '3.5 Days', icon: ClockIcon },
+            ];
         }
         return [];
     }, [user.id, user.role]);
@@ -69,76 +90,129 @@ const TeamMemberDetailView: React.FC<{ user: User }> = ({ user }) => {
     const attendanceForMonth = ATTENDANCE_DATA[user.id] || [];
 
     return (
-        <Card className="h-full flex flex-col">
+        <ContentCard className="h-full flex flex-col !p-0 overflow-hidden">
             {/* Header */}
-            <div className="flex items-start space-x-4 pb-4">
-                <img className="w-16 h-16 rounded-full" src={user.avatar} alt={user.name} />
-                <div className="flex-1">
-                    <h3 className="text-xl font-bold text-text-primary">{user.name}</h3>
-                    <p className="text-sm text-text-secondary">{user.role}</p>
-                    <div className="text-xs text-text-secondary mt-1 flex items-center space-x-2">
-                         <PhoneIcon className="w-3 h-3"/>
-                         <span>{user.phone}</span>
+            <div className="p-8 pb-6 border-b border-border/40 bg-subtle-background/30">
+                <div className="flex items-center gap-6">
+                    <div className="relative">
+                        <img className="w-20 h-20 rounded-3xl object-cover ring-4 ring-surface" src={user.avatar} alt={user.name} />
+                        <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-lg bg-secondary flex items-center justify-center text-white border-2 border-surface">
+                            <CheckCircleIcon className="w-3.5 h-3.5" />
+                        </div>
+                    </div>
+                    <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-1">
+                            <h3 className="text-2xl font-serif font-black text-text-primary tracking-tight">{user.name}</h3>
+                            <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest border border-primary/20">
+                                {user.role}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-1.5 text-text-tertiary">
+                                <PhoneIcon className="w-3.5 h-3.5" />
+                                <span className="text-xs font-semibold">{user.phone}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-text-tertiary">
+                                <ClockIcon className="w-3.5 h-3.5" />
+                                <span className="text-xs font-semibold italic">Active profile</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
             {/* Tabs */}
-            <div className="border-b border-border">
-                <nav className="-mb-px flex space-x-4">
-                    <TabButton label="Overview" icon={<UserCircleIcon className="w-5 h-5"/>} isActive={activeTab === 'overview'} onClick={() => setActiveTab('overview')} />
-                    <TabButton label="Work History" icon={<ClockIcon className="w-5 h-5"/>} isActive={activeTab === 'history'} onClick={() => setActiveTab('history')} />
-                    <TabButton label="Attendance" icon={<CalendarDaysIcon className="w-5 h-5"/>} isActive={activeTab === 'attendance'} onClick={() => setActiveTab('attendance')} />
+            <div className="bg-surface border-b border-border/40 px-4">
+                <nav className="flex space-x-2">
+                    <TabButton label="Tactical View" icon={UserCircleIcon} isActive={activeTab === 'overview'} onClick={() => setActiveTab('overview')} />
+                    <TabButton label="Deployment History" icon={ClockIcon} isActive={activeTab === 'history'} onClick={() => setActiveTab('history')} />
+                    <TabButton label="Attendance" icon={CalendarIcon} isActive={activeTab === 'attendance'} onClick={() => setActiveTab('attendance')} />
                 </nav>
             </div>
 
             {/* Tab Content */}
-            <div className="flex-grow overflow-y-auto pt-4 -mr-4 pr-4">
-                {activeTab === 'overview' && (
-                    <div className="space-y-4">
-                        <h4 className="font-bold text-text-primary">Key Performance Indicators</h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {userKPIs.map(kpi => <KpiCard key={kpi.title} {...kpi} />)}
-                        </div>
-                         <h4 className="font-bold text-text-primary pt-2">Current Task</h4>
-                        <div className="p-3 bg-subtle-background rounded-lg">
-                            <p className="text-sm italic">"{user.currentTask}"</p>
-                        </div>
-                    </div>
-                )}
-                {activeTab === 'history' && (
-                    <div className="flow-root">
-                        <ul role="list" className="-mb-8">
-                           {userActivities.map((activity, idx) => (
-                             <li key={activity.id}>
-                               <div className="relative pb-8">
-                                 {idx !== userActivities.length - 1 ? <span className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-border" aria-hidden="true" /> : null}
-                                 <div className="relative flex space-x-3">
-                                   <div>
-                                     <span className={`h-8 w-8 rounded-full flex items-center justify-center ring-4 ring-surface ${activity.status === ActivityStatus.DONE ? 'bg-secondary-subtle-background' : 'bg-accent-subtle-background'}`}>
-                                       <CheckCircleIcon className={`h-5 w-5 ${activity.status === ActivityStatus.DONE ? 'text-secondary' : 'text-accent'}`} aria-hidden="true" />
-                                     </span>
-                                   </div>
-                                   <div className="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
-                                     <div>
-                                       <p className="text-sm text-text-primary">{activity.description}</p>
-                                     </div>
-                                     <div className="whitespace-nowrap text-right text-sm text-text-secondary">
-                                        {formatDateTime(activity.timestamp)}
-                                     </div>
-                                   </div>
-                                 </div>
-                               </div>
-                             </li>
-                           ))}
-                        </ul>
-                    </div>
-                )}
-                {activeTab === 'attendance' && (
-                    <AttendanceCalendar attendanceData={attendanceForMonth} />
-                )}
+            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                <AnimatePresence mode="wait">
+                    {activeTab === 'overview' && (
+                        <motion.div
+                            key="overview"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="space-y-8"
+                        >
+                            <section>
+                                <div className="flex items-center gap-2 mb-4">
+                                    <BriefcaseIcon className="w-4 h-4 text-primary" />
+                                    <h4 className="text-sm font-black uppercase tracking-widest text-text-primary">Performance Vectors</h4>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {userKPIs.map(kpi => <UserMetric key={kpi.title} icon={kpi.icon} title={kpi.title} value={kpi.value} />)}
+                                </div>
+                            </section>
+
+                            <section>
+                                <div className="flex items-center gap-2 mb-4">
+                                    <ClockIcon className="w-4 h-4 text-accent" />
+                                    <h4 className="text-sm font-black uppercase tracking-widest text-text-primary">Operational Focus</h4>
+                                </div>
+                                <div className="p-6 bg-accent/5 border border-accent/20 rounded-2xl relative overflow-hidden group">
+                                    <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
+                                        <BriefcaseIcon className="w-32 h-32" />
+                                    </div>
+                                    <p className="text-base font-serif italic text-text-primary leading-relaxed relative z-10">
+                                        "{user.currentTask}"
+                                    </p>
+                                </div>
+                            </section>
+                        </motion.div>
+                    )}
+
+                    {activeTab === 'history' && (
+                        <motion.div
+                            key="history"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="space-y-6"
+                        >
+                            <div className="space-y-4 relative">
+                                <div className="absolute left-[15px] top-2 bottom-2 w-px bg-border/40" />
+                                {userActivities.map((activity, idx) => (
+                                    <div key={activity.id} className="relative pl-10">
+                                        <div className={cn(
+                                            "absolute left-0 top-1.5 w-8 h-8 rounded-xl border-4 border-surface shadow-sm flex items-center justify-center",
+                                            activity.status === ActivityStatus.DONE ? "bg-secondary text-white" : "bg-accent/20 text-accent"
+                                        )}>
+                                            <CheckCircleIcon className="w-4 h-4" />
+                                        </div>
+                                        <div className="bg-subtle-background/40 p-4 rounded-2xl border border-border/20 group hover:border-primary/20 transition-all">
+                                            <div className="flex justify-between items-start gap-4">
+                                                <p className="text-sm font-semibold text-text-primary leading-snug">{activity.description}</p>
+                                                <span className="text-[10px] font-black uppercase tracking-tighter text-text-tertiary whitespace-nowrap">
+                                                    {formatDateTime(activity.timestamp)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {activeTab === 'attendance' && (
+                        <motion.div
+                            key="attendance"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                        >
+                            <AttendanceCalendar attendanceData={attendanceForMonth} />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
-        </Card>
+        </ContentCard>
     );
 };
 

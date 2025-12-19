@@ -34,6 +34,37 @@ export interface Theme {
 }
 
 export const themes: Record<string, Theme> = {
+  'aura-luxe': {
+    name: 'Aura Luxe',
+    type: 'light',
+    colors: {
+      primary: '139 92 246', // Violet 500
+      secondary: '217 70 239', // Fuchsia 500
+      accent: '251 146 60', // Orange 400 (Rose Gold-ish)
+      error: '239 68 68',
+      purple: '167 139 250',
+      background: '250 248 255', // Very soft lavender tint
+      surface: '255 255 255',
+      'text-primary': '30 27 46', // Deep indigo-ish charcoal
+      'text-secondary': '107 114 128',
+      border: '231 229 242',
+      'subtle-background': '243 240 255',
+      'toggle-background': '216 210 240',
+
+      'primary-subtle-background': '245 243 255',
+      'primary-subtle-text': '139 92 246',
+      'secondary-subtle-background': '253 244 255',
+      'secondary-subtle-text': '217 70 239',
+      'accent-subtle-background': '255 247 237',
+      'accent-subtle-text': '251 146 60',
+      'error-subtle-background': '254 242 242',
+      'error-subtle-text': '185 28 28',
+      'purple-subtle-background': '245 243 255',
+      'purple-subtle-text': '124 58 237',
+      'slate-subtle-background': '248 250 252',
+      'slate-subtle-text': '71 85 105',
+    },
+  },
   'luxury-heritage': {
     name: 'Luxury Heritage',
     type: 'light',
@@ -63,6 +94,37 @@ export const themes: Record<string, Theme> = {
       'purple-subtle-text': '107 33 168',
       'slate-subtle-background': '241 245 249',
       'slate-subtle-text': '51 65 85',
+    },
+  },
+  'serenity-white': {
+    name: 'Serenity White',
+    type: 'light',
+    colors: {
+      primary: '14 165 233', // Sky 500
+      secondary: '71 85 105', // Slate 600
+      accent: '20 184 166', // Teal 500
+      error: '225 29 72',
+      purple: '139 92 246',
+      background: '255 255 255',
+      surface: '255 255 255',
+      'text-primary': '15 23 42',
+      'text-secondary': '100 116 139',
+      border: '241 245 249',
+      'subtle-background': '248 250 252',
+      'toggle-background': '226 232 240',
+
+      'primary-subtle-background': '240 249 255',
+      'primary-subtle-text': '14 165 233',
+      'secondary-subtle-background': '241 245 249',
+      'secondary-subtle-text': '71 85 105',
+      'accent-subtle-background': '240 253 250',
+      'accent-subtle-text': '20 184 166',
+      'error-subtle-background': '255 241 242',
+      'error-subtle-text': '190 18 60',
+      'purple-subtle-background': '245 243 255',
+      'purple-subtle-text': '124 58 237',
+      'slate-subtle-background': '241 245 249',
+      'slate-subtle-text': '71 85 105',
     },
   },
   'corporate-classic': {
@@ -232,19 +294,26 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState(() => {
-      // Try to load from local storage first, fallback to 'luxury-heritage'
-      return typeof window !== 'undefined' ? localStorage.getItem('app-theme') || 'luxury-heritage' : 'luxury-heritage';
+    if (typeof window === 'undefined') return 'serenity-white';
+
+    const savedTheme = localStorage.getItem('app-theme');
+    // Force migration from legacy themes or if no theme is saved
+    const legacyThemes = ['obsidian-gold', 'midnight-deep', 'kurchi-espresso'];
+    if (!savedTheme || legacyThemes.includes(savedTheme) || !themes[savedTheme]) {
+      return 'serenity-white';
+    }
+    return savedTheme;
   });
 
   useEffect(() => {
-    const selectedTheme = themes[theme] || themes['luxury-heritage'];
+    const selectedTheme = themes[theme] || themes['serenity-white'];
     if (selectedTheme) {
       const root = document.documentElement;
       // Add or remove 'dark' class for Tailwind dark mode if needed (optional)
       if (selectedTheme.type === 'dark') {
-          root.classList.add('dark');
+        root.classList.add('dark');
       } else {
-          root.classList.remove('dark');
+        root.classList.remove('dark');
       }
 
       Object.entries(selectedTheme.colors).forEach(([key, value]) => {

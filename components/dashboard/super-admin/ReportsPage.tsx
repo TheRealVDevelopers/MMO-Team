@@ -1,10 +1,19 @@
-
 import React, { useState, useMemo } from 'react';
 import { GoogleGenAI } from '@google/genai';
-import Card from '../../shared/Card';
 import { PROJECTS, LEADS, USERS, ACTIVITIES } from '../../../constants';
 import { ProjectStatus, ActivityStatus, UserRole } from '../../../types';
-import { ArrowDownTrayIcon, ArrowLeftIcon } from '../../icons/IconComponents';
+import {
+    ArrowDownTrayIcon,
+    ArrowLeftIcon,
+    SparklesIcon,
+    ChartPieIcon,
+    PresentationChartBarIcon,
+    DocumentArrowDownIcon,
+    CpuChipIcon,
+    CircleStackIcon
+} from '@heroicons/react/24/outline';
+import { ContentCard, SectionHeader, cn, staggerContainer } from '../shared/DashboardUI';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // --- START: Chart Components ---
 
@@ -43,57 +52,66 @@ const ProjectStatusDonutChart: React.FC = () => {
 
     const totalProjects = PROJECTS.length;
     const radius = 80;
-    const strokeWidth = 30;
-    const innerRadius = radius - strokeWidth;
+    const strokeWidth = 24;
+    const innerRadius = radius - strokeWidth / 2;
     const circumference = 2 * Math.PI * innerRadius;
 
     let accumulatedAngle = 0;
 
     return (
-        <div className="flex flex-col md:flex-row items-center justify-center gap-6 h-full p-4">
+        <div className="flex flex-col md:flex-row items-center justify-center gap-10 h-full">
             <div className="relative">
-                <svg width="200" height="200" viewBox="0 0 200 200">
+                <svg width="200" height="200" viewBox="0 0 200 200" className="drop-shadow-2xl">
                     <g transform="rotate(-90 100 100)">
-                        {data.map((segment) => {
+                        {data.map((segment, idx) => {
                             const percentage = (segment.count / totalProjects) * 100;
                             const arcLength = (circumference * percentage) / 100;
                             const rotation = (accumulatedAngle / totalProjects) * 360;
                             accumulatedAngle += segment.count;
 
                             return (
-                                <circle
+                                <motion.circle
                                     key={segment.status}
+                                    initial={{ strokeDasharray: `0 ${circumference}` }}
+                                    animate={{ strokeDasharray: `${arcLength} ${circumference}` }}
+                                    transition={{ duration: 1, delay: idx * 0.1 }}
                                     cx="100" cy="100" r={innerRadius}
                                     fill="transparent"
                                     stroke={segment.color}
                                     strokeWidth={strokeWidth}
-                                    strokeDasharray={`${arcLength} ${circumference}`}
                                     transform={`rotate(${rotation} 100 100)`}
+                                    className="transition-all hover:stroke-[30px] cursor-pointer"
                                 >
                                     <title>{segment.name}: {segment.count} ({percentage.toFixed(1)}%)</title>
-                                </circle>
+                                </motion.circle>
                             );
                         })}
                     </g>
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-3xl font-bold text-text-primary">{totalProjects}</span>
-                    <span className="text-xs text-text-secondary">Total Projects</span>
+                    <span className="text-4xl font-serif font-black text-text-primary tracking-tighter">{totalProjects}</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-text-tertiary">Fleet Total</span>
                 </div>
             </div>
-            <div className="flex-1 max-w-xs w-full">
-                <ul className="space-y-2 text-sm">
-                    {data.slice(0, 5).map(item => (
-                        <li key={item.status} className="flex items-center justify-between">
-                            <div className="flex items-center">
-                                <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: item.color }}></span>
-                                <span className="text-text-secondary">{item.name}</span>
-                            </div>
-                            <span className="font-medium text-text-primary">{item.count}</span>
-                        </li>
-                    ))}
-                    {data.length > 5 && <li className="text-xs text-text-secondary text-center pt-1">...and {data.length - 5} more</li>}
-                </ul>
+            <div className="flex-1 w-full space-y-3">
+                {data.slice(0, 5).map((item, idx) => (
+                    <motion.div
+                        key={item.status}
+                        initial={{ opacity: 0, x: 10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.1 }}
+                        className="flex items-center justify-between group"
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: item.color }} />
+                            <span className="text-xs font-bold text-text-secondary group-hover:text-text-primary transition-colors">{item.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-black text-text-primary">{item.count}</span>
+                            <span className="text-[9px] font-black text-text-tertiary uppercase tracking-tighter opacity-40">Units</span>
+                        </div>
+                    </motion.div>
+                ))}
             </div>
         </div>
     );
@@ -106,30 +124,41 @@ const TeamProductivityChart: React.FC = () => {
             acc[activity.team] = (acc[activity.team] || 0) + 1;
             return acc;
         }, {} as Record<UserRole, number>);
-        return Object.entries(counts).map(([team, count]) => ({ team: team as UserRole, count })).sort((a,b) => b.count - a.count);
+        return Object.entries(counts).map(([team, count]) => ({ team: team as UserRole, count })).sort((a, b) => b.count - a.count);
     }, []);
 
     const maxCount = Math.max(...data.map(d => d.count), 0);
-    
+
     return (
-        <div className="p-4 h-full flex flex-col justify-end space-y-2">
-            {data.map(d => {
-                 const barWidth = maxCount > 0 ? (d.count / maxCount) * 100 : 0;
-                 return (
-                    <div key={d.team} className="flex items-center group">
-                        <div className="w-32 text-right text-xs text-text-secondary pr-2 truncate" title={d.team}>
-                           {d.team.replace(' Team', '').replace(' Member', '').replace(' General Manager', ' GM')}
+        <div className="space-y-6">
+            {data.map((d, idx) => {
+                const barWidth = maxCount > 0 ? (d.count / maxCount) * 100 : 0;
+                return (
+                    <motion.div
+                        key={d.team}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.1 }}
+                        className="space-y-1.5"
+                    >
+                        <div className="flex justify-between items-center px-1">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">
+                                {d.team.replace(' Team', '').replace(' Member', '').replace(' General Manager', ' GM')}
+                            </p>
+                            <p className="text-xs font-bold text-text-primary">{d.count} Operations</p>
                         </div>
-                        <div className="flex-1 bg-subtle-background rounded-full h-6 relative">
-                            <div 
-                                className="bg-primary rounded-full h-6 flex items-center justify-start pl-2 transition-all duration-500"
-                                style={{ width: `${barWidth}%`}}
+                        <div className="h-4 bg-subtle-background/50 rounded-full border border-border/20 overflow-hidden shadow-inner group relative">
+                            <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${barWidth}%` }}
+                                transition={{ duration: 1.2, delay: idx * 0.1, ease: "easeOut" }}
+                                className="bg-primary h-full relative group-hover:bg-secondary transition-colors"
                             >
-                                <span className="text-xs font-bold text-white">{d.count}</span>
-                            </div>
+                                <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent" />
+                            </motion.div>
                         </div>
-                    </div>
-                 )
+                    </motion.div>
+                )
             })}
         </div>
     );
@@ -151,7 +180,7 @@ const ReportsPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ set
 
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
-            
+
             const prompt = `
                 Analyze the following JSON data for an interior design company's internal management system in India and generate a concise weekly report summary in markdown format.
                 The summary should be suitable for an Indian business context.
@@ -168,9 +197,9 @@ const ReportsPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ set
                 Leads: ${JSON.stringify(LEADS.map(l => ({ status: l.status, inquiryDate: l.inquiryDate })))}
                 Users: ${JSON.stringify(USERS.map(u => ({ name: u.name, role: u.role, currentTask: u.currentTask })))}
             `;
-            
+
             const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
+                model: 'gemini-2.0-flash', // updated to latest
                 contents: prompt,
             });
 
@@ -178,12 +207,12 @@ const ReportsPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ set
 
         } catch (err) {
             console.error(err);
-            setError('Failed to generate summary. Please check the API key and try again.');
+            setError('Strategic Synthesis Offline. Please verify API protocols.');
         } finally {
             setIsLoading(false);
         }
     };
-    
+
     const renderMarkdown = (text: string) => {
         if (!text) return null;
         const sections = text.split(/(?=###\s)/g);
@@ -191,18 +220,34 @@ const ReportsPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ set
             const lines = section.split('\n').filter(line => line.trim() !== '');
             const heading = lines.shift()?.replace('###', '').trim();
             return (
-                <div key={index}>
-                    {heading && <h3 className="text-md font-bold text-text-primary mt-3 mb-1.5">{heading}</h3>}
-                    <ul className="list-disc pl-5 space-y-1 text-sm text-text-secondary">
+                <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="mb-6 last:mb-0"
+                >
+                    {heading && (
+                        <div className="flex items-center gap-2 mb-3">
+                            <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">{heading}</h3>
+                        </div>
+                    )}
+                    <ul className="space-y-3">
                         {lines.map((line, lineIndex) => (
-                             <li key={lineIndex}>{line.replace(/[-*]\s/,'').trim()}</li>
+                            <li key={lineIndex} className="flex items-start gap-4 group">
+                                <span className="text-[10px] text-text-tertiary mt-1 font-bold">0{lineIndex + 1}</span>
+                                <p className="text-sm text-text-secondary font-medium leading-relaxed group-hover:text-text-primary transition-colors">
+                                    {line.replace(/[-*]\s/, '').trim()}
+                                </p>
+                            </li>
                         ))}
                     </ul>
-                </div>
+                </motion.div>
             );
         });
     };
-    
+
     const handleDownload = (data: any[], filename: string) => {
         if (data.length === 0) return;
         const headers = Object.keys(data[0]);
@@ -225,7 +270,7 @@ const ReportsPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ set
             }).join('\r\n');
             return header + body;
         }
-        
+
         const csv = convertToCSV(data);
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
@@ -240,76 +285,149 @@ const ReportsPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ set
 
 
     return (
-        <div className="space-y-6">
+        <motion.div
+            variants={staggerContainer}
+            initial="initial"
+            animate="animate"
+            className="space-y-10"
+        >
             <div className="flex items-center gap-4">
                 <button
                     onClick={() => setCurrentPage('overview')}
-                    className="flex items-center space-x-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+                    className="group p-3 rounded-2xl border border-border bg-surface hover:bg-subtle-background hover:scale-105 transition-all text-text-tertiary shadow-sm"
                 >
-                    <ArrowLeftIcon className="w-5 h-5" />
-                    <span>Back</span>
+                    <ArrowLeftIcon className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
                 </button>
-                <h2 className="text-2xl font-bold text-text-primary">Reports & Analytics</h2>
+                <div className="h-6 w-px bg-border/40 mx-2" />
+                <div>
+                    <h2 className="text-3xl font-serif font-black text-text-primary tracking-tight">Intelligence & Analytics</h2>
+                    <p className="text-text-tertiary text-sm font-medium mt-1">High-fidelity strategic synthesis and data exporting.</p>
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card className="flex flex-col">
-                    <h3 className="text-lg font-bold">AI Weekly Summary</h3>
-                    <p className="text-sm text-text-secondary mt-1">Generate an AI-powered summary of the week's activities.</p>
-                    <button 
-                        onClick={generateReportSummary}
-                        disabled={isLoading}
-                        className="mt-4 w-full bg-primary text-white py-2 rounded-md hover:opacity-90 disabled:bg-opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {isLoading ? 'Generating...' : 'Generate Weekly Report Summary'}
-                    </button>
-                    {error && <p className="mt-2 text-sm text-error">{error}</p>}
-                    <div className="mt-4 p-4 border border-border rounded-md bg-subtle-background flex-grow">
-                        {isLoading ? (
-                             <div className="flex items-center justify-center h-full">
-                                <p className="text-text-secondary">Generating your summary...</p>
-                             </div>
-                        ) : summary ? (
-                           renderMarkdown(summary)
-                        ) : (
-                            <div className="flex items-center justify-center h-full">
-                                <p className="text-text-secondary text-center">Your generated report will appear here.</p>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                {/* AI Briefing Module */}
+                <div className="lg:col-span-12">
+                    <ContentCard className="!p-0 overflow-hidden shadow-2xl relative">
+                        <div className="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none">
+                            <CpuChipIcon className="w-64 h-64" />
+                        </div>
+                        <div className="p-8 border-b border-border/40 bg-surface flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                                    <SparklesIcon className="w-6 h-6 animate-pulse" />
+                                </div>
+                                <div>
+                                    <h3 className="text-2xl font-serif font-black text-text-primary tracking-tight italic">Intelligence Briefing</h3>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-text-tertiary mt-0.5">Automated Strategic Synthesis</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={generateReportSummary}
+                                disabled={isLoading}
+                                className="group flex items-center gap-3 px-8 py-4 bg-primary text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-secondary transition-all shadow-xl shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <SparklesIcon className={cn("w-4 h-4", isLoading ? "animate-spin" : "group-hover:rotate-12")} />
+                                {isLoading ? 'Synthesizing...' : 'Initialize Analysis'}
+                            </button>
+                        </div>
+
+                        <div className="p-10 min-h-[400px] relative z-10 bg-subtle-background/30 backdrop-blur-sm">
+                            {isLoading ? (
+                                <div className="flex flex-col items-center justify-center h-64 space-y-4">
+                                    <div className="w-16 h-1 bg-border/20 rounded-full overflow-hidden">
+                                        <motion.div
+                                            initial={{ x: -100 }}
+                                            animate={{ x: 100 }}
+                                            transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                                            className="w-full h-full bg-primary"
+                                        />
+                                    </div>
+                                    <p className="text-xs font-black uppercase tracking-widest text-text-tertiary animate-pulse">Aggregating Strategic Vectors...</p>
+                                </div>
+                            ) : summary ? (
+                                <div className="max-w-4xl mx-auto">
+                                    {renderMarkdown(summary)}
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center h-64 text-center">
+                                    <div className="w-20 h-20 bg-surface rounded-[2rem] border border-border shadow-sm flex items-center justify-center mb-6">
+                                        <SparklesIcon className="w-10 h-10 text-text-tertiary opacity-10" />
+                                    </div>
+                                    <p className="text-text-secondary font-serif italic text-lg max-w-sm mx-auto">
+                                        "Click initialize to trigger deep-learning synthesis of the current operational state."
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        {error && (
+                            <div className="p-4 bg-error/10 border-t border-error/20 flex items-center justify-center gap-3">
+                                <div className="w-2 h-2 rounded-full bg-error" />
+                                <p className="text-[10px] font-black uppercase tracking-widest text-error">{error}</p>
                             </div>
                         )}
-                    </div>
-                </Card>
-                <Card>
-                     <h3 className="text-lg font-bold">Downloadable Reports</h3>
-                     <p className="text-sm text-text-secondary mt-1">Export raw data for further analysis.</p>
-                     <div className="mt-4 space-y-3">
-                        <button onClick={() => handleDownload(ACTIVITIES, 'team_activity.csv')} className="w-full flex items-center p-3 bg-subtle-background hover:bg-border rounded-md text-sm font-medium">
-                            <ArrowDownTrayIcon className="w-5 h-5 mr-3 text-text-secondary"/> Download Team Activity Report (.csv)
-                        </button>
-                        <button onClick={() => handleDownload(PROJECTS, 'project_progress.csv')} className="w-full flex items-center p-3 bg-subtle-background hover:bg-border rounded-md text-sm font-medium">
-                            <ArrowDownTrayIcon className="w-5 h-5 mr-3 text-text-secondary"/> Download Project Progress Report (.csv)
-                        </button>
-                        <button onClick={() => handleDownload(LEADS, 'client_leads.csv')} className="w-full flex items-center p-3 bg-subtle-background hover:bg-border rounded-md text-sm font-medium">
-                            <ArrowDownTrayIcon className="w-5 h-5 mr-3 text-text-secondary"/> Download Client Leads Report (.csv)
-                        </button>
-                     </div>
-                </Card>
-            </div>
+                    </ContentCard>
+                </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                 <Card>
-                    <h3 className="text-lg font-bold">Team Productivity (Completed Tasks)</h3>
-                    <div className="h-72">
+                {/* Data Charts Module */}
+                <div className="lg:col-span-7">
+                    <ContentCard className="h-full shadow-xl">
+                        <div className="flex items-center gap-4 mb-10 pb-4 border-b border-border/40">
+                            <ChartPieIcon className="w-6 h-6 text-primary" />
+                            <h3 className="text-xl font-serif font-black text-text-primary tracking-tight">Fleet Status Breakdown</h3>
+                        </div>
+                        <div className="h-64 mb-8">
+                            <ProjectStatusDonutChart />
+                        </div>
+                    </ContentCard>
+                </div>
+
+                <div className="lg:col-span-5">
+                    <ContentCard className="h-full shadow-xl">
+                        <div className="flex items-center gap-4 mb-10 pb-4 border-b border-border/40">
+                            <PresentationChartBarIcon className="w-6 h-6 text-secondary" />
+                            <h3 className="text-xl font-serif font-black text-text-primary tracking-tight">Deployment Depth</h3>
+                        </div>
                         <TeamProductivityChart />
-                    </div>
-                </Card>
-                <Card>
-                    <h3 className="text-lg font-bold">Project Status Breakdown</h3>
-                     <div className="h-72">
-                        <ProjectStatusDonutChart />
-                    </div>
-                </Card>
+                    </ContentCard>
+                </div>
+
+                {/* Export Module */}
+                <div className="lg:col-span-12">
+                    <ContentCard className="bg-surface/50 border-border/40 backdrop-blur-sm shadow-2xl">
+                        <div className="flex items-center gap-4 mb-8">
+                            <CircleStackIcon className="w-6 h-6 text-accent" />
+                            <h3 className="text-xl font-serif font-black text-text-primary tracking-tight">Data Extraction Protocol</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {[
+                                { label: 'Team Activity Feed', file: 'team_activity.csv', data: ACTIVITIES },
+                                { label: 'Deployment Progress', file: 'project_progress.csv', data: PROJECTS },
+                                { label: 'Stakeholder Registry', file: 'client_leads.csv', data: LEADS },
+                            ].map((repo, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => handleDownload(repo.data, repo.file)}
+                                    className="group flex items-center justify-between p-6 bg-surface border border-border/60 rounded-3xl hover:border-primary/40 hover:scale-[1.02] transition-all shadow-sm"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-xl bg-subtle-background flex items-center justify-center text-text-tertiary group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                                            <DocumentArrowDownIcon className="w-5 h-5" />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-xs font-black uppercase tracking-widest text-text-primary leading-none mb-1">{repo.label}</p>
+                                            <p className="text-[10px] font-bold text-text-tertiary uppercase opacity-40 leading-none">Export .CSV Protocol</p>
+                                        </div>
+                                    </div>
+                                    <ArrowDownTrayIcon className="w-4 h-4 text-text-tertiary group-hover:text-primary transition-colors" />
+                                </button>
+                            ))}
+                        </div>
+                    </ContentCard>
+                </div>
             </div>
-        </div>
+        </motion.div>
     );
 };
 

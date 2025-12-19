@@ -1,18 +1,49 @@
 import React from 'react';
-import Card from '../../shared/Card';
 import { USERS, formatDate } from '../../../constants';
 import { AccountsRequest, AccountsRequestStatus } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
-import { ArrowLeftIcon } from '../../icons/IconComponents';
-import StatusPill from '../../shared/StatusPill';
+import {
+    CreditCardIcon,
+    ArrowLeftIcon,
+    ClockIcon,
+    CheckCircleIcon,
+    UserIcon,
+    CalendarIcon,
+    BanknotesIcon
+} from '@heroicons/react/24/outline';
+import {
+    ContentCard,
+    cn,
+    staggerContainer
+} from '../shared/DashboardUI';
+import { motion } from 'framer-motion';
+
+const getStatusConfig = (status: AccountsRequestStatus) => {
+    switch (status) {
+        case AccountsRequestStatus.REQUESTED:
+            return { color: 'text-blue-500 bg-blue-500/10 border-blue-500/20', icon: ClockIcon };
+        case AccountsRequestStatus.IN_PROGRESS:
+            return { color: 'text-amber-500 bg-amber-500/10 border-amber-500/20', icon: ClockIcon };
+        case AccountsRequestStatus.COMPLETED:
+            return { color: 'text-green-500 bg-green-500/10 border-green-500/20', icon: CheckCircleIcon };
+        default:
+            return { color: 'text-gray-500 bg-gray-500/10 border-gray-500/20', icon: ClockIcon };
+    }
+};
 
 const AccountsStatusPill: React.FC<{ status: AccountsRequestStatus }> = ({ status }) => {
-    const color = {
-        [AccountsRequestStatus.REQUESTED]: 'blue',
-        [AccountsRequestStatus.IN_PROGRESS]: 'amber',
-        [AccountsRequestStatus.COMPLETED]: 'green',
-    }[status] as 'blue' | 'amber' | 'green';
-    return <StatusPill color={color}>{status}</StatusPill>;
+    const config = getStatusConfig(status);
+    const Icon = config.icon;
+
+    return (
+        <span className={cn(
+            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border",
+            config.color
+        )}>
+            <Icon className="w-3.5 h-3.5" />
+            {status}
+        </span>
+    );
 };
 
 const AccountsTasksPage: React.FC<{ setCurrentPage: (page: string) => void, accountsRequests: AccountsRequest[] }> = ({ setCurrentPage, accountsRequests }) => {
@@ -20,51 +51,86 @@ const AccountsTasksPage: React.FC<{ setCurrentPage: (page: string) => void, acco
     const myRequests = accountsRequests.filter(v => v.requesterId === currentUser?.id);
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 space-y-6">
-            <div className="flex items-center gap-4">
-                <button
-                    onClick={() => setCurrentPage('leads')}
-                    className="flex items-center space-x-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
-                >
-                    <ArrowLeftIcon className="w-5 h-5" />
-                    <span>Back</span>
-                </button>
-                <h2 className="text-2xl font-bold text-text-primary">My Accounts Task Assignments</h2>
-            </div>
-            <Card>
+        <motion.div
+            variants={staggerContainer}
+            initial="initial"
+            animate="animate"
+            className="space-y-6"
+        >
+            <ContentCard
+                title="Accounts Requests"
+                subtitle="Manage and track financial tasks and payment requests"
+                icon={BanknotesIcon}
+            >
                 <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-border">
-                        <thead className="bg-subtle-background">
-                            <tr>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Project</th>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Task</th>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Assigned To</th>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Date</th>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Status</th>
+                    <table className="min-w-full divide-y divide-border/40">
+                        <thead>
+                            <tr className="bg-subtle-background/50">
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-text-secondary uppercase tracking-wider">Project</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-text-secondary uppercase tracking-wider">Task</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-text-secondary uppercase tracking-wider">Assigned To</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-text-secondary uppercase tracking-wider">Date</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-text-secondary uppercase tracking-wider">Status</th>
                             </tr>
                         </thead>
-                        <tbody className="bg-surface divide-y divide-border">
-                            {myRequests.map(req => (
-                                <tr key={req.id} className="hover:bg-subtle-background">
-                                    <td className="px-4 py-3 whitespace-nowrap">
-                                        <p className="text-sm font-medium text-text-primary">{req.projectName}</p>
+                        <tbody className="divide-y divide-border/40 bg-transparent">
+                            {myRequests.map((req, index) => (
+                                <motion.tr
+                                    key={req.id}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: index * 0.05 }}
+                                    className="group hover:bg-subtle-background/30 transition-colors"
+                                >
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                                                <CreditCardIcon className="w-4 h-4" />
+                                            </div>
+                                            <span className="text-sm font-semibold text-text-primary group-hover:text-primary transition-colors">
+                                                {req.projectName}
+                                            </span>
+                                        </div>
                                     </td>
-                                     <td className="px-4 py-3 text-sm text-text-secondary">{req.task}</td>
-                                    <td className="px-4 py-3 text-sm text-text-secondary">{USERS.find(u => u.id === req.assigneeId)?.name}</td>
-                                    <td className="px-4 py-3 text-sm text-text-secondary">{formatDate(req.requestDate)}</td>
-                                    <td className="px-4 py-3"><AccountsStatusPill status={req.status} /></td>
-                                </tr>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <span className="text-sm text-text-secondary font-medium italic">
+                                            {req.task}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="flex items-center gap-2">
+                                            <UserIcon className="w-4 h-4 text-text-tertiary" />
+                                            <span className="text-sm text-text-secondary font-medium">
+                                                {USERS.find(u => u.id === req.assigneeId)?.name || 'Unassigned'}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="flex items-center gap-2 text-text-tertiary">
+                                            <CalendarIcon className="w-4 h-4" />
+                                            <span className="text-sm font-medium">{formatDate(req.requestDate)}</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <AccountsStatusPill status={req.status} />
+                                    </td>
+                                </motion.tr>
                             ))}
-                             {myRequests.length === 0 && (
+                            {myRequests.length === 0 && (
                                 <tr>
-                                    <td colSpan={5} className="text-center py-8 text-text-secondary">No accounts tasks assigned yet.</td>
+                                    <td colSpan={5} className="text-center py-12">
+                                        <div className="flex flex-col items-center gap-2 text-text-tertiary">
+                                            <BanknotesIcon className="w-12 h-12 opacity-20" />
+                                            <p className="text-sm font-medium">No accounts tasks found</p>
+                                        </div>
+                                    </td>
                                 </tr>
                             )}
                         </tbody>
                     </table>
                 </div>
-            </Card>
-        </div>
+            </ContentCard>
+        </motion.div>
     );
 };
 

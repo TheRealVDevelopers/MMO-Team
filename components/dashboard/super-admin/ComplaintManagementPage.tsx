@@ -1,25 +1,34 @@
 import React, { useState } from 'react';
-import Card from '../../shared/Card';
 import { COMPLAINTS, formatDate } from '../../../constants';
 import { Complaint, ComplaintStatus } from '../../../types';
-import { ArrowLeftIcon } from '../../icons/IconComponents';
-import StatusPill from '../../shared/StatusPill';
+import {
+    ArrowLeftIcon,
+    ExclamationTriangleIcon,
+    ShieldExclamationIcon,
+    CheckBadgeIcon,
+    ArrowPathIcon,
+    FunnelIcon,
+    MagnifyingGlassIcon
+} from '@heroicons/react/24/outline';
+import { ContentCard, StatCard, SectionHeader, cn, staggerContainer } from '../shared/DashboardUI';
+import { motion, AnimatePresence } from 'framer-motion';
 import ComplaintDetailModal from './ComplaintDetailModal';
 
-const getStatusPillColor = (status: ComplaintStatus): 'blue' | 'amber' | 'green' | 'red' | 'slate' | 'purple' => {
-    switch(status) {
-        case ComplaintStatus.SUBMITTED: return 'blue';
-        case ComplaintStatus.UNDER_REVIEW: return 'amber';
-        case ComplaintStatus.INVESTIGATION: return 'purple';
-        case ComplaintStatus.RESOLVED: return 'green';
-        case ComplaintStatus.ESCALATED: return 'red';
-        default: return 'slate';
+const getStatusConfig = (status: ComplaintStatus) => {
+    switch (status) {
+        case ComplaintStatus.SUBMITTED: return { color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/20' };
+        case ComplaintStatus.UNDER_REVIEW: return { color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20' };
+        case ComplaintStatus.INVESTIGATION: return { color: 'text-purple-500', bg: 'bg-purple-500/10', border: 'border-purple-500/20' };
+        case ComplaintStatus.RESOLVED: return { color: 'text-green-500', bg: 'bg-green-500/10', border: 'border-green-500/20' };
+        case ComplaintStatus.ESCALATED: return { color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20' };
+        default: return { color: 'text-text-tertiary', bg: 'bg-subtle-background', border: 'border-border' };
     }
 };
 
 const ComplaintManagementPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
     const [complaints, setComplaints] = useState<Complaint[]>(COMPLAINTS);
     const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
     const handleUpdateStatus = (complaintId: string, newStatus: ComplaintStatus) => {
         setComplaints(prev => prev.map(c => c.id === complaintId ? { ...c, status: newStatus } : c));
@@ -29,65 +38,172 @@ const ComplaintManagementPage: React.FC<{ setCurrentPage: (page: string) => void
         acc[curr.status] = (acc[curr.status] || 0) + 1;
         return acc;
     }, {} as Record<ComplaintStatus, number>);
-    
+
     const activeComplaints = (stats[ComplaintStatus.SUBMITTED] || 0) + (stats[ComplaintStatus.UNDER_REVIEW] || 0) + (stats[ComplaintStatus.INVESTIGATION] || 0);
-    const highPriority = complaints.filter(c => c.priority === 'High' || c.priority === 'Critical').length;
+    const highPriorityCount = complaints.filter(c => c.priority === 'High' || c.priority === 'Critical').length;
+
+    const filteredComplaints = complaints.filter(c =>
+        c.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.against.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.id.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     return (
-        <>
-            <div className="p-4 sm:p-6 lg:p-8 space-y-6">
-                <div className="flex items-center gap-4">
-                     <button
+        <motion.div
+            variants={staggerContainer}
+            initial="initial"
+            animate="animate"
+            className="space-y-8 pb-20"
+        >
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                <div className="flex items-center gap-5">
+                    <button
                         onClick={() => setCurrentPage('overview')}
-                        className="flex items-center space-x-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+                        className="group p-3 rounded-2xl border border-border bg-surface hover:bg-subtle-background hover:scale-105 transition-all text-text-tertiary shadow-sm"
                     >
-                        <ArrowLeftIcon className="w-5 h-5" />
-                        <span>Back</span>
+                        <ArrowLeftIcon className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
                     </button>
-                    <h2 className="text-2xl font-bold text-text-primary">Complaint Management Center</h2>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Card><p className="text-sm text-text-secondary">Active Complaints</p><p className="text-2xl font-bold">{activeComplaints}</p></Card>
-                    <Card><p className="text-sm text-text-secondary">High/Critical Priority</p><p className="text-2xl font-bold text-error">{highPriority}</p></Card>
-                    <Card><p className="text-sm text-text-secondary">Resolved This Week</p><p className="text-2xl font-bold text-secondary">8</p></Card>
+                    <div>
+                        <h2 className="text-4xl font-serif font-black text-text-primary tracking-tighter">Resolution HUB</h2>
+                        <p className="text-text-tertiary text-sm font-medium mt-1 uppercase tracking-[0.15em]">Internal Integrity & Grievance Registry</p>
+                    </div>
                 </div>
 
-                <Card>
-                    <h3 className="text-lg font-bold">All Submitted Complaints</h3>
-                    <div className="overflow-x-auto mt-4">
-                        <table className="min-w-full divide-y divide-border">
-                            <thead className="bg-subtle-background">
-                                <tr>
-                                    <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Date</th>
-                                    <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Type</th>
-                                    <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Against</th>
-                                    <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-surface divide-y divide-border">
-                                {complaints.map(complaint => (
-                                    <tr key={complaint.id} onClick={() => setSelectedComplaint(complaint)} className="cursor-pointer hover:bg-subtle-background">
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-text-secondary">{formatDate(complaint.submissionDate)}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-text-primary">{complaint.type}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-text-secondary">{complaint.against}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap">
-                                            <StatusPill color={getStatusPillColor(complaint.status)}>{complaint.status}</StatusPill>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                <div className="flex items-center gap-3">
+                    <div className="relative group">
+                        <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary group-focus-within:text-primary transition-colors" />
+                        <input
+                            type="text"
+                            placeholder="Search Registry..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="bg-surface border border-border/60 rounded-2xl py-3 pl-11 pr-6 text-xs font-bold focus:ring-4 focus:ring-primary/10 transition-all w-64 placeholder:text-text-tertiary/50 uppercase tracking-widest"
+                        />
                     </div>
-                </Card>
+                </div>
             </div>
+
+            {/* Metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <StatCard
+                    label="Active Grievances"
+                    value={activeComplaints}
+                    icon={ShieldExclamationIcon}
+                    trend={{ value: 'Pending Pulse', isPositive: false }}
+                    className="ring-1 ring-primary/20"
+                />
+                <StatCard
+                    label="Critical Vectors"
+                    value={highPriorityCount}
+                    icon={ExclamationTriangleIcon}
+                    trend={{ value: 'Priority Load', isPositive: false }}
+                    className="ring-1 ring-red-500/20"
+                />
+                <StatCard
+                    label="Resolution Output"
+                    value={stats[ComplaintStatus.RESOLVED] || 0}
+                    icon={CheckBadgeIcon}
+                    trend={{ value: 'Cycle Complete', isPositive: true }}
+                    className="ring-1 ring-green-500/20"
+                />
+            </div>
+
+            {/* Registry Table */}
+            <ContentCard className="overflow-hidden !p-0 shadow-2xl">
+                <div className="p-8 border-b border-border/40 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                        <h3 className="text-xl font-serif font-black text-text-primary tracking-tight">Active Registry Feed</h3>
+                    </div>
+                    <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-tertiary hover:text-primary transition-colors">
+                        <FunnelIcon className="w-4 h-4" />
+                        Advanced Filter
+                    </button>
+                </div>
+
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-border/20">
+                        <thead className="bg-subtle-background/50">
+                            <tr>
+                                <th className="px-8 py-4 text-left text-[10px] font-black text-text-tertiary uppercase tracking-[0.2em]">Deployment ID</th>
+                                <th className="px-8 py-4 text-left text-[10px] font-black text-text-tertiary uppercase tracking-[0.2em]">Subject Protocol</th>
+                                <th className="px-8 py-4 text-left text-[10px] font-black text-text-tertiary uppercase tracking-[0.2em]">Target Entity</th>
+                                <th className="px-8 py-4 text-left text-[10px] font-black text-text-tertiary uppercase tracking-[0.2em]">Status Sync</th>
+                                <th className="px-8 py-4 text-right text-[10px] font-black text-text-tertiary uppercase tracking-[0.2em]">Priority</th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-surface/50 divide-y divide-border/10">
+                            <AnimatePresence>
+                                {filteredComplaints.map((complaint, idx) => {
+                                    const status = getStatusConfig(complaint.status);
+                                    return (
+                                        <motion.tr
+                                            key={complaint.id}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: idx * 0.05 }}
+                                            onClick={() => setSelectedComplaint(complaint)}
+                                            className="group cursor-pointer hover:bg-subtle-background transition-colors"
+                                        >
+                                            <td className="px-8 py-6 whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs font-black text-text-primary tracking-widest uppercase">#{complaint.id.slice(0, 8)}</span>
+                                                    <span className="text-[10px] font-bold text-text-tertiary mt-1">{formatDate(complaint.submissionDate)}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-6 whitespace-nowrap">
+                                                <span className="text-sm font-bold text-text-primary group-hover:text-primary transition-colors">{complaint.type}</span>
+                                            </td>
+                                            <td className="px-8 py-6 whitespace-nowrap">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-text-tertiary/20" />
+                                                    <span className="text-xs font-black uppercase text-text-secondary">{complaint.against}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-6 whitespace-nowrap">
+                                                <span className={cn(
+                                                    "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
+                                                    status.bg, status.color, status.border
+                                                )}>
+                                                    {complaint.status}
+                                                </span>
+                                            </td>
+                                            <td className="px-8 py-6 whitespace-nowrap text-right">
+                                                <span className={cn(
+                                                    "text-[10px] font-black uppercase tracking-widest",
+                                                    (complaint.priority === 'Critical' || complaint.priority === 'High') ? "text-error" : "text-text-tertiary"
+                                                )}>
+                                                    {complaint.priority}
+                                                </span>
+                                            </td>
+                                        </motion.tr>
+                                    );
+                                })}
+                            </AnimatePresence>
+                        </tbody>
+                    </table>
+                </div>
+
+                {filteredComplaints.length === 0 && (
+                    <div className="p-20 flex flex-col items-center justify-center text-center">
+                        <div className="w-16 h-16 bg-subtle-background rounded-3xl border border-dashed border-border flex items-center justify-center mb-6">
+                            <ArrowPathIcon className="w-8 h-8 text-text-tertiary opacity-20" />
+                        </div>
+                        <p className="text-text-tertiary font-serif italic text-lg max-w-xs mx-auto">
+                            "Registry scan complete. No grievances found matching current parameters."
+                        </p>
+                    </div>
+                )}
+            </ContentCard>
+
             <ComplaintDetailModal
                 isOpen={!!selectedComplaint}
                 onClose={() => setSelectedComplaint(null)}
                 complaint={selectedComplaint}
                 onUpdateStatus={handleUpdateStatus}
             />
-        </>
+        </motion.div>
     );
 };
 
