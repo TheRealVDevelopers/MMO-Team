@@ -121,8 +121,8 @@ const PortfolioPage: React.FC<PortfolioPageProps> = ({ onNavigate }) => {
             <section className="bg-surface py-20 border-b border-border">
                 <div className="max-w-7xl mx-auto px-6 lg:px-12 text-center">
                     <FadeInSection>
-                        <span className="text-kurchi-gold-500 font-bold uppercase tracking-[0.2em] text-xs">Our Portfolio</span>
-                        <h1 className="text-5xl font-serif font-bold text-kurchi-espresso-900 mt-6 mb-6">Curated Excellence</h1>
+                        <span className="text-primary font-bold uppercase tracking-[0.2em] text-xs">Our Portfolio</span>
+                        <h1 className="text-5xl font-serif font-bold text-text-primary mt-6 mb-6">Curated Excellence</h1>
                         <p className="text-text-secondary max-w-2xl mx-auto text-lg font-light leading-relaxed">
                             A showcase of workspaces where engineering meets art. Each project is a testament to our integrated design-build philosophy.
                         </p>
@@ -139,8 +139,8 @@ const PortfolioPage: React.FC<PortfolioPageProps> = ({ onNavigate }) => {
                                 key={cat}
                                 onClick={() => setActiveFilter(cat)}
                                 className={`text-xs uppercase tracking-[0.15em] font-bold transition-all py-2 border-b-2 ${activeFilter === cat
-                                        ? 'text-kurchi-gold-500 border-kurchi-gold-500'
-                                        : 'text-text-secondary border-transparent hover:text-text-primary hover:border-gray-300'
+                                    ? 'text-primary border-primary'
+                                    : 'text-text-secondary border-transparent hover:text-text-primary hover:border-gray-300'
                                     }`}
                             >
                                 {cat}
@@ -170,11 +170,11 @@ const PortfolioPage: React.FC<PortfolioPageProps> = ({ onNavigate }) => {
                                 </div>
                                 <div className="flex justify-between items-end">
                                     <div>
-                                        <p className="text-[10px] text-kurchi-gold-500 uppercase tracking-widest font-bold mb-1">{project.category}</p>
-                                        <h3 className="text-xl font-serif font-bold text-kurchi-espresso-900 group-hover:text-kurchi-gold-500 transition-colors">{project.title}</h3>
+                                        <p className="text-[10px] text-primary uppercase tracking-widest font-bold mb-1">{project.category}</p>
+                                        <h3 className="text-xl font-serif font-bold text-text-primary group-hover:text-primary transition-colors">{project.title}</h3>
                                         <p className="text-xs text-text-secondary mt-1">{project.location} • {project.size}</p>
                                     </div>
-                                    <ArrowUpRightIcon className="w-5 h-5 text-text-secondary group-hover:text-kurchi-gold-500 transition-colors transform group-hover:translate-x-1 group-hover:-translate-y-1 duration-300" />
+                                    <ArrowUpRightIcon className="w-5 h-5 text-text-secondary group-hover:text-primary transition-colors transform group-hover:translate-x-1 group-hover:-translate-y-1 duration-300" />
                                 </div>
                             </div>
                         </FadeInSection>
@@ -189,7 +189,7 @@ const PortfolioPage: React.FC<PortfolioPageProps> = ({ onNavigate }) => {
             </div>
 
             {/* CTA Section */}
-            <section className="bg-kurchi-espresso-900 py-24 relative overflow-hidden text-center">
+            <section className="bg-text-primary py-24 relative overflow-hidden text-center">
                 <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
                 <div className="max-w-4xl mx-auto px-6 relative z-10">
                     <FadeInSection>
@@ -197,7 +197,7 @@ const PortfolioPage: React.FC<PortfolioPageProps> = ({ onNavigate }) => {
                         <p className="text-gray-300 mb-10 font-light text-lg max-w-2xl mx-auto">
                             Whether it's a corporate HQ or a boutique studio, we bring the same level of precision and passion to every space.
                         </p>
-                        <button onClick={() => onNavigate('contact')} className="px-10 py-4 bg-kurchi-gold-500 text-white font-bold text-sm uppercase tracking-widest hover:bg-white hover:text-kurchi-espresso-900 transition-all duration-300 transform active:scale-95 shadow-lg">
+                        <button onClick={() => onNavigate('contact')} className="px-10 py-4 bg-primary text-white font-bold text-sm uppercase tracking-widest hover:bg-white hover:text-text-primary transition-all duration-300 transform active:scale-95 shadow-lg">
                             Get In Touch
                         </button>
                     </FadeInSection>

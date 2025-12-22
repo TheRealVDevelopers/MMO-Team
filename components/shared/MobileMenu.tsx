@@ -19,11 +19,11 @@ interface MobileMenuProps {
     showFooter?: boolean;
 }
 
-const MobileMenu: React.FC<MobileMenuProps> = ({ 
-    isOpen, 
-    onClose, 
-    currentPage, 
-    setCurrentPage, 
+const MobileMenu: React.FC<MobileMenuProps> = ({
+    isOpen,
+    onClose,
+    currentPage,
+    setCurrentPage,
     navItems,
     secondaryNavItems,
     title,
@@ -51,19 +51,18 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
     return (
         <>
             {/* Backdrop */}
-            <div 
+            <div
                 className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
                 onClick={onClose}
                 aria-hidden="true"
             />
 
             {/* Slide-in Menu */}
-            <div className={`fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] bg-white dark:bg-surface border-l border-border dark:border-border shadow-2xl z-50 lg:hidden transform transition-transform duration-300 ease-out ${
-                isOpen ? 'translate-x-0' : 'translate-x-full'
-            }`}>
+            <div className={`fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] bg-white dark:bg-surface border-l border-border dark:border-border shadow-2xl z-50 lg:hidden transform transition-transform duration-300 ease-out ${isOpen ? 'translate-x-0' : 'translate-x-full'
+                }`}>
                 <div className="h-full flex flex-col overflow-hidden">
                     {/* Header */}
-                    <div className="flex items-center justify-between p-6 border-b border-border dark:border-border bg-gradient-to-r from-kurchi-gold-500 to-kurchi-espresso-900">
+                    <div className="flex items-center justify-between p-6 border-b border-border dark:border-border bg-gradient-to-r from-primary to-secondary">
                         <div>
                             <h2 className="text-lg font-bold text-white">{title}</h2>
                             <p className="text-xs text-white/80 mt-0.5">Navigation Menu</p>
@@ -89,24 +88,22 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                                     <button
                                         key={item.id}
                                         onClick={() => handleNavClick(item.id)}
-                                        className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-left transition-all duration-200 ${
-                                            currentPage === item.id
-                                                ? 'bg-gradient-to-r from-kurchi-gold-500 to-kurchi-gold-600 text-white shadow-lg'
+                                        className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-left transition-all duration-200 ${currentPage === item.id
+                                                ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg'
                                                 : 'text-text-primary dark:text-text-primary hover:bg-subtle-background dark:hover:bg-background'
-                                        }`}
+                                            }`}
                                     >
                                         <div className="flex items-center space-x-3">
-                                            <div className={currentPage === item.id ? 'text-white' : 'text-kurchi-gold-600'}>
+                                            <div className={currentPage === item.id ? 'text-white' : 'text-primary'}>
                                                 {item.icon}
                                             </div>
                                             <span className="font-medium">{item.label}</span>
                                         </div>
                                         {item.count !== undefined && (
-                                            <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${
-                                                currentPage === item.id
+                                            <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${currentPage === item.id
                                                     ? 'bg-white/20 text-white'
-                                                    : 'bg-kurchi-gold-500/10 text-kurchi-gold-600'
-                                            }`}>
+                                                    : 'bg-primary/10 text-primary'
+                                                }`}>
                                                 {item.count}
                                             </span>
                                         )}
@@ -126,13 +123,12 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                                         <button
                                             key={item.id}
                                             onClick={() => handleNavClick(item.id)}
-                                            className={`w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-left transition-all duration-200 ${
-                                                currentPage === item.id
-                                                    ? 'bg-gradient-to-r from-kurchi-gold-500 to-kurchi-gold-600 text-white shadow-lg'
+                                            className={`w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-left transition-all duration-200 ${currentPage === item.id
+                                                    ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg'
                                                     : 'text-text-primary dark:text-text-primary hover:bg-subtle-background dark:hover:bg-background'
-                                            }`}
+                                                }`}
                                         >
-                                            <div className={currentPage === item.id ? 'text-white' : 'text-kurchi-gold-600'}>
+                                            <div className={currentPage === item.id ? 'text-white' : 'text-primary'}>
                                                 {item.icon}
                                             </div>
                                             <span className="font-medium">{item.label}</span>
@@ -151,23 +147,23 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                                     Contact Us
                                 </p>
                                 <div className="space-y-3">
-                                    <a href="tel:+915551234567" className="flex items-center space-x-3 text-sm text-text-primary dark:text-text-primary hover:text-kurchi-gold-600 transition-colors">
-                                        <PhoneIcon className="w-5 h-5 text-kurchi-gold-600" />
+                                    <a href="tel:+915551234567" className="flex items-center space-x-3 text-sm text-text-primary dark:text-text-primary hover:text-primary transition-colors">
+                                        <PhoneIcon className="w-5 h-5 text-primary" />
                                         <span>+91 (555) 123-4567</span>
                                     </a>
-                                    <a href="mailto:projects@kurchi.com" className="flex items-center space-x-3 text-sm text-text-primary dark:text-text-primary hover:text-kurchi-gold-600 transition-colors">
-                                        <EnvelopeIcon className="w-5 h-5 text-kurchi-gold-600" />
-                                        <span>projects@kurchi.com</span>
+                                    <a href="mailto:projects@makemyoffice.com" className="flex items-center space-x-3 text-sm text-text-primary dark:text-text-primary hover:text-primary transition-colors">
+                                        <EnvelopeIcon className="w-5 h-5 text-primary" />
+                                        <span>projects@makemyoffice.com</span>
                                     </a>
                                     <div className="flex items-start space-x-3 text-sm text-text-secondary dark:text-text-secondary">
-                                        <MapPinIcon className="w-5 h-5 text-kurchi-gold-600 flex-shrink-0 mt-0.5" />
-                                        <span className="leading-relaxed">Cyber City, Sector 18<br/>Gurgaon, Haryana 122002</span>
+                                        <MapPinIcon className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                                        <span className="leading-relaxed">Cyber City, Sector 18<br />Gurgaon, Haryana 122002</span>
                                     </div>
                                 </div>
                             </div>
                             <div className="pt-4 border-t border-border dark:border-border">
                                 <p className="text-xs text-text-secondary dark:text-text-secondary text-center">
-                                    © 2025 Kurchi - Make My Office
+                                    © 2025 Make My Office - MMO
                                 </p>
                             </div>
                         </div>

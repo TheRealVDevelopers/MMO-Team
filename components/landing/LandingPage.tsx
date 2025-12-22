@@ -136,11 +136,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                 onClick={() => setCurrentView('home')}
               >
                 <div className="w-10 h-10 flex items-center justify-center font-serif font-bold text-xl bg-primary text-white transition-all duration-500 group-hover:bg-secondary group-hover:shadow-[0_0_20px_rgba(var(--color-primary),0.3)] rounded-lg">
-                  K
+                  M
                 </div>
                 <div className="ml-3 flex flex-col">
-                  <span className="text-xl font-serif font-black tracking-tighter leading-none text-text-primary bg-clip-text text-transparent bg-gradient-to-r from-text-primary to-text-primary/70">KURCHI</span>
-                  <span className="text-[0.6rem] uppercase tracking-[0.4em] text-primary font-bold mt-1 opacity-80">Interior Studio</span>
+                  <span className="text-xl font-serif font-black tracking-tighter leading-none text-text-primary bg-clip-text text-transparent bg-gradient-to-r from-text-primary to-text-primary/70">MMO</span>
+                  <span className="text-[0.6rem] uppercase tracking-[0.4em] text-primary font-bold mt-1 opacity-80">Make My Office</span>
                 </div>
               </motion.div>
 
@@ -211,8 +211,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
               {/* Menu Header */}
               <div className="flex items-center justify-between p-6 border-b border-border bg-gradient-to-r from-primary to-secondary">
                 <div>
-                  <h2 className="text-lg font-bold text-white uppercase tracking-widest">Kurchi</h2>
-                  <p className="text-xs text-white/70 font-light mt-0.5 tracking-wide">Elite Interior Systems</p>
+                  <h2 className="text-lg font-bold text-white uppercase tracking-widest">MMO</h2>
+                  <p className="text-xs text-white/70 font-light mt-0.5 tracking-wide">Workplace Solutions</p>
                 </div>
                 <button
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -292,9 +292,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                       <PhoneIcon className="w-5 h-5 text-primary/50" />
                       <span className="font-light">+91 (555) 123-4567</span>
                     </a>
-                    <a href="mailto:projects@kurchi.com" className="flex items-center space-x-3 text-sm text-text-primary hover:text-primary transition-colors">
+                    <a href="mailto:projects@makemyoffice.com" className="flex items-center space-x-3 text-sm text-text-primary hover:text-primary transition-colors">
                       <EnvelopeIcon className="w-5 h-5 text-primary/50" />
-                      <span className="font-light">projects@kurchi.com</span>
+                      <span className="font-light">projects@makemyoffice.com</span>
                     </a>
                     <div className="flex items-start space-x-3 text-sm text-text-secondary">
                       <GlobeAltIcon className="w-5 h-5 text-primary/50 flex-shrink-0 mt-0.5" />
@@ -304,7 +304,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                 </div>
                 <div className="pt-4 border-t border-border dark:border-border">
                   <p className="text-xs text-text-secondary dark:text-text-secondary text-center">
-                    © 2025 Kurchi - Make My Office
+                    © 2025 Make My Office - MMO
                   </p>
                 </div>
               </div>
@@ -327,8 +327,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
               {/* Brand Column */}
               <div className="space-y-6">
                 <div className="flex items-center">
-                  <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-serif font-bold text-lg">K</div>
-                  <span className="ml-3 text-2xl font-serif font-bold text-text-primary tracking-wide">KURCHI</span>
+                  <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-serif font-bold text-lg">M</div>
+                  <span className="ml-3 text-2xl font-serif font-bold text-text-primary tracking-wide">MMO</span>
                 </div>
                 <p className="text-sm font-light leading-relaxed text-text-secondary max-w-xs">
                   Bridging the gap between aesthetic vision and engineering precision. We create workspaces that define legacies and empower minds.
@@ -371,14 +371,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                   </li>
                   <li className="flex items-center group">
                     <EnvelopeIcon className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
-                    <span className="ml-3">projects@kurchi.com</span>
+                    <span className="ml-3">projects@makemyoffice.com</span>
                   </li>
                 </ul>
               </div>
             </div>
 
             <div className="pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center text-[10px] font-bold uppercase tracking-widest text-text-secondary/50">
-              <p>&copy; 2025 Kurchi Interiors. All rights reserved.</p>
+              <p>&copy; 2025 Make My Office Interiors. All rights reserved.</p>
               <div className="flex space-x-8 mt-4 md:mt-0">
                 <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>
                 <a href="#" className="hover:text-primary transition-colors">Terms of Use</a>

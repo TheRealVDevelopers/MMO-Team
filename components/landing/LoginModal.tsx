@@ -189,7 +189,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
                 {/* Help Text */}
                 <div className="pt-6 border-t border-border">
                     <p className="text-[10px] uppercase tracking-[0.2em] text-text-secondary text-center">
-                        Secure Authentication Port • Kurchi Protocol
+                        Secure Authentication Port • MMO Protocol
                     </p>
                 </div>
             </div>

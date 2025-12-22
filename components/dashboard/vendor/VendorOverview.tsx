@@ -44,7 +44,7 @@ const VendorOverview: React.FC = () => {
                 </div>
                 <div className="text-right">
                     <div className="text-xs font-bold uppercase tracking-wider text-text-secondary">Vendor Rating</div>
-                    <div className="text-2xl font-bold text-kurchi-gold-500">★ {currentVendor.rating}</div>
+                    <div className="text-2xl font-bold text-primary">★ {currentVendor.rating}</div>
                 </div>
             </div>
 

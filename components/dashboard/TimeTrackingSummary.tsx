@@ -13,7 +13,7 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ userId }) => 
 
   const filteredEntries = useMemo(() => {
     if (!entries.length) return [];
-    
+
     const now = new Date();
     let startDate = new Date();
 
@@ -39,13 +39,13 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ userId }) => 
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-kurchi-espresso-800 rounded-xl shadow-md p-6">
+      <div className="bg-white dark:bg-background/90 rounded-xl shadow-md p-6">
         <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 dark:bg-kurchi-espresso-700 rounded w-1/2 mb-4"></div>
+          <div className="h-6 bg-gray-200 dark:bg-surface/90 rounded w-1/2 mb-4"></div>
           <div className="space-y-3">
-            <div className="h-4 bg-gray-200 dark:bg-kurchi-espresso-700 rounded"></div>
-            <div className="h-4 bg-gray-200 dark:bg-kurchi-espresso-700 rounded"></div>
-            <div className="h-4 bg-gray-200 dark:bg-kurchi-espresso-700 rounded"></div>
+            <div className="h-4 bg-gray-200 dark:bg-surface/90 rounded"></div>
+            <div className="h-4 bg-gray-200 dark:bg-surface/90 rounded"></div>
+            <div className="h-4 bg-gray-200 dark:bg-surface/90 rounded"></div>
           </div>
         </div>
       </div>
@@ -53,15 +53,15 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ userId }) => 
   }
 
   return (
-    <div className="bg-white dark:bg-kurchi-espresso-800 rounded-xl shadow-md p-6">
+    <div className="bg-white dark:bg-background/90 rounded-xl shadow-md p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
-          <div className="bg-kurchi-gold-500/10 dark:bg-kurchi-gold-500/20 rounded-full p-3">
-            <ChartBarIcon className="w-6 h-6 text-kurchi-gold-600 dark:text-kurchi-gold-400" />
+          <div className="bg-primary/10 dark:bg-primary/20 rounded-full p-3">
+            <ChartBarIcon className="w-6 h-6 text-primary-hover dark:text-primary" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-kurchi-espresso-900 dark:text-white">Time Summary</h3>
+            <h3 className="text-lg font-bold text-text-primary/90 dark:text-white">Time Summary</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">Your work hours overview</p>
           </div>
         </div>
@@ -71,31 +71,28 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ userId }) => 
       <div className="flex space-x-2 mb-6">
         <button
           onClick={() => setTimeRange('week')}
-          className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 ${
-            timeRange === 'week'
-              ? 'bg-kurchi-gold-500 text-white shadow-md'
-              : 'bg-gray-100 dark:bg-kurchi-espresso-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-kurchi-espresso-600'
-          }`}
+          className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 ${timeRange === 'week'
+              ? 'bg-primary text-white shadow-md'
+              : 'bg-gray-100 dark:bg-surface/90 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-surface/80'
+            }`}
         >
           Last 7 Days
         </button>
         <button
           onClick={() => setTimeRange('month')}
-          className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 ${
-            timeRange === 'month'
-              ? 'bg-kurchi-gold-500 text-white shadow-md'
-              : 'bg-gray-100 dark:bg-kurchi-espresso-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-kurchi-espresso-600'
-          }`}
+          className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 ${timeRange === 'month'
+              ? 'bg-primary text-white shadow-md'
+              : 'bg-gray-100 dark:bg-surface/90 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-surface/80'
+            }`}
         >
           Last 30 Days
         </button>
         <button
           onClick={() => setTimeRange('all')}
-          className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 ${
-            timeRange === 'all'
-              ? 'bg-kurchi-gold-500 text-white shadow-md'
-              : 'bg-gray-100 dark:bg-kurchi-espresso-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-kurchi-espresso-600'
-          }`}
+          className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 ${timeRange === 'all'
+              ? 'bg-primary text-white shadow-md'
+              : 'bg-gray-100 dark:bg-surface/90 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-surface/80'
+            }`}
         >
           All Time
         </button>
@@ -138,22 +135,22 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ userId }) => 
 
       {/* Today's Details */}
       {todayEntry && (
-        <div className="bg-gradient-to-br from-kurchi-gold-50 to-kurchi-gold-100 dark:from-kurchi-espresso-700 dark:to-kurchi-espresso-600 rounded-lg p-4 border border-kurchi-gold-200 dark:border-kurchi-espresso-500">
-          <h4 className="text-sm font-bold text-kurchi-espresso-900 dark:text-white mb-3 flex items-center">
+        <div className="bg-gradient-to-br from-primary-subtle-background/50 to-primary-subtle-background/80 dark:from-surface/80 dark:to-surface/70 rounded-lg p-4 border border-primary/20 dark:border-primary/30">
+          <h4 className="text-sm font-bold text-text-primary/90 dark:text-white mb-3 flex items-center">
             <CalendarIcon className="w-4 h-4 mr-2" />
             Today's Activity
           </h4>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-600 dark:text-gray-300">Clock In:</span>
-              <span className="font-semibold text-kurchi-espresso-900 dark:text-white">
+              <span className="font-semibold text-text-primary/90 dark:text-white">
                 {todayEntry.clockIn.toLocaleTimeString()}
               </span>
             </div>
             {todayEntry.clockOut && (
               <div className="flex justify-between">
                 <span className="text-gray-600 dark:text-gray-300">Clock Out:</span>
-                <span className="font-semibold text-kurchi-espresso-900 dark:text-white">
+                <span className="font-semibold text-text-primary/90 dark:text-white">
                   {todayEntry.clockOut.toLocaleTimeString()}
                 </span>
               </div>
@@ -161,15 +158,15 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ userId }) => 
             {todayEntry.breaks.length > 0 && (
               <div className="flex justify-between">
                 <span className="text-gray-600 dark:text-gray-300">Breaks Taken:</span>
-                <span className="font-semibold text-kurchi-espresso-900 dark:text-white">
+                <span className="font-semibold text-text-primary/90 dark:text-white">
                   {todayEntry.breaks.length}
                 </span>
               </div>
             )}
             {todayEntry.totalWorkHours && (
-              <div className="flex justify-between pt-2 border-t border-kurchi-gold-200 dark:border-kurchi-espresso-500">
+              <div className="flex justify-between pt-2 border-t border-primary/20 dark:border-primary/30">
                 <span className="text-gray-600 dark:text-gray-300 font-semibold">Total Work:</span>
-                <span className="font-bold text-kurchi-gold-600 dark:text-kurchi-gold-400">
+                <span className="font-bold text-primary-hover dark:text-primary">
                   {todayEntry.totalWorkHours.toFixed(2)} hours
                 </span>
               </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  ChatBubbleLeftRightIcon, 
-  PaperClipIcon, 
+import {
+  ChatBubbleLeftRightIcon,
+  PaperClipIcon,
   PaperAirplaneIcon,
   CheckCircleIcon,
   ClockIcon,
@@ -66,11 +66,11 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
 
   const fetchLead = async () => {
     if (!leadId) return;
-    
+
     try {
       const leadRef = doc(db, 'leads', leadId);
       const leadSnap = await getDoc(leadRef);
-      
+
       if (leadSnap.exists()) {
         const data = leadSnap.data() as Lead;
         setLead({
@@ -147,8 +147,8 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
         await uploadBytes(fileRef, file);
         const fileUrl = await getDownloadURL(fileRef);
 
-        const fileType = file.type.startsWith('image/') ? 'image' : 
-                        file.type.includes('pdf') || file.type.includes('document') ? 'document' : 'other';
+        const fileType = file.type.startsWith('image/') ? 'image' :
+          file.type.includes('pdf') || file.type.includes('document') ? 'document' : 'other';
 
         const leadFile: LeadFile = {
           id: `file-${Date.now()}-${i}`,
@@ -189,7 +189,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
     setUpdatingMilestone(true);
     try {
       const stageName = PROJECT_STAGES.find(s => s.id === selectedStage)?.name || '';
-      
+
       const milestone: ProjectMilestone = {
         id: `milestone-${Date.now()}`,
         leadId,
@@ -204,11 +204,11 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
       };
 
       const leadRef = doc(db, 'leads', leadId);
-      
+
       // Get existing milestones
       const leadSnap = await getDoc(leadRef);
       const existingMilestones = (leadSnap.data()?.milestones || []) as ProjectMilestone[];
-      
+
       // Update or add milestone
       const milestoneIndex = existingMilestones.findIndex(m => m.stage === selectedStage);
       if (milestoneIndex !== -1) {
@@ -262,7 +262,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
   if (loading) {
     return (
       <div className="min-h-screen bg-subtle-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-kurchi-gold-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-hover"></div>
       </div>
     );
   }
@@ -274,7 +274,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
           <h2 className="text-2xl font-bold text-text-primary mb-4">Lead Not Found</h2>
           <button
             onClick={onClose}
-            className="bg-kurchi-gold-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-kurchi-gold-600"
+            className="bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-hover"
           >
             Back
           </button>
@@ -286,16 +286,16 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
   return (
     <div className="min-h-screen bg-subtle-background p-4 sm:p-6 lg:p-8">
       {/* Header */}
-      <div className="bg-white dark:bg-kurchi-espresso-800 rounded-xl shadow-md p-6 mb-6">
+      <div className="bg-white dark:bg-background/90 rounded-xl shadow-md p-6 mb-6">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-bold text-kurchi-espresso-900 dark:text-white">{lead.projectName}</h1>
+            <h1 className="text-3xl font-bold text-text-primary/90 dark:text-white">{lead.projectName}</h1>
             <p className="text-text-secondary mt-2">Client: {lead.clientName}</p>
             <p className="text-text-secondary text-sm">Lead ID: {lead.id}</p>
           </div>
           <button
             onClick={onClose}
-            className="bg-gray-100 dark:bg-kurchi-espresso-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-kurchi-espresso-600"
+            className="bg-gray-100 dark:bg-surface/90 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-surface/80"
           >
             ← Back
           </button>
@@ -305,41 +305,37 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
         <div className="flex space-x-4 mt-6 border-b border-border">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`px-4 py-2 font-semibold transition-all ${
-              activeTab === 'overview'
-                ? 'text-kurchi-gold-600 border-b-2 border-kurchi-gold-600'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
+            className={`px-4 py-2 font-semibold transition-all ${activeTab === 'overview'
+              ? 'text-primary-hover border-b-2 border-primary-hover'
+              : 'text-gray-500 hover:text-gray-700'
+              }`}
           >
             Overview
           </button>
           <button
             onClick={() => setActiveTab('chat')}
-            className={`px-4 py-2 font-semibold transition-all ${
-              activeTab === 'chat'
-                ? 'text-kurchi-gold-600 border-b-2 border-kurchi-gold-600'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
+            className={`px-4 py-2 font-semibold transition-all ${activeTab === 'chat'
+              ? 'text-primary-hover border-b-2 border-primary-hover'
+              : 'text-gray-500 hover:text-gray-700'
+              }`}
           >
             Chat
           </button>
           <button
             onClick={() => setActiveTab('files')}
-            className={`px-4 py-2 font-semibold transition-all ${
-              activeTab === 'files'
-                ? 'text-kurchi-gold-600 border-b-2 border-kurchi-gold-600'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
+            className={`px-4 py-2 font-semibold transition-all ${activeTab === 'files'
+              ? 'text-primary-hover border-b-2 border-primary-hover'
+              : 'text-gray-500 hover:text-gray-700'
+              }`}
           >
             Files
           </button>
           <button
             onClick={() => setActiveTab('milestones')}
-            className={`px-4 py-2 font-semibold transition-all ${
-              activeTab === 'milestones'
-                ? 'text-kurchi-gold-600 border-b-2 border-kurchi-gold-600'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
+            className={`px-4 py-2 font-semibold transition-all ${activeTab === 'milestones'
+              ? 'text-primary-hover border-b-2 border-primary-hover'
+              : 'text-gray-500 hover:text-gray-700'
+              }`}
           >
             Milestones
           </button>
@@ -352,9 +348,9 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
         <div className="lg:col-span-2">
           {/* Overview Tab */}
           {activeTab === 'overview' && (
-            <div className="bg-white dark:bg-kurchi-espresso-800 rounded-xl shadow-md p-6">
-              <h2 className="text-xl font-bold text-kurchi-espresso-900 dark:text-white mb-4">Project Overview</h2>
-              
+            <div className="bg-white dark:bg-background/90 rounded-xl shadow-md p-6">
+              <h2 className="text-xl font-bold text-text-primary/90 dark:text-white mb-4">Project Overview</h2>
+
               {/* Lead Status */}
               <div className="mb-6">
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -363,7 +359,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
                 <select
                   value={lead.status}
                   onChange={(e) => handleUpdateLeadStatus(e.target.value as LeadPipelineStatus)}
-                  className="w-full p-3 border border-border rounded-lg bg-surface focus:ring-2 focus:ring-kurchi-gold-500"
+                  className="w-full p-3 border border-border rounded-lg bg-surface focus:ring-2 focus:ring-primary"
                 >
                   {Object.values(LeadPipelineStatus).map(status => (
                     <option key={status} value={status}>{status}</option>
@@ -375,36 +371,36 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Email</p>
-                  <p className="font-semibold text-kurchi-espresso-900 dark:text-white">{lead.clientEmail || 'N/A'}</p>
+                  <p className="font-semibold text-text-primary/90 dark:text-white">{lead.clientEmail || 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Mobile</p>
-                  <p className="font-semibold text-kurchi-espresso-900 dark:text-white">{lead.clientMobile || 'N/A'}</p>
+                  <p className="font-semibold text-text-primary/90 dark:text-white">{lead.clientMobile || 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Priority</p>
-                  <p className="font-semibold text-kurchi-espresso-900 dark:text-white">{lead.priority}</p>
+                  <p className="font-semibold text-text-primary/90 dark:text-white">{lead.priority}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Source</p>
-                  <p className="font-semibold text-kurchi-espresso-900 dark:text-white">{lead.source}</p>
+                  <p className="font-semibold text-text-primary/90 dark:text-white">{lead.source}</p>
                 </div>
               </div>
 
               {/* Current Stage Progress */}
-              <div className="bg-gradient-to-br from-kurchi-gold-50 to-kurchi-gold-100 dark:from-kurchi-espresso-700 dark:to-kurchi-espresso-600 rounded-lg p-4">
-                <h3 className="text-sm font-bold text-kurchi-espresso-900 dark:text-white mb-3">Current Stage</h3>
+              <div className="bg-gradient-to-br from-primary/5 to-primary-subtle-background/200 dark:from-surface/90 dark:to-surface/80 rounded-lg p-4">
+                <h3 className="text-sm font-bold text-text-primary/90 dark:text-white mb-3">Current Stage</h3>
                 <div className="flex items-center space-x-3">
                   <div className="text-3xl">
                     {PROJECT_STAGES.find(s => s.id === (lead.currentStage || 1))?.icon}
                   </div>
                   <div>
-                    <p className="font-bold text-kurchi-espresso-900 dark:text-white">
+                    <p className="font-bold text-text-primary/90 dark:text-white">
                       Stage {lead.currentStage || 1}: {PROJECT_STAGES.find(s => s.id === (lead.currentStage || 1))?.name}
                     </p>
                     <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-2">
                       <div
-                        className="bg-kurchi-gold-500 h-2 rounded-full transition-all duration-500"
+                        className="bg-primary h-2 rounded-full transition-all duration-500"
                         style={{ width: `${((lead.currentStage || 1) / 8) * 100}%` }}
                       ></div>
                     </div>
@@ -416,11 +412,11 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
 
           {/* Chat Tab - CONTINUED IN NEXT PART */}
           {activeTab === 'chat' && (
-            <div className="bg-white dark:bg-kurchi-espresso-800 rounded-xl shadow-md flex flex-col h-[600px]">
+            <div className="bg-white dark:bg-background/90 rounded-xl shadow-md flex flex-col h-[600px]">
               {/* Chat Header */}
               <div className="p-4 border-b border-border">
-                <h2 className="text-xl font-bold text-kurchi-espresso-900 dark:text-white flex items-center">
-                  <ChatBubbleLeftRightIcon className="w-6 h-6 mr-2 text-kurchi-gold-600" />
+                <h2 className="text-xl font-bold text-text-primary/90 dark:text-white flex items-center">
+                  <ChatBubbleLeftRightIcon className="w-6 h-6 mr-2 text-primary-hover" />
                   Client Communication
                 </h2>
               </div>
@@ -434,11 +430,10 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
                       className={`flex ${msg.senderRole === 'sales' ? 'justify-end' : 'justify-start'}`}
                     >
                       <div
-                        className={`max-w-[70%] rounded-lg p-3 ${
-                          msg.senderRole === 'sales'
-                            ? 'bg-kurchi-gold-500 text-white'
-                            : 'bg-gray-100 dark:bg-kurchi-espresso-700 text-kurchi-espresso-900 dark:text-white'
-                        }`}
+                        className={`max-w-[70%] rounded-lg p-3 ${msg.senderRole === 'sales'
+                          ? 'bg-primary text-white'
+                          : 'bg-gray-100 dark:bg-surface/90 text-text-primary/90 dark:text-white'
+                          }`}
                       >
                         <p className="text-sm font-semibold mb-1">{msg.senderName}</p>
                         <p>{msg.message}</p>
@@ -466,13 +461,13 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
                     onChange={(e) => setNewMessage(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                     placeholder="Type your message..."
-                    className="flex-1 p-3 border border-border rounded-lg bg-surface focus:ring-2 focus:ring-kurchi-gold-500"
+                    className="flex-1 p-3 border border-border rounded-lg bg-surface focus:ring-2 focus:ring-primary"
                     disabled={sending}
                   />
                   <button
                     onClick={handleSendMessage}
                     disabled={sending || !newMessage.trim()}
-                    className="bg-kurchi-gold-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-kurchi-gold-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                    className="bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                   >
                     <PaperAirplaneIcon className="w-5 h-5" />
                   </button>
@@ -483,13 +478,13 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
 
           {/* Files Tab */}
           {activeTab === 'files' && (
-            <div className="bg-white dark:bg-kurchi-espresso-800 rounded-xl shadow-md p-6">
+            <div className="bg-white dark:bg-background/90 rounded-xl shadow-md p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-kurchi-espresso-900 dark:text-white">Files & Documents</h2>
+                <h2 className="text-xl font-bold text-text-primary/90 dark:text-white">Files & Documents</h2>
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
-                  className="bg-kurchi-gold-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-kurchi-gold-600 disabled:opacity-50 flex items-center"
+                  className="bg-primary text-white px-4 py-2 rounded-lg font-semibold hover:bg-primary-hover disabled:opacity-50 flex items-center"
                 >
                   <PaperClipIcon className="w-5 h-5 mr-2" />
                   {uploading ? 'Uploading...' : 'Upload File'}
@@ -511,15 +506,15 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
                       href={file.fileUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="bg-gray-50 dark:bg-kurchi-espresso-700 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-kurchi-espresso-600 transition-all"
+                      className="bg-gray-50 dark:bg-surface/90 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-surface/80 transition-all"
                     >
                       <div className="flex flex-col items-center text-center">
                         {file.fileType === 'image' ? (
-                          <PhotoIcon className="w-12 h-12 text-kurchi-gold-600 mb-2" />
+                          <PhotoIcon className="w-12 h-12 text-primary-hover mb-2" />
                         ) : (
-                          <DocumentIcon className="w-12 h-12 text-kurchi-gold-600 mb-2" />
+                          <DocumentIcon className="w-12 h-12 text-primary-hover mb-2" />
                         )}
-                        <p className="text-sm font-semibold text-kurchi-espresso-900 dark:text-white truncate w-full">
+                        <p className="text-sm font-semibold text-text-primary/90 dark:text-white truncate w-full">
                           {file.fileName}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -545,9 +540,9 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
           {activeTab === 'milestones' && (
             <div className="space-y-6">
               {/* Milestone Form */}
-              <div className="bg-white dark:bg-kurchi-espresso-800 rounded-xl shadow-md p-6">
-                <h2 className="text-xl font-bold text-kurchi-espresso-900 dark:text-white mb-4">Update Milestone</h2>
-                
+              <div className="bg-white dark:bg-background/90 rounded-xl shadow-md p-6">
+                <h2 className="text-xl font-bold text-text-primary/90 dark:text-white mb-4">Update Milestone</h2>
+
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -556,7 +551,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
                     <select
                       value={selectedStage}
                       onChange={(e) => setSelectedStage(Number(e.target.value))}
-                      className="w-full p-3 border border-border rounded-lg bg-surface focus:ring-2 focus:ring-kurchi-gold-500"
+                      className="w-full p-3 border border-border rounded-lg bg-surface focus:ring-2 focus:ring-primary"
                     >
                       {PROJECT_STAGES.map(stage => (
                         <option key={stage.id} value={stage.id}>
@@ -573,7 +568,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
                     <select
                       value={milestoneStatus}
                       onChange={(e) => setMilestoneStatus(e.target.value as any)}
-                      className="w-full p-3 border border-border rounded-lg bg-surface focus:ring-2 focus:ring-kurchi-gold-500"
+                      className="w-full p-3 border border-border rounded-lg bg-surface focus:ring-2 focus:ring-primary"
                     >
                       <option value="pending">Pending</option>
                       <option value="in-progress">In Progress</option>
@@ -589,7 +584,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
                       type="date"
                       value={milestoneDeadline}
                       onChange={(e) => setMilestoneDeadline(e.target.value)}
-                      className="w-full p-3 border border-border rounded-lg bg-surface focus:ring-2 focus:ring-kurchi-gold-500"
+                      className="w-full p-3 border border-border rounded-lg bg-surface focus:ring-2 focus:ring-primary"
                     />
                   </div>
 
@@ -601,7 +596,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
                       value={milestoneNotes}
                       onChange={(e) => setMilestoneNotes(e.target.value)}
                       rows={3}
-                      className="w-full p-3 border border-border rounded-lg bg-surface focus:ring-2 focus:ring-kurchi-gold-500"
+                      className="w-full p-3 border border-border rounded-lg bg-surface focus:ring-2 focus:ring-primary"
                       placeholder="Add notes about this milestone..."
                     />
                   </div>
@@ -609,7 +604,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
                   <button
                     onClick={handleUpdateMilestone}
                     disabled={updatingMilestone}
-                    className="w-full bg-kurchi-gold-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-kurchi-gold-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {updatingMilestone ? 'Updating...' : 'Update Milestone'}
                   </button>
@@ -617,27 +612,26 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
               </div>
 
               {/* Milestone Timeline */}
-              <div className="bg-white dark:bg-kurchi-espresso-800 rounded-xl shadow-md p-6">
-                <h2 className="text-xl font-bold text-kurchi-espresso-900 dark:text-white mb-6">Project Timeline</h2>
-                
+              <div className="bg-white dark:bg-background/90 rounded-xl shadow-md p-6">
+                <h2 className="text-xl font-bold text-text-primary/90 dark:text-white mb-6">Project Timeline</h2>
+
                 <div className="space-y-4">
                   {PROJECT_STAGES.map(stage => {
                     const milestone = lead.milestones?.find(m => m.stage === stage.id);
                     return (
                       <div key={stage.id} className="flex items-start space-x-4">
-                        <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg ${
-                          milestone?.status === 'completed'
-                            ? 'bg-green-100 dark:bg-green-900/30'
-                            : milestone?.status === 'in-progress'
+                        <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg ${milestone?.status === 'completed'
+                          ? 'bg-green-100 dark:bg-green-900/30'
+                          : milestone?.status === 'in-progress'
                             ? 'bg-yellow-100 dark:bg-yellow-900/30'
                             : 'bg-gray-100 dark:bg-gray-700'
-                        }`}>
+                          }`}>
                           {milestone?.status === 'completed' ? '✓' : stage.icon}
                         </div>
                         <div className="flex-1">
                           <div className="flex justify-between items-start">
                             <div>
-                              <h3 className="font-semibold text-kurchi-espresso-900 dark:text-white">
+                              <h3 className="font-semibold text-text-primary/90 dark:text-white">
                                 {stage.name}
                               </h3>
                               {milestone && (
@@ -655,13 +649,12 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
                               )}
                             </div>
                             {milestone && (
-                              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                                milestone.status === 'completed'
-                                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                                  : milestone.status === 'in-progress'
+                              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${milestone.status === 'completed'
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                                : milestone.status === 'in-progress'
                                   ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
                                   : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                              }`}>
+                                }`}>
                                 {milestone.status}
                               </span>
                             )}
@@ -679,20 +672,20 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Quick Stats */}
-          <div className="bg-white dark:bg-kurchi-espresso-800 rounded-xl shadow-md p-6">
-            <h3 className="text-lg font-bold text-kurchi-espresso-900 dark:text-white mb-4">Quick Stats</h3>
+          <div className="bg-white dark:bg-background/90 rounded-xl shadow-md p-6">
+            <h3 className="text-lg font-bold text-text-primary/90 dark:text-white mb-4">Quick Stats</h3>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600 dark:text-gray-400">Messages</span>
-                <span className="font-bold text-kurchi-gold-600">{lead.communicationMessages?.length || 0}</span>
+                <span className="font-bold text-primary-hover">{lead.communicationMessages?.length || 0}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600 dark:text-gray-400">Files</span>
-                <span className="font-bold text-kurchi-gold-600">{lead.files?.length || 0}</span>
+                <span className="font-bold text-primary-hover">{lead.files?.length || 0}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600 dark:text-gray-400">Milestones</span>
-                <span className="font-bold text-kurchi-gold-600">
+                <span className="font-bold text-primary-hover">
                   {lead.milestones?.filter(m => m.status === 'completed').length || 0}/8
                 </span>
               </div>
@@ -700,9 +693,9 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
           </div>
 
           {/* Assigned To */}
-          <div className="bg-white dark:bg-kurchi-espresso-800 rounded-xl shadow-md p-6">
-            <h3 className="text-lg font-bold text-kurchi-espresso-900 dark:text-white mb-4">Assigned To</h3>
-            <p className="text-kurchi-espresso-900 dark:text-white font-semibold">{currentUser?.name || 'Sales Team'}</p>
+          <div className="bg-white dark:bg-background/90 rounded-xl shadow-md p-6">
+            <h3 className="text-lg font-bold text-text-primary/90 dark:text-white mb-4">Assigned To</h3>
+            <p className="text-text-primary/90 dark:text-white font-semibold">{currentUser?.name || 'Sales Team'}</p>
             <p className="text-sm text-gray-500 dark:text-gray-400">{currentUser?.role}</p>
           </div>
         </div>

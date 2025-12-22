@@ -63,7 +63,7 @@ const HeroSection = () => {
     const opacity = useTransform(scrollY, [0, 300], [1, 0]);
 
     return (
-        <section className="relative h-screen min-h-[700px] flex items-center justify-center overflow-hidden bg-kurchi-espresso-950">
+        <section className="relative h-screen min-h-[700px] flex items-center justify-center overflow-hidden bg-background">
             <motion.div
                 style={{ y: y1, opacity }}
                 className="absolute inset-0 z-0"
@@ -73,7 +73,7 @@ const HeroSection = () => {
                     alt="Premium Corporate Space"
                     className="w-full h-full object-cover opacity-50 scale-110"
                 />
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-kurchi-espresso-950/50 to-kurchi-espresso-950"></div>
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/50 to-background"></div>
             </motion.div>
 
             <div className="relative z-10 text-center px-6 max-w-5xl mx-auto">
@@ -86,7 +86,7 @@ const HeroSection = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.3 }}
-                        className="inline-block text-kurchi-gold-500 font-bold uppercase tracking-[0.3em] text-xs mb-8"
+                        className="inline-block text-primary font-bold uppercase tracking-[0.3em] text-xs mb-8"
                     >
                         Since 2005
                     </motion.span>
@@ -97,7 +97,7 @@ const HeroSection = () => {
                         className="text-6xl md:text-8xl font-serif font-bold text-white mb-8 leading-[1.1] tracking-tight"
                     >
                         Defining the <br />
-                        <span className="text-kurchi-gold-500 italic">Art of Workspace</span>
+                        <span className="text-primary italic">Art of Workspace</span>
                     </motion.h1>
                     <motion.p
                         initial={{ opacity: 0 }}
@@ -105,7 +105,7 @@ const HeroSection = () => {
                         transition={{ delay: 0.8, duration: 1 }}
                         className="text-xl text-gray-300 font-light max-w-2xl mx-auto leading-relaxed"
                     >
-                        We don't just build offices. We architect corporate legacies through seamless integration of design, engineering, and manufacturing.
+                        Make My Office was born from a singular vision: to bridge the gap between abstract design and flawless implementation.
                     </motion.p>
                 </motion.div>
             </div>
@@ -117,7 +117,7 @@ const HeroSection = () => {
                 className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4"
             >
                 <span className="text-[10px] text-gray-400 uppercase tracking-widest">Scroll to Explore</span>
-                <div className="w-[1px] h-12 bg-gradient-to-b from-kurchi-gold-500 to-transparent"></div>
+                <div className="w-[1px] h-12 bg-gradient-to-b from-primary to-transparent"></div>
             </motion.div>
         </section>
     );
@@ -142,8 +142,8 @@ const IntegratedAdvantage = () => {
                         viewport={{ once: true }}
                         variants={staggerContainer}
                     >
-                        <motion.span variants={fadeInUp} className="text-kurchi-gold-500 font-bold uppercase tracking-widest text-xs">Our Edge</motion.span>
-                        <motion.h2 variants={fadeInUp} className="text-5xl font-serif font-bold text-kurchi-espresso-900 mt-6 mb-10 leading-tight">
+                        <motion.span variants={fadeInUp} className="text-primary font-bold uppercase tracking-widest text-xs">Our Edge</motion.span>
+                        <motion.h2 variants={fadeInUp} className="text-5xl font-serif font-bold text-text-primary mt-6 mb-10 leading-tight">
                             One Roof. <br />Infinite Possibilities.
                         </motion.h2>
                         <motion.p variants={fadeInUp} className="text-text-secondary text-lg font-light leading-relaxed mb-8">
@@ -156,11 +156,11 @@ const IntegratedAdvantage = () => {
                                 { title: "Direct Execution", desc: "Our own site engineers and supervisors ensure zero compromise." }
                             ].map((item, idx) => (
                                 <div key={idx} className="flex gap-4 group">
-                                    <div className="flex-shrink-0 w-12 h-12 rounded-full border border-kurchi-gold-500/20 flex items-center justify-center group-hover:bg-kurchi-gold-500 transition-colors duration-500">
-                                        <CheckCircleIcon className="w-6 h-6 text-kurchi-gold-500 group-hover:text-white transition-colors" />
+                                    <div className="flex-shrink-0 w-12 h-12 rounded-full border border-primary/20 flex items-center justify-center group-hover:bg-primary transition-colors duration-500">
+                                        <CheckCircleIcon className="w-6 h-6 text-primary group-hover:text-white transition-colors" />
                                     </div>
                                     <div>
-                                        <h4 className="font-bold text-kurchi-espresso-900">{item.title}</h4>
+                                        <h4 className="font-bold text-text-primary">{item.title}</h4>
                                         <p className="text-sm text-text-secondary font-light">{item.desc}</p>
                                     </div>
                                 </div>
@@ -178,10 +178,10 @@ const IntegratedAdvantage = () => {
                                 alt="Modern Office"
                                 className="w-full h-full object-cover brightness-[0.8] group-hover:brightness-105 group-hover:scale-105 transition-all duration-1000 ease-luxury"
                             />
-                            <div className="absolute inset-0 bg-kurchi-espresso-900/10 mix-blend-overlay"></div>
+                            <div className="absolute inset-0 bg-text-primary/10 mix-blend-overlay"></div>
                         </div>
-                        <div className="absolute -bottom-10 -right-10 w-2/3 aspect-video bg-kurchi-espresso-950 text-white p-8 rounded-xl shadow-2xl hidden md:block">
-                            <span className="text-kurchi-gold-500 text-xs font-bold uppercase tracking-widest">Our Mission</span>
+                        <div className="absolute -bottom-10 -right-10 w-2/3 aspect-video bg-background text-white p-8 rounded-xl shadow-2xl hidden md:block">
+                            <span className="text-primary text-xs font-bold uppercase tracking-widest">Our Mission</span>
                             <p className="mt-4 font-serif text-xl italic leading-relaxed">
                                 "Merging global design standards with Indian manufacturing excellence."
                             </p>
@@ -200,7 +200,7 @@ const BentoStructure = () => {
             title: "Design Studio",
             icon: <PaintBrushIcon />,
             size: "col-span-2 row-span-2",
-            color: "bg-kurchi-gold-500/5",
+            color: "bg-primary/5",
             desc: "Architects and visualizers creating 3D realities.",
             image: "https://images.unsplash.com/photo-1542621334-a254cf47733d?q=80&w=800&auto=format&fit=crop"
         },
@@ -216,7 +216,7 @@ const BentoStructure = () => {
             title: "Factory",
             icon: <CubeIcon />,
             size: "col-span-1 row-span-2",
-            color: "bg-kurchi-espresso-950 text-white",
+            color: "bg-background text-white",
             desc: "Precision manufacturing at scale.",
             image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=400&auto=format&fit=crop"
         },
@@ -232,7 +232,7 @@ const BentoStructure = () => {
             title: "Client Success",
             icon: <HeartIcon />,
             size: "col-span-2 row-span-1",
-            color: "bg-kurchi-gold-500 text-white",
+            color: "bg-primary text-white",
             desc: "Post-handover maintenance and relationship management.",
             image: "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=800&auto=format&fit=crop"
         },
@@ -242,8 +242,8 @@ const BentoStructure = () => {
         <section className="py-32 bg-background">
             <div className="max-w-7xl mx-auto px-6 lg:px-12">
                 <div className="text-center mb-20">
-                    <span className="text-kurchi-gold-500 font-bold uppercase tracking-widest text-xs">The Backbone</span>
-                    <h2 className="text-4xl font-serif font-bold text-kurchi-espresso-900 mt-4">Organizational Ecosystem</h2>
+                    <span className="text-primary font-bold uppercase tracking-widest text-xs">The Backbone</span>
+                    <h2 className="text-4xl font-serif font-bold text-text-primary mt-4">Organizational Ecosystem</h2>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 auto-rows-[200px]">
                     {items.map((item, idx) => (
@@ -296,8 +296,8 @@ const ImageGallery = () => {
     return (
         <section className="py-40 bg-white overflow-hidden">
             <div className="max-w-7xl mx-auto px-6 lg:px-12 mb-20 text-center">
-                <span className="text-kurchi-gold-500 font-black uppercase tracking-[0.4em] text-[10px]">Gallery</span>
-                <h2 className="text-4xl md:text-6xl font-serif font-bold text-kurchi-espresso-900 mt-4">Atelier of Innovation</h2>
+                <span className="text-primary font-black uppercase tracking-[0.4em] text-[10px]">Gallery</span>
+                <h2 className="text-4xl md:text-6xl font-serif font-bold text-text-primary mt-4">Atelier of Innovation</h2>
             </div>
 
             <div
@@ -322,9 +322,9 @@ const ImageGallery = () => {
 
             <div className="flex justify-center mt-10">
                 <div className="flex gap-2 items-center">
-                    <div className="w-20 h-[1px] bg-kurchi-gold-500/30"></div>
-                    <span className="text-kurchi-gold-500/50 font-black text-[10px] uppercase tracking-widest">Swipe to Explore</span>
-                    <div className="w-20 h-[1px] bg-kurchi-gold-500/30"></div>
+                    <div className="w-20 h-[1px] bg-primary/30"></div>
+                    <span className="text-primary/50 font-black text-[10px] uppercase tracking-widest">Swipe to Explore</span>
+                    <div className="w-20 h-[1px] bg-primary/30"></div>
                 </div>
             </div>
         </section>
@@ -341,7 +341,7 @@ const LeadershipRedefined = () => {
     ];
 
     return (
-        <section className="py-40 bg-kurchi-espresso-950 overflow-hidden relative">
+        <section className="py-40 bg-background overflow-hidden relative">
             {/* Background Texture/Pattern */}
             <div className="absolute inset-0 opacity-[0.05] pointer-events-none">
                 <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '40px 40px' }}></div>
@@ -363,7 +363,7 @@ const LeadershipRedefined = () => {
                                 className="absolute inset-0 w-full h-full object-cover brightness-75 group-hover:brightness-100 transition-all duration-1000"
                             />
                         </AnimatePresence>
-                        <div className="absolute inset-0 bg-gradient-to-t from-kurchi-espresso-950 via-transparent to-transparent opacity-60"></div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-60"></div>
 
                         {/* Decorative Badge */}
                         <div className="absolute top-10 left-10 w-20 h-20 border border-white/20 rounded-full flex items-center justify-center backdrop-blur-md">
@@ -376,7 +376,7 @@ const LeadershipRedefined = () => {
                         <motion.span
                             initial={{ opacity: 0, x: -20 }}
                             whileInView={{ opacity: 1, x: 0 }}
-                            className="text-kurchi-gold-500 font-black uppercase tracking-[0.5em] text-xs mb-8"
+                            className="text-primary font-black uppercase tracking-[0.5em] text-xs mb-8"
                         >
                             Executive Board
                         </motion.span>
@@ -392,9 +392,9 @@ const LeadershipRedefined = () => {
                                 >
                                     <h2 className="text-6xl md:text-8xl font-serif font-bold text-white mb-6 leading-tight">
                                         {leaders[activeIndex].name.split(' ')[0]} <br />
-                                        <span className="text-kurchi-gold-500 italic">{leaders[activeIndex].name.split(' ')[1]}</span>
+                                        <span className="text-primary italic">{leaders[activeIndex].name.split(' ')[1]}</span>
                                     </h2>
-                                    <p className="text-kurchi-gold-500 font-bold uppercase tracking-widest text-sm mb-8">{leaders[activeIndex].role}</p>
+                                    <p className="text-primary font-bold uppercase tracking-widest text-sm mb-8">{leaders[activeIndex].role}</p>
                                     <p className="text-gray-400 text-xl font-light leading-relaxed max-w-md">
                                         "{leaders[activeIndex].bio}"
                                     </p>
@@ -408,7 +408,7 @@ const LeadershipRedefined = () => {
                                 <button
                                     key={i}
                                     onClick={() => setActiveIndex(i)}
-                                    className={`relative w-20 h-20 rounded-2xl overflow-hidden transition-all duration-500 ${activeIndex === i ? 'ring-2 ring-kurchi-gold-500 scale-110' : 'opacity-40 hover:opacity-100'}`}
+                                    className={`relative w-20 h-20 rounded-2xl overflow-hidden transition-all duration-500 ${activeIndex === i ? 'ring-2 ring-primary scale-110' : 'opacity-40 hover:opacity-100'}`}
                                 >
                                     <img src={leader.img} className="w-full h-full object-cover" alt="" />
                                 </button>
@@ -466,8 +466,8 @@ const MetricsSection = () => {
     ];
 
     return (
-        <section className="py-24 bg-kurchi-espresso-950 text-white relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-1/3 h-full bg-kurchi-gold-500/5 skew-x-12 translate-x-1/2"></div>
+        <section className="py-24 bg-background text-white relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-1/3 h-full bg-primary/5 skew-x-12 translate-x-1/2"></div>
             <div className="max-w-7xl mx-auto px-6 lg:px-12 relative z-10">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-12">
                     {metrics.map((m, i) => (
@@ -479,7 +479,7 @@ const MetricsSection = () => {
                             transition={{ delay: i * 0.1 }}
                             className="text-center"
                         >
-                            <h2 className="text-5xl md:text-7xl font-serif font-bold text-kurchi-gold-500 mb-2">
+                            <h2 className="text-5xl md:text-7xl font-serif font-bold text-primary mb-2">
                                 <AnimatedCounter value={m.value} />
                             </h2>
                             <p className="text-xs uppercase tracking-[0.2em] text-gray-400 font-medium">{m.label}</p>
@@ -514,8 +514,8 @@ const ProcessTimeline = () => {
             <div className="max-w-7xl mx-auto px-6 lg:px-12 relative z-10">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-20 items-center">
                     <div className="lg:col-span-1">
-                        <span className="text-kurchi-gold-500 font-bold uppercase tracking-widest text-xs">Our Workflow</span>
-                        <h2 className="text-5xl font-serif font-bold text-kurchi-espresso-900 mt-4 leading-tight">
+                        <span className="text-primary font-bold uppercase tracking-widest text-xs">Our Workflow</span>
+                        <h2 className="text-5xl font-serif font-bold text-text-primary mt-4 leading-tight">
                             The Precision <br />Pipeline
                         </h2>
                         <p className="mt-8 text-text-secondary font-light leading-relaxed">
@@ -536,12 +536,12 @@ const ProcessTimeline = () => {
                                     >
                                         <div className="w-full md:w-1/2 md:px-12">
                                             <div className={`${i % 2 === 0 ? 'md:text-right' : 'md:text-left'}`}>
-                                                <h4 className="text-xl font-bold text-kurchi-espresso-900">{step.title}</h4>
+                                                <h4 className="text-xl font-bold text-text-primary">{step.title}</h4>
                                                 <p className="text-sm text-text-secondary font-light mt-1">{step.desc}</p>
                                             </div>
                                         </div>
                                         <div className="relative z-10 w-16 h-16 rounded-full bg-surface border-4 border-background flex items-center justify-center shadow-luxury">
-                                            <span className="text-kurchi-gold-500 font-bold">{i + 1}</span>
+                                            <span className="text-primary font-bold">{i + 1}</span>
                                         </div>
                                         <div className="hidden md:block w-1/2"></div>
                                     </motion.div>
@@ -557,7 +557,7 @@ const ProcessTimeline = () => {
 
 const CTASection: React.FC<{ onNavigate: (page: string) => void }> = ({ onNavigate }) => {
     return (
-        <section className="py-32 bg-kurchi-gold-500 text-kurchi-espresso-950 relative overflow-hidden">
+        <section className="py-32 bg-primary text-background relative overflow-hidden">
             <motion.div
                 animate={{
                     rotate: 360,
@@ -568,7 +568,7 @@ const CTASection: React.FC<{ onNavigate: (page: string) => void }> = ({ onNaviga
                     repeat: Infinity,
                     ease: "linear"
                 }}
-                className="absolute -top-64 -right-64 w-[600px] h-[600px] border-[1px] border-kurchi-espresso-950/10 rounded-full"
+                className="absolute -top-64 -right-64 w-[600px] h-[600px] border-[1px] border-background/10 rounded-full"
             ></motion.div>
 
             <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
@@ -596,7 +596,7 @@ const CTASection: React.FC<{ onNavigate: (page: string) => void }> = ({ onNaviga
                     whileTap={{ scale: 0.95 }}
                     viewport={{ once: true }}
                     onClick={() => onNavigate('contact')}
-                    className="px-12 py-5 bg-kurchi-espresso-950 text-white font-bold text-sm uppercase tracking-[0.2em] rounded-full shadow-2xl hover:bg-neutral-800 transition-colors"
+                    className="px-12 py-5 bg-background text-white font-bold text-sm uppercase tracking-[0.2em] rounded-full shadow-2xl hover:bg-neutral-800 transition-colors"
                 >
                     Start a Conversation
                 </motion.button>
@@ -611,7 +611,7 @@ const AboutPage: React.FC<AboutPageProps> = ({ onNavigate }) => {
     }, []);
 
     return (
-        <div className="bg-background overflow-x-hidden selection:bg-kurchi-gold-500 selection:text-white">
+        <div className="bg-background overflow-x-hidden selection:bg-primary selection:text-white">
             <HeroSection />
             <IntegratedAdvantage />
             <MetricsSection />

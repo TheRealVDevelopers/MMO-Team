@@ -22,7 +22,7 @@ const RequestApprovalModal: React.FC<RequestApprovalModalProps> = ({ isOpen, onC
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!currentUser || !title.trim() || !description.trim()) {
       alert('Please fill in all required fields');
       return;
@@ -68,17 +68,17 @@ const RequestApprovalModal: React.FC<RequestApprovalModalProps> = ({ isOpen, onC
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      
+
       <div className="relative min-h-screen flex items-center justify-center p-4">
-        <div className="relative bg-white dark:bg-kurchi-espresso-800 rounded-2xl shadow-2xl w-full max-w-2xl">
+        <div className="relative bg-white dark:bg-background/90 rounded-2xl shadow-2xl w-full max-w-2xl">
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-border">
-            <h2 className="text-2xl font-bold text-kurchi-espresso-900 dark:text-white">
+            <h2 className="text-2xl font-bold text-text-primary/90 dark:text-white">
               Request Approval
             </h2>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-kurchi-espresso-700 rounded-lg transition-all"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-surface/90 rounded-lg transition-all"
             >
               <XMarkIcon className="w-6 h-6 text-gray-600 dark:text-gray-300" />
             </button>
@@ -94,7 +94,7 @@ const RequestApprovalModal: React.FC<RequestApprovalModalProps> = ({ isOpen, onC
               <select
                 value={requestType}
                 onChange={(e) => setRequestType(e.target.value as ApprovalRequestType)}
-                className="w-full p-3 border border-border rounded-lg bg-surface focus:ring-2 focus:ring-kurchi-gold-500"
+                className="w-full p-3 border border-border rounded-lg bg-surface focus:ring-2 focus:ring-primary"
                 required
               >
                 {Object.values(ApprovalRequestType).map(type => (
@@ -112,7 +112,7 @@ const RequestApprovalModal: React.FC<RequestApprovalModalProps> = ({ isOpen, onC
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full p-3 border border-border rounded-lg bg-surface focus:ring-2 focus:ring-kurchi-gold-500"
+                className="w-full p-3 border border-border rounded-lg bg-surface focus:ring-2 focus:ring-primary"
                 placeholder="e.g., Sick Leave for 2 days"
                 required
               />
@@ -127,7 +127,7 @@ const RequestApprovalModal: React.FC<RequestApprovalModalProps> = ({ isOpen, onC
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={4}
-                className="w-full p-3 border border-border rounded-lg bg-surface focus:ring-2 focus:ring-kurchi-gold-500"
+                className="w-full p-3 border border-border rounded-lg bg-surface focus:ring-2 focus:ring-primary"
                 placeholder="Provide details about your request..."
                 required
               />
@@ -143,7 +143,7 @@ const RequestApprovalModal: React.FC<RequestApprovalModalProps> = ({ isOpen, onC
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full p-3 border border-border rounded-lg bg-surface focus:ring-2 focus:ring-kurchi-gold-500"
+                  className="w-full p-3 border border-border rounded-lg bg-surface focus:ring-2 focus:ring-primary"
                 />
               </div>
               <div>
@@ -154,7 +154,7 @@ const RequestApprovalModal: React.FC<RequestApprovalModalProps> = ({ isOpen, onC
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full p-3 border border-border rounded-lg bg-surface focus:ring-2 focus:ring-kurchi-gold-500"
+                  className="w-full p-3 border border-border rounded-lg bg-surface focus:ring-2 focus:ring-primary"
                   min={startDate}
                 />
               </div>
@@ -169,7 +169,7 @@ const RequestApprovalModal: React.FC<RequestApprovalModalProps> = ({ isOpen, onC
                 type="text"
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
-                className="w-full p-3 border border-border rounded-lg bg-surface focus:ring-2 focus:ring-kurchi-gold-500"
+                className="w-full p-3 border border-border rounded-lg bg-surface focus:ring-2 focus:ring-primary"
                 placeholder="e.g., 2 days, 4 hours, Half day"
               />
             </div>
@@ -182,7 +182,7 @@ const RequestApprovalModal: React.FC<RequestApprovalModalProps> = ({ isOpen, onC
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as 'High' | 'Medium' | 'Low')}
-                className="w-full p-3 border border-border rounded-lg bg-surface focus:ring-2 focus:ring-kurchi-gold-500"
+                className="w-full p-3 border border-border rounded-lg bg-surface focus:ring-2 focus:ring-primary"
               >
                 <option value="Low">Low</option>
                 <option value="Medium">Medium</option>
@@ -195,7 +195,7 @@ const RequestApprovalModal: React.FC<RequestApprovalModalProps> = ({ isOpen, onC
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 bg-gray-100 dark:bg-kurchi-espresso-700 text-gray-700 dark:text-gray-300 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-kurchi-espresso-600 transition-all"
+                className="flex-1 bg-gray-100 dark:bg-surface text-gray-700 dark:text-gray-300 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-surface/80 transition-all"
                 disabled={submitting}
               >
                 Cancel
@@ -203,7 +203,7 @@ const RequestApprovalModal: React.FC<RequestApprovalModalProps> = ({ isOpen, onC
               <button
                 type="submit"
                 disabled={submitting}
-                className="flex-1 bg-kurchi-gold-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-kurchi-gold-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-hover transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <PaperAirplaneIcon className="w-5 h-5" />
                 {submitting ? 'Submitting...' : 'Submit Request'}

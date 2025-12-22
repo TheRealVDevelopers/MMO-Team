@@ -267,11 +267,11 @@ const BrandSection: React.FC<{ onNavigate: (page: string) => void }> = ({ onNavi
                     <span className="text-secondary text-[10px] font-black uppercase tracking-[0.4em]">Our Philosophy</span>
                     <h2 className="text-4xl md:text-5xl font-serif leading-tight">
                         We Don't Just Design.<br />
-                        <span className="text-primary italic font-light italic">We Manifest Excellence.</span>
+                        <span className="text-primary italic font-light italic">We Build Excellence.</span>
                     </h2>
                 </div>
                 <p className="text-text-secondary text-lg font-light leading-relaxed">
-                    Kurchi Interior Studio was born from a singular vision: to bridge the gap between abstract design and flawless implementation. We observed a market where design was detached from reality—we changed that.
+                    Make My Office was born from a singular vision: to bridge the gap between abstract design and flawless implementation. We observed a market where design was detached from reality—we changed that.
                 </p>
                 <div className="grid grid-cols-2 gap-8 py-6 border-y border-border/50">
                     <div>
@@ -555,7 +555,7 @@ const ProcessSection: React.FC = () => {
         <section className="py-32 bg-subtle-background overflow-hidden px-4">
             <SectionHeader
                 badge="Methodology"
-                title="The Kurchi Protocol"
+                title="The MMO Protocol"
                 description="Our rigorous five-phase approach replaces uncertainty with architectural precision and world-class implementation."
             />
 
@@ -651,7 +651,7 @@ const ProcessSection: React.FC = () => {
 const Testimonials: React.FC = () => {
     const clients = [
         {
-            quote: "Kurchi didn't just build an office; they translated our company culture into a physical space.",
+            quote: "Make My Office didn't just build an office; they translated our company culture into a physical space.",
             author: "Vikram Singh",
             company: "Enterprise Suites",
             image: "https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=400&auto=format&fit=crop"

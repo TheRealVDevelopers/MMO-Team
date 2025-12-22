@@ -44,7 +44,7 @@ const InternalLayout: React.FC<InternalLayoutProps> = ({
     children,
     currentPage,
     setCurrentPage,
-    title = "KURCHI",
+    title = "MMO",
     navItems = [],
     secondaryNavItems = []
 }) => {
@@ -95,12 +95,12 @@ const InternalLayout: React.FC<InternalLayoutProps> = ({
                             animate={{ opacity: 1 }}
                             className="flex items-center gap-3"
                         >
-                            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-serif font-bold">K</div>
+                            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-serif font-bold">M</div>
                             <span className="text-xl font-serif font-bold text-text-primary tracking-wide">{title}</span>
                         </motion.div>
                     )}
                     {isSidebarCollapsed && (
-                        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-serif font-bold mx-auto">K</div>
+                        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-serif font-bold mx-auto">M</div>
                     )}
                 </div>
 
@@ -168,7 +168,7 @@ const InternalLayout: React.FC<InternalLayoutProps> = ({
                         <button onClick={() => setIsMobileMenuOpen(true)}>
                             <Bars3Icon className="w-6 h-6 text-text-primary" />
                         </button>
-                        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-serif font-bold">K</div>
+                        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-serif font-bold">M</div>
                     </div>
 
                     <div className="flex-1 max-w-xl hidden md:block">
@@ -270,7 +270,7 @@ const InternalLayout: React.FC<InternalLayoutProps> = ({
                         >
                             <div className="flex items-center justify-between mb-12">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-serif font-bold">K</div>
+                                    <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-serif font-bold">M</div>
                                     <span className="text-xl font-serif font-bold text-text-primary">{title}</span>
                                 </div>
                                 <button onClick={() => setIsMobileMenuOpen(false)}>

@@ -61,7 +61,7 @@ const ComparativeStatement: React.FC<ComparativeStatementProps> = ({ isOpen, onC
                                             <div className="text-xs text-text-secondary">{vendor?.category} Specialist</div>
                                         </td>
                                         <td className="p-4">
-                                            <div className="flex items-center text-kurchi-gold-500 font-bold">
+                                            <div className="flex items-center text-primary/100 font-bold">
                                                 <StarIcon className="w-4 h-4 mr-1" />
                                                 {vendor?.rating || 'N/A'}
                                             </div>

@@ -48,12 +48,12 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, title, size = 
       >
         {title && (
           <div className="flex items-center justify-between px-6 py-4 border-b border-border/50 sticky top-0 bg-white rounded-t-2xl">
-            <h2 id="modal-title" className="text-xl font-serif font-bold text-kurchi-espresso-900">
+            <h2 id="modal-title" className="text-xl font-serif font-bold text-text-primary">
               {title}
             </h2>
             <button
               onClick={onClose}
-              className="p-2 rounded-xl text-text-secondary hover:bg-subtle-background hover:text-kurchi-gold-600 transition-all"
+              className="p-2 rounded-xl text-text-secondary hover:bg-subtle-background hover:text-primary transition-all"
               aria-label="Close modal"
             >
               <XMarkIcon className="w-5 h-5" />

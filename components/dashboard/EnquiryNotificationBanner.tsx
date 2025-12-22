@@ -11,7 +11,7 @@ const EnquiryNotificationBanner: React.FC<EnquiryNotificationBannerProps> = ({ n
     if (newEnquiries.length === 0) return null;
 
     return (
-        <div className="bg-gradient-to-r from-kurchi-gold-500 to-kurchi-gold-600 rounded-xl shadow-lg p-4 mb-6 animate-pulse-slow">
+        <div className="bg-gradient-to-r from-primary to-secondary rounded-xl shadow-lg p-4 mb-6 animate-pulse-slow">
             <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                     <div className="bg-white/20 rounded-full p-3">
@@ -22,8 +22,8 @@ const EnquiryNotificationBanner: React.FC<EnquiryNotificationBannerProps> = ({ n
                             {newEnquiries.length} New {newEnquiries.length === 1 ? 'Enquiry' : 'Enquiries'}
                         </h3>
                         <p className="text-white/90 text-sm">
-                            {newEnquiries.length === 1 
-                                ? 'A new project enquiry requires your attention' 
+                            {newEnquiries.length === 1
+                                ? 'A new project enquiry requires your attention'
                                 : `${newEnquiries.length} project enquiries are waiting to be assigned`
                             }
                         </p>
@@ -31,7 +31,7 @@ const EnquiryNotificationBanner: React.FC<EnquiryNotificationBannerProps> = ({ n
                 </div>
                 <button
                     onClick={onViewEnquiries}
-                    className="bg-white text-kurchi-gold-600 px-6 py-3 rounded-lg font-bold hover:bg-kurchi-espresso-900 hover:text-white transition-all duration-300 flex items-center space-x-2 shadow-lg"
+                    className="bg-white text-primary px-6 py-3 rounded-lg font-bold hover:bg-text-primary hover:text-white transition-all duration-300 flex items-center space-x-2 shadow-lg"
                 >
                     <EnvelopeIcon className="w-5 h-5" />
                     <span>View Enquiries</span>

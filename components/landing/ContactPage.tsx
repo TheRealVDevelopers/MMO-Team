@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-    PhoneIcon, 
-    GlobeAltIcon, 
-    EnvelopeIcon, 
-    MapPinIcon, 
+import {
+    PhoneIcon,
+    GlobeAltIcon,
+    EnvelopeIcon,
+    MapPinIcon,
     ClockIcon,
     BuildingOfficeIcon,
     ChatBubbleLeftRightIcon,
@@ -24,7 +24,7 @@ const useOnScreen = (options: IntersectionObserverInit) => {
         const observer = new IntersectionObserver(([entry]) => {
             if (entry.isIntersecting) {
                 setIsVisible(true);
-                observer.disconnect(); 
+                observer.disconnect();
             }
         }, options);
 
@@ -38,7 +38,7 @@ const useOnScreen = (options: IntersectionObserverInit) => {
 const FadeInSection: React.FC<{ children: React.ReactNode; delay?: string; className?: string }> = ({ children, delay = '0ms', className = '' }) => {
     const [ref, isVisible] = useOnScreen({ threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
     return (
-        <div 
+        <div
             ref={ref}
             style={{ animationDelay: delay }}
             className={`${className} ${isVisible ? 'animate-luxury-reveal opacity-100' : 'opacity-0 translate-y-8'}`}
@@ -49,16 +49,16 @@ const FadeInSection: React.FC<{ children: React.ReactNode; delay?: string; class
 };
 
 const ContactPage: React.FC = () => {
-    const [formData, setFormData] = useState({ 
-        name: '', 
-        email: '', 
-        phone: '+91 ', 
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        phone: '+91 ',
         company: '',
         projectType: '',
         budget: '',
         timeline: '',
-        subject: '', 
-        message: '' 
+        subject: '',
+        message: ''
     });
     const [formStatus, setFormStatus] = useState<'idle' | 'submitting' | 'success'>('idle');
 
@@ -72,7 +72,7 @@ const ContactPage: React.FC = () => {
                 projectName: formData.subject || 'New Website Inquiry',
                 status: LeadPipelineStatus.NEW_NOT_CONTACTED,
                 lastContacted: 'Just now',
-                assignedTo: USERS[2].id, 
+                assignedTo: USERS[2].id,
                 inquiryDate: new Date(),
                 value: 0,
                 source: 'Contact Page',
@@ -99,10 +99,10 @@ const ContactPage: React.FC = () => {
     return (
         <div className="bg-background min-h-screen pt-20">
             {/* Hero Section */}
-            <section className="bg-gradient-to-br from-kurchi-espresso-950 to-kurchi-espresso-900 text-white py-20 px-6">
+            <section className="bg-gradient-to-br from-primary to-primary-hover text-white py-20 px-6">
                 <div className="max-w-7xl mx-auto text-center">
                     <FadeInSection>
-                        <span className="text-kurchi-gold-500 font-bold uppercase tracking-[0.2em] text-xs">Connect With Us</span>
+                        <span className="text-primary font-bold uppercase tracking-[0.2em] text-xs">Connect With Us</span>
                         <h1 className="text-5xl md:text-7xl font-serif font-medium mt-6 mb-6">Get In Touch</h1>
                         <p className="text-gray-300 text-lg font-light max-w-3xl mx-auto leading-relaxed">
                             Whether you have a question, want to start a project, or just want to connect — we'd love to hear from you. Our team is ready to bring your vision to life.
@@ -116,10 +116,10 @@ const ContactPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
                     <FadeInSection delay="100ms">
                         <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-700 transform hover:scale-105 border border-border">
-                            <div className="w-14 h-14 bg-kurchi-gold-500/10 rounded-xl flex items-center justify-center mb-6">
-                                <MapPinIcon className="w-7 h-7 text-kurchi-gold-500" />
+                            <div className="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center mb-6">
+                                <MapPinIcon className="w-7 h-7 text-primary" />
                             </div>
-                            <h3 className="text-lg font-bold text-kurchi-espresso-900 mb-2">Visit Us</h3>
+                            <h3 className="text-lg font-bold text-text-primary/90 mb-2">Visit Us</h3>
                             <p className="text-sm text-text-secondary font-light leading-relaxed">
                                 Experience our showroom and discuss your project in person
                             </p>
@@ -128,10 +128,10 @@ const ContactPage: React.FC = () => {
 
                     <FadeInSection delay="200ms">
                         <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-700 transform hover:scale-105 border border-border">
-                            <div className="w-14 h-14 bg-kurchi-gold-500/10 rounded-xl flex items-center justify-center mb-6">
-                                <PhoneIcon className="w-7 h-7 text-kurchi-gold-500" />
+                            <div className="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center mb-6">
+                                <PhoneIcon className="w-7 h-7 text-primary" />
                             </div>
-                            <h3 className="text-lg font-bold text-kurchi-espresso-900 mb-2">Call Us</h3>
+                            <h3 className="text-lg font-bold text-text-primary/90 mb-2">Call Us</h3>
                             <p className="text-sm text-text-secondary font-light leading-relaxed">
                                 Speak directly with our design consultants
                             </p>
@@ -140,10 +140,10 @@ const ContactPage: React.FC = () => {
 
                     <FadeInSection delay="300ms">
                         <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-700 transform hover:scale-105 border border-border">
-                            <div className="w-14 h-14 bg-kurchi-gold-500/10 rounded-xl flex items-center justify-center mb-6">
-                                <EnvelopeIcon className="w-7 h-7 text-kurchi-gold-500" />
+                            <div className="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center mb-6">
+                                <EnvelopeIcon className="w-7 h-7 text-primary" />
                             </div>
-                            <h3 className="text-lg font-bold text-kurchi-espresso-900 mb-2">Email Us</h3>
+                            <h3 className="text-lg font-bold text-text-primary/90 mb-2">Email Us</h3>
                             <p className="text-sm text-text-secondary font-light leading-relaxed">
                                 Send us your detailed requirements and specifications
                             </p>
@@ -152,10 +152,10 @@ const ContactPage: React.FC = () => {
 
                     <FadeInSection delay="400ms">
                         <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-700 transform hover:scale-105 border border-border">
-                            <div className="w-14 h-14 bg-kurchi-gold-500/10 rounded-xl flex items-center justify-center mb-6">
-                                <ChatBubbleLeftRightIcon className="w-7 h-7 text-kurchi-gold-500" />
+                            <div className="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center mb-6">
+                                <ChatBubbleLeftRightIcon className="w-7 h-7 text-primary" />
                             </div>
-                            <h3 className="text-lg font-bold text-kurchi-espresso-900 mb-2">Live Chat</h3>
+                            <h3 className="text-lg font-bold text-text-primary/90 mb-2">Live Chat</h3>
                             <p className="text-sm text-text-secondary font-light leading-relaxed">
                                 Get instant answers to your quick questions
                             </p>
@@ -167,21 +167,21 @@ const ContactPage: React.FC = () => {
             {/* Main Content: Form + Contact Details */}
             <section className="max-w-7xl mx-auto px-6 pb-24">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-                    
+
                     {/* Left Column - Contact Details */}
                     <div className="lg:col-span-1 space-y-8">
                         {/* Headquarters */}
                         <FadeInSection>
-                            <div className="bg-kurchi-espresso-900 text-white p-8 rounded-2xl shadow-lg">
+                            <div className="bg-gradient-to-br from-primary to-primary-hover text-white p-8 rounded-2xl shadow-lg">
                                 <div className="flex items-center space-x-3 mb-6">
-                                    <BuildingOfficeIcon className="w-6 h-6 text-kurchi-gold-500" />
+                                    <BuildingOfficeIcon className="w-6 h-6 text-primary" />
                                     <h3 className="text-xl font-serif font-bold">Headquarters</h3>
                                 </div>
                                 <div className="space-y-4 text-sm font-light">
                                     <p className="text-gray-300 leading-relaxed">
-                                        123 Design District<br/>
-                                        Cyber City, Sector 18<br/>
-                                        Gurgaon, Haryana 122002<br/>
+                                        123 Design District<br />
+                                        Cyber City, Sector 18<br />
+                                        Gurgaon, Haryana 122002<br />
                                         India
                                     </p>
                                     <div className="pt-4 border-t border-white/10">
@@ -190,7 +190,7 @@ const ContactPage: React.FC = () => {
                                     </div>
                                     <div className="pt-2">
                                         <p className="text-xs uppercase tracking-wider text-gray-400 mb-2">Email</p>
-                                        <p className="text-white">projects@kurchi.com</p>
+                                        <p className="text-white">projects@makemyoffice.com</p>
                                     </div>
                                 </div>
                             </div>
@@ -200,17 +200,17 @@ const ContactPage: React.FC = () => {
                         <FadeInSection delay="100ms">
                             <div className="bg-white p-8 rounded-2xl shadow-lg border border-border">
                                 <div className="flex items-center space-x-3 mb-6">
-                                    <ClockIcon className="w-6 h-6 text-kurchi-gold-500" />
-                                    <h3 className="text-xl font-serif font-bold text-kurchi-espresso-900">Working Hours</h3>
+                                    <ClockIcon className="w-6 h-6 text-primary" />
+                                    <h3 className="text-xl font-serif font-bold text-text-primary/90">Working Hours</h3>
                                 </div>
                                 <div className="space-y-3 text-sm">
                                     <div className="flex justify-between items-center">
                                         <span className="text-text-secondary">Monday - Friday</span>
-                                        <span className="font-bold text-kurchi-espresso-900">9:00 AM - 7:00 PM</span>
+                                        <span className="font-bold text-text-primary/90">9:00 AM - 7:00 PM</span>
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <span className="text-text-secondary">Saturday</span>
-                                        <span className="font-bold text-kurchi-espresso-900">10:00 AM - 5:00 PM</span>
+                                        <span className="font-bold text-text-primary/90">10:00 AM - 5:00 PM</span>
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <span className="text-text-secondary">Sunday</span>
@@ -230,22 +230,22 @@ const ContactPage: React.FC = () => {
                         <FadeInSection delay="200ms">
                             <div className="bg-white p-8 rounded-2xl shadow-lg border border-border">
                                 <div className="flex items-center space-x-3 mb-6">
-                                    <UserGroupIcon className="w-6 h-6 text-kurchi-gold-500" />
-                                    <h3 className="text-xl font-serif font-bold text-kurchi-espresso-900">Regional Offices</h3>
+                                    <UserGroupIcon className="w-6 h-6 text-primary" />
+                                    <h3 className="text-xl font-serif font-bold text-text-primary/90">Regional Offices</h3>
                                 </div>
                                 <div className="space-y-4 text-sm">
                                     <div>
-                                        <p className="font-bold text-kurchi-espresso-900 mb-1">Mumbai Office</p>
+                                        <p className="font-bold text-text-primary/90 mb-1">Mumbai Office</p>
                                         <p className="text-text-secondary font-light">BKC, Mumbai - 400051</p>
                                         <p className="text-text-secondary text-xs mt-1">+91 (555) 234-5678</p>
                                     </div>
                                     <div>
-                                        <p className="font-bold text-kurchi-espresso-900 mb-1">Bangalore Office</p>
+                                        <p className="font-bold text-text-primary/90 mb-1">Bangalore Office</p>
                                         <p className="text-text-secondary font-light">Whitefield, Bangalore - 560066</p>
                                         <p className="text-text-secondary text-xs mt-1">+91 (555) 345-6789</p>
                                     </div>
                                     <div>
-                                        <p className="font-bold text-kurchi-espresso-900 mb-1">Delhi Office</p>
+                                        <p className="font-bold text-text-primary/90 mb-1">Delhi Office</p>
                                         <p className="text-text-secondary font-light">Connaught Place, Delhi - 110001</p>
                                         <p className="text-text-secondary text-xs mt-1">+91 (555) 456-7890</p>
                                     </div>
@@ -257,25 +257,25 @@ const ContactPage: React.FC = () => {
                         <FadeInSection delay="300ms">
                             <div className="bg-subtle-background p-8 rounded-2xl border border-border">
                                 <div className="flex items-center space-x-3 mb-4">
-                                    <QuestionMarkCircleIcon className="w-6 h-6 text-kurchi-gold-500" />
-                                    <h3 className="text-lg font-bold text-kurchi-espresso-900">Quick Questions?</h3>
+                                    <QuestionMarkCircleIcon className="w-6 h-6 text-primary" />
+                                    <h3 className="text-lg font-bold text-text-primary/90">Quick Questions?</h3>
                                 </div>
                                 <p className="text-sm text-text-secondary mb-4">Common inquiries we receive:</p>
                                 <ul className="space-y-2 text-sm">
                                     <li className="flex items-start space-x-2">
-                                        <span className="text-kurchi-gold-500">•</span>
+                                        <span className="text-primary">•</span>
                                         <span className="text-text-secondary">What's your typical project timeline?</span>
                                     </li>
                                     <li className="flex items-start space-x-2">
-                                        <span className="text-kurchi-gold-500">•</span>
+                                        <span className="text-primary">•</span>
                                         <span className="text-text-secondary">Do you handle turnkey projects?</span>
                                     </li>
                                     <li className="flex items-start space-x-2">
-                                        <span className="text-kurchi-gold-500">•</span>
+                                        <span className="text-primary">•</span>
                                         <span className="text-text-secondary">Can I see your portfolio?</span>
                                     </li>
                                     <li className="flex items-start space-x-2">
-                                        <span className="text-kurchi-gold-500">•</span>
+                                        <span className="text-primary">•</span>
                                         <span className="text-text-secondary">What's the minimum project size?</span>
                                     </li>
                                 </ul>
@@ -287,7 +287,7 @@ const ContactPage: React.FC = () => {
                     <div className="lg:col-span-2">
                         <FadeInSection delay="400ms">
                             <div className="bg-white p-10 lg:p-12 rounded-2xl shadow-2xl border border-border">
-                                <h2 className="text-3xl font-serif font-bold text-kurchi-espresso-900 mb-3">Send Us a Message</h2>
+                                <h2 className="text-3xl font-serif font-bold text-text-primary/90 mb-3">Send Us a Message</h2>
                                 <p className="text-text-secondary font-light mb-8">Fill out the form below with your project details, and our team will get back to you within 24 hours.</p>
 
                                 {formStatus === 'success' ? (
@@ -302,22 +302,22 @@ const ContactPage: React.FC = () => {
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <div>
                                                 <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Full Name *</label>
-                                                <input 
-                                                    type="text" 
-                                                    required 
-                                                    value={formData.name} 
-                                                    onChange={e => setFormData({...formData, name: e.target.value})} 
-                                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-kurchi-gold-500 outline-none transition-colors"
+                                                <input
+                                                    type="text"
+                                                    required
+                                                    value={formData.name}
+                                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary outline-none transition-colors"
                                                     placeholder="John Doe"
                                                 />
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Company Name</label>
-                                                <input 
-                                                    type="text" 
-                                                    value={formData.company} 
-                                                    onChange={e => setFormData({...formData, company: e.target.value})} 
-                                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-kurchi-gold-500 outline-none transition-colors"
+                                                <input
+                                                    type="text"
+                                                    value={formData.company}
+                                                    onChange={e => setFormData({ ...formData, company: e.target.value })}
+                                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary outline-none transition-colors"
                                                     placeholder="Your Company Ltd."
                                                 />
                                             </div>
@@ -326,23 +326,23 @@ const ContactPage: React.FC = () => {
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <div>
                                                 <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Email Address *</label>
-                                                <input 
-                                                    type="email" 
-                                                    required 
-                                                    value={formData.email} 
-                                                    onChange={e => setFormData({...formData, email: e.target.value})} 
-                                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-kurchi-gold-500 outline-none transition-colors"
+                                                <input
+                                                    type="email"
+                                                    required
+                                                    value={formData.email}
+                                                    onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary outline-none transition-colors"
                                                     placeholder="john@company.com"
                                                 />
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Phone Number *</label>
-                                                <input 
-                                                    type="tel" 
-                                                    required 
-                                                    value={formData.phone} 
-                                                    onChange={e => setFormData({...formData, phone: e.target.value})} 
-                                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-kurchi-gold-500 outline-none transition-colors"
+                                                <input
+                                                    type="tel"
+                                                    required
+                                                    value={formData.phone}
+                                                    onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary outline-none transition-colors"
                                                     placeholder="+91 98765 43210"
                                                 />
                                             </div>
@@ -352,10 +352,10 @@ const ContactPage: React.FC = () => {
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <div>
                                                 <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Project Type</label>
-                                                <select 
-                                                    value={formData.projectType} 
-                                                    onChange={e => setFormData({...formData, projectType: e.target.value})}
-                                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-kurchi-gold-500 outline-none transition-colors"
+                                                <select
+                                                    value={formData.projectType}
+                                                    onChange={e => setFormData({ ...formData, projectType: e.target.value })}
+                                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary outline-none transition-colors"
                                                 >
                                                     <option value="">Select type</option>
                                                     <option value="Office Interior">Office Interior</option>
@@ -367,10 +367,10 @@ const ContactPage: React.FC = () => {
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Budget Range</label>
-                                                <select 
-                                                    value={formData.budget} 
-                                                    onChange={e => setFormData({...formData, budget: e.target.value})}
-                                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-kurchi-gold-500 outline-none transition-colors"
+                                                <select
+                                                    value={formData.budget}
+                                                    onChange={e => setFormData({ ...formData, budget: e.target.value })}
+                                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary outline-none transition-colors"
                                                 >
                                                     <option value="">Select budget</option>
                                                     <option value="Under ₹5 Lakhs">Under ₹5 Lakhs</option>
@@ -385,10 +385,10 @@ const ContactPage: React.FC = () => {
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <div>
                                                 <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Timeline</label>
-                                                <select 
-                                                    value={formData.timeline} 
-                                                    onChange={e => setFormData({...formData, timeline: e.target.value})}
-                                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-kurchi-gold-500 outline-none transition-colors"
+                                                <select
+                                                    value={formData.timeline}
+                                                    onChange={e => setFormData({ ...formData, timeline: e.target.value })}
+                                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary outline-none transition-colors"
                                                 >
                                                     <option value="">Select timeline</option>
                                                     <option value="Urgent (Within 1 month)">Urgent (Within 1 month)</option>
@@ -399,11 +399,11 @@ const ContactPage: React.FC = () => {
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Subject</label>
-                                                <input 
-                                                    type="text" 
-                                                    value={formData.subject} 
-                                                    onChange={e => setFormData({...formData, subject: e.target.value})} 
-                                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-kurchi-gold-500 outline-none transition-colors"
+                                                <input
+                                                    type="text"
+                                                    value={formData.subject}
+                                                    onChange={e => setFormData({ ...formData, subject: e.target.value })}
+                                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary outline-none transition-colors"
                                                     placeholder="e.g., Office Renovation"
                                                 />
                                             </div>
@@ -411,21 +411,21 @@ const ContactPage: React.FC = () => {
 
                                         <div>
                                             <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Your Message *</label>
-                                            <textarea 
-                                                required 
-                                                rows={5} 
-                                                value={formData.message} 
-                                                onChange={e => setFormData({...formData, message: e.target.value})} 
-                                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-kurchi-gold-500 outline-none transition-colors"
+                                            <textarea
+                                                required
+                                                rows={5}
+                                                value={formData.message}
+                                                onChange={e => setFormData({ ...formData, message: e.target.value })}
+                                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary outline-none transition-colors"
                                                 placeholder="Tell us about your project requirements, timeline expectations, and any specific design preferences..."
                                             />
                                         </div>
 
                                         <div className="pt-4">
-                                            <button 
-                                                type="submit" 
+                                            <button
+                                                type="submit"
                                                 disabled={formStatus === 'submitting'}
-                                                className="w-full md:w-auto px-10 py-4 bg-kurchi-espresso-900 text-white font-bold text-sm uppercase tracking-widest rounded-xl hover:bg-kurchi-gold-500 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+                                                className="w-full md:w-auto px-10 py-4 bg-primary text-white font-bold text-sm uppercase tracking-widest rounded-xl hover:bg-primary-hover transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
                                             >
                                                 {formStatus === 'submitting' ? (
                                                     <span className="flex items-center justify-center">

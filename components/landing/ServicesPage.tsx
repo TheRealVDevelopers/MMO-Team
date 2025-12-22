@@ -56,7 +56,7 @@ const ServiceDetail: React.FC<{
     <div className={`flex flex-col lg:flex-row gap-16 items-center py-24 border-b border-border last:border-0 ${reversed ? 'lg:flex-row-reverse' : ''}`}>
         <div className="lg:w-1/2 relative group">
             <FadeInSection className="h-full w-full">
-                <div className={`absolute top-6 ${reversed ? 'right-6' : 'left-6'} w-full h-full border-2 border-kurchi-gold-500/30 z-0 transition-transform duration-1000 ease-luxury group-hover:translate-x-0 group-hover:translate-y-0 translate-x-2 translate-y-2`}></div>
+                <div className={`absolute top-6 ${reversed ? 'right-6' : 'left-6'} w-full h-full border-2 border-primary/30 z-0 transition-transform duration-1000 ease-luxury group-hover:translate-x-0 group-hover:translate-y-0 translate-x-2 translate-y-2`}></div>
                 <div className="relative z-10 overflow-hidden h-full shadow-xl">
                     <img src={image} alt={title} className="w-full h-[500px] object-cover brightness-[0.8] group-hover:brightness-105 saturate-[0.8] group-hover:saturate-100 transition-all duration-1000 ease-luxury group-hover:scale-110" />
                 </div>
@@ -64,19 +64,19 @@ const ServiceDetail: React.FC<{
         </div>
         <div className="lg:w-1/2 px-4 lg:px-8">
             <FadeInSection delay="200ms">
-                <div className="w-16 h-16 bg-white border border-border shadow-md flex items-center justify-center rounded-full mb-8 text-kurchi-gold-500">
+                <div className="w-16 h-16 bg-white border border-border shadow-md flex items-center justify-center rounded-full mb-8 text-primary">
                     {icon}
                 </div>
-                <h3 className="text-4xl font-serif font-bold text-kurchi-espresso-900 mb-6">{title}</h3>
+                <h3 className="text-4xl font-serif font-bold text-text-primary mb-6">{title}</h3>
                 <p className="text-text-secondary text-lg leading-relaxed mb-10 font-light">
                     {description}
                 </p>
                 <div className="space-y-4">
                     {features.map((feature, idx) => (
                         <div key={idx} className="flex items-start space-x-3">
-                            <CheckCircleIcon className="w-6 h-6 text-kurchi-gold-500 flex-shrink-0 mt-0.5" />
+                            <CheckCircleIcon className="w-6 h-6 text-primary flex-shrink-0 mt-0.5" />
                             <div>
-                                <span className="text-base font-medium text-kurchi-espresso-900">{feature}</span>
+                                <span className="text-base font-medium text-text-primary">{feature}</span>
                             </div>
                         </div>
                     ))}
@@ -87,9 +87,9 @@ const ServiceDetail: React.FC<{
 );
 
 const ValuePropCard: React.FC<{ icon: React.ReactNode, title: string, desc: string }> = ({ icon, title, desc }) => (
-    <div className="bg-surface p-8 border border-border shadow-sm hover:shadow-luxury hover:border-kurchi-gold-500 transition-all duration-300 group">
-        <div className="text-text-secondary group-hover:text-kurchi-gold-500 transition-colors mb-4">{icon}</div>
-        <h4 className="text-xl font-bold text-kurchi-espresso-900 mb-3">{title}</h4>
+    <div className="bg-surface p-8 border border-border shadow-sm hover:shadow-luxury hover:border-primary transition-all duration-300 group">
+        <div className="text-text-secondary group-hover:text-primary transition-colors mb-4">{icon}</div>
+        <h4 className="text-xl font-bold text-text-primary mb-3">{title}</h4>
         <p className="text-text-secondary font-light text-sm leading-relaxed">{desc}</p>
     </div>
 );
@@ -98,18 +98,18 @@ const ServicesPage: React.FC<ServicesPageProps> = ({ onNavigate }) => {
     return (
         <div className="bg-background pt-20">
             {/* Header */}
-            <div className="relative h-[60vh] bg-kurchi-espresso-950 flex items-center justify-center overflow-hidden">
+            <div className="relative h-[60vh] bg-background flex items-center justify-center overflow-hidden">
                 <div className="absolute inset-0">
                     <img
                         src="https://images.unsplash.com/photo-1497366216548-37526070297c?ixlib=rb-1.2.1&auto=format&fit=crop&w=2000&q=80"
                         alt="Services Hero"
                         className="w-full h-full object-cover opacity-40 animate-image-settle"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-b from-kurchi-espresso-950/60 to-background"></div>
+                    <div className="absolute inset-0 bg-gradient-to-b from-background/95 to-background"></div>
                 </div>
                 <div className="relative z-10 text-center px-4 max-w-4xl mx-auto mt-20">
                     <FadeInSection>
-                        <span className="text-kurchi-gold-500 uppercase tracking-[0.3em] text-xs font-bold mb-4 block">Our Expertise</span>
+                        <span className="text-primary uppercase tracking-[0.3em] text-xs font-bold mb-4 block">Our Expertise</span>
                         <h1 className="text-5xl md:text-7xl font-serif font-bold text-white mb-6">Comprehensive Solutions</h1>
                         <p className="text-gray-300 text-lg font-light max-w-2xl mx-auto leading-relaxed">
                             From the first sketch to the final polish, we handle every aspect of creating your ideal workspace with precision and artistry.
@@ -179,7 +179,7 @@ const ServicesPage: React.FC<ServicesPageProps> = ({ onNavigate }) => {
             </div>
 
             {/* CTA */}
-            <section className="bg-kurchi-espresso-900 py-24 relative overflow-hidden">
+            <section className="bg-text-primary py-24 relative overflow-hidden">
                 <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
                 <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
                     <FadeInSection>
@@ -187,7 +187,7 @@ const ServicesPage: React.FC<ServicesPageProps> = ({ onNavigate }) => {
                         <p className="text-gray-300 mb-10 font-light text-lg">
                             Let's discuss how our expertise can transform your workspace into a productivity powerhouse.
                         </p>
-                        <button onClick={() => onNavigate('contact')} className="px-10 py-4 bg-kurchi-gold-500 text-white font-bold text-sm uppercase tracking-widest hover:bg-white hover:text-kurchi-espresso-900 transition-all duration-300 transform active:scale-95 shadow-lg">
+                        <button onClick={() => onNavigate('contact')} className="px-10 py-4 bg-primary text-white font-bold text-sm uppercase tracking-widest hover:bg-white hover:text-text-primary transition-all duration-300 transform active:scale-95 shadow-lg">
                             Start a Project
                         </button>
                     </FadeInSection>

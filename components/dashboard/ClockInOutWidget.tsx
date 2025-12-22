@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ClockIcon, 
-  PlayIcon, 
-  PauseIcon, 
+import {
+  ClockIcon,
+  PlayIcon,
+  PauseIcon,
   StopIcon,
   CheckCircleIcon,
 } from '@heroicons/react/24/outline';
@@ -75,7 +75,7 @@ const ClockInOutWidget: React.FC<ClockInOutWidgetProps> = ({ userId, userName })
 
   const handleClockOut = async () => {
     if (!status.currentEntryId) return;
-    
+
     const confirmed = window.confirm('Are you sure you want to clock out for the day?');
     if (!confirmed) return;
 
@@ -91,7 +91,7 @@ const ClockInOutWidget: React.FC<ClockInOutWidgetProps> = ({ userId, userName })
 
   const handleStartBreak = async () => {
     if (!status.currentEntryId) return;
-    
+
     setActionLoading(true);
     try {
       await startBreak(status.currentEntryId);
@@ -104,7 +104,7 @@ const ClockInOutWidget: React.FC<ClockInOutWidgetProps> = ({ userId, userName })
 
   const handleEndBreak = async () => {
     if (!status.currentEntryId) return;
-    
+
     setActionLoading(true);
     try {
       await endBreak(status.currentEntryId);
@@ -117,10 +117,10 @@ const ClockInOutWidget: React.FC<ClockInOutWidgetProps> = ({ userId, userName })
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-kurchi-espresso-800 rounded-xl shadow-md p-6">
+      <div className="bg-white dark:bg-background/90 rounded-xl shadow-md p-6">
         <div className="animate-pulse">
-          <div className="h-4 bg-gray-200 dark:bg-kurchi-espresso-700 rounded w-3/4 mb-4"></div>
-          <div className="h-8 bg-gray-200 dark:bg-kurchi-espresso-700 rounded"></div>
+          <div className="h-4 bg-gray-200 dark:bg-surface/90 rounded w-3/4 mb-4"></div>
+          <div className="h-8 bg-gray-200 dark:bg-surface/90 rounded"></div>
         </div>
       </div>
     );
@@ -140,15 +140,15 @@ const ClockInOutWidget: React.FC<ClockInOutWidgetProps> = ({ userId, userName })
   };
 
   return (
-    <div className="bg-white dark:bg-kurchi-espresso-800 rounded-xl shadow-md p-6 border-2 border-transparent hover:border-kurchi-gold-500 transition-all duration-300">
+    <div className="bg-white dark:bg-background/90 rounded-xl shadow-md p-6 border-2 border-transparent hover:border-primary transition-all duration-300">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
-          <div className="bg-kurchi-gold-500/10 dark:bg-kurchi-gold-500/20 rounded-full p-3">
-            <ClockIcon className="w-6 h-6 text-kurchi-gold-600 dark:text-kurchi-gold-400" />
+          <div className="bg-primary/10 dark:bg-primary/20 rounded-full p-3">
+            <ClockIcon className="w-6 h-6 text-primary-hover dark:text-primary-hover/80" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-kurchi-espresso-900 dark:text-white">Time Tracking</h3>
+            <h3 className="text-lg font-bold text-text-primary dark:text-white">Time Tracking</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">{currentTime.toLocaleTimeString()}</p>
           </div>
         </div>
@@ -159,12 +159,12 @@ const ClockInOutWidget: React.FC<ClockInOutWidgetProps> = ({ userId, userName })
 
       {/* Time Display */}
       {status.status !== TimeTrackingStatus.CLOCKED_OUT && (
-        <div className="mb-6 bg-gradient-to-br from-kurchi-gold-50 to-kurchi-gold-100 dark:from-kurchi-espresso-700 dark:to-kurchi-espresso-600 rounded-lg p-4">
+        <div className="mb-6 bg-gradient-to-br from-primary/10 to-primary-subtle-background/200 dark:from-background/20 dark:to-surface/10 rounded-lg p-4">
           <div className="text-center">
             <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
               {status.status === TimeTrackingStatus.ON_BREAK ? 'Break Duration' : 'Work Duration'}
             </p>
-            <p className="text-3xl font-bold text-kurchi-espresso-900 dark:text-white font-mono">
+            <p className="text-3xl font-bold text-text-primary dark:text-white font-mono">
               {status.status === TimeTrackingStatus.ON_BREAK ? breakDuration : duration}
             </p>
             {status.clockInTime && (

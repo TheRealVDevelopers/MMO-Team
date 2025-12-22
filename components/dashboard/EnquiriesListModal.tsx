@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import Modal from '../shared/Modal';
 import { ProjectEnquiry, EnquiryStatus } from '../../types';
-import { 
-    EnvelopeIcon, 
-    PhoneIcon, 
-    MapPinIcon, 
+import {
+    EnvelopeIcon,
+    PhoneIcon,
+    MapPinIcon,
     ClockIcon,
     CheckCircleIcon,
     XCircleIcon,
@@ -20,9 +20,9 @@ interface EnquiriesListModalProps {
     currentUserId: string;
 }
 
-const EnquiriesListModal: React.FC<EnquiriesListModalProps> = ({ 
-    isOpen, 
-    onClose, 
+const EnquiriesListModal: React.FC<EnquiriesListModalProps> = ({
+    isOpen,
+    onClose,
     enquiries,
     currentUserId
 }) => {
@@ -84,7 +84,7 @@ const EnquiriesListModal: React.FC<EnquiriesListModalProps> = ({
                         enquiries.map((enquiry) => (
                             <div
                                 key={enquiry.id}
-                                className="bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl p-6 hover:border-kurchi-gold-500 transition-all duration-300 cursor-pointer group"
+                                className="bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl p-6 hover:border-primary transition-all duration-300 cursor-pointer group"
                                 onClick={() => setSelectedEnquiry(enquiry)}
                             >
                                 <div className="flex items-start justify-between">
@@ -92,7 +92,7 @@ const EnquiriesListModal: React.FC<EnquiriesListModalProps> = ({
                                         {/* Header */}
                                         <div className="flex items-center justify-between mb-4">
                                             <div className="flex items-center space-x-3">
-                                                <h3 className="text-xl font-bold text-kurchi-espresso-900 dark:text-white">
+                                                <h3 className="text-xl font-bold text-text-primary dark:text-white">
                                                     {enquiry.clientName}
                                                 </h3>
                                                 <span className={`px-3 py-1 rounded-full text-xs font-bold border-2 ${getStatusColor(enquiry.status)} flex items-center space-x-1`}>
@@ -101,7 +101,7 @@ const EnquiriesListModal: React.FC<EnquiriesListModalProps> = ({
                                                 </span>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-sm font-mono text-kurchi-gold-600 dark:text-kurchi-gold-400 font-bold">
+                                                <p className="text-sm font-mono text-primary dark:text-primary-hover font-bold">
                                                     {enquiry.enquiryId}
                                                 </p>
                                                 <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center justify-end space-x-1 mt-1">
@@ -114,15 +114,15 @@ const EnquiriesListModal: React.FC<EnquiriesListModalProps> = ({
                                         {/* Contact Info */}
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                                             <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
-                                                <EnvelopeIcon className="w-4 h-4 text-kurchi-gold-500" />
+                                                <EnvelopeIcon className="w-4 h-4 text-primary" />
                                                 <span className="truncate">{enquiry.email}</span>
                                             </div>
                                             <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
-                                                <PhoneIcon className="w-4 h-4 text-kurchi-gold-500" />
+                                                <PhoneIcon className="w-4 h-4 text-primary" />
                                                 <span>{enquiry.mobile}</span>
                                             </div>
                                             <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
-                                                <MapPinIcon className="w-4 h-4 text-kurchi-gold-500" />
+                                                <MapPinIcon className="w-4 h-4 text-primary" />
                                                 <span>{enquiry.city}</span>
                                             </div>
                                         </div>
@@ -131,19 +131,19 @@ const EnquiriesListModal: React.FC<EnquiriesListModalProps> = ({
                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                                             <div>
                                                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Project Type</p>
-                                                <p className="text-sm font-bold text-kurchi-espresso-900 dark:text-white">{enquiry.projectType}</p>
+                                                <p className="text-sm font-bold text-text-primary dark:text-white">{enquiry.projectType}</p>
                                             </div>
                                             <div>
                                                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Space</p>
-                                                <p className="text-sm font-bold text-kurchi-espresso-900 dark:text-white">{enquiry.spaceType}</p>
+                                                <p className="text-sm font-bold text-text-primary dark:text-white">{enquiry.spaceType}</p>
                                             </div>
                                             <div>
                                                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Area</p>
-                                                <p className="text-sm font-bold text-kurchi-espresso-900 dark:text-white">{enquiry.area}</p>
+                                                <p className="text-sm font-bold text-text-primary dark:text-white">{enquiry.area}</p>
                                             </div>
                                             <div>
                                                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Budget</p>
-                                                <p className="text-sm font-bold text-kurchi-espresso-900 dark:text-white">{enquiry.budgetRange}</p>
+                                                <p className="text-sm font-bold text-text-primary dark:text-white">{enquiry.budgetRange}</p>
                                             </div>
                                         </div>
 
@@ -152,14 +152,14 @@ const EnquiriesListModal: React.FC<EnquiriesListModalProps> = ({
                                             <div className="mt-4 flex items-center space-x-2 text-sm">
                                                 <UserPlusIcon className="w-4 h-4 text-green-600" />
                                                 <span className="text-gray-600 dark:text-gray-300">
-                                                    Assigned to: <span className="font-bold text-kurchi-espresso-900 dark:text-white">{enquiry.assignedToName}</span>
+                                                    Assigned to: <span className="font-bold text-text-primary dark:text-white">{enquiry.assignedToName}</span>
                                                 </span>
                                             </div>
                                         )}
                                     </div>
 
                                     {/* Arrow Icon */}
-                                    <ArrowRightIcon className="w-6 h-6 text-gray-400 group-hover:text-kurchi-gold-500 group-hover:translate-x-2 transition-all duration-300 ml-4 flex-shrink-0" />
+                                    <ArrowRightIcon className="w-6 h-6 text-gray-400 group-hover:text-primary group-hover:translate-x-2 transition-all duration-300 ml-4 flex-shrink-0" />
                                 </div>
                             </div>
                         ))

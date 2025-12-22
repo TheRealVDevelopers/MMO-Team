@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
+import {
     CheckCircleIcon,
     ClockIcon,
     ChatBubbleLeftRightIcon,
@@ -26,7 +26,7 @@ const useOnScreen = (options: IntersectionObserverInit) => {
         const observer = new IntersectionObserver(([entry]) => {
             if (entry.isIntersecting) {
                 setIsVisible(true);
-                observer.disconnect(); 
+                observer.disconnect();
             }
         }, options);
 
@@ -40,7 +40,7 @@ const useOnScreen = (options: IntersectionObserverInit) => {
 const FadeInSection: React.FC<{ children: React.ReactNode; delay?: string; className?: string }> = ({ children, delay = '0ms', className = '' }) => {
     const [ref, isVisible] = useOnScreen({ threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
     return (
-        <div 
+        <div
             ref={ref}
             style={{ animationDelay: delay }}
             className={`${className} ${isVisible ? 'animate-luxury-reveal opacity-100' : 'opacity-0 translate-y-8'}`}
@@ -102,7 +102,7 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
         consultant: {
             name: 'Rajesh Kumar',
             phone: '+91 98765 43210',
-            email: 'rajesh@kurchi.com'
+            email: 'rajesh@makemyoffice.com'
         },
         currentStage: 3,
         expectedCompletion: 'March 2025',
@@ -245,7 +245,7 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
         if (stage.status === 'completed') {
             return <CheckCircleSolid className="w-8 h-8 text-green-500" />;
         } else if (stage.status === 'in-progress') {
-            return <ClockIcon className="w-8 h-8 text-kurchi-gold-500 animate-pulse" />;
+            return <ClockIcon className="w-8 h-8 text-primary animate-pulse" />;
         } else {
             return <div className="w-8 h-8 rounded-full border-2 border-gray-300 bg-white"></div>;
         }
@@ -258,17 +258,17 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
                 <div className="max-w-7xl mx-auto px-6 py-4">
                     <div className="flex justify-between items-center">
                         <div className="flex items-center space-x-4">
-                            <div className="w-10 h-10 bg-kurchi-gold-500 rounded-xl flex items-center justify-center">
-                                <span className="text-white font-serif font-bold text-xl">K</span>
+                            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
+                                <span className="text-white font-serif font-bold text-xl">M</span>
                             </div>
                             <div>
-                                <h1 className="text-xl font-serif font-bold text-kurchi-espresso-900">My Project</h1>
+                                <h1 className="text-xl font-serif font-bold text-text-primary/90">My Project</h1>
                                 <p className="text-xs text-text-secondary">ID: {projectId}</p>
                             </div>
                         </div>
-                        <button 
+                        <button
                             onClick={onLogout}
-                            className="text-sm text-text-secondary hover:text-kurchi-espresso-900 transition-colors"
+                            className="text-sm text-text-secondary hover:text-text-primary/90 transition-colors"
                         >
                             Logout
                         </button>
@@ -278,38 +278,38 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
 
             <div className="max-w-7xl mx-auto px-6 py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    
+
                     {/* LEFT COLUMN - Project Timeline */}
                     <div className="lg:col-span-2 space-y-8">
-                        
+
                         {/* Project Overview Card */}
                         <FadeInSection>
                             <div className="bg-white rounded-2xl shadow-lg p-8">
                                 <div className="flex items-start justify-between mb-6">
                                     <div>
-                                        <h2 className="text-2xl font-serif font-bold text-kurchi-espresso-900 mb-2">
+                                        <h2 className="text-2xl font-serif font-bold text-text-primary/90 mb-2">
                                             {projectData.projectType}
                                         </h2>
                                         <p className="text-text-secondary">Welcome back, {projectData.clientName}!</p>
                                     </div>
                                     <div className="text-right">
                                         <p className="text-sm text-text-secondary mb-1">Expected Completion</p>
-                                        <p className="text-lg font-bold text-kurchi-gold-500">{projectData.expectedCompletion}</p>
+                                        <p className="text-lg font-bold text-primary">{projectData.expectedCompletion}</p>
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                                     <div className="p-4 bg-subtle-background rounded-xl">
                                         <p className="text-xs text-text-secondary uppercase tracking-wider mb-1">Area</p>
-                                        <p className="text-lg font-bold text-kurchi-espresso-900">{projectData.area}</p>
+                                        <p className="text-lg font-bold text-text-primary/90">{projectData.area}</p>
                                     </div>
                                     <div className="p-4 bg-subtle-background rounded-xl">
                                         <p className="text-xs text-text-secondary uppercase tracking-wider mb-1">Budget</p>
-                                        <p className="text-lg font-bold text-kurchi-espresso-900">{projectData.budget}</p>
+                                        <p className="text-lg font-bold text-text-primary/90">{projectData.budget}</p>
                                     </div>
                                     <div className="p-4 bg-subtle-background rounded-xl">
                                         <p className="text-xs text-text-secondary uppercase tracking-wider mb-1">Current Stage</p>
-                                        <p className="text-lg font-bold text-kurchi-espresso-900">{stages[projectData.currentStage - 1].name}</p>
+                                        <p className="text-lg font-bold text-text-primary/90">{stages[projectData.currentStage - 1].name}</p>
                                     </div>
                                 </div>
                             </div>
@@ -318,40 +318,37 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
                         {/* Timeline */}
                         <FadeInSection delay="100ms">
                             <div className="bg-white rounded-2xl shadow-lg p-8">
-                                <h3 className="text-xl font-serif font-bold text-kurchi-espresso-900 mb-8">Project Journey</h3>
-                                
+                                <h3 className="text-xl font-serif font-bold text-text-primary/90 mb-8">Project Journey</h3>
+
                                 <div className="space-y-6">
                                     {stages.map((stage, index) => (
                                         <div key={stage.id} className="relative">
                                             {/* Connecting Line */}
                                             {index < stages.length - 1 && (
-                                                <div className={`absolute left-4 top-12 w-0.5 h-full ${
-                                                    stage.status === 'completed' ? 'bg-green-500' : 'bg-gray-200'
-                                                }`}></div>
+                                                <div className={`absolute left-4 top-12 w-0.5 h-full ${stage.status === 'completed' ? 'bg-green-500' : 'bg-gray-200'
+                                                    }`}></div>
                                             )}
 
                                             <div className="flex items-start space-x-4">
                                                 <div className="flex-shrink-0 relative z-10 bg-white">
                                                     {getStageIcon(stage)}
                                                 </div>
-                                                
-                                                <div className={`flex-1 pb-8 transition-all duration-700 ${
-                                                    stage.status === 'upcoming' ? 'opacity-50' : 'opacity-100'
-                                                }`}>
+
+                                                <div className={`flex-1 pb-8 transition-all duration-700 ${stage.status === 'upcoming' ? 'opacity-50' : 'opacity-100'
+                                                    }`}>
                                                     <div className="flex items-start justify-between">
                                                         <div>
-                                                            <h4 className={`font-bold text-lg mb-1 ${
-                                                                stage.status === 'in-progress' ? 'text-kurchi-gold-500' :
+                                                            <h4 className={`font-bold text-lg mb-1 ${stage.status === 'in-progress' ? 'text-primary' :
                                                                 stage.status === 'completed' ? 'text-green-700' :
-                                                                'text-gray-600'
-                                                            }`}>
+                                                                    'text-gray-600'
+                                                                }`}>
                                                                 {stage.name}
                                                             </h4>
                                                             {stage.notes && (
                                                                 <p className="text-sm text-text-secondary mt-2">{stage.notes}</p>
                                                             )}
                                                         </div>
-                                                        
+
                                                         <div className="text-right ml-4">
                                                             {stage.status === 'completed' && stage.endDate && (
                                                                 <span className="inline-flex items-center text-xs text-green-600 bg-green-50 px-3 py-1 rounded-full">
@@ -360,7 +357,7 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
                                                                 </span>
                                                             )}
                                                             {stage.status === 'in-progress' && (
-                                                                <span className="inline-flex items-center text-xs text-kurchi-gold-600 bg-kurchi-gold-50 px-3 py-1 rounded-full">
+                                                                <span className="inline-flex items-center text-xs text-primary-hover bg-primary/10 px-3 py-1 rounded-full">
                                                                     <ClockIcon className="w-3 h-3 mr-1" />
                                                                     Expected: {stage.expectedDate}
                                                                 </span>
@@ -384,27 +381,27 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
 
                     {/* RIGHT COLUMN - Details & Chat */}
                     <div className="space-y-6">
-                        
+
                         {/* Consultant Card */}
                         <FadeInSection delay="200ms">
                             <div className="bg-white rounded-2xl shadow-lg p-6">
                                 <h3 className="text-sm font-bold text-text-secondary uppercase tracking-wider mb-4">Your Consultant</h3>
                                 <div className="flex items-center space-x-4 mb-4">
-                                    <div className="w-12 h-12 bg-kurchi-gold-100 rounded-full flex items-center justify-center">
-                                        <UserCircleIcon className="w-8 h-8 text-kurchi-gold-500" />
+                                    <div className="w-12 h-12 bg-primary-subtle-background/200 rounded-full flex items-center justify-center">
+                                        <UserCircleIcon className="w-8 h-8 text-primary" />
                                     </div>
                                     <div>
-                                        <h4 className="font-bold text-kurchi-espresso-900">{projectData.consultant.name}</h4>
+                                        <h4 className="font-bold text-text-primary/90">{projectData.consultant.name}</h4>
                                         <p className="text-xs text-text-secondary">Project Consultant</p>
                                     </div>
                                 </div>
                                 <div className="space-y-3 text-sm">
                                     <div className="flex items-center space-x-3 text-text-secondary">
-                                        <PhoneIcon className="w-4 h-4 text-kurchi-gold-500" />
+                                        <PhoneIcon className="w-4 h-4 text-primary" />
                                         <span>{projectData.consultant.phone}</span>
                                     </div>
                                     <div className="flex items-center space-x-3 text-text-secondary">
-                                        <EnvelopeIcon className="w-4 h-4 text-kurchi-gold-500" />
+                                        <EnvelopeIcon className="w-4 h-4 text-primary" />
                                         <span className="break-all">{projectData.consultant.email}</span>
                                     </div>
                                 </div>
@@ -418,22 +415,20 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
                                 <div className="flex border-b border-border">
                                     <button
                                         onClick={() => setActiveTab('chat')}
-                                        className={`flex-1 px-4 py-3 text-sm font-bold transition-colors ${
-                                            activeTab === 'chat' 
-                                                ? 'bg-kurchi-gold-500 text-white' 
-                                                : 'text-text-secondary hover:bg-gray-50'
-                                        }`}
+                                        className={`flex-1 px-4 py-3 text-sm font-bold transition-colors ${activeTab === 'chat'
+                                            ? 'bg-primary text-white'
+                                            : 'text-text-secondary hover:bg-gray-50'
+                                            }`}
                                     >
                                         <ChatBubbleLeftRightIcon className="w-4 h-4 inline mr-2" />
                                         Chat
                                     </button>
                                     <button
                                         onClick={() => setActiveTab('issues')}
-                                        className={`flex-1 px-4 py-3 text-sm font-bold transition-colors ${
-                                            activeTab === 'issues' 
-                                                ? 'bg-kurchi-gold-500 text-white' 
-                                                : 'text-text-secondary hover:bg-gray-50'
-                                        }`}
+                                        className={`flex-1 px-4 py-3 text-sm font-bold transition-colors ${activeTab === 'issues'
+                                            ? 'bg-primary text-white'
+                                            : 'text-text-secondary hover:bg-gray-50'
+                                            }`}
                                     >
                                         <ExclamationTriangleIcon className="w-4 h-4 inline mr-2" />
                                         Issues
@@ -445,15 +440,14 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
                                     <div className="flex flex-col h-[500px]">
                                         <div className="flex-1 overflow-y-auto p-4 space-y-4">
                                             {messages.map((msg) => (
-                                                <div 
+                                                <div
                                                     key={msg.id}
                                                     className={`flex ${msg.sender === 'client' ? 'justify-end' : 'justify-start'}`}
                                                 >
-                                                    <div className={`max-w-[80%] ${
-                                                        msg.sender === 'client' 
-                                                            ? 'bg-kurchi-gold-500 text-white' 
-                                                            : 'bg-gray-100 text-kurchi-espresso-900'
-                                                    } rounded-2xl px-4 py-3`}>
+                                                    <div className={`max-w-[80%] ${msg.sender === 'client'
+                                                        ? 'bg-primary text-white'
+                                                        : 'bg-gray-100 text-text-primary/90'
+                                                        } rounded-2xl px-4 py-3`}>
                                                         <p className="text-xs font-bold mb-1 opacity-70">{msg.senderName}</p>
                                                         <p className="text-sm">{msg.content}</p>
                                                         <p className="text-xs opacity-60 mt-2">
@@ -473,11 +467,11 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
                                                     onChange={(e) => setNewMessage(e.target.value)}
                                                     onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                                                     placeholder="Type your message..."
-                                                    className="flex-1 px-4 py-2 border border-gray-200 rounded-xl focus:border-kurchi-gold-500 outline-none text-sm"
+                                                    className="flex-1 px-4 py-2 border border-gray-200 rounded-xl focus:border-primary outline-none text-sm"
                                                 />
                                                 <button
                                                     onClick={handleSendMessage}
-                                                    className="px-4 py-2 bg-kurchi-gold-500 text-white rounded-xl hover:bg-kurchi-espresso-900 transition-colors"
+                                                    className="px-4 py-2 bg-primary text-white rounded-xl hover:bg-text-primary/90 transition-colors"
                                                 >
                                                     <PaperAirplaneIcon className="w-5 h-5" />
                                                 </button>
@@ -491,7 +485,7 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
                                     <div className="p-4">
                                         <button
                                             onClick={() => setShowIssueModal(true)}
-                                            className="w-full mb-4 px-4 py-3 bg-kurchi-espresso-900 text-white font-bold text-sm rounded-xl hover:bg-kurchi-gold-500 transition-colors"
+                                            className="w-full mb-4 px-4 py-3 bg-text-primary/90 text-white font-bold text-sm rounded-xl hover:bg-primary transition-colors"
                                         >
                                             <ExclamationTriangleIcon className="w-4 h-4 inline mr-2" />
                                             Raise an Issue
@@ -501,20 +495,19 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
                                             {issues.map((issue) => (
                                                 <div key={issue.id} className="p-4 bg-gray-50 rounded-xl">
                                                     <div className="flex items-start justify-between mb-2">
-                                                        <span className="text-xs font-bold text-kurchi-espresso-900">{issue.category}</span>
-                                                        <span className={`text-xs px-2 py-1 rounded-full ${
-                                                            issue.status === 'resolved' ? 'bg-green-100 text-green-700' :
+                                                        <span className="text-xs font-bold text-text-primary/90">{issue.category}</span>
+                                                        <span className={`text-xs px-2 py-1 rounded-full ${issue.status === 'resolved' ? 'bg-green-100 text-green-700' :
                                                             issue.status === 'in-progress' ? 'bg-yellow-100 text-yellow-700' :
-                                                            'bg-red-100 text-red-700'
-                                                        }`}>
+                                                                'bg-red-100 text-red-700'
+                                                            }`}>
                                                             {issue.status}
                                                         </span>
                                                     </div>
                                                     <p className="text-sm text-text-secondary mb-2">{issue.description}</p>
                                                     {issue.response && (
                                                         <div className="mt-3 pt-3 border-t border-gray-200">
-                                                            <p className="text-xs font-bold text-kurchi-gold-500 mb-1">Response:</p>
-                                                            <p className="text-sm text-kurchi-espresso-900">{issue.response}</p>
+                                                            <p className="text-xs font-bold text-primary mb-1">Response:</p>
+                                                            <p className="text-sm text-text-primary/90">{issue.response}</p>
                                                         </div>
                                                     )}
                                                     <p className="text-xs text-gray-400 mt-2">
@@ -536,8 +529,8 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-6">
                     <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8">
                         <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-2xl font-serif font-bold text-kurchi-espresso-900">Raise an Issue</h3>
-                            <button onClick={() => setShowIssueModal(false)} className="text-gray-400 hover:text-kurchi-espresso-900">
+                            <h3 className="text-2xl font-serif font-bold text-text-primary/90">Raise an Issue</h3>
+                            <button onClick={() => setShowIssueModal(false)} className="text-gray-400 hover:text-text-primary/90">
                                 <XMarkIcon className="w-6 h-6" />
                             </button>
                         </div>
@@ -547,8 +540,8 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
                                 <label className="block text-sm font-bold text-text-secondary uppercase tracking-wider mb-2">Category</label>
                                 <select
                                     value={newIssue.category}
-                                    onChange={(e) => setNewIssue({...newIssue, category: e.target.value})}
-                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-kurchi-gold-500 outline-none"
+                                    onChange={(e) => setNewIssue({ ...newIssue, category: e.target.value })}
+                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary outline-none"
                                 >
                                     <option value="">Select category</option>
                                     <option value="Design Query">Design Query</option>
@@ -565,8 +558,8 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
                                 <textarea
                                     rows={4}
                                     value={newIssue.description}
-                                    onChange={(e) => setNewIssue({...newIssue, description: e.target.value})}
-                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-kurchi-gold-500 outline-none"
+                                    onChange={(e) => setNewIssue({ ...newIssue, description: e.target.value })}
+                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary outline-none"
                                     placeholder="Describe your issue..."
                                 />
                             </div>
@@ -578,12 +571,11 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
                                         <button
                                             key={level}
                                             type="button"
-                                            onClick={() => setNewIssue({...newIssue, urgency: level})}
-                                            className={`flex-1 px-4 py-2 rounded-xl border-2 capitalize transition-all ${
-                                                newIssue.urgency === level
-                                                    ? 'border-kurchi-gold-500 bg-kurchi-gold-500/5 text-kurchi-espresso-900 font-bold'
-                                                    : 'border-gray-200 text-text-secondary hover:border-kurchi-gold-500/50'
-                                            }`}
+                                            onClick={() => setNewIssue({ ...newIssue, urgency: level })}
+                                            className={`flex-1 px-4 py-2 rounded-xl border-2 capitalize transition-all ${newIssue.urgency === level
+                                                ? 'border-primary bg-primary/5 text-text-primary/90 font-bold'
+                                                : 'border-gray-200 text-text-secondary hover:border-primary/50'
+                                                }`}
                                         >
                                             {level}
                                         </button>
@@ -594,7 +586,7 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
                             <button
                                 onClick={handleRaiseIssue}
                                 disabled={!newIssue.category || !newIssue.description}
-                                className="w-full py-4 bg-kurchi-espresso-900 text-white font-bold text-sm uppercase tracking-widest rounded-xl hover:bg-kurchi-gold-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full py-4 bg-text-primary/90 text-white font-bold text-sm uppercase tracking-widest rounded-xl hover:bg-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 Submit Issue
                             </button>
