@@ -84,7 +84,7 @@ const useOnScreen = (options: IntersectionObserverInit) => {
         const observer = new IntersectionObserver(([entry]) => {
             if (entry.isIntersecting) {
                 setIsVisible(true);
-                observer.disconnect(); 
+                observer.disconnect();
             }
         }, options);
 
@@ -98,7 +98,7 @@ const useOnScreen = (options: IntersectionObserverInit) => {
 const FadeInSection: React.FC<{ children: React.ReactNode; delay?: string; className?: string }> = ({ children, delay = '0ms', className = '' }) => {
     const [ref, isVisible] = useOnScreen({ threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
     return (
-        <div 
+        <div
             ref={ref}
             style={{ animationDelay: delay }}
             className={`${className} ${isVisible ? 'animate-luxury-reveal opacity-100' : 'opacity-0 translate-y-8'}`}
@@ -111,8 +111,8 @@ const FadeInSection: React.FC<{ children: React.ReactNode; delay?: string; class
 const PortfolioPage: React.FC<PortfolioPageProps> = ({ onNavigate }) => {
     const [activeFilter, setActiveFilter] = useState("All");
 
-    const filteredProjects = activeFilter === "All" 
-        ? projects 
+    const filteredProjects = activeFilter === "All"
+        ? projects
         : projects.filter(p => p.category === activeFilter);
 
     return (
@@ -135,14 +135,13 @@ const PortfolioPage: React.FC<PortfolioPageProps> = ({ onNavigate }) => {
                 <div className="max-w-7xl mx-auto px-6 lg:px-12 overflow-x-auto scrollbar-hide">
                     <div className="flex justify-center space-x-8 min-w-max">
                         {categories.map(cat => (
-                            <button 
+                            <button
                                 key={cat}
                                 onClick={() => setActiveFilter(cat)}
-                                className={`text-xs uppercase tracking-[0.15em] font-bold transition-all py-2 border-b-2 ${
-                                    activeFilter === cat 
-                                    ? 'text-kurchi-gold-500 border-kurchi-gold-500' 
-                                    : 'text-text-secondary border-transparent hover:text-text-primary hover:border-gray-300'
-                                }`}
+                                className={`text-xs uppercase tracking-[0.15em] font-bold transition-all py-2 border-b-2 ${activeFilter === cat
+                                        ? 'text-kurchi-gold-500 border-kurchi-gold-500'
+                                        : 'text-text-secondary border-transparent hover:text-text-primary hover:border-gray-300'
+                                    }`}
                             >
                                 {cat}
                             </button>
@@ -163,10 +162,10 @@ const PortfolioPage: React.FC<PortfolioPageProps> = ({ onNavigate }) => {
                                             View Project
                                         </button>
                                     </div>
-                                    <img 
-                                        src={project.image} 
-                                        alt={project.title} 
-                                        className="w-full h-full object-cover transition-transform duration-1000 ease-luxury group-hover:scale-110 grayscale group-hover:grayscale-0"
+                                    <img
+                                        src={project.image}
+                                        alt={project.title}
+                                        className="w-full h-full object-cover brightness-[0.8] group-hover:brightness-105 saturate-[0.8] group-hover:saturate-100 transition-all duration-1000 ease-luxury group-hover:scale-110"
                                     />
                                 </div>
                                 <div className="flex justify-between items-end">
@@ -175,13 +174,13 @@ const PortfolioPage: React.FC<PortfolioPageProps> = ({ onNavigate }) => {
                                         <h3 className="text-xl font-serif font-bold text-kurchi-espresso-900 group-hover:text-kurchi-gold-500 transition-colors">{project.title}</h3>
                                         <p className="text-xs text-text-secondary mt-1">{project.location} • {project.size}</p>
                                     </div>
-                                    <ArrowUpRightIcon className="w-5 h-5 text-text-secondary group-hover:text-kurchi-gold-500 transition-colors transform group-hover:translate-x-1 group-hover:-translate-y-1 duration-300"/>
+                                    <ArrowUpRightIcon className="w-5 h-5 text-text-secondary group-hover:text-kurchi-gold-500 transition-colors transform group-hover:translate-x-1 group-hover:-translate-y-1 duration-300" />
                                 </div>
                             </div>
                         </FadeInSection>
                     ))}
                 </div>
-                
+
                 {filteredProjects.length === 0 && (
                     <div className="text-center py-24 text-text-secondary font-light">
                         No projects found in this category.

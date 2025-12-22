@@ -19,7 +19,8 @@ import {
     getDocs
 } from 'firebase/firestore';
 import { auth, db } from '../firebase';
-import { User, UserRole } from '../types';
+import { User, UserRole, Vendor } from '../types';
+import { USERS, VENDORS } from '../constants';
 
 // Default password for all new staff accounts
 export const DEFAULT_STAFF_PASSWORD = '123456';
@@ -56,18 +57,15 @@ export const convertToAppUser = async (firebaseUser: FirebaseUser): Promise<User
 /**
  * Sign in staff member with email and password
  */
-export const signInStaff = async (email: string, password: string, designation?: string): Promise<User | null> => {
+export const signInStaff = async (email: string, password: string): Promise<User | null> => {
     // Simplified Auth for Development
-    if (email === 'a@mmo.com' && password === '123456') {
-        console.log(`Simplified staff login as ${designation || 'Staff'}`);
+    // Check if the email exists in our USERS constant for mock login
+    const mockUser = USERS.find(u => u.email === email);
+
+    if (mockUser && password === '123456') {
+        console.log(`Simplified staff login for ${mockUser.name} (${mockUser.role})`);
         return {
-            id: 'mock-staff-id',
-            name: `Test ${designation || 'Staff Member'}`,
-            role: (designation?.toUpperCase() as UserRole) || UserRole.MANAGER,
-            email: 'a@mmo.com',
-            phone: '+91 0000000000',
-            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=mock',
-            currentTask: 'Development Testing',
+            ...mockUser,
             lastUpdateTimestamp: new Date(),
         };
     }
@@ -245,6 +243,25 @@ export const getAllStaff = async (): Promise<User[]> => {
         console.error('Error getting all staff:', error);
         return [];
     }
+};
+
+// Vendor Authentication
+
+/**
+ * Sign in vendor with email and password
+ */
+export const signInVendor = async (email: string, password: string): Promise<Vendor | null> => {
+    // Simplified Auth for Vendor Portal
+    // Check if the email exists in our VENDORS constant
+    const mockVendor = VENDORS.find(v => v.email === email);
+
+    if (mockVendor && password === '123456') {
+        console.log(`Simplified vendor login for ${mockVendor.name}`);
+        return mockVendor;
+    }
+
+    // In a real app, this would query a 'vendors' collection in Firestore
+    return null;
 };
 
 // Client Authentication

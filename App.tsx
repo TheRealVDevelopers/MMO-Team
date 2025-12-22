@@ -7,12 +7,12 @@ import SettingsPage from './components/settings/SettingsPage';
 import InternalLayout from './components/dashboard/shared/InternalLayout';
 import LandingPage from './components/landing/LandingPage';
 import { useAuth } from './context/AuthContext';
-import { User, UserRole } from './types';
+import { User, UserRole, Vendor } from './types';
 // Fix: Imported missing CalendarDaysIcon and BanknotesIcon components.
 import {
   BuildingOfficeIcon, RectangleGroupIcon, UsersIcon, RectangleStackIcon, FunnelIcon, ChartPieIcon, ChatBubbleLeftRightIcon, ShieldExclamationIcon,
   ClockIcon, MapPinIcon, PaintBrushIcon, CalculatorIcon, TruckIcon, WrenchScrewdriverIcon, CreditCardIcon, ChartBarSquareIcon, CalendarDaysIcon, BanknotesIcon,
-  ViewColumnsIcon, TagIcon, ListBulletIcon, PresentationChartLineIcon, ReceiptPercentIcon, BuildingStorefrontIcon, BuildingLibraryIcon, CheckCircleIcon
+  ViewColumnsIcon, TagIcon, ListBulletIcon, PresentationChartLineIcon, ReceiptPercentIcon, BuildingStorefrontIcon, BuildingLibraryIcon, CheckCircleIcon, DocumentTextIcon
 } from './components/icons/IconComponents';
 import { USERS } from './constants';
 
@@ -99,6 +99,7 @@ const navConfig = {
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
       { id: 'bidding', label: 'Bidding', icon: <TagIcon className="w-6 h-6" /> },
+      { id: 'purchase-orders', label: 'Orders', icon: <DocumentTextIcon className="w-6 h-6" /> },
       { id: 'vendors', label: 'Vendors', icon: <BuildingStorefrontIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
       { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
@@ -129,7 +130,7 @@ const navConfig = {
 };
 
 const AppContent: React.FC = () => {
-  const { currentUser, setCurrentUser, loading } = useAuth();
+  const { currentUser, setCurrentUser, currentVendor, setCurrentVendor, loading } = useAuth();
   const [currentPage, setCurrentPage] = useState('overview');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showApp, setIsShowApp] = useState(false);
@@ -147,8 +148,14 @@ const AppContent: React.FC = () => {
     setIsSettingsOpen(false);
   }
 
-  const handleLogin = (user: User) => {
-    setCurrentUser(user);
+  const handleLogin = (user: User | Vendor, type: 'staff' | 'vendor' = 'staff') => {
+    if (type === 'vendor') {
+      setCurrentVendor(user as Vendor);
+      setCurrentUser(null);
+    } else {
+      setCurrentUser(user as User);
+      setCurrentVendor(null);
+    }
     setIsShowApp(true);
   }
 
@@ -157,10 +164,18 @@ const AppContent: React.FC = () => {
       const defaultPage = navConfig[currentUser.role]?.navItems[0]?.id || 'overview';
       setCurrentPage(defaultPage);
       setIsShowApp(true);
+    } else if (currentVendor) {
+      setCurrentPage('overview');
+      setIsShowApp(true);
     } else {
       setIsShowApp(false);
     }
-  }, [currentUser?.role]);
+  }, [currentUser?.role, !!currentVendor]);
+
+  // Show app content when vendor is logged in (VendorDashboard has its own layout)
+  if (currentVendor) {
+    return <Dashboard currentPage={currentPage} setCurrentPage={handleSetPage} />;
+  }
 
   // Show landing page if not logged in
   if (!currentUser && !loading) {
@@ -176,7 +191,7 @@ const AppContent: React.FC = () => {
     );
   }
 
-  // Show app content when logged in
+  // Show app content when staff is logged in
   if (currentUser) {
     const currentNavConfig = navConfig[currentUser.role];
 
@@ -196,6 +211,8 @@ const AppContent: React.FC = () => {
       </InternalLayout>
     );
   }
+
+  return <LandingPage onLogin={handleLogin} />;
 }
 
 

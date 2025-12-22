@@ -14,9 +14,15 @@ import ProcurementTeamDashboard from './ProcurementTeamDashboard';
 import ExecutionTeamDashboard from './ExecutionTeamDashboard';
 import AccountsTeamDashboard from './AccountsTeamDashboard';
 import SuperAdminDashboard from './SuperAdminDashboard';
+import VendorDashboard from './vendor/VendorDashboard';
 
 const Dashboard: React.FC<{ currentPage: string; setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, currentVendor } = useAuth();
+
+  // If vendor is logged in, show Vendor Dashboard
+  if (currentVendor) {
+    return <VendorDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
+  }
 
   if (!currentUser) {
     return (

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import LoginModal from './LoginModal';
-import { User } from '../../types';
+import { User, Vendor } from '../../types';
 import HomePage from './HomePage';
 import PortfolioPage from './PortfolioPage';
 import AboutPage from './AboutPage';
@@ -23,7 +23,7 @@ function cn(...inputs: ClassValue[]) {
 }
 
 interface LandingPageProps {
-  onLogin: (user: User) => void;
+  onLogin: (user: User | Vendor, type?: 'staff' | 'vendor') => void;
 }
 
 const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {

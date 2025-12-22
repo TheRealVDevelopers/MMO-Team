@@ -417,19 +417,6 @@ export interface Item {
 }
 
 
-export interface Vendor {
-  id: string;
-  name: string;
-  category: string;
-  rating: number;
-}
-
-export interface Bid {
-  vendorId: string;
-  vendorName: string;
-  amount: number;
-  timestamp: string;
-}
 
 export enum MaterialRequestStatus {
   RFQ_PENDING = "RFQ Pending",
@@ -449,6 +436,127 @@ export interface MaterialRequest {
   requiredBy: Date;
   status: MaterialRequestStatus;
   priority: 'High' | 'Medium' | 'Low';
+}
+
+export interface Vendor {
+  id: string;
+  name: string;
+  category: string; // e.g., 'Furniture', 'Electrical'
+  email: string; // For login
+  phone: string;
+  rating: number;
+  specialization: string;
+  address: string;
+  gstin: string;
+  paymentTerms: string; // e.g., "50% Advance"
+}
+
+export enum RFQStatus {
+  DRAFT = "Draft",
+  OPEN = "Open", // Bidding is active
+  CLOSED = "Closed", // Deadline passed
+  CANCELLED = "Cancelled"
+}
+
+export interface RFQItem {
+  id: string;
+  name: string;
+  description: string;
+  quantity: number;
+  unit: string; // e.g. 'sqft', 'nos'
+  targetPrice?: number;
+}
+
+export interface RFQ {
+  id: string;
+  rfqNumber: string; // RFQ-2024-001
+  projectId: string;
+  projectName: string;
+  procurementRequestId?: string; // Link to internal PR
+  items: RFQItem[];
+  createdDate: Date;
+  deadline: Date;
+  status: RFQStatus;
+  invitedVendorIds: string[];
+  notes?: string;
+  createdBy: string;
+}
+
+export enum BidStatus {
+  SUBMITTED = "Submitted",
+  UNDER_REVIEW = "Under Review",
+  SHORTLISTED = "Shortlisted",
+  REJECTED = "Rejected",
+  ACCEPTED = "Accepted" // Winner
+}
+
+export interface Bid {
+  id: string;
+  rfqId: string;
+  vendorId: string;
+  vendorName: string; // Denormalized for easier display
+  submittedDate: Date;
+  validityDate: Date;
+  items: {
+    rfqItemId: string;
+    unitPrice: number;
+    totalPrice: number;
+    remarks?: string
+  }[];
+  totalAmount: number;
+  deliveryTimeline: string; // e.g., "10 Days"
+  paymentTerms: string;
+  warranty: string;
+  status: BidStatus;
+  notes?: string;
+}
+
+export enum POStatus {
+  ISSUED = "Issued",
+  ACCEPTED = "Accepted", // Vendor acknowledged
+  IN_TRANSIT = "In Transit",
+  PARTIALLY_DELIVERED = "Partially Delivered",
+  DELIVERED = "Delivered",
+  CANCELLED = "Cancelled"
+}
+
+export interface PurchaseOrder {
+  id: string;
+  poNumber: string; // PO-2024-001
+  rfqId: string;
+  bidId: string;
+  vendorId: string;
+  projectId: string;
+  items: {
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+  }[];
+  totalAmount: number;
+  taxAmount: number;
+  grandTotal: number;
+  issueDate: Date;
+  expectedDeliveryDate: Date;
+  status: POStatus;
+  billingAddress: string;
+  shippingAddress: string;
+  termsAndConditions: string;
+}
+
+export interface GRN {
+  id: string;
+  poId: string;
+  receivedDate: Date;
+  receivedBy: string; // Internal User
+  itemsReceived: {
+    itemName: string;
+    quantityReceived: number;
+    quantityAccepted: number;
+    quantityRejected: number;
+    rejectionReason?: string;
+  }[];
+  notes?: string;
 }
 
 export interface MaterialOrder {

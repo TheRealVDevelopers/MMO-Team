@@ -3,12 +3,12 @@
 
 
 
-import { User, Lead, UserRole, Project, ProjectStatus, Vendor, Invoice, PaymentStatus, Bid, LeadPipelineStatus, Activity, ActivityStatus, SiteVisit, SiteVisitStatus, MaterialRequest, MaterialRequestStatus, Issue, ChecklistItem, CommunicationMessage, Expense, VendorBill, Attendance, AttendanceStatus, Document, QuotationRequest, QuotationRequestStatus, DrawingRequest, DrawingRequestStatus, ProcurementRequest, ProcurementRequestStatus, ExecutionRequest, ExecutionRequestStatus, AccountsRequest, AccountsRequestStatus, Item, ProjectTemplate, ExpenseClaim, ExpenseClaimStatus, Task, TaskStatus, ChatChannel, ChatMessage, Complaint, ComplaintType, ComplaintPriority, ComplaintStatus, SiteReport } from './types';
+import { User, Lead, UserRole, Project, ProjectStatus, Vendor, Invoice, PaymentStatus, LeadPipelineStatus, Activity, ActivityStatus, SiteVisit, SiteVisitStatus, MaterialRequest, MaterialRequestStatus, Issue, ChecklistItem, CommunicationMessage, Expense, VendorBill, Attendance, AttendanceStatus, Document, QuotationRequest, QuotationRequestStatus, DrawingRequest, DrawingRequestStatus, ProcurementRequest, ProcurementRequestStatus, ExecutionRequest, ExecutionRequestStatus, AccountsRequest, AccountsRequestStatus, Item, ProjectTemplate, ExpenseClaim, ExpenseClaimStatus, Task, TaskStatus, ChatChannel, ChatMessage, Complaint, ComplaintType, ComplaintPriority, ComplaintStatus, SiteReport, RFQ, RFQStatus, Bid, BidStatus, PurchaseOrder, POStatus } from './types';
 
-export const formatCurrencyINR = (value: number) => 
-    new Intl.NumberFormat('en-IN', { 
-        style: 'currency', 
-        currency: 'INR', 
+export const formatCurrencyINR = (value: number) =>
+    new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
         minimumFractionDigits: 0,
         maximumFractionDigits: 2,
     }).format(value);
@@ -23,10 +23,10 @@ export const formatLargeNumberINR = (value: number): string => {
     return formatCurrencyINR(value);
 };
 
-export const formatDateTime = (date: Date) => 
+export const formatDateTime = (date: Date) =>
     new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 
-export const formatDate = (date: Date) => 
+export const formatDate = (date: Date) =>
     new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(date);
 
 export const numberToWordsINR = (num: number): string => {
@@ -34,7 +34,7 @@ export const numberToWordsINR = (num: number): string => {
     const b = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
     const number = parseFloat(num.toString()).toFixed(2).split('.');
     const main = parseInt(number[0]);
-    
+
     if (main.toString().length > 9) return 'overflow';
     const n = ('000000000' + main).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
     if (!n) return '';
@@ -44,7 +44,7 @@ export const numberToWordsINR = (num: number): string => {
     str += (parseInt(n[3]) != 0) ? (a[Number(n[3])] || b[n[3][0]] + ' ' + a[n[3][1]]) + 'thousand ' : '';
     str += (parseInt(n[4]) != 0) ? (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + 'hundred ' : '';
     str += (parseInt(n[5]) != 0) ? str != '' ? 'and ' : '' + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) : '';
-    
+
     return str.replace(/\s+/g, ' ').trim().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') + ' Rupees Only';
 }
 
@@ -68,26 +68,26 @@ export const BANK_DETAILS = {
 const now = new Date();
 
 export const USERS: User[] = [
-  { id: 'user-1', name: 'Admin', role: UserRole.SUPER_ADMIN, avatar: 'https://i.pravatar.cc/150?u=user-1', currentTask: 'Reviewing Q3 performance reports.', lastUpdateTimestamp: new Date(now.getTime() - 15 * 60 * 1000), email: 'admin@makemyoffice.com', phone: '+91 98765 43210' },
-  { id: 'user-2', name: 'Sarah Manager', role: UserRole.SALES_GENERAL_MANAGER, avatar: 'https://i.pravatar.cc/150?u=user-2', currentTask: 'Finalizing sales strategy for new quarter.', lastUpdateTimestamp: new Date(now.getTime() - 30 * 60 * 1000), email: 'sarah.m@makemyoffice.com', phone: '+91 98765 43211' },
-  { id: 'user-3', name: 'John Sales', role: UserRole.SALES_TEAM_MEMBER, avatar: 'https://i.pravatar.cc/150?u=user-3', currentTask: 'Preparing proposal for Innovate Corp.', lastUpdateTimestamp: new Date(now.getTime() - 5 * 60 * 1000), region: 'North', email: 'john.s@makemyoffice.com', phone: '+91 98765 43212' },
-  { id: 'user-4', name: 'Emily Designer', role: UserRole.DRAWING_TEAM, avatar: 'https://i.pravatar.cc/150?u=user-4', currentTask: 'Working on 3D renders for Pantry Renovation.', lastUpdateTimestamp: new Date(now.getTime() - 1 * 60 * 60 * 1000), email: 'emily.d@makemyoffice.com', phone: '+91 98765 43213' },
-  { id: 'user-5', name: 'Mike Quote', role: UserRole.QUOTATION_TEAM, avatar: 'https://i.pravatar.cc/150?u=user-5', currentTask: 'Revising quote for Art Studio Conversion.', lastUpdateTimestamp: new Date(now.getTime() - 2 * 60 * 60 * 1000), email: 'mike.q@makemyoffice.com', phone: '+91 98765 43214' },
-  { id: 'user-6', name: 'David Engineer', role: UserRole.SITE_ENGINEER, avatar: 'https://i.pravatar.cc/150?u=user-6', currentTask: 'On-site visit at Enterprise Suites.', lastUpdateTimestamp: new Date(now.getTime() - 45 * 60 * 1000), email: 'david.e@makemyoffice.com', phone: '+91 98765 43215' },
-  { id: 'user-7', name: 'Anna Procurement', role: UserRole.PROCUREMENT_TEAM, avatar: 'https://i.pravatar.cc/150?u=user-7', currentTask: 'Negotiating with furniture vendors.', lastUpdateTimestamp: new Date(now.getTime() - 2 * 60 * 60 * 1000), email: 'anna.p@makemyoffice.com', phone: '+91 98765 43216' },
-  { id: 'user-8', name: 'Chris Executor', role: UserRole.EXECUTION_TEAM, avatar: 'https://i.pravatar.cc/150?u=user-8', currentTask: 'Supervising electrical work at Enterprise Suites.', lastUpdateTimestamp: new Date(now.getTime() - 10 * 60 * 1000), email: 'chris.e@makemyoffice.com', phone: '+91 98765 43217' },
-  { id: 'user-9', name: 'Olivia Accounts', role: UserRole.ACCOUNTS_TEAM, avatar: 'https://i.pravatar.cc/150?u=user-9', currentTask: 'Processing invoices for completed projects.', lastUpdateTimestamp: new Date(now.getTime() - 3 * 60 * 60 * 1000), email: 'olivia.a@makemyoffice.com', phone: '+91 98765 43218' },
-  { id: 'user-10', name: 'Jane Doe', role: UserRole.SALES_TEAM_MEMBER, avatar: 'https://i.pravatar.cc/150?u=user-10', currentTask: 'Following up with Tech Solutions Ltd.', lastUpdateTimestamp: new Date(now.getTime() - 25 * 60 * 1000), region: 'South', email: 'jane.d@makemyoffice.com', phone: '+91 98765 43219' },
+    { id: 'user-1', name: 'Admin', role: UserRole.SUPER_ADMIN, avatar: 'https://i.pravatar.cc/150?u=user-1', currentTask: 'Reviewing Q3 performance reports.', lastUpdateTimestamp: new Date(now.getTime() - 15 * 60 * 1000), email: 'admin@makemyoffice.com', phone: '+91 98765 43210' },
+    { id: 'user-2', name: 'Sarah Manager', role: UserRole.SALES_GENERAL_MANAGER, avatar: 'https://i.pravatar.cc/150?u=user-2', currentTask: 'Finalizing sales strategy for new quarter.', lastUpdateTimestamp: new Date(now.getTime() - 30 * 60 * 1000), email: 'sarah.m@makemyoffice.com', phone: '+91 98765 43211' },
+    { id: 'user-3', name: 'John Sales', role: UserRole.SALES_TEAM_MEMBER, avatar: 'https://i.pravatar.cc/150?u=user-3', currentTask: 'Preparing proposal for Innovate Corp.', lastUpdateTimestamp: new Date(now.getTime() - 5 * 60 * 1000), region: 'North', email: 'sales@makemyoffice.com', phone: '+91 98765 43212' },
+    { id: 'user-4', name: 'Emily Designer', role: UserRole.DRAWING_TEAM, avatar: 'https://i.pravatar.cc/150?u=user-4', currentTask: 'Working on 3D renders for Pantry Renovation.', lastUpdateTimestamp: new Date(now.getTime() - 1 * 60 * 60 * 1000), email: 'emily.d@makemyoffice.com', phone: '+91 98765 43213' },
+    { id: 'user-5', name: 'Mike Quote', role: UserRole.QUOTATION_TEAM, avatar: 'https://i.pravatar.cc/150?u=user-5', currentTask: 'Revising quote for Art Studio Conversion.', lastUpdateTimestamp: new Date(now.getTime() - 2 * 60 * 60 * 1000), email: 'mike.q@makemyoffice.com', phone: '+91 98765 43214' },
+    { id: 'user-6', name: 'David Engineer', role: UserRole.SITE_ENGINEER, avatar: 'https://i.pravatar.cc/150?u=user-6', currentTask: 'On-site visit at Enterprise Suites.', lastUpdateTimestamp: new Date(now.getTime() - 45 * 60 * 1000), email: 'david.e@makemyoffice.com', phone: '+91 98765 43215' },
+    { id: 'user-7', name: 'Anna Procurement', role: UserRole.PROCUREMENT_TEAM, avatar: 'https://i.pravatar.cc/150?u=user-7', currentTask: 'Negotiating with furniture vendors.', lastUpdateTimestamp: new Date(now.getTime() - 2 * 60 * 60 * 1000), email: 'anna.p@makemyoffice.com', phone: '+91 98765 43216' },
+    { id: 'user-8', name: 'Chris Executor', role: UserRole.EXECUTION_TEAM, avatar: 'https://i.pravatar.cc/150?u=user-8', currentTask: 'Supervising electrical work at Enterprise Suites.', lastUpdateTimestamp: new Date(now.getTime() - 10 * 60 * 1000), email: 'chris.e@makemyoffice.com', phone: '+91 98765 43217' },
+    { id: 'user-9', name: 'Olivia Accounts', role: UserRole.ACCOUNTS_TEAM, avatar: 'https://i.pravatar.cc/150?u=user-9', currentTask: 'Processing invoices for completed projects.', lastUpdateTimestamp: new Date(now.getTime() - 3 * 60 * 60 * 1000), email: 'olivia.a@makemyoffice.com', phone: '+91 98765 43218' },
+    { id: 'user-10', name: 'Jane Doe', role: UserRole.SALES_TEAM_MEMBER, avatar: 'https://i.pravatar.cc/150?u=user-10', currentTask: 'Following up with Tech Solutions Ltd.', lastUpdateTimestamp: new Date(now.getTime() - 25 * 60 * 1000), region: 'South', email: 'jane.d@makemyoffice.com', phone: '+91 98765 43219' },
 ];
 
 
 export const LEADS: Lead[] = [
-    { 
-        id: 'lead-1', 
-        clientName: 'Innovate Corp', 
-        projectName: 'HQ Remodel', 
-        status: LeadPipelineStatus.NEW_NOT_CONTACTED, 
-        lastContacted: '2 hours ago', 
+    {
+        id: 'lead-1',
+        clientName: 'Innovate Corp',
+        projectName: 'HQ Remodel',
+        status: LeadPipelineStatus.NEW_NOT_CONTACTED,
+        lastContacted: '2 hours ago',
         assignedTo: 'user-3',
         inquiryDate: new Date(now.getTime() - 2 * 60 * 60 * 1000),
         value: 12000000,
@@ -101,12 +101,12 @@ export const LEADS: Lead[] = [
             quotationRequests: ['qr-2'],
         }
     },
-    { 
-        id: 'lead-2', 
-        clientName: 'Tech Solutions Ltd.', 
-        projectName: 'New Office Wing', 
-        status: LeadPipelineStatus.CONTACTED_CALL_DONE, 
-        lastContacted: '1 day ago', 
+    {
+        id: 'lead-2',
+        clientName: 'Tech Solutions Ltd.',
+        projectName: 'New Office Wing',
+        status: LeadPipelineStatus.CONTACTED_CALL_DONE,
+        lastContacted: '1 day ago',
         assignedTo: 'user-10',
         inquiryDate: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000),
         value: 22000000,
@@ -125,20 +125,20 @@ export const LEADS: Lead[] = [
             drawingRequests: ['dr-1'],
         }
     },
-    { 
-        id: 'lead-3', 
-        clientName: 'Global Ventures', 
-        projectName: 'Pantry Renovation', 
-        status: LeadPipelineStatus.SITE_VISIT_SCHEDULED, 
-        lastContacted: '3 days ago', 
+    {
+        id: 'lead-3',
+        clientName: 'Global Ventures',
+        projectName: 'Pantry Renovation',
+        status: LeadPipelineStatus.SITE_VISIT_SCHEDULED,
+        lastContacted: '3 days ago',
         assignedTo: 'user-3',
         inquiryDate: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000),
         value: 6000000,
         source: 'Cold Call',
         history: [
-             { action: 'Lead Created', user: 'John Sales', timestamp: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000) },
-             { action: 'Initial Call', user: 'John Sales', timestamp: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000) },
-             { action: 'Site Visit Scheduled', user: 'John Sales', timestamp: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000), notes: 'Visit booked for next Tuesday.' }
+            { action: 'Lead Created', user: 'John Sales', timestamp: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000) },
+            { action: 'Initial Call', user: 'John Sales', timestamp: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000) },
+            { action: 'Site Visit Scheduled', user: 'John Sales', timestamp: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000), notes: 'Visit booked for next Tuesday.' }
         ],
         priority: 'Medium',
         reminders: [
@@ -148,12 +148,12 @@ export const LEADS: Lead[] = [
             siteVisits: ['sv-3', 'sv-5'],
         }
     },
-    { 
-        id: 'lead-4', 
-        clientName: 'Startup Hub', 
-        projectName: 'Co-working Space Design', 
-        status: LeadPipelineStatus.QUOTATION_SENT, 
-        lastContacted: '5 hours ago', 
+    {
+        id: 'lead-4',
+        clientName: 'Startup Hub',
+        projectName: 'Co-working Space Design',
+        status: LeadPipelineStatus.QUOTATION_SENT,
+        lastContacted: '5 hours ago',
         assignedTo: 'user-10',
         inquiryDate: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000),
         value: 36000000,
@@ -163,12 +163,12 @@ export const LEADS: Lead[] = [
         ],
         priority: 'High',
     },
-    { 
-        id: 'lead-5', 
-        clientName: 'Marketing Gurus', 
-        projectName: 'Creative Studio Setup', 
-        status: LeadPipelineStatus.NEGOTIATION, 
-        lastContacted: '1 week ago', 
+    {
+        id: 'lead-5',
+        clientName: 'Marketing Gurus',
+        projectName: 'Creative Studio Setup',
+        status: LeadPipelineStatus.NEGOTIATION,
+        lastContacted: '1 week ago',
         assignedTo: 'user-3',
         inquiryDate: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000),
         value: 9600000,
@@ -178,18 +178,18 @@ export const LEADS: Lead[] = [
         ],
         priority: 'Medium',
     },
-    { 
-        id: 'lead-6', 
-        clientName: 'Finance Partners', 
-        projectName: 'Executive Floor Interiors', 
-        status: LeadPipelineStatus.WON, 
-        lastContacted: '2 days ago', 
+    {
+        id: 'lead-6',
+        clientName: 'Finance Partners',
+        projectName: 'Executive Floor Interiors',
+        status: LeadPipelineStatus.WON,
+        lastContacted: '2 days ago',
         assignedTo: 'user-10',
         inquiryDate: new Date(new Date().setDate(2)), // this month
         value: 25600000,
         source: 'Referral',
         history: [
-             { action: 'Deal Won', user: 'Jane Doe', timestamp: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000) }
+            { action: 'Deal Won', user: 'Jane Doe', timestamp: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000) }
         ],
         priority: 'High',
         tasks: {
@@ -199,27 +199,27 @@ export const LEADS: Lead[] = [
             accountsRequests: ['ar-1'],
         }
     },
-    { 
-        id: 'lead-7', 
-        clientName: 'Health First Clinic', 
-        projectName: 'Reception Redesign', 
-        status: LeadPipelineStatus.LOST, 
-        lastContacted: '1 month ago', 
+    {
+        id: 'lead-7',
+        clientName: 'Health First Clinic',
+        projectName: 'Reception Redesign',
+        status: LeadPipelineStatus.LOST,
+        lastContacted: '1 month ago',
         assignedTo: 'user-3',
         inquiryDate: new Date(now.getTime() - 45 * 24 * 60 * 60 * 1000),
         value: 7600000,
         source: 'Website',
         history: [
-             { action: 'Deal Lost', user: 'John Sales', timestamp: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000), notes: 'Lost to competitor pricing.' }
+            { action: 'Deal Lost', user: 'John Sales', timestamp: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000), notes: 'Lost to competitor pricing.' }
         ],
         priority: 'Low',
     },
-    { 
-        id: 'lead-8', 
-        clientName: 'Highrise Apartments', 
-        projectName: 'Lobby Interior', 
-        status: LeadPipelineStatus.NEW_NOT_CONTACTED, 
-        lastContacted: '48 hours ago', 
+    {
+        id: 'lead-8',
+        clientName: 'Highrise Apartments',
+        projectName: 'Lobby Interior',
+        status: LeadPipelineStatus.NEW_NOT_CONTACTED,
+        lastContacted: '48 hours ago',
         assignedTo: 'user-10',
         inquiryDate: new Date(now.getTime() - 48 * 60 * 60 * 1000),
         value: 16800000,
@@ -271,7 +271,7 @@ export const COMMUNICATION: Record<string, CommunicationMessage[]> = {
         { id: 'c3', user: 'Sarah Manager', avatar: 'https://i.pravatar.cc/150?u=user-2', message: 'Client called, they are very happy with the progress so far!', timestamp: new Date(now.getTime() - 1 * 60 * 60 * 1000) },
     ],
     'proj-108': [
-         { id: 'c4', user: 'Chris Executor', avatar: 'https://i.pravatar.cc/150?u=user-8', message: 'Team, we are on track for the final handover next Monday. Let\'s ensure all punch list items are cleared.', timestamp: new Date(now.getTime() - 2 * 60 * 60 * 1000) },
+        { id: 'c4', user: 'Chris Executor', avatar: 'https://i.pravatar.cc/150?u=user-8', message: 'Team, we are on track for the final handover next Monday. Let\'s ensure all punch list items are cleared.', timestamp: new Date(now.getTime() - 2 * 60 * 60 * 1000) },
     ]
 };
 
@@ -291,11 +291,11 @@ export const DOCUMENTS: Document[] = [
 ];
 
 export const PROJECTS: Project[] = [
-    { id: 'proj-101', clientName: 'Global Ventures', projectName: 'Pantry Renovation', status: ProjectStatus.DESIGN_IN_PROGRESS, deadline: '5 days', priority: 'High', budget: 1200000, advancePaid: 600000, clientAddress: '123 Business Bay, Mumbai', clientContact: { name: 'Rohan Sharma', phone: '+91 9820098200' }, progress: 10, assignedTeam: { drawing: 'user-4' }, milestones: [{name: 'Initial Design', completed: false}], startDate: new Date(2024, 5, 1), endDate: new Date(2024, 6, 15), totalExpenses: 96000, salespersonId: 'user-3', documents: [DOCUMENTS[0], DOCUMENTS[1]] },
-    { id: 'proj-102', clientName: 'Data Systems Inc', projectName: 'Server Room Layout', status: ProjectStatus.AWAITING_QUOTATION, deadline: '3 days', priority: 'Medium', budget: 2800000, advancePaid: 1000000, clientAddress: '456 Tech Park, Bangalore', clientContact: { name: 'Priya Patel', phone: '+91 9988776655' }, progress: 25, assignedTeam: { drawing: 'user-4', quotation: 'user-5' }, milestones: [{name: 'Initial Design', completed: true}, {name: 'Client Feedback', completed: false}], startDate: new Date(2024, 5, 10), endDate: new Date(2024, 7, 1), totalExpenses: 360000, salespersonId: 'user-10' },
+    { id: 'proj-101', clientName: 'Global Ventures', projectName: 'Pantry Renovation', status: ProjectStatus.DESIGN_IN_PROGRESS, deadline: '5 days', priority: 'High', budget: 1200000, advancePaid: 600000, clientAddress: '123 Business Bay, Mumbai', clientContact: { name: 'Rohan Sharma', phone: '+91 9820098200' }, progress: 10, assignedTeam: { drawing: 'user-4' }, milestones: [{ name: 'Initial Design', completed: false }], startDate: new Date(2024, 5, 1), endDate: new Date(2024, 6, 15), totalExpenses: 96000, salespersonId: 'user-3', documents: [DOCUMENTS[0], DOCUMENTS[1]] },
+    { id: 'proj-102', clientName: 'Data Systems Inc', projectName: 'Server Room Layout', status: ProjectStatus.AWAITING_QUOTATION, deadline: '3 days', priority: 'Medium', budget: 2800000, advancePaid: 1000000, clientAddress: '456 Tech Park, Bangalore', clientContact: { name: 'Priya Patel', phone: '+91 9988776655' }, progress: 25, assignedTeam: { drawing: 'user-4', quotation: 'user-5' }, milestones: [{ name: 'Initial Design', completed: true }, { name: 'Client Feedback', completed: false }], startDate: new Date(2024, 5, 10), endDate: new Date(2024, 7, 1), totalExpenses: 360000, salespersonId: 'user-10' },
     { id: 'proj-103', clientName: 'Creative Minds', projectName: 'Art Studio Conversion', status: ProjectStatus.NEGOTIATING, deadline: '3 days', priority: 'High', budget: 6000000, advancePaid: 2500000, clientAddress: '789 Art Lane, Delhi', clientContact: { name: 'Anjali Mehta', phone: '+91 9123456789' }, progress: 40, assignedTeam: { quotation: 'user-5' }, milestones: [], startDate: new Date(2024, 6, 1), endDate: new Date(2024, 8, 30), totalExpenses: 0, salespersonId: 'user-3' },
-    { id: 'proj-104', clientName: 'Enterprise Suites', projectName: 'Full Floor Fit-out', status: ProjectStatus.IN_EXECUTION, priority: 'Medium', budget: 20000000, advancePaid: 10000000, clientAddress: '101 Corporate Towers, Gurgaon', clientContact: { name: 'Vikram Singh', phone: '+91 9876543210' }, progress: 60, assignedTeam: { execution: ['user-8'], site_engineer: 'user-6' }, milestones: [{name: 'Advance Paid', completed: true}, {name: 'Milestone 1', completed: false}], startDate: new Date(2024, 4, 15), endDate: new Date(2024, 9, 15), issues: ISSUES.filter(i => i.projectId === 'proj-104'), checklists: CHECKLISTS['proj-104'], communication: COMMUNICATION['proj-104'], totalExpenses: 8800000 },
-    { id: 'proj-105', clientName: 'Legal Eagles LLP', projectName: 'Conference Room AV', status: ProjectStatus.COMPLETED, priority: 'Low', budget: 3600000, advancePaid: 3600000, clientAddress: '212 Law Chambers, Pune', clientContact: { name: 'Sunita Rao', phone: '+91 9555512345' }, progress: 100, assignedTeam: { drawing: 'user-4' }, milestones: [{name: 'Project Handover', completed: true}], startDate: new Date(2024, 3, 1), endDate: new Date(2024, 4, 30), totalExpenses: 2560000 },
+    { id: 'proj-104', clientName: 'Enterprise Suites', projectName: 'Full Floor Fit-out', status: ProjectStatus.IN_EXECUTION, priority: 'Medium', budget: 20000000, advancePaid: 10000000, clientAddress: '101 Corporate Towers, Gurgaon', clientContact: { name: 'Vikram Singh', phone: '+91 9876543210' }, progress: 60, assignedTeam: { execution: ['user-8'], site_engineer: 'user-6' }, milestones: [{ name: 'Advance Paid', completed: true }, { name: 'Milestone 1', completed: false }], startDate: new Date(2024, 4, 15), endDate: new Date(2024, 9, 15), issues: ISSUES.filter(i => i.projectId === 'proj-104'), checklists: CHECKLISTS['proj-104'], communication: COMMUNICATION['proj-104'], totalExpenses: 8800000 },
+    { id: 'proj-105', clientName: 'Legal Eagles LLP', projectName: 'Conference Room AV', status: ProjectStatus.COMPLETED, priority: 'Low', budget: 3600000, advancePaid: 3600000, clientAddress: '212 Law Chambers, Pune', clientContact: { name: 'Sunita Rao', phone: '+91 9555512345' }, progress: 100, assignedTeam: { drawing: 'user-4' }, milestones: [{ name: 'Project Handover', completed: true }], startDate: new Date(2024, 3, 1), endDate: new Date(2024, 4, 30), totalExpenses: 2560000 },
     { id: 'proj-106', clientName: 'Health First Clinic', projectName: 'Reception Area Redesign', status: ProjectStatus.PROCUREMENT, priority: 'Medium', budget: 4800000, advancePaid: 2000000, clientAddress: '333 Wellness Rd, Hyderabad', clientContact: { name: 'Dr. Kumar', phone: '+91 9000011111' }, progress: 50, assignedTeam: {}, milestones: [], startDate: new Date(2024, 6, 20), endDate: new Date(2024, 8, 20), totalExpenses: 1200000, salespersonId: 'user-3' },
     { id: 'proj-107', clientName: 'Finance Partners', projectName: 'Executive Floor Interiors', status: ProjectStatus.APPROVED, priority: 'High', budget: 25600000, advancePaid: 12800000, clientAddress: '444 Money Street, Mumbai', clientContact: { name: 'Rajesh Gupta', phone: '+91 9820198201' }, progress: 100, assignedTeam: { drawing: 'user-4', quotation: 'user-5' }, milestones: [], startDate: new Date(2024, 2, 1), endDate: new Date(2024, 5, 30), totalExpenses: 20000000, salespersonId: 'user-10', documents: [DOCUMENTS[3]] },
     { id: 'proj-108', clientName: 'Innovate Corp', projectName: 'HQ Remodel', status: ProjectStatus.PENDING_REVIEW, priority: 'High', budget: 12000000, advancePaid: 6000000, clientAddress: '555 Innovation Dr, Bangalore', clientContact: { name: 'Amit Desai', phone: '+91 9988776650' }, progress: 95, assignedTeam: { execution: ['user-8'], drawing: 'user-4', site_engineer: 'user-6' }, milestones: [], startDate: new Date(2024, 5, 1), endDate: new Date(2024, 10, 1), issues: ISSUES.filter(i => i.projectId === 'proj-108'), checklists: CHECKLISTS['proj-108'], communication: COMMUNICATION['proj-108'], totalExpenses: 7600000, salespersonId: 'user-3' },
@@ -308,18 +308,106 @@ export const PROJECTS: Project[] = [
 ];
 
 export const VENDORS: Vendor[] = [
-    { id: 'ven-1', name: 'Furniture World', category: 'Furniture', rating: 4.8 },
-    { id: 'ven-2', name: 'Lighting Fast', category: 'Lighting', rating: 4.5 },
-    { id: 'ven-3', name: 'Paint Masters', category: 'Painting', rating: 4.9 },
-    { id: 'ven-4', name: 'ElectroSource', category: 'Electronics', rating: 4.2 },
+    { id: 'ven-1', name: 'Furniture World', category: 'Furniture', email: 'vendor@makemyoffice.com', phone: '+91 9876500001', rating: 4.8, specialization: 'Office Workstations & Chairs', address: '12 IND Estate, Okhla', gstin: '07AAAAA0000A1Z5', paymentTerms: '50% Advance' },
+    { id: 'ven-2', name: 'Lighting Fast', category: 'Lighting', email: 'contact@lightingfast.com', phone: '+91 9876500002', rating: 4.5, specialization: 'LED & Architectural Lighting', address: '45 Light Market, Bhagirath Palace', gstin: '07BBBBB0000B1Z5', paymentTerms: '100% Against Delivery' },
+    { id: 'ven-3', name: 'Paint Masters', category: 'Painting', email: 'info@paintmasters.com', phone: '+91 9876500003', rating: 4.9, specialization: 'Interior & Exterior Painting', address: '88 Color Road, Delhi', gstin: '07CCCCC0000C1Z5', paymentTerms: '30 days Credit' },
+    { id: 'ven-4', name: 'ElectroSource', category: 'Electronics', email: 'b2b@electrosource.com', phone: '+91 9876500004', rating: 4.2, specialization: 'AV & Networking Gear', address: 'Nehru Place, Delhi', gstin: '07DDDDD0000D1Z5', paymentTerms: 'Advance Only' },
+    { id: 'ven-5', name: 'Super Woodworks', category: 'Carpentry', email: 'hello@superwood.com', phone: '+91 9876500005', rating: 4.6, specialization: 'Custom Joinery', address: 'Kirti Nagar, Delhi', gstin: '07EEEEE0000E1Z5', paymentTerms: 'Milestone Based' },
 ];
 
-export const BIDS: Bid[] = [
-    { vendorId: 'ven-1', vendorName: 'Furniture World', amount: 1000000, timestamp: '2 hours ago' },
-    { vendorId: 'ven-2', vendorName: 'Lighting Fast', amount: 656000, timestamp: '1 day ago' },
-    { vendorId: 'ven-3', vendorName: 'Paint Masters', amount: 360000, timestamp: '3 hours ago' },
-    { vendorId: 'ven-4', vendorName: 'ElectroSource', amount: 1200000, timestamp: '5 hours ago' },
-     { vendorId: 'ven-1', vendorName: 'Desks & Co.', amount: 944000, timestamp: '1 hour ago' },
+export const RFQS: RFQ[] = [
+    {
+        id: 'rfq-1',
+        rfqNumber: 'RFQ-2024-101',
+        projectId: 'proj-104',
+        projectName: 'Full Floor Fit-out',
+        procurementRequestId: 'mr-2',
+        items: [
+            { id: 'item-1', name: 'LED Panel 2x2', description: '36W Cool White, Philips or Equivalent', quantity: 100, unit: 'nos', targetPrice: 2200 },
+            { id: 'item-2', name: 'Track Light 15W', description: 'Warm White, Adjustable Beam', quantity: 40, unit: 'nos', targetPrice: 1500 }
+        ],
+        createdDate: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000),
+        deadline: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000),
+        status: RFQStatus.OPEN,
+        invitedVendorIds: ['ven-2', 'ven-4'],
+        createdBy: 'user-7'
+    },
+    {
+        id: 'rfq-2',
+        rfqNumber: 'RFQ-2024-102',
+        projectId: 'proj-101',
+        projectName: 'Pantry Renovation',
+        items: [
+            { id: 'item-3', name: 'Modular Pantry Cabinet', description: 'Waterproof Ply, Laminate Finish', quantity: 1, unit: 'lot' },
+            { id: 'item-4', name: 'Quartz Countertop', description: 'Calacatta White, 18mm', quantity: 40, unit: 'sqft' }
+        ],
+        createdDate: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000),
+        deadline: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000),
+        status: RFQStatus.OPEN,
+        invitedVendorIds: ['ven-1', 'ven-5'],
+        createdBy: 'user-7'
+    }
+];
+
+export const BIDS_DATA: Bid[] = [
+    {
+        id: 'bid-1',
+        rfqId: 'rfq-1',
+        vendorId: 'ven-2',
+        vendorName: 'Lighting Fast',
+        submittedDate: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000),
+        validityDate: new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000),
+        items: [
+            { rfqItemId: 'item-1', unitPrice: 2100, totalPrice: 210000, remarks: 'Philips Brand' },
+            { rfqItemId: 'item-2', unitPrice: 1450, totalPrice: 58000 }
+        ],
+        totalAmount: 268000,
+        deliveryTimeline: '7 Days',
+        paymentTerms: '100% Against Delivery',
+        warranty: '2 Years Manufacturer Warranty',
+        status: BidStatus.SUBMITTED
+    },
+    {
+        id: 'bid-2',
+        rfqId: 'rfq-1',
+        vendorId: 'ven-4',
+        vendorName: 'ElectroSource',
+        submittedDate: new Date(now.getTime() - 2 * 60 * 60 * 1000),
+        validityDate: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
+        items: [
+            { rfqItemId: 'item-1', unitPrice: 2050, totalPrice: 205000, remarks: 'Wipro Brand' },
+            { rfqItemId: 'item-2', unitPrice: 1600, totalPrice: 64000 }
+        ],
+        totalAmount: 269000,
+        deliveryTimeline: '5 Days',
+        paymentTerms: 'Advance Only',
+        warranty: '1 Year Warranty',
+        status: BidStatus.SUBMITTED
+    }
+];
+
+export const PURCHASE_ORDERS: PurchaseOrder[] = [
+    {
+        id: 'po-1',
+        poNumber: 'PO-2024-055',
+        rfqId: 'rfq-prev-1',
+        bidId: 'bid-prev-1',
+        vendorId: 'ven-1',
+        projectId: 'proj-106',
+        items: [
+            { name: 'Executive Chair (Leather)', quantity: 10, unitPrice: 12000, total: 120000 },
+            { name: 'Conf Table 8-Seater', quantity: 1, unitPrice: 45000, total: 45000 }
+        ],
+        totalAmount: 165000,
+        taxAmount: 29700, // 18%
+        grandTotal: 194700,
+        issueDate: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000),
+        expectedDeliveryDate: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000), // was due 2 days ago
+        status: POStatus.IN_TRANSIT,
+        billingAddress: COMPANY_DETAILS.address,
+        shippingAddress: '333 Wellness Rd, Hyderabad',
+        termsAndConditions: 'Standard MMO Procurement Terms apply.'
+    }
 ];
 
 
@@ -393,13 +481,13 @@ export const ACTIVITIES: Activity[] = [
     { id: 'act-4', description: 'Submitted quote for "Co-working Space Design"', team: UserRole.QUOTATION_TEAM, userId: 'user-5', timestamp: new Date(now.getTime() - 24 * 60 * 60 * 1000), status: ActivityStatus.DONE, projectId: 'lead-4' },
     { id: 'act-5', description: 'Vendor approval pending for "Lighting Fast"', team: UserRole.SUPER_ADMIN, userId: 'user-1', timestamp: new Date(new Date().getTime() - 2 * 24 * 60 * 60 * 1000), status: ActivityStatus.PENDING },
     { id: 'act-6', description: 'Payment of INV-002 is overdue', team: UserRole.ACCOUNTS_TEAM, userId: 'user-9', timestamp: new Date(new Date().getTime() - 3 * 24 * 60 * 60 * 1000), status: ActivityStatus.PENDING, projectId: 'inv-002' },
-    { id: 'act-7', description: 'Logged initial call with Tech Solutions Ltd.', team: UserRole.SALES_TEAM_MEMBER, userId: 'user-10', timestamp: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000), status: ActivityStatus.DONE, projectId: 'lead-2'},
-    { id: 'act-8', description: 'Won deal with Finance Partners', team: UserRole.SALES_TEAM_MEMBER, userId: 'user-10', timestamp: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000), status: ActivityStatus.DONE, projectId: 'lead-6'},
-    { id: 'act-9', description: 'Submitted design for Pantry Renovation', team: UserRole.DRAWING_TEAM, userId: 'user-4', timestamp: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000), status: ActivityStatus.DONE, projectId: 'proj-101'},
-    { id: 'act-10', description: 'Revised quote for Art Studio Conversion', team: UserRole.QUOTATION_TEAM, userId: 'user-5', timestamp: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000), status: ActivityStatus.DONE, projectId: 'proj-103'},
-    { id: 'act-11', description: 'Lost deal with Health First Clinic', team: UserRole.SALES_TEAM_MEMBER, userId: 'user-3', timestamp: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000), status: ActivityStatus.DONE, projectId: 'lead-7'},
-    { id: 'act-12', description: 'Started procurement for Reception Redesign', team: UserRole.PROCUREMENT_TEAM, userId: 'user-7', timestamp: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000), status: ActivityStatus.IN_PROGRESS, projectId: 'proj-106'},
-    { id: 'act-13', description: 'Processed invoice for Legal Eagles LLP', team: UserRole.ACCOUNTS_TEAM, userId: 'user-9', timestamp: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000), status: ActivityStatus.DONE, projectId: 'inv-001'},
+    { id: 'act-7', description: 'Logged initial call with Tech Solutions Ltd.', team: UserRole.SALES_TEAM_MEMBER, userId: 'user-10', timestamp: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000), status: ActivityStatus.DONE, projectId: 'lead-2' },
+    { id: 'act-8', description: 'Won deal with Finance Partners', team: UserRole.SALES_TEAM_MEMBER, userId: 'user-10', timestamp: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000), status: ActivityStatus.DONE, projectId: 'lead-6' },
+    { id: 'act-9', description: 'Submitted design for Pantry Renovation', team: UserRole.DRAWING_TEAM, userId: 'user-4', timestamp: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000), status: ActivityStatus.DONE, projectId: 'proj-101' },
+    { id: 'act-10', description: 'Revised quote for Art Studio Conversion', team: UserRole.QUOTATION_TEAM, userId: 'user-5', timestamp: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000), status: ActivityStatus.DONE, projectId: 'proj-103' },
+    { id: 'act-11', description: 'Lost deal with Health First Clinic', team: UserRole.SALES_TEAM_MEMBER, userId: 'user-3', timestamp: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000), status: ActivityStatus.DONE, projectId: 'lead-7' },
+    { id: 'act-12', description: 'Started procurement for Reception Redesign', team: UserRole.PROCUREMENT_TEAM, userId: 'user-7', timestamp: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000), status: ActivityStatus.IN_PROGRESS, projectId: 'proj-106' },
+    { id: 'act-13', description: 'Processed invoice for Legal Eagles LLP', team: UserRole.ACCOUNTS_TEAM, userId: 'user-9', timestamp: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000), status: ActivityStatus.DONE, projectId: 'inv-001' },
 ];
 
 const today = new Date();
@@ -435,16 +523,16 @@ export const EXECUTION_REQUESTS: ExecutionRequest[] = [
 ];
 
 export const ACCOUNTS_REQUESTS: AccountsRequest[] = [
-    { id: 'ar-1', leadId: 'lead-6', projectName: 'Executive Floor Interiors', requesterId: 'user-10', assigneeId: 'user-9', status: AccountsRequestStatus.REQUESTED, requestDate: new Date(now.getTime() - 10 * 60 * 60 * 1000), task: 'Generate Proforma', notes: 'Please prepare proforma invoice for 50% advance payment.'},
+    { id: 'ar-1', leadId: 'lead-6', projectName: 'Executive Floor Interiors', requesterId: 'user-10', assigneeId: 'user-9', status: AccountsRequestStatus.REQUESTED, requestDate: new Date(now.getTime() - 10 * 60 * 60 * 1000), task: 'Generate Proforma', notes: 'Please prepare proforma invoice for 50% advance payment.' },
 ];
 
 export const ITEMS: Item[] = [
-  { id: 'item-1', name: 'Executive Desk', category: 'Workstations', price: 45000, imageUrl: 'https://via.placeholder.com/150/007bff/ffffff?text=Desk' },
-  { id: 'item-2', name: 'Ergonomic Chair', category: 'Chairs', price: 22000, imageUrl: 'https://via.placeholder.com/150/28a745/ffffff?text=Chair' },
-  { id: 'item-3', name: 'Filing Cabinet', category: 'Storage', price: 18000, imageUrl: 'https://via.placeholder.com/150/6c757d/ffffff?text=Cabinet' },
-  { id: 'item-4', name: 'LED Pendant Light', category: 'Lighting', price: 8500, imageUrl: 'https://via.placeholder.com/150/ffc107/ffffff?text=Light' },
-  { id: 'item-5', name: 'Conference Table', category: 'Workstations', price: 85000, imageUrl: 'https://via.placeholder.com/150/17a2b8/ffffff?text=Table' },
-  { id: 'item-6', name: 'Visitor Chair', category: 'Chairs', price: 9500, imageUrl: 'https://via.placeholder.com/150/fd7e14/ffffff?text=Chair' },
+    { id: 'item-1', name: 'Executive Desk', category: 'Workstations', price: 45000, imageUrl: 'https://via.placeholder.com/150/007bff/ffffff?text=Desk' },
+    { id: 'item-2', name: 'Ergonomic Chair', category: 'Chairs', price: 22000, imageUrl: 'https://via.placeholder.com/150/28a745/ffffff?text=Chair' },
+    { id: 'item-3', name: 'Filing Cabinet', category: 'Storage', price: 18000, imageUrl: 'https://via.placeholder.com/150/6c757d/ffffff?text=Cabinet' },
+    { id: 'item-4', name: 'LED Pendant Light', category: 'Lighting', price: 8500, imageUrl: 'https://via.placeholder.com/150/ffc107/ffffff?text=Light' },
+    { id: 'item-5', name: 'Conference Table', category: 'Workstations', price: 85000, imageUrl: 'https://via.placeholder.com/150/17a2b8/ffffff?text=Table' },
+    { id: 'item-6', name: 'Visitor Chair', category: 'Chairs', price: 9500, imageUrl: 'https://via.placeholder.com/150/fd7e14/ffffff?text=Chair' },
 ];
 
 export const MATERIAL_REQUESTS: MaterialRequest[] = [
@@ -488,47 +576,47 @@ const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
     ATTENDANCE_DATA[userId] = [];
     for (let i = 1; i <= daysInMonth; i++) {
         const date = new Date(currentYear, currentMonth, i);
-        if (date > now) continue; 
+        if (date > now) continue;
         const dayOfWeek = date.getDay();
-        if (dayOfWeek === 0 || dayOfWeek === 6) continue; 
+        if (dayOfWeek === 0 || dayOfWeek === 6) continue;
         const rand = Math.random();
         let status: AttendanceStatus;
-        if (rand < 0.85) { status = AttendanceStatus.PRESENT; } 
-        else if (rand < 0.9) { status = AttendanceStatus.HALF_DAY; } 
-        else if (rand < 0.95) { status = AttendanceStatus.LEAVE; } 
+        if (rand < 0.85) { status = AttendanceStatus.PRESENT; }
+        else if (rand < 0.9) { status = AttendanceStatus.HALF_DAY; }
+        else if (rand < 0.95) { status = AttendanceStatus.LEAVE; }
         else { status = AttendanceStatus.ABSENT; }
         ATTENDANCE_DATA[userId].push({ date, status });
     }
 });
 
 export const CHAT_CHANNELS: Omit<ChatChannel, 'lastMessage'>[] = [
-    { 
-        id: 'channel-1', 
-        name: 'General', 
-        isGroup: true, 
+    {
+        id: 'channel-1',
+        name: 'General',
+        isGroup: true,
         avatar: 'https://i.pravatar.cc/150?u=group-general',
-        members: ['user-2', 'user-3', 'user-4', 'user-5', 'user-6', 'user-7', 'user-8', 'user-9', 'user-10'] 
+        members: ['user-2', 'user-3', 'user-4', 'user-5', 'user-6', 'user-7', 'user-8', 'user-9', 'user-10']
     },
-    { 
-        id: 'channel-3', 
-        name: 'Project: Enterprise Fitout', 
-        isGroup: true, 
+    {
+        id: 'channel-3',
+        name: 'Project: Enterprise Fitout',
+        isGroup: true,
         avatar: 'https://i.pravatar.cc/150?u=group-proj-104',
-        members: ['user-2', 'user-6', 'user-8', 'user-4'] 
+        members: ['user-2', 'user-6', 'user-8', 'user-4']
     },
-    { 
-        id: 'dm-user-3-user-4', 
-        name: 'Emily Designer', 
-        isGroup: false, 
+    {
+        id: 'dm-user-3-user-4',
+        name: 'Emily Designer',
+        isGroup: false,
         avatar: USERS.find(u => u.id === 'user-4')?.avatar || '',
-        members: ['user-3', 'user-4'] 
+        members: ['user-3', 'user-4']
     },
-    { 
-        id: 'dm-user-10-user-2', 
-        name: 'Sarah Manager', 
-        isGroup: false, 
+    {
+        id: 'dm-user-10-user-2',
+        name: 'Sarah Manager',
+        isGroup: false,
         avatar: USERS.find(u => u.id === 'user-2')?.avatar || '',
-        members: ['user-10', 'user-2'] 
+        members: ['user-10', 'user-2']
     },
 ];
 

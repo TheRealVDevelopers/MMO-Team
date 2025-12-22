@@ -243,9 +243,13 @@ const BrandSection: React.FC<{ onNavigate: (page: string) => void }> = ({ onNavi
                 transition={{ duration: 1 }}
                 className="lg:w-1/2 relative"
             >
-                <div className="relative z-10 rounded-3xl overflow-hidden shadow-2xl">
-                    <img src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?q=80&w=1000&auto=format&fit=crop" alt="Studio" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent" />
+                <div className="relative z-10 rounded-3xl overflow-hidden shadow-2xl group">
+                    <img
+                        src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?q=80&w=1000&auto=format&fit=crop"
+                        alt="Studio"
+                        className="w-full h-full object-cover brightness-[0.9] group-hover:brightness-105 saturate-[0.8] group-hover:saturate-100 transition-all duration-1000 ease-luxury group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent pointer-events-none" />
                 </div>
                 {/* Decorative Elements */}
                 <div className="absolute -top-10 -left-10 w-40 h-40 bg-primary/5 rounded-full blur-3xl" />
@@ -343,7 +347,7 @@ const ServicesSection: React.FC<{ onNavigate: (page: string) => void }> = ({ onN
                         <img
                             src={service.image}
                             alt={service.title}
-                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                            className="absolute inset-0 w-full h-full object-cover brightness-[0.8] group-hover:brightness-105 saturate-[0.8] group-hover:saturate-100 transition-all duration-1000 ease-luxury group-hover:scale-110"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
@@ -370,59 +374,143 @@ const ServicesSection: React.FC<{ onNavigate: (page: string) => void }> = ({ onN
 };
 
 // --- 4. PROJECTS CAROUSEL ---
+const ProjectSlide: React.FC<{ project: any }> = ({ project }) => (
+    <motion.div
+        initial={{ opacity: 0, scale: 0.95, filter: 'blur(10px)' }}
+        animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+        exit={{ opacity: 0, scale: 1.05, filter: 'blur(10px)' }}
+        transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+        className="relative w-full aspect-[21/9] rounded-[3rem] overflow-hidden shadow-luxury bg-surface group cursor-pointer"
+    >
+        <img
+            src={project.img}
+            alt={project.title}
+            className="absolute inset-0 w-full h-full object-cover brightness-[0.7] group-hover:brightness-90 transition-all duration-1000 group-hover:scale-105"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-12 md:p-20">
+            <motion.div
+                initial={{ y: 30, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+            >
+                <div className="flex items-center gap-4 mb-6">
+                    <span className="w-12 h-[1px] bg-primary"></span>
+                    <span className="text-primary text-[10px] font-black uppercase tracking-[0.6em]">{project.type}</span>
+                </div>
+                <h3 className="text-5xl md:text-8xl font-serif text-white mb-8 leading-none tracking-tight">
+                    {project.title}
+                </h3>
+                <div className="flex gap-12 text-white/60 text-[10px] font-black uppercase tracking-[0.4em]">
+                    <div className="flex flex-col gap-2">
+                        <span className="text-white/30">Location</span>
+                        <span>Bangalore, India</span>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <span className="text-white/30">Category</span>
+                        <span>Turnkey Workspace</span>
+                    </div>
+                </div>
+            </motion.div>
+        </div>
+
+        {/* Floating Arrow */}
+        <div className="absolute top-12 right-12 md:top-20 md:right-20">
+            <div className="w-20 h-20 bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center group-hover:bg-primary group-hover:border-primary transition-all duration-500 transform group-hover:rotate-45">
+                <ArrowUpRightIcon className="w-8 h-8 text-white" />
+            </div>
+        </div>
+    </motion.div>
+);
+
 const FeaturedProjects: React.FC<{ onNavigate: (page: string) => void }> = ({ onNavigate }) => {
+    const [activeIndex, setActiveIndex] = useState(0);
     const projects = [
-        { title: "FinTech HQ", type: "Corporate", img: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=800&auto=format&fit=crop" },
-        { title: "Nexus Law", type: "Prestigious", img: "https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?q=80&w=800&auto=format&fit=crop" },
-        { title: "Zenith Co-Work", type: "Dynamic", img: "https://images.unsplash.com/photo-1600607686527-6fb886090705?q=80&w=800&auto=format&fit=crop" },
-        { title: "Creative Pulse", type: "Bespoke", img: "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=800&auto=format&fit=crop" }
+        { title: "FinTech HQ", type: "Corporate", img: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1600&auto=format&fit=crop" },
+        { title: "Nexus Law", type: "Prestigious", img: "https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?q=80&w=1600&auto=format&fit=crop" },
+        { title: "Zenith Co-Work", type: "Dynamic", img: "https://images.unsplash.com/photo-1600607686527-6fb886090705?q=80&w=1600&auto=format&fit=crop" },
+        { title: "Creative Pulse", type: "Bespoke", img: "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=1600&auto=format&fit=crop" },
+        { title: "Aero Logistics", type: "Industrial", img: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=1600&auto=format&fit=crop" }
     ];
 
-    const ref = useRef<HTMLDivElement>(null);
+    const next = () => setActiveIndex((prev) => (prev + 1) % projects.length);
+    const prev = () => setActiveIndex((prev) => (prev - 1 + projects.length) % projects.length);
 
     return (
-        <section className="py-32 bg-background overflow-hidden">
-            <div className="max-w-7xl mx-auto px-6 mb-16 flex flex-col md:flex-row justify-between items-end gap-8">
-                <div className="max-w-xl text-left">
-                    <span className="text-secondary text-[10px] font-black uppercase tracking-[0.4em]">Work</span>
-                    <h2 className="text-4xl md:text-5xl font-serif mt-4">Curated Portfolio</h2>
-                    <p className="text-text-secondary mt-6 font-light">A selection of workspaces that have redefined the standards of productivity and aesthetic excellence across India.</p>
+        <section className="py-40 bg-background overflow-hidden relative">
+            <div className="max-w-[1600px] mx-auto px-6 relative z-10">
+                <div className="flex flex-col md:flex-row justify-between items-end mb-24 gap-12">
+                    <div className="max-w-2xl">
+                        <motion.span
+                            initial={{ opacity: 0, x: -20 }}
+                            whileInView={{ opacity: 1, x: 0 }}
+                            className="text-primary text-[10px] font-black uppercase tracking-[0.8em]"
+                        >
+                            Curated Series
+                        </motion.span>
+                        <motion.h2
+                            initial={{ opacity: 0, y: 30 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            className="text-5xl md:text-8xl font-serif mt-6 leading-tight tracking-tight"
+                        >
+                            Legendary <span className="text-secondary italic">Works</span>
+                        </motion.h2>
+                    </div>
                 </div>
-                <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    onClick={() => onNavigate('portfolio')}
-                    className="px-8 py-3 bg-text-primary text-background text-[10px] font-bold uppercase tracking-[0.2em] rounded-full"
-                >
-                    View All Works
-                </motion.button>
-            </div>
 
-            <div
-                ref={ref}
-                className="flex gap-8 overflow-x-auto px-6 lg:px-[calc((100vw-80rem)/2)] pb-20 scrollbar-hide snap-x"
-            >
-                {projects.map((p, i) => (
-                    <motion.div
-                        key={i}
-                        whileHover={{ y: -10 }}
-                        className="relative min-w-[320px] md:min-w-[450px] aspect-[4/5] rounded-[2.5rem] overflow-hidden snap-center cursor-pointer group shadow-xl"
+                {/* Main Slider Display */}
+                <div className="relative mb-24 min-h-[500px] md:min-h-[700px]">
+                    <AnimatePresence mode="wait">
+                        <ProjectSlide key={activeIndex} project={projects[activeIndex]} />
+                    </AnimatePresence>
+
+                    {/* Side Navigation Overlay */}
+                    <div className="absolute inset-y-0 left-0 right-0 flex items-center justify-between pointer-events-none px-6 md:px-12">
+                        <motion.button
+                            onClick={prev}
+                            whileHover={{ scale: 1.1, x: -10 }}
+                            whileTap={{ scale: 0.9 }}
+                            className="w-16 h-16 md:w-24 md:h-24 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center pointer-events-auto hover:bg-primary transition-all group"
+                        >
+                            <ArrowRightIcon className="w-6 h-6 md:w-10 md:h-10 text-white rotate-180" />
+                        </motion.button>
+                        <motion.button
+                            onClick={next}
+                            whileHover={{ scale: 1.1, x: 10 }}
+                            whileTap={{ scale: 0.9 }}
+                            className="w-16 h-16 md:w-24 md:h-24 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center pointer-events-auto hover:bg-primary transition-all group"
+                        >
+                            <ArrowRightIcon className="w-6 h-6 md:w-10 md:h-10 text-white" />
+                        </motion.button>
+                    </div>
+                </div>
+
+                {/* Footer Controls & Indicators */}
+                <div className="flex flex-col md:flex-row items-center justify-between gap-12 pt-12 border-t border-border">
+                    <div className="flex items-center gap-4">
+                        <span className="text-3xl font-serif font-bold text-primary">0{activeIndex + 1}</span>
+                        <div className="w-12 h-[1px] bg-border"></div>
+                        <span className="text-text-secondary text-sm font-light">0{projects.length}</span>
+                    </div>
+
+                    <div className="flex gap-4">
+                        {projects.map((_, i) => (
+                            <button
+                                key={i}
+                                onClick={() => setActiveIndex(i)}
+                                className={`h-[2px] rounded-full transition-all duration-700 ${activeIndex === i ? "w-24 bg-primary" : "w-12 bg-border hover:bg-primary/50"}`}
+                            />
+                        ))}
+                    </div>
+
+                    <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => onNavigate('portfolio')}
+                        className="text-primary font-black text-[10px] uppercase tracking-[0.4em] border-b-2 border-primary pb-2"
                     >
-                        <img
-                            src={p.img}
-                            alt={p.title}
-                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
-                        <div className="absolute bottom-0 left-0 p-10 w-full">
-                            <span className="text-primary text-[10px] font-black uppercase tracking-[0.3em] block mb-3">{p.type}</span>
-                            <h3 className="text-3xl font-serif text-white mb-2">{p.title}</h3>
-                            <p className="text-white/50 text-xs font-bold uppercase tracking-[0.2em] transform transition-all duration-500 opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0">
-                                Detailed Case Study
-                            </p>
-                        </div>
-                    </motion.div>
-                ))}
+                        View Project Archive
+                    </motion.button>
+                </div>
             </div>
         </section>
     );
@@ -488,7 +576,8 @@ const ProcessSection: React.FC = () => {
                         <div className="w-full lg:w-1/2 group relative">
                             <div className="aspect-[16/10] rounded-[2rem] overflow-hidden shadow-2xl relative z-10">
                                 <motion.img
-                                    whileHover={{ scale: 1.05 }}
+                                    whileHover={{ scale: 1.1, brightness: 1.1, saturate: 1.1 }}
+                                    initial={{ brightness: 0.9, saturate: 0.8 }}
                                     transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
                                     src={step.image}
                                     alt={step.title}

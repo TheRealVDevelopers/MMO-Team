@@ -22,6 +22,8 @@ import {
     XMarkIcon
 } from '@heroicons/react/24/outline';
 import UserSelector from '../../shared/UserSelector';
+import CommandPalette from './CommandPalette';
+import NotificationPopover from './NotificationPopover';
 
 interface NavItemProp {
     id: string;
@@ -50,6 +52,20 @@ const InternalLayout: React.FC<InternalLayoutProps> = ({
     const { theme, setTheme } = useTheme();
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+
+    // Keyboard Shortcut for Command Palette
+    React.useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                setIsCommandPaletteOpen(prev => !prev);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     const renderIcon = (icon: React.ReactNode, isActive: boolean) => {
         if (React.isValidElement(icon)) {
@@ -156,9 +172,16 @@ const InternalLayout: React.FC<InternalLayoutProps> = ({
                     </div>
 
                     <div className="flex-1 max-w-xl hidden md:block">
-                        <div className="h-10 bg-background border border-border rounded-full px-4 flex items-center gap-3 text-text-secondary/50 focus-within:border-primary transition-colors">
-                            <span className="text-xs">Search projects, enquiries or tasks...</span>
-                        </div>
+                        <button
+                            onClick={() => setIsCommandPaletteOpen(true)}
+                            className="w-full h-10 bg-background border border-border rounded-full px-4 flex items-center justify-between text-text-secondary/50 hover:border-primary hover:text-primary transition-all group cursor-text"
+                        >
+                            <span className="text-xs group-hover:text-text-primary">Search projects, enquiries or tasks...</span>
+                            <div className="flex items-center gap-1">
+                                <span className="text-[10px] font-bold bg-surface border border-border rounded px-1.5 py-0.5 group-hover:bg-primary/10 group-hover:border-primary/20">Ctrl</span>
+                                <span className="text-[10px] font-bold bg-surface border border-border rounded px-1.5 py-0.5 group-hover:bg-primary/10 group-hover:border-primary/20">K</span>
+                            </div>
+                        </button>
                     </div>
 
                     <div className="flex items-center gap-6">
@@ -170,10 +193,7 @@ const InternalLayout: React.FC<InternalLayoutProps> = ({
                             {theme === 'serenity-white' ? <MoonIcon className="w-6 h-6" /> : <SunIcon className="w-6 h-6" />}
                         </button>
 
-                        <button className="p-2 text-text-secondary hover:text-primary relative transition-colors">
-                            <BellIcon className="w-6 h-6" />
-                            <span className="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-surface" />
-                        </button>
+                        <NotificationPopover />
 
                         <div className="h-8 w-px bg-border hidden sm:block" />
 
@@ -202,6 +222,13 @@ const InternalLayout: React.FC<InternalLayoutProps> = ({
                         </div>
                     </div>
                 </header>
+
+                <CommandPalette
+                    isOpen={isCommandPaletteOpen}
+                    onClose={() => setIsCommandPaletteOpen(false)}
+                    setCurrentPage={setCurrentPage}
+                    navItems={[...navItems, ...secondaryNavItems]}
+                />
 
                 {/* Dynamic Content */}
                 <div className="flex-1 overflow-y-auto bg-background p-8 relative">

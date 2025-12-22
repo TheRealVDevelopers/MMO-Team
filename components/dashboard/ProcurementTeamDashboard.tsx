@@ -4,6 +4,7 @@ import ProcurementOverviewPage from './procurement-team/ProcurementOverviewPage'
 import BiddingManagementPage from './procurement-team/BiddingManagementPage';
 import VendorManagementPage from './procurement-team/VendorManagementPage';
 import MyPerformancePage from './procurement-team/MyPerformancePage';
+import POManagementPage from './procurement-team/POManagementPage';
 import MyDayPage from './shared/MyDayPage';
 import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
@@ -16,6 +17,8 @@ const ProcurementTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: 
       return <ProcurementOverviewPage />;
     case 'bidding':
       return <BiddingManagementPage setCurrentPage={setCurrentPage} />;
+    case 'purchase-orders':
+      return <POManagementPage setCurrentPage={setCurrentPage} />;
     case 'vendors':
       return <VendorManagementPage setCurrentPage={setCurrentPage} />;
     case 'performance':
