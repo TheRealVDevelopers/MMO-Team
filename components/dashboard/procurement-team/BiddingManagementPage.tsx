@@ -5,6 +5,7 @@ import { ClockIcon, FireIcon, ArrowLeftIcon, PlusIcon, XMarkIcon, ChartBarIcon }
 import Modal from '../../shared/Modal';
 import ComparativeStatement from './ComparativeStatement';
 import InitiateRFQModal from './InitiateRFQModal';
+import SubmitQuoteModal from '../../shared/SubmitQuoteModal';
 
 // --- Start: NewRequestModal Component ---
 
@@ -295,7 +296,8 @@ const RequestCard: React.FC<{
     onStartBidding: (requestId: string) => void;
     onSelect: (request: MaterialRequest) => void;
     onCompare: (requestId: string) => void;
-}> = ({ request, onStartBidding, onSelect, onCompare }) => {
+    onSubmitBid: (requestId: string) => void;
+}> = ({ request, onStartBidding, onSelect, onCompare, onSubmitBid }) => {
     return (
         <div onClick={() => onSelect(request)} className="bg-surface p-3 rounded-xl border border-border space-y-3 cursor-pointer hover:shadow-lg transition-shadow hover:border-primary group">
             <div className="flex justify-between items-start">
@@ -324,6 +326,18 @@ const RequestCard: React.FC<{
                 </button>
             )}
 
+            {request.status === MaterialRequestStatus.BIDDING_OPEN && (
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onSubmitBid(request.id);
+                    }}
+                    className="w-full mt-4 py-3 bg-primary text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-xl hover:shadow-luxury transition-all"
+                >
+                    Submit Bid
+                </button>
+            )}
+
             {(request.status === MaterialRequestStatus.UNDER_EVALUATION || request.status === MaterialRequestStatus.NEGOTIATION) && (
                 <button
                     onClick={(e) => {
@@ -346,6 +360,7 @@ const BiddingManagementPage: React.FC<{ setCurrentPage: (page: string) => void }
     const [selectedRequest, setSelectedRequest] = useState<MaterialRequest | null>(null);
     const [csRequestId, setCsRequestId] = useState<string | null>(null);
     const [rfqInitiateRequestId, setRfqInitiateRequestId] = useState<string | null>(null);
+    const [submitBidRequestId, setSubmitBidRequestId] = useState<string | null>(null);
     const [rfqs, setRfqs] = useState(RFQS);
 
     const handleStartBidding = (requestId: string) => {
@@ -438,6 +453,7 @@ const BiddingManagementPage: React.FC<{ setCurrentPage: (page: string) => void }
                                             onStartBidding={handleStartBidding}
                                             onSelect={setSelectedRequest}
                                             onCompare={(id) => setCsRequestId(id)}
+                                            onSubmitBid={(id) => setSubmitBidRequestId(id)}
                                         />
                                     ))
                                 }
@@ -471,6 +487,13 @@ const BiddingManagementPage: React.FC<{ setCurrentPage: (page: string) => void }
                 request={materialRequests.find(r => r.id === rfqInitiateRequestId) || null}
                 onInitiate={handleInitiateRFQ}
             />
+            {submitBidRequestId && (
+                <SubmitQuoteModal
+                    isOpen={!!submitBidRequestId}
+                    onClose={() => setSubmitBidRequestId(null)}
+                    rfq={rfqs.find(r => r.procurementRequestId === submitBidRequestId) || RFQS[0]}
+                />
+            )}
         </>
     );
 };

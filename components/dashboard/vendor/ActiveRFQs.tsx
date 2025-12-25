@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { RFQS } from '../../../constants';
+import { RFQS, formatCurrencyINR } from '../../../constants';
 import { RFQStatus, RFQ } from '../../../types';
-import { formatCurrencyINR } from '../../../constants';
 import { ClipboardDocumentListIcon, ClockIcon } from '@heroicons/react/24/outline';
+import SubmitQuoteModal from '../../shared/SubmitQuoteModal';
 
 const ActiveRFQs: React.FC = () => {
     const { currentVendor } = useAuth();
@@ -73,6 +72,15 @@ const ActiveRFQs: React.FC = () => {
                         </div>
                     ))}
                 </div>
+            )}
+
+            {selectedRFQ && (
+                <SubmitQuoteModal
+                    isOpen={!!selectedRFQ}
+                    onClose={() => setSelectedRFQ(null)}
+                    rfq={selectedRFQ}
+                    currentVendor={currentVendor}
+                />
             )}
         </div>
     );

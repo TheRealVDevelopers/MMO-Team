@@ -9,14 +9,22 @@ interface LoginModalProps {
     isOpen: boolean;
     onClose: () => void;
     onLogin: (user: User | Vendor, type?: 'staff' | 'vendor') => void;
+    initialType?: 'staff' | 'vendor';
 }
 
-const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => {
-    const [loginType, setLoginType] = useState<'staff' | 'vendor'>('staff');
+const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initialType = 'staff' }) => {
+    const [loginType, setLoginType] = useState<'staff' | 'vendor'>(initialType);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+
+    // Update loginType when initialType changes and modal is closed/reopened
+    React.useEffect(() => {
+        if (isOpen) {
+            setLoginType(initialType);
+        }
+    }, [isOpen, initialType]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -43,7 +51,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
                     setEmail('');
                     setPassword('');
                 } else {
-                    throw new Error('Invalid vendor credentials. Try sales@furnitureworld.com / 123456');
+                    throw new Error('Invalid vendor credentials. Try vendor@makemyoffice.com / 123456');
                 }
             }
         } catch (err: any) {

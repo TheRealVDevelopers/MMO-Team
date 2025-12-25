@@ -28,6 +28,7 @@ interface LandingPageProps {
 
 const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [loginModalType, setLoginModalType] = useState<'staff' | 'vendor'>('staff');
   const [currentView, setCurrentView] = useState<'home' | 'services' | 'portfolio' | 'about' | 'contact' | 'start-project' | 'client-login' | 'client-dashboard'>('home');
   const [isScrolled, setIsScrolled] = useState(false);
   const [clientProjectId, setClientProjectId] = useState<string>('');
@@ -163,12 +164,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                 </button>
 
                 <button
-                  onClick={() => setIsLoginModalOpen(true)}
+                  onClick={() => {
+                    setLoginModalType('staff');
+                    setIsLoginModalOpen(true);
+                  }}
                   className="text-[10px] uppercase tracking-[0.1em] font-bold text-text-secondary hover:text-primary transition-colors"
                 >
                   Staff Login
                 </button>
-
                 <motion.button
                   whileHover={{ scale: 1.05, boxShadow: "0 10px 25px -5px rgba(var(--color-primary), 0.3)" }}
                   whileTap={{ scale: 0.95 }}
@@ -272,11 +275,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                       Client Portal
                     </button>
                     <button
-                      onClick={() => { setIsLoginModalOpen(true); setIsMobileMenuOpen(false); }}
+                      onClick={() => { setLoginModalType('staff'); setIsLoginModalOpen(true); setIsMobileMenuOpen(false); }}
                       className="w-full px-4 py-3 border border-border text-text-secondary text-[10px] font-black uppercase tracking-[0.2em] hover:border-primary hover:text-primary transition-all duration-300 rounded-xl"
                     >
                       Staff Access
                     </button>
+
                   </div>
                 </div>
               </div>
@@ -392,6 +396,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
         onLogin={onLogin}
+        initialType={loginModalType}
       />
     </div>
   );

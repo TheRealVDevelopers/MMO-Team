@@ -10,7 +10,14 @@ const MyBids: React.FC = () => {
     const { currentVendor } = useAuth();
 
     // Filter Bids submitted by current vendor
-    const myBids = BIDS_DATA.filter(bid =>
+    const [allBids, setAllBids] = React.useState<Bid[]>([]);
+
+    React.useEffect(() => {
+        const localBids = JSON.parse(localStorage.getItem('mmo_mock_bids') || '[]');
+        setAllBids([...BIDS_DATA, ...localBids]);
+    }, []);
+
+    const myBids = allBids.filter(bid =>
         currentVendor &&
         bid.vendorId === currentVendor.id
     );

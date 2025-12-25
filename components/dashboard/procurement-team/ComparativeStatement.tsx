@@ -19,7 +19,14 @@ const ComparativeStatement: React.FC<ComparativeStatementProps> = ({ isOpen, onC
     if (!rfq) return null;
 
     // Find all bids for this RFQ
-    const bids = BIDS_DATA.filter(b => b.rfqId === rfq.id);
+    const [allBids, setAllBids] = React.useState<Bid[]>([]);
+
+    React.useEffect(() => {
+        const localBids = JSON.parse(localStorage.getItem('mmo_mock_bids') || '[]');
+        setAllBids([...BIDS_DATA, ...localBids]);
+    }, []);
+
+    const bids = allBids.filter(b => b.rfqId === rfq.id);
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={`Comparative Statement (CS) - ${rfq.projectName}`} size="6xl">
