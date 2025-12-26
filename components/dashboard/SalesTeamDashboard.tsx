@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import MyLeadsPage from './sales-team/MyLeadsPage';
 import { useAuth } from '../../context/AuthContext';
 import { Lead, SiteVisit, DrawingRequest, QuotationRequest, ProcurementRequest, ExecutionRequest, AccountsRequest, SiteVisitStatus, DrawingRequestStatus, QuotationRequestStatus, LeadPipelineStatus } from '../../types';
@@ -16,20 +16,83 @@ import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
 import { useLeads, addLead, updateLead } from '../../hooks/useLeads';
 import { SectionHeader, PrimaryButton } from './shared/DashboardUI';
-import { UserPlusIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { UserPlusIcon, ExclamationTriangleIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+
+// Simple Error Boundary Component for internal use
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+}
+
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  readonly state: ErrorBoundaryState = { hasError: false };
+
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+  }
+
+  static getDerivedStateFromError(error: any): ErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error("Sales Dashboard Error:", error, errorInfo);
+  }
+
+  render() {
+    // @ts-ignore
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 text-center bg-error/5 border border-error/20 rounded-3xl">
+          <ExclamationTriangleIcon className="w-12 h-12 text-error mx-auto mb-4" />
+          <h3 className="text-lg font-bold text-error">Something went wrong</h3>
+          <p className="mt-2 text-text-secondary">We couldn't load this section. Please try refreshing.</p>
+          <button
+            type="button"
+            // @ts-ignore
+            onClick={() => this.setState({ hasError: false })}
+            className="mt-4 px-4 py-2 bg-white border border-border rounded-lg text-sm font-medium hover:bg-gray-50"
+          >
+            Try Again
+          </button>
+        </div>
+      );
+    }
+
+    // @ts-ignore
+    return this.props.children;
+  }
+}
 
 const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
 
   const { leads, loading: leadsLoading, error: leadsError } = useLeads(currentUser?.id);
 
-  // Centralized state management for the sales user
-  const [siteVisits, setSiteVisits] = useState<SiteVisit[]>(() => SITE_VISITS.filter(sv => sv.requesterId === currentUser?.id));
-  const [drawingRequests, setDrawingRequests] = useState<DrawingRequest[]>(() => DRAWING_REQUESTS.filter(dr => dr.requesterId === currentUser?.id));
-  const [quotationRequests, setQuotationRequests] = useState<QuotationRequest[]>(() => QUOTATION_REQUESTS.filter(qr => qr.requesterId === currentUser?.id));
-  const [procurementRequests, setProcurementRequests] = useState<ProcurementRequest[]>(() => PROCUREMENT_REQUESTS.filter(pr => pr.requesterId === currentUser?.id));
-  const [executionRequests, setExecutionRequests] = useState<ExecutionRequest[]>(() => EXECUTION_REQUESTS.filter(er => er.requesterId === currentUser?.id));
-  const [accountsRequests, setAccountsRequests] = useState<AccountsRequest[]>(() => ACCOUNTS_REQUESTS.filter(ar => ar.requesterId === currentUser?.id));
+  // Use state but initialize safely. using useEffect to keep in sync with local "database" (constants)
+  // In a real app this would be API calls. Here we reset from constants on mount.
+  const [siteVisits, setSiteVisits] = useState<SiteVisit[]>([]);
+  const [drawingRequests, setDrawingRequests] = useState<DrawingRequest[]>([]);
+  const [quotationRequests, setQuotationRequests] = useState<QuotationRequest[]>([]);
+  const [procurementRequests, setProcurementRequests] = useState<ProcurementRequest[]>([]);
+  const [executionRequests, setExecutionRequests] = useState<ExecutionRequest[]>([]);
+  const [accountsRequests, setAccountsRequests] = useState<AccountsRequest[]>([]);
+
+  useEffect(() => {
+    if (currentUser?.id) {
+      // Safe access to imported constants
+      setSiteVisits((SITE_VISITS || []).filter(sv => sv.requesterId === currentUser.id));
+      setDrawingRequests((DRAWING_REQUESTS || []).filter(dr => dr.requesterId === currentUser.id));
+      setQuotationRequests((QUOTATION_REQUESTS || []).filter(qr => qr.requesterId === currentUser.id));
+      setProcurementRequests((PROCUREMENT_REQUESTS || []).filter(pr => pr.requesterId === currentUser.id));
+      setExecutionRequests((EXECUTION_REQUESTS || []).filter(er => er.requesterId === currentUser.id));
+      setAccountsRequests((ACCOUNTS_REQUESTS || []).filter(ar => ar.requesterId === currentUser.id));
+    }
+  }, [currentUser?.id]);
+
 
   const pageTitles: { [key: string]: string } = {
     'my-day': 'Personal Agenda',
@@ -95,10 +158,11 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
   };
 
   const renderPage = () => {
+    // Shared Loading State
     if (leadsLoading && ['my-day', 'leads'].includes(currentPage)) {
       return (
         <div className="flex flex-col items-center justify-center h-64">
-          <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
+          <ArrowPathIcon className="w-8 h-8 text-primary animate-spin mb-4" />
           <p className="text-text-secondary animate-pulse">Initializing data streams...</p>
         </div>
       );
@@ -121,18 +185,19 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
         return <SalesOverviewPage setCurrentPage={setCurrentPage} siteVisits={siteVisits} />;
       case 'leads':
         return <MyLeadsPage leads={leads} onUpdateLead={handleLeadUpdate} onAddNewLead={handleAddNewLead} />;
+      // Wrapped sub-pages with strict props
       case 'site-visits':
-        return <SiteVisitTasksPage setCurrentPage={setCurrentPage} siteVisits={siteVisits} onScheduleVisit={handleScheduleVisit} />;
+        return <SiteVisitTasksPage setCurrentPage={setCurrentPage} siteVisits={siteVisits || []} onScheduleVisit={handleScheduleVisit} />;
       case 'drawing-tasks':
-        return <DrawingTasksPage setCurrentPage={setCurrentPage} drawingRequests={drawingRequests} />;
+        return <DrawingTasksPage setCurrentPage={setCurrentPage} drawingRequests={drawingRequests || []} />;
       case 'quotation-tasks':
-        return <QuotationTasksPage setCurrentPage={setCurrentPage} quotationRequests={quotationRequests} />;
+        return <QuotationTasksPage setCurrentPage={setCurrentPage} quotationRequests={quotationRequests || []} />;
       case 'procurement-tasks':
-        return <ProcurementTasksPage setCurrentPage={setCurrentPage} procurementRequests={procurementRequests} />;
+        return <ProcurementTasksPage setCurrentPage={setCurrentPage} procurementRequests={procurementRequests || []} />;
       case 'execution-tasks':
-        return <ExecutionTasksPage setCurrentPage={setCurrentPage} executionRequests={executionRequests} />;
+        return <ExecutionTasksPage setCurrentPage={setCurrentPage} executionRequests={executionRequests || []} />;
       case 'accounts-tasks':
-        return <AccountsTasksPage setCurrentPage={setCurrentPage} accountsRequests={accountsRequests} />;
+        return <AccountsTasksPage setCurrentPage={setCurrentPage} accountsRequests={accountsRequests || []} />;
       case 'performance':
         return <MyPerformancePage setCurrentPage={setCurrentPage} />;
       case 'communication':
@@ -147,7 +212,7 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
   return (
     <div className="max-w-[1600px] mx-auto">
       <SectionHeader
-        title={pageTitles[currentPage]}
+        title={pageTitles[currentPage] || 'Workspace'}
         subtitle={currentPage === 'my-day' ? `Good morning, ${currentUser?.name.split(' ')[0]}. Here's your objective focus for today.` : undefined}
         actions={
           currentPage === 'leads' ? (
@@ -158,7 +223,9 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
         }
       />
       <div className="mt-8">
-        {renderPage()}
+        <ErrorBoundary key={currentPage}>
+          {renderPage()}
+        </ErrorBoundary>
       </div>
     </div>
   );

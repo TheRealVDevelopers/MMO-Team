@@ -15,11 +15,12 @@ import {
     SparklesIcon
 } from '@heroicons/react/24/outline';
 import PersonalCalendar from './PersonalCalendar';
-import ClockInOutWidget from '../ClockInOutWidget';
+import TimeTimeline from './TimeTimeline';
 import TimeTrackingSummary from '../TimeTrackingSummary';
 import RequestApprovalModal from './RequestApprovalModal';
 import { ContentCard, PrimaryButton, SecondaryButton, cn, staggerContainer } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTimeEntries } from '../../../hooks/useTimeTracking';
 
 // Define a type for the reminder with its associated lead info
 interface EnrichedReminder extends Reminder {
@@ -89,6 +90,11 @@ const MyDayPage: React.FC = () => {
     const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [newTaskTitle, setNewTaskTitle] = useState('');
     const [showRequestApprovalModal, setShowRequestApprovalModal] = useState(false);
+
+    // Fetch today's time entry for the timeline
+    const todayStr = new Date().toLocaleDateString('en-CA');
+    const { entries: timeEntries, loading: timeLoading } = useTimeEntries(currentUser?.id || '', todayStr, todayStr);
+    const todayTimeEntry = timeEntries.find(e => e.date === todayStr);
 
     useEffect(() => {
         if (currentUser) {
@@ -226,7 +232,7 @@ const MyDayPage: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Left Column: Clocking & Calendar */}
                 <div className="space-y-8">
-                    <ClockInOutWidget userId={currentUser.id} userName={currentUser.name} />
+                    <TimeTimeline timeEntry={todayTimeEntry} />
 
                     <PersonalCalendar
                         userId={currentUser.id}

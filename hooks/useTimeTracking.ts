@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { 
-  collection, 
-  query, 
-  where, 
-  onSnapshot, 
-  addDoc, 
-  updateDoc, 
-  doc, 
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  doc,
   serverTimestamp,
   orderBy,
   Timestamp,
@@ -29,7 +29,7 @@ export const useCurrentTimeStatus = (userId: string) => {
       return;
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
     const q = query(
       collection(db, 'timeEntries'),
       where('userId', '==', userId),
@@ -40,7 +40,7 @@ export const useCurrentTimeStatus = (userId: string) => {
       if (!snapshot.empty) {
         const doc = snapshot.docs[0];
         const data = doc.data() as TimeEntry;
-        
+
         let currentStatus: TimeTrackingStatus = TimeTrackingStatus.CLOCKED_OUT;
         let currentBreakStartTime: Date | undefined;
 
@@ -55,11 +55,20 @@ export const useCurrentTimeStatus = (userId: string) => {
           }
         }
 
+        let clockInTime: Date;
+        if (data.clockIn && typeof (data.clockIn as any).toDate === 'function') {
+          clockInTime = (data.clockIn as any).toDate();
+        } else {
+          // Fallback if seconds exists or just now
+          const seconds = (data.clockIn as any)?.seconds;
+          clockInTime = seconds ? new Date(seconds * 1000) : new Date();
+        }
+
         setStatus({
           userId,
           status: currentStatus,
           currentEntryId: doc.id,
-          clockInTime: (data.clockIn as any).toDate(),
+          clockInTime,
           currentBreakStartTime,
         });
       } else {
@@ -88,11 +97,23 @@ export const useTimeEntries = (userId: string, startDate?: string, endDate?: str
       return;
     }
 
-    let q = query(
-      collection(db, 'timeEntries'),
-      where('userId', '==', userId),
-      orderBy('date', 'desc')
-    );
+    let q;
+
+    // Optimization: If asking for a single day, use equality to avoid composite index requirements
+    if (startDate && endDate && startDate === endDate) {
+      q = query(
+        collection(db, 'timeEntries'),
+        where('userId', '==', userId),
+        where('date', '==', startDate)
+      );
+    } else {
+      // Fallback for ranges (requires index)
+      q = query(
+        collection(db, 'timeEntries'),
+        where('userId', '==', userId),
+        orderBy('date', 'desc')
+      );
+    }
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const timeEntries: TimeEntry[] = [];
@@ -106,9 +127,17 @@ export const useTimeEntries = (userId: string, startDate?: string, endDate?: str
           clockOut: data.clockOut ? (data.clockOut as Timestamp).toDate() : undefined,
           breaks: data.breaks?.map((b: any) => ({
             id: b.id,
-            startTime: (b.startTime as Timestamp).toDate(),
-            endTime: b.endTime ? (b.endTime as Timestamp).toDate() : undefined,
+            startTime: b.startTime && typeof b.startTime.toDate === 'function' ? b.startTime.toDate() : new Date(b.startTime?.seconds * 1000 || Date.now()),
+            endTime: b.endTime ? (typeof b.endTime.toDate === 'function' ? b.endTime.toDate() : new Date(b.endTime.seconds * 1000)) : undefined,
             durationMinutes: b.durationMinutes,
+          })) || [],
+          activities: data.activities?.map((a: any) => ({
+            id: a.id,
+            name: a.name,
+            startTime: a.startTime && typeof a.startTime.toDate === 'function' ? a.startTime.toDate() : new Date(a.startTime?.seconds * 1000 || Date.now()),
+            endTime: a.endTime ? (typeof a.endTime.toDate === 'function' ? a.endTime.toDate() : new Date(a.endTime.seconds * 1000)) : undefined,
+            durationMinutes: a.durationMinutes,
+            tags: a.tags
           })) || [],
           totalWorkHours: data.totalWorkHours,
           totalBreakMinutes: data.totalBreakMinutes,
@@ -129,8 +158,8 @@ export const useTimeEntries = (userId: string, startDate?: string, endDate?: str
 // Clock In
 export const clockIn = async (userId: string, userName: string) => {
   try {
-    const today = new Date().toISOString().split('T')[0];
-    
+    const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
+
     // Check if already clocked in today
     const q = query(
       collection(db, 'timeEntries'),
@@ -138,7 +167,7 @@ export const clockIn = async (userId: string, userName: string) => {
       where('date', '==', today)
     );
     const snapshot = await getDocs(q);
-    
+
     if (!snapshot.empty) {
       throw new Error('Already clocked in today');
     }
@@ -149,6 +178,7 @@ export const clockIn = async (userId: string, userName: string) => {
       clockIn: serverTimestamp(),
       date: today,
       breaks: [],
+      activities: [],
       status: TimeTrackingStatus.CLOCKED_IN,
     };
 
@@ -164,11 +194,11 @@ export const clockIn = async (userId: string, userName: string) => {
 export const clockOut = async (entryId: string) => {
   try {
     const entryRef = doc(db, 'timeEntries', entryId);
-    
+
     // Get current entry data using getDoc
     const { getDoc } = await import('firebase/firestore');
     const docSnapshot = await getDoc(entryRef);
-    
+
     if (!docSnapshot.exists()) {
       throw new Error('Time entry not found');
     }
@@ -176,7 +206,7 @@ export const clockOut = async (entryId: string) => {
     const data = docSnapshot.data();
     const clockInTime = (data.clockIn as Timestamp).toDate();
     const clockOutTime = new Date();
-    
+
     // Calculate total work hours
     const totalMs = clockOutTime.getTime() - clockInTime.getTime();
     const totalBreakMs = (data.breaks || []).reduce((acc: number, b: any) => {
@@ -185,7 +215,7 @@ export const clockOut = async (entryId: string) => {
       }
       return acc;
     }, 0);
-    
+
     const totalWorkMs = totalMs - totalBreakMs;
     const totalWorkHours = totalWorkMs / (1000 * 60 * 60);
     const totalBreakMinutes = totalBreakMs / (1000 * 60);
@@ -206,17 +236,17 @@ export const clockOut = async (entryId: string) => {
 export const startBreak = async (entryId: string) => {
   try {
     const entryRef = doc(db, 'timeEntries', entryId);
-    
+
     const { getDoc } = await import('firebase/firestore');
     const docSnapshot = await getDoc(entryRef);
-    
+
     if (!docSnapshot.exists()) {
       throw new Error('Time entry not found');
     }
 
     const data = docSnapshot.data();
     const breaks = data.breaks || [];
-    
+
     // Check if already on break
     const activeBreak = breaks.find((b: any) => !b.endTime);
     if (activeBreak) {
@@ -225,7 +255,7 @@ export const startBreak = async (entryId: string) => {
 
     breaks.push({
       id: `break-${Date.now()}`,
-      startTime: serverTimestamp(),
+      startTime: new Date(),
     });
 
     await updateDoc(entryRef, {
@@ -242,17 +272,17 @@ export const startBreak = async (entryId: string) => {
 export const endBreak = async (entryId: string) => {
   try {
     const entryRef = doc(db, 'timeEntries', entryId);
-    
+
     const { getDoc } = await import('firebase/firestore');
     const docSnapshot = await getDoc(entryRef);
-    
+
     if (!docSnapshot.exists()) {
       throw new Error('Time entry not found');
     }
 
     const data = docSnapshot.data();
     const breaks = data.breaks || [];
-    
+
     // Find active break
     const activeBreakIndex = breaks.findIndex((b: any) => !b.endTime);
     if (activeBreakIndex === -1) {
@@ -266,7 +296,7 @@ export const endBreak = async (entryId: string) => {
 
     breaks[activeBreakIndex] = {
       ...activeBreak,
-      endTime: serverTimestamp(),
+      endTime: new Date(),
       durationMinutes,
     };
 
@@ -300,7 +330,7 @@ export const getTimeTrackingSummary = (entries: TimeEntry[]) => {
   const totalBreakMinutes = entries.reduce((total, entry) => {
     return total + (entry.totalBreakMinutes || 0);
   }, 0);
-  
+
   const totalDays = entries.filter(e => e.clockOut).length;
   const averageHoursPerDay = totalDays > 0 ? totalWorkHours / totalDays : 0;
 

@@ -28,6 +28,15 @@ export enum TimeTrackingStatus {
   ON_BREAK = "On Break",
 }
 
+export interface TimeActivity {
+  id: string;
+  name: string; // e.g., "Designing UI", "Meeting with Client"
+  startTime: Date;
+  endTime?: Date;
+  durationMinutes?: number;
+  tags?: string[];
+}
+
 export interface TimeEntry {
   id: string;
   userId: string;
@@ -35,6 +44,7 @@ export interface TimeEntry {
   clockIn: Date;
   clockOut?: Date;
   breaks: BreakEntry[];
+  activities: TimeActivity[]; // New field for detailed tracking
   totalWorkHours?: number;
   totalBreakMinutes?: number;
   date: string; // YYYY-MM-DD format
