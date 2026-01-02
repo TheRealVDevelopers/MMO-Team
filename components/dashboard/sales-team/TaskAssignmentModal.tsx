@@ -82,7 +82,7 @@ const TaskAssignmentModal: React.FC<TaskAssignmentModalProps> = ({ isOpen, onClo
 
                 <div className="pt-4 flex justify-end space-x-2">
                     <button type="button" onClick={handleClose} className="px-4 py-2 text-sm font-medium text-text-primary bg-surface border border-border rounded-md hover:bg-subtle-background">Cancel</button>
-                    <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-blue-700" disabled={!assigneeId}>Assign Task</button>
+                    <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-secondary" disabled={!assigneeId}>Assign Task</button>
                 </div>
 
             </form>

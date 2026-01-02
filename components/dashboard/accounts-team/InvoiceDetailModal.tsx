@@ -61,7 +61,7 @@ const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({ isOpen, onClose
                         </div>
                         <div className="flex justify-end space-x-2">
                              <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-text-primary bg-surface border border-border rounded-md hover:bg-subtle-background">Cancel</button>
-                             <button onClick={handleUpdate} className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-blue-700">Save Changes</button>
+                             <button onClick={handleUpdate} className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-secondary">Save Changes</button>
                         </div>
                     </div>
                 </div>

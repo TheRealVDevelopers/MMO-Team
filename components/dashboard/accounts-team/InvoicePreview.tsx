@@ -38,7 +38,7 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ invoice }) => {
             `}
             </style>
             <div className="no-print absolute top-4 right-4 flex space-x-2">
-                 <button onClick={handlePrint} className="flex items-center space-x-2 bg-primary text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700">
+                 <button onClick={handlePrint} className="flex items-center space-x-2 bg-primary text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-secondary">
                     <ArrowDownTrayIcon className="w-4 h-4"/>
                     <span>Print / Download</span>
                 </button>

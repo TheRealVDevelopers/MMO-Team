@@ -31,7 +31,7 @@ const EnquiriesListModal: React.FC<EnquiriesListModalProps> = ({
     const getStatusColor = (status: EnquiryStatus) => {
         switch (status) {
             case EnquiryStatus.NEW:
-                return 'bg-blue-100 text-blue-800 border-blue-200';
+                return 'bg-accent-subtle-background text-accent-subtle-text border-accent';
             case EnquiryStatus.ASSIGNED:
                 return 'bg-yellow-100 text-yellow-800 border-yellow-200';
             case EnquiryStatus.CONVERTED_TO_LEAD:

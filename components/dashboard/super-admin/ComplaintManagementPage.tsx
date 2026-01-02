@@ -16,7 +16,7 @@ import ComplaintDetailModal from './ComplaintDetailModal';
 
 const getStatusConfig = (status: ComplaintStatus) => {
     switch (status) {
-        case ComplaintStatus.SUBMITTED: return { color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/20' };
+        case ComplaintStatus.SUBMITTED: return { color: 'text-accent-subtle-text', bg: 'bg-accent-subtle-background/10', border: 'border-accent-subtle-text/20' };
         case ComplaintStatus.UNDER_REVIEW: return { color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20' };
         case ComplaintStatus.INVESTIGATION: return { color: 'text-purple-500', bg: 'bg-purple-500/10', border: 'border-purple-500/20' };
         case ComplaintStatus.RESOLVED: return { color: 'text-green-500', bg: 'bg-green-500/10', border: 'border-green-500/20' };

@@ -54,7 +54,7 @@ const ProfileCard: React.FC = () => {
             />
              <button 
                 onClick={handleCameraClick}
-                className="absolute bottom-0 right-0 bg-primary text-white rounded-full p-1.5 shadow-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary focus:ring-offset-surface"
+                className="absolute bottom-0 right-0 bg-primary text-white rounded-full p-1.5 shadow-md hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary focus:ring-offset-surface"
                 aria-label="Change profile picture"
             >
                 <CameraIcon className="w-4 h-4" />

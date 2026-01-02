@@ -135,7 +135,7 @@ const RequestQuotationModal: React.FC<RequestQuotationModalProps> = ({ isOpen, o
                         <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-border border-dashed rounded-md">
                             <div className="space-y-1 text-center">
                                 <svg className="mx-auto h-12 w-12 text-text-secondary" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path></svg>
-                                <div className="flex text-sm text-text-secondary"><label htmlFor="file-upload" className="relative cursor-pointer bg-surface rounded-md font-medium text-primary hover:text-blue-700"><span>Upload files</span><input id="file-upload" name="file-upload" type="file" className="sr-only" multiple/></label><p className="pl-1">or drag and drop</p></div>
+                                <div className="flex text-sm text-text-secondary"><label htmlFor="file-upload" className="relative cursor-pointer bg-surface rounded-md font-medium text-primary hover:text-secondary"><span>Upload files</span><input id="file-upload" name="file-upload" type="file" className="sr-only" multiple/></label><p className="pl-1">or drag and drop</p></div>
                                 <p className="text-xs text-text-secondary">Site reports, inspiration photos, etc.</p>
                             </div>
                         </div>
@@ -146,7 +146,7 @@ const RequestQuotationModal: React.FC<RequestQuotationModalProps> = ({ isOpen, o
                 <div className="flex justify-between pt-2">
                     <button type="button" onClick={() => setStep(s => s - 1)} disabled={step === 1} className="px-4 py-2 text-sm font-medium text-text-primary bg-surface border border-border rounded-md hover:bg-subtle-background disabled:opacity-50">Back</button>
                     {step < 3 ? (
-                        <button type="button" onClick={() => setStep(s => s + 1)} className="bg-primary text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700">Next</button>
+                        <button type="button" onClick={() => setStep(s => s + 1)} className="bg-primary text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-secondary">Next</button>
                     ) : (
                         <button type="submit" className="bg-secondary text-white px-4 py-2 rounded-md text-sm font-medium hover:opacity-90">Submit Request</button>
                     )}

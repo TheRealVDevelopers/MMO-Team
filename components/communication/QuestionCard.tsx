@@ -39,8 +39,7 @@ const QuestionCard: React.FC<{ question: QuickClarifyQuestion }> = ({ question }
                     <img src={sender?.avatar} alt={sender?.name} className="w-6 h-6 rounded-full" />
                     <span className="text-xs font-medium">{sender?.name}</span>
                 </div>
-                <button className="px-3 py-1 bg-primary text-white text-xs font-semibold rounded-md hover:bg-blue-700">Reply</button>
-            </div>
+                <button className="px-3 py-1 bg-primary text-white text-xs font-semibold rounded-md hover:bg-secondary">Reply</button>            </div>
         </div>
     );
 };

@@ -211,7 +211,7 @@ service cloud.firestore {
                 </div>
                 {showHeader && (
                   <div className="flex items-center space-x-2">
-                      <button onClick={() => setAddLeadModalOpen(true)} className="flex items-center space-x-2 bg-primary text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700">
+                      <button onClick={() => setAddLeadModalOpen(true)} className="flex items-center space-x-2 bg-primary text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-secondary">
                           <UserPlusIcon className="w-4 h-4" />
                           <span>Add New Lead</span>
                       </button>

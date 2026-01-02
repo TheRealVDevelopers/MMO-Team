@@ -63,7 +63,7 @@ const NotificationPopover: React.FC = () => {
         switch (type) {
             case 'success': return <CheckCircleIcon className="w-5 h-5 text-green-500" />;
             case 'warning': return <ExclamationTriangleIcon className="w-5 h-5 text-amber-500" />;
-            default: return <InformationCircleIcon className="w-5 h-5 text-blue-500" />;
+            default: return <InformationCircleIcon className="w-5 h-5 text-accent-subtle-text" />;
         }
     };
 

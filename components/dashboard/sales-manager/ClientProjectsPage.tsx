@@ -226,9 +226,9 @@ const ClientProjectsPage: React.FC = () => {
                                     {/* Notification Badges */}
                                     <div className="flex items-center space-x-2">
                                         {project.unreadMessages > 0 && (
-                                            <div className="flex items-center space-x-1 px-3 py-1 bg-blue-50 rounded-full">
-                                                <ChatBubbleLeftRightIcon className="w-4 h-4 text-blue-600" />
-                                                <span className="text-xs font-bold text-blue-600">{project.unreadMessages}</span>
+                                            <div className="flex items-center space-x-1 px-3 py-1 bg-accent-subtle-background rounded-full">
+                                                <ChatBubbleLeftRightIcon className="w-4 h-4 text-accent-subtle-text" />
+                                                <span className="text-xs font-bold text-accent-subtle-text">{project.unreadMessages}</span>
                                             </div>
                                         )}
                                         {project.openIssues > 0 && (

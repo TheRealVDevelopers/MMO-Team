@@ -38,7 +38,7 @@ const QuickClarifyChannel: React.FC<QuickClarifyChannelProps> = ({ channel, ques
                         <QuestionMarkCircleIcon className="w-6 h-6 text-text-secondary"/>
                         <h2 className="text-lg font-bold text-text-primary ml-2">{channel.name}</h2>
                     </div>
-                    <button onClick={() => setIsModalOpen(true)} className="flex items-center space-x-2 bg-primary text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700">
+                    <button onClick={() => setIsModalOpen(true)} className="flex items-center space-x-2 bg-primary text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-secondary">
                         <PlusIcon className="w-4 h-4"/>
                         <span>Ask a Question</span>
                     </button>

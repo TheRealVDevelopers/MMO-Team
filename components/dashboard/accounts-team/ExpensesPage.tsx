@@ -11,7 +11,7 @@ import ExpenseModal from './ExpenseModal';
 const ExpenseStatusPill: React.FC<{ status: ExpenseStatus }> = ({ status }) => {
     const color = {
         'Pending': 'amber',
-        'Approved': 'blue',
+        'Approved': 'green',
         'Rejected': 'red',
         'Paid': 'green',
     }[status] as 'amber' | 'blue' | 'red' | 'green';
@@ -61,7 +61,7 @@ const ExpensesPage: React.FC<ExpensesPageProps> = ({ setCurrentPage, expenses, p
                         </button>
                         <h2 className="text-2xl font-bold text-text-primary">Expense Management</h2>
                     </div>
-                     <button onClick={() => handleOpenModal(null)} className="flex items-center space-x-2 bg-primary text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 mt-2 sm:mt-0">
+                     <button onClick={() => handleOpenModal(null)} className="flex items-center space-x-2 bg-primary text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-secondary mt-2 sm:mt-0">
                         <PlusIcon className="w-4 h-4" />
                         <span>Create Expense</span>
                     </button>

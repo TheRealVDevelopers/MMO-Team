@@ -21,7 +21,7 @@ import { motion } from 'framer-motion';
 const getStatusConfig = (status: ExecutionRequestStatus) => {
     switch (status) {
         case ExecutionRequestStatus.REQUESTED:
-            return { color: 'text-blue-500 bg-blue-500/10 border-blue-500/20', icon: ClockIcon };
+            return { color: 'text-accent-subtle-text bg-accent-subtle-background/10 border-accent-subtle-text/20', icon: ClockIcon };
         case ExecutionRequestStatus.IN_PROGRESS:
             return { color: 'text-amber-500 bg-amber-500/10 border-amber-500/20', icon: ClockIcon };
         case ExecutionRequestStatus.COMPLETED:

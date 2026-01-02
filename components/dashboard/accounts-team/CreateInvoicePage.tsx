@@ -145,7 +145,7 @@ const CreateInvoicePage: React.FC<CreateInvoicePageProps> = ({ projects, onAddIn
                         <div className="space-y-1 text-center">
                             <svg className="mx-auto h-12 w-12 text-text-secondary" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path></svg>
                             <div className="flex text-sm text-text-secondary">
-                                <label htmlFor="file-upload" className="relative cursor-pointer bg-surface rounded-md font-medium text-primary hover:text-blue-700">
+                                <label htmlFor="file-upload" className="relative cursor-pointer bg-surface rounded-md font-medium text-primary hover:text-secondary">
                                     <span>Upload supporting documents</span>
                                     <input id="file-upload" name="file-upload" type="file" className="sr-only" multiple/>
                                 </label>
@@ -155,7 +155,7 @@ const CreateInvoicePage: React.FC<CreateInvoicePageProps> = ({ projects, onAddIn
                     </div>
                 </div>
 
-                <button onClick={handleSave} className="w-full py-2 bg-primary text-white font-semibold rounded-lg hover:bg-blue-700">Save and Generate Invoice</button>
+                <button onClick={handleSave} className="w-full py-2 bg-primary text-white font-semibold rounded-lg hover:bg-secondary">Save and Generate Invoice</button>
             </div>
 
             {/* Preview Column */}

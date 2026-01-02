@@ -162,7 +162,7 @@ const AssignVisitModal: React.FC<AssignVisitModalProps> = ({ isOpen, onClose, le
                          <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-border border-dashed rounded-md">
                             <div className="space-y-1 text-center">
                                 <PaperClipIcon className="mx-auto h-8 w-8 text-text-secondary"/>
-                                <div className="flex text-sm text-text-secondary"><label htmlFor="file-upload" className="relative cursor-pointer bg-surface rounded-md font-medium text-primary hover:text-blue-700"><span>Upload a file</span><input id="file-upload" name="file-upload" type="file" className="sr-only"/></label><p className="pl-1">or drag and drop</p></div>
+                                <div className="flex text-sm text-text-secondary"><label htmlFor="file-upload" className="relative cursor-pointer bg-surface rounded-md font-medium text-primary hover:text-secondary"><span>Upload a file</span><input id="file-upload" name="file-upload" type="file" className="sr-only"/></label><p className="pl-1">or drag and drop</p></div>
                             </div>
                         </div>
                     </div>
@@ -171,7 +171,7 @@ const AssignVisitModal: React.FC<AssignVisitModalProps> = ({ isOpen, onClose, le
                 <div className="flex justify-between pt-2">
                     <button type="button" onClick={() => setStep(s => s - 1)} disabled={step === 1} className="px-4 py-2 text-sm font-medium text-text-primary bg-surface border border-border rounded-md hover:bg-subtle-background disabled:opacity-50">Back</button>
                     {step < 3 ? (
-                        <button type="button" onClick={() => setStep(s => s + 1)} className="bg-primary text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700">Next</button>
+                        <button type="button" onClick={() => setStep(s => s + 1)} className="bg-primary text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-secondary">Next</button>
                     ) : (
                         <button type="submit" className="bg-secondary text-white px-4 py-2 rounded-md text-sm font-medium hover:opacity-90">Assign Visit</button>
                     )}

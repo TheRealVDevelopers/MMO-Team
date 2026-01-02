@@ -52,7 +52,7 @@ const SiteVisitsPage: React.FC<{ setCurrentPage: (page: string) => void; siteVis
                     </button>
                     <h2 className="text-2xl font-bold text-text-primary">My Site Visit Requests</h2>
                 </div>
-                 <button onClick={() => setModalOpen(true)} className="flex items-center space-x-2 bg-primary text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 mt-2 sm:mt-0">
+                 <button onClick={() => setModalOpen(true)} className="flex items-center space-x-2 bg-primary text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-secondary mt-2 sm:mt-0">
                     <PlusIcon className="w-4 h-4" />
                     <span>Assign New Visit</span>
                 </button>

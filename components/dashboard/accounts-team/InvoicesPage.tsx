@@ -14,7 +14,7 @@ const PaymentStatusPill: React.FC<{ status: PaymentStatus }> = ({ status }) => {
         [PaymentStatus.PENDING]: 'amber',
         [PaymentStatus.OVERDUE]: 'red',
         [PaymentStatus.DRAFT]: 'slate',
-        [PaymentStatus.SENT]: 'blue',
+        [PaymentStatus.SENT]: 'green',
         [PaymentStatus.PARTIALLY_PAID]: 'purple',
     }[status] as 'green' | 'amber' | 'red' | 'slate' | 'blue' | 'purple';
     return <StatusPill color={color}>{status}</StatusPill>;
@@ -68,7 +68,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ setCurrentPage, invoices, p
                     </div>
                     <button 
                         onClick={() => setView('create')}
-                        className="flex items-center space-x-2 bg-primary text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 mt-2 sm:mt-0">
+                        className="flex items-center space-x-2 bg-primary text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-secondary mt-2 sm:mt-0">
                         <PlusIcon className="w-4 h-4" />
                         <span>Create New Invoice</span>
                     </button>

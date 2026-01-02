@@ -309,7 +309,7 @@ const EnquiryDetailsModal: React.FC<EnquiryDetailsModalProps> = ({
                             </div>
                         </div>
 
-                        <div className="text-sm text-gray-600 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="text-sm text-gray-600 bg-accent-subtle-background border border-accent rounded-lg p-4">
                             <p className="font-bold mb-2">What happens when you convert?</p>
                             <ul className="list-disc list-inside space-y-1">
                                 <li>Creates a new Lead in the sales pipeline</li>

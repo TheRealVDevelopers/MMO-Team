@@ -4,7 +4,7 @@ import { PurchaseOrder, POStatus } from '../../../types';
 import { ArrowLeftIcon, PlusIcon, DocumentTextIcon, TruckIcon, CheckCircleIcon, XMarkIcon } from '../../icons/IconComponents';
 
 const PO_STATUS_COLORS = {
-    [POStatus.ISSUED]: 'bg-blue-100 text-blue-700 border-blue-200',
+    [POStatus.ISSUED]: 'bg-accent-subtle-background text-accent-subtle-text border-accent',
     [POStatus.ACCEPTED]: 'bg-indigo-100 text-indigo-700 border-indigo-200',
     [POStatus.IN_TRANSIT]: 'bg-amber-100 text-amber-700 border-amber-200',
     [POStatus.PARTIALLY_DELIVERED]: 'bg-orange-100 text-orange-700 border-orange-200',

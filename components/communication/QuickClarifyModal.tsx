@@ -67,7 +67,7 @@ const QuickClarifyModal: React.FC<QuickClarifyModalProps> = ({ isOpen, onClose, 
                 </div>
                 <div className="pt-4 flex justify-end space-x-2">
                     <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-text-primary bg-surface border border-border rounded-md hover:bg-subtle-background">Cancel</button>
-                    <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-blue-700">Submit Question</button>
+                    <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-secondary">Submit Question</button>
                 </div>
             </form>
         </Modal>

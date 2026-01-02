@@ -134,7 +134,7 @@ const QuotationDetailModal: React.FC<{
 
             <div className="flex justify-between items-center mt-6 pt-4 border-t border-border">
                 <button onClick={() => setStep(s => Math.max(1, s - 1))} disabled={step === 1} className="px-4 py-2 text-sm font-medium text-text-primary bg-surface border border-border rounded-md hover:bg-subtle-background disabled:opacity-50">Back</button>
-                <button onClick={() => setStep(s => Math.min(3, s + 1))} disabled={step === 3} className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-blue-700 disabled:opacity-50">Next</button>
+                <button onClick={() => setStep(s => Math.min(3, s + 1))} disabled={step === 3} className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-secondary disabled:opacity-50">Next</button>
             </div>
 
         </Modal>

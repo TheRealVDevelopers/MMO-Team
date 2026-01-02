@@ -54,7 +54,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdateStatus }) => {
                 <span className="font-mono font-semibold">{formatTime(elapsedTime)}</span>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                  <button onClick={() => onUpdateStatus(task.id, TaskStatus.COMPLETED)} className="flex items-center justify-center space-x-2 py-2 bg-primary text-white rounded-md text-sm font-semibold hover:bg-blue-700">
+                  <button onClick={() => onUpdateStatus(task.id, TaskStatus.COMPLETED)} className="flex items-center justify-center space-x-2 py-2 bg-primary text-white rounded-md text-sm font-semibold hover:bg-secondary">
                       <CheckCircleIcon className="w-4 h-4" />
                       <span>Complete</span>
                   </button>

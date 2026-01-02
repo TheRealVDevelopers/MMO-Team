@@ -99,9 +99,9 @@ const ComparativeStatement: React.FC<ComparativeStatementProps> = ({ isOpen, onC
                     </table>
                 </div>
 
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-start space-x-3">
-                    <CheckCircleIcon className="w-5 h-5 text-blue-500 mt-0.5" />
-                    <p className="text-xs text-blue-800 leading-relaxed">
+                <div className="p-4 bg-accent-subtle-background border border-accent rounded-xl flex items-start space-x-3">
+                    <CheckCircleIcon className="w-5 h-5 text-accent-subtle-text mt-0.5" />
+                    <p className="text-xs text-accent-subtle-text leading-relaxed">
                         <strong>Evaluation Protocol:</strong> Comparing based on L1 (Lowest Price) vs T1 (Technical Rating). Awarding a PO will automatically notify the vendor and initiate the Goods Receipt workflow.
                     </p>
                 </div>

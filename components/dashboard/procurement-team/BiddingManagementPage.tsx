@@ -143,7 +143,7 @@ const NewRequestModal: React.FC<NewRequestModalProps> = ({ isOpen, onClose, onAd
 
                 <div className="flex justify-end pt-4 space-x-2">
                     <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-text-primary bg-surface border border-border rounded-md hover:bg-subtle-background">Cancel</button>
-                    <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-blue-700">Create Request</button>
+                    <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-secondary">Create Request</button>
                 </div>
             </form>
         </Modal>
@@ -275,7 +275,7 @@ const EditRequestModal: React.FC<EditRequestModalProps> = ({ isOpen, onClose, re
 
                 <div className="flex justify-end pt-4 space-x-2">
                     <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-text-primary bg-surface border border-border rounded-md hover:bg-subtle-background">Cancel</button>
-                    <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-blue-700">Save Changes</button>
+                    <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-secondary">Save Changes</button>
                 </div>
             </form>
         </Modal>

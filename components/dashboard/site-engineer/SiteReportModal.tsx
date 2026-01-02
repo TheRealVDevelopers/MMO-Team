@@ -163,7 +163,7 @@ const SiteReportModal: React.FC<SiteReportModalProps> = ({ isOpen, onClose, visi
                       <div className="space-y-1 text-center">
                           <CameraIcon className="mx-auto h-12 w-12 text-text-secondary" />
                           <div className="flex text-sm text-text-secondary">
-                              <label htmlFor="file-upload" className="relative cursor-pointer bg-surface rounded-md font-medium text-primary hover:text-blue-700">
+                              <label htmlFor="file-upload" className="relative cursor-pointer bg-surface rounded-md font-medium text-primary hover:text-secondary">
                                   <span>Upload photos</span>
                                   <input id="file-upload" name="file-upload" type="file" className="sr-only" multiple/>
                               </label>
@@ -179,7 +179,7 @@ const SiteReportModal: React.FC<SiteReportModalProps> = ({ isOpen, onClose, visi
       <div className="flex justify-between items-center mt-6 pt-4 border-t border-border">
           <button onClick={() => setStep(s => Math.max(1, s-1))} disabled={step === 1} className="px-4 py-2 text-sm font-medium text-text-primary bg-surface border border-border rounded-md hover:bg-subtle-background disabled:opacity-50">Back</button>
            {step < 4 ? (
-               <button onClick={() => setStep(s => Math.min(4, s+1))} className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-blue-700">Next</button>
+               <button onClick={() => setStep(s => Math.min(4, s+1))} className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-secondary">Next</button>
            ) : (
                 <button onClick={handleSubmit} className="px-4 py-2 text-sm font-medium text-white bg-secondary rounded-md hover:opacity-90">Submit Report</button>
            )}

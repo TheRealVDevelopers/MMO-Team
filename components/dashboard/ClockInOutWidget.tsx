@@ -223,8 +223,8 @@ const ClockInOutWidget: React.FC<ClockInOutWidgetProps> = ({ userId, userName })
       </div>
 
       {/* Info Message */}
-      <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-        <p className="text-xs text-blue-700 dark:text-blue-300 text-center">
+      <div className="mt-4 p-3 bg-accent-subtle-background dark:bg-accent-subtle-background/20 rounded-lg">
+        <p className="text-xs text-accent-subtle-text dark:text-accent-subtle-text text-center">
           {status.status === TimeTrackingStatus.CLOCKED_OUT && 'Click "Clock In" when you start your work day'}
           {status.status === TimeTrackingStatus.CLOCKED_IN && 'Take a break when needed or clock out when done'}
           {status.status === TimeTrackingStatus.ON_BREAK && 'Click "End Break" when you\'re ready to resume work'}
