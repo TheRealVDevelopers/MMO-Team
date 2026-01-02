@@ -53,19 +53,18 @@ const VendorOverview: React.FC = () => {
                     icon={ClipboardDocumentListIcon}
                     label="Pending RFQs"
                     value={activeRFQs}
-                    colorClass="bg-blue-100 text-blue-600"
+                    colorClass="bg-primary/10 text-primary"
                 />
                 <StatCard
-                    icon={DocumentCheckIcon}
                     label="Submitted Bids"
                     value={submittedBidsCount}
-                    colorClass="bg-purple-100 text-purple-600"
+                    colorClass="bg-purple/10 text-purple"
                 />
                 <StatCard
                     icon={TrophyIcon}
                     label="Bids Won"
                     value={wins}
-                    colorClass="bg-green-100 text-green-600"
+                    colorClass="bg-secondary/10 text-secondary"
                 />
             </div>
 

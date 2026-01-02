@@ -5,7 +5,7 @@ import { ArrowLeftIcon, PlusIcon, DocumentTextIcon, TruckIcon, CheckCircleIcon, 
 
 const PO_STATUS_COLORS = {
     [POStatus.ISSUED]: 'bg-accent-subtle-background text-accent-subtle-text border-accent',
-    [POStatus.ACCEPTED]: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+    [POStatus.ACCEPTED]: 'bg-primary/10 text-primary border-primary/20',
     [POStatus.IN_TRANSIT]: 'bg-amber-100 text-amber-700 border-amber-200',
     [POStatus.PARTIALLY_DELIVERED]: 'bg-orange-100 text-orange-700 border-orange-200',
     [POStatus.DELIVERED]: 'bg-emerald-100 text-emerald-700 border-emerald-200',

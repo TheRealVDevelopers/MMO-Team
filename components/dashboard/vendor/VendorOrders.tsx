@@ -5,11 +5,11 @@ import { DocumentTextIcon, TruckIcon, CheckCircleIcon, ClockIcon } from '@heroic
 import { POStatus } from '../../../types';
 
 const STATUS_CONFIG = {
-    [POStatus.ISSUED]: { color: 'text-blue-600 bg-blue-50 border-blue-100', icon: ClockIcon, label: 'Received' },
-    [POStatus.ACCEPTED]: { color: 'text-indigo-600 bg-indigo-50 border-indigo-100', icon: CheckCircleIcon, label: 'Accepted' },
+    [POStatus.ISSUED]: { color: 'text-primary bg-primary/5 border-primary/10', icon: ClockIcon, label: 'Received' },
+    [POStatus.ACCEPTED]: { color: 'text-purple bg-purple/5 border-purple/10', icon: CheckCircleIcon, label: 'Accepted' },
     [POStatus.IN_TRANSIT]: { color: 'text-amber-600 bg-amber-50 border-amber-100', icon: TruckIcon, label: 'In Transit' },
-    [POStatus.DELIVERED]: { color: 'text-emerald-600 bg-emerald-50 border-emerald-100', icon: CheckCircleIcon, label: 'Delivered' },
-    [POStatus.CANCELLED]: { color: 'text-rose-600 bg-rose-50 border-rose-100', icon: ClockIcon, label: 'Cancelled' },
+    [POStatus.DELIVERED]: { color: 'text-secondary bg-secondary/5 border-secondary/10', icon: CheckCircleIcon, label: 'Delivered' },
+    [POStatus.CANCELLED]: { color: 'text-error bg-error/5 border-error/10', icon: ClockIcon, label: 'Cancelled' },
 };
 
 const VendorOrders: React.FC = () => {

@@ -9,9 +9,9 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800&display=swap"
-    rel="stylesheet">  <style>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <style>
     :root {
       /* Primary Accent: Green */
       --color-primary: 34 197 94;
@@ -23,35 +23,36 @@
       --color-error: 239 68 68;
       --color-purple: 139 92 246;
 
-      /* Main Background: Slate 50 */
-      --color-background: 248 250 252;
+      /* Main Background: Neutral 50 */
+      --color-background: 250 250 250;
 
-      /* Section Background: Slate 100 */
-      --color-subtle-background: 241 245 249;
+      /* Section Background: Neutral 100 */
+      --color-subtle-background: 245 245 245;
 
       /* Card Background: Pure White */
       --color-surface: 255 255 255;
 
       /* Text Colors */
-      --color-text-primary: 15 23 42;
-      /* Slate 900 */
-      --color-text-secondary: 71 85 105;
-      /* Slate 600 */
+      --color-text-primary: 23 23 23;
+      /* Neutral 900 */
+      --color-text-secondary: 82 82 82;
+      /* Neutral 600 */
 
       /* Borders */
-      --color-border: 226 232 240;
-      /* Slate 200 */
+      --color-border: 229 229 229;
+      /* Neutral 200 */
 
-      --color-toggle-background: 203 213 225;
+      --color-toggle-background: 212 212 212;
 
       /* Subtle States */
-      --color-primary-subtle-background: 240 255 244;
+      --color-primary-subtle-background: 240 253 244;
       --color-primary-subtle-text: 34 197 94;
 
-      --color-secondary-subtle-background: 246 255 249;
+      --color-secondary-subtle-background: 240 253 244;
+      /* Matching Primary for Green Theme Consistency */
       --color-secondary-subtle-text: 74 222 128;
-      --color-accent-subtle-background: 241 245 249;
-      --color-accent-subtle-text: 71 85 105;
+      --color-accent-subtle-background: 245 245 245;
+      --color-accent-subtle-text: 82 82 82;
 
       --color-error-subtle-background: 254 242 242;
       --color-error-subtle-text: 185 28 28;
@@ -59,23 +60,20 @@
       --color-purple-subtle-background: 243 232 255;
       --color-purple-subtle-text: 107 33 168;
 
-      --color-slate-subtle-background: 241 245 249;
-      --color-slate-subtle-text: 71 85 105;
+      --color-slate-subtle-background: 245 245 245;
+      --color-slate-subtle-text: 82 82 82;
     }
 
-    /* Smooth Scrolling with heavy dampening */
+    /* Smooth Scrolling */
     html {
       scroll-behavior: smooth;
     }
 
-    .font-serif {
-      font-family: 'Nunito', sans-serif;
-    }
-
+    .font-serif,
     .font-sans {
       font-family: 'Nunito', sans-serif;
     }
-    /* Hide Scrollbar for horizontal scroll areas */
+
     .scrollbar-hide::-webkit-scrollbar {
       display: none;
     }
@@ -85,7 +83,6 @@
       scrollbar-width: none;
     }
 
-    /* Luxury Text Rendering */
     body {
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
@@ -95,6 +92,7 @@
   <script>
     tailwind.config = {
       darkMode: 'class',
+      important: true, /* FORCE OVERRIDE of any conflicting styles */
       theme: {
         extend: {
           fontFamily: {
@@ -102,28 +100,55 @@
             serif: ['Nunito', 'sans-serif'],
           },
           colors: {
-            primary: 'rgb(var(--color-primary) / <alpha-value>)',
-            secondary: 'rgb(var(--color-secondary) / <alpha-value>)',
-            accent: 'rgb(var(--color-accent) / <alpha-value>)',
-            error: 'rgb(var(--color-error) / <alpha-value>)',
-            purple: 'rgb(var(--color-purple) / <alpha-value>)',
-            background: 'rgb(var(--color-background) / <alpha-value>)',
-            surface: 'rgb(var(--color-surface) / <alpha-value>)',
-            'text-primary': 'rgb(var(--color-text-primary) / <alpha-value>)',
-            'text-secondary': 'rgb(var(--color-text-secondary) / <alpha-value>)',
-            border: 'rgb(var(--color-border) / <alpha-value>)',
-            'subtle-background': 'rgb(var(--color-subtle-background) / <alpha-value>)',
+            /* HARDCODED GREEN PALETTE TO ENSURE THEME APPLICATION */
+            primary: '#22c55e', /* Green-500 */
+            secondary: '#4ade80', /* Green-400 */
+            accent: '#86efac', /* Green-300 */
+
+            /* Semantic Colors (Hardcoded) */
+            error: '#ef4444',
+            purple: '#14b8a6', /* Mapped Purple to Teal for Green Harmony */
+
+            /* Backgrounds (Neutral) */
+            background: '#fafafa', /* Neutral-50 */
+            surface: '#ffffff',
+            'subtle-background': '#f5f5f5', /* Neutral-100 */
+
+            /* Text (Neutral) */
+            'text-primary': '#171717', /* Neutral-900 */
+            'text-secondary': '#525252', /* Neutral-600 */
+
+            border: '#e5e5e5', /* Neutral-200 */
+
+            /* FORCE OVERRIDE STANDARD BLUE PALETTES TO GREEN/NEUTRAL via EXTEND */
+            /* This ensures 'bg-blue-500' becomes 'bg-green-500' */
+            slate: {
+              50: '#fafafa', 100: '#f5f5f5', 200: '#e5e5e5', 300: '#d4d4d4', 400: '#a3a3a3',
+              500: '#737373', 600: '#525252', 700: '#404040', 800: '#262626', 900: '#171717', 950: '#0a0a0a',
+            },
+            blue: {
+              50: '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0', 300: '#86efac', 400: '#4ade80',
+              500: '#22c55e', 600: '#16a34a', 700: '#15803d', 800: '#166534', 900: '#14532d', 950: '#052e16',
+            },
+            indigo: {
+              50: '#f0fdfa', 100: '#ccfbf1', 200: '#99f6e4', 300: '#5eead4', 400: '#2dd4bf',
+              500: '#14b8a6', 600: '#0d9488', 700: '#0f766e', 800: '#115e59', 900: '#134e4a', 950: '#042f2e',
+            },
+            sky: {
+              50: '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0', 300: '#86efac', 400: '#4ade80',
+              500: '#22c55e', 600: '#16a34a', 700: '#15803d', 800: '#166534', 900: '#14532d', 950: '#052e16',
+            },
 
             /* Semantic Mapping to New Theme for existing components */
             'kurchi-gold': {
               400: '#D4B875',
-              500: '#C4A35A', // Primary Accent
+              500: '#C4A35A',
               600: '#A88A45',
             },
             'kurchi-espresso': {
               800: '#4A4A4A',
-              900: '#2A2A2A', // Primary Text (Soft Charcoal)
-              950: '#222222', // Deep Charcoal (No harsh black)
+              900: '#2A2A2A',
+              950: '#222222',
             }
           },
           boxShadow: {

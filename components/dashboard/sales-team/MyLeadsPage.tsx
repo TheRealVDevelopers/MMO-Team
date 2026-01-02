@@ -36,7 +36,7 @@ const LeadStatusPill: React.FC<{ status: LeadPipelineStatus }> = ({ status }) =>
     [LeadPipelineStatus.NEW_NOT_CONTACTED]: { color: 'text-error bg-error/10', label: 'New' },
     [LeadPipelineStatus.CONTACTED_CALL_DONE]: { color: 'text-accent bg-accent/10', label: 'Contacted' },
     [LeadPipelineStatus.SITE_VISIT_SCHEDULED]: { color: 'text-purple bg-purple/10', label: 'Site Visit' },
-    [LeadPipelineStatus.WAITING_FOR_DRAWING]: { color: 'text-indigo-400 bg-indigo-400/10', label: 'Drawing' },
+    [LeadPipelineStatus.WAITING_FOR_DRAWING]: { color: 'text-kurchi-gold-600 bg-kurchi-gold-400/10', label: 'Drawing' },
     [LeadPipelineStatus.QUOTATION_SENT]: { color: 'text-primary bg-primary/10', label: 'Quotation' },
     [LeadPipelineStatus.NEGOTIATION]: { color: 'text-amber-500 bg-amber-500/10', label: 'Negotiation' },
     [LeadPipelineStatus.IN_PROCUREMENT]: { color: 'text-purple bg-purple/10', label: 'Procurement' },
