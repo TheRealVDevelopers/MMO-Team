@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   CheckCircleIcon,
   XCircleIcon,
@@ -14,7 +14,7 @@ import {
 import { useAuth } from '../../../context/AuthContext';
 import { useApprovalRequests, approveRequest, rejectRequest, getApprovalStats } from '../../../hooks/useApprovals';
 import { ApprovalRequest, ApprovalStatus, ApprovalRequestType } from '../../../types';
-import { formatDateTime } from '../../../constants';
+import { formatDateTime, USERS } from '../../../constants';
 import { ContentCard, StatCard, SectionHeader, cn, staggerContainer } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -25,9 +25,26 @@ const ApprovalsPage: React.FC = () => {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewAction, setReviewAction] = useState<'approve' | 'reject'>('approve');
   const [reviewComments, setReviewComments] = useState('');
+  const [assigneeId, setAssigneeId] = useState('');
   const [processing, setProcessing] = useState(false);
 
   const { requests, loading } = useApprovalRequests(filterStatus === 'All' ? undefined : filterStatus);
+  const { requests: allRequests } = useApprovalRequests(); // For stats or full list if needed
+
+  // Personnel for assignment
+  const personnel = useMemo(() => {
+    if (!selectedRequest?.targetRole) return [];
+    return USERS.filter(u => u.role === selectedRequest.targetRole);
+  }, [selectedRequest]);
+
+  // Handle personnel selection reset
+  useEffect(() => {
+    if (selectedRequest && personnel.length > 0) {
+      setAssigneeId(personnel[0].id);
+    } else {
+      setAssigneeId('');
+    }
+  }, [selectedRequest, personnel]);
 
   const filteredRequests = useMemo(() => {
     if (filterStatus === 'All') return requests;
@@ -58,6 +75,7 @@ const ApprovalsPage: React.FC = () => {
           selectedRequest.id,
           currentUser.id,
           currentUser.name,
+          assigneeId || undefined,
           reviewComments
         );
       } else {
@@ -142,30 +160,30 @@ const ApprovalsPage: React.FC = () => {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <StatCard
-          label="Total Protocols"
+          title="Total Protocols"
           value={stats.total}
-          icon={ArchiveBoxIcon}
-          trend={{ value: 'Fleet Scale', isPositive: true }}
+          icon={<ArchiveBoxIcon className="w-6 h-6" />}
+          trend={{ value: 'Fleet Scale', positive: true }}
         />
         <StatCard
-          label="Pending Sync"
+          title="Pending Sync"
           value={stats.pending}
-          icon={ClockIcon}
-          trend={{ value: 'Action Required', isPositive: false }}
+          icon={<ClockIcon className="w-6 h-6" />}
+          trend={{ value: 'Action Required', positive: false }}
           className="ring-1 ring-yellow-500/20"
         />
         <StatCard
-          label="Authorized"
+          title="Authorized"
           value={stats.approved}
-          icon={ShieldCheckIcon}
-          trend={{ value: 'Successful', isPositive: true }}
+          icon={<ShieldCheckIcon className="w-6 h-6" />}
+          trend={{ value: 'Successful', positive: true }}
           className="ring-1 ring-green-500/20"
         />
         <StatCard
-          label="Rejected"
+          title="Rejected"
           value={stats.rejected}
-          icon={XCircleIcon}
-          trend={{ value: 'Discontinued', isPositive: false }}
+          icon={<XCircleIcon className="w-6 h-6" />}
+          trend={{ value: 'Discontinued', positive: false }}
           className="ring-1 ring-red-500/20"
         />
       </div>
@@ -310,11 +328,47 @@ const ApprovalsPage: React.FC = () => {
                   <textarea
                     value={reviewComments}
                     onChange={(e) => setReviewComments(e.target.value)}
-                    rows={4}
+                    rows={reviewAction === 'approve' && selectedRequest.targetRole ? 2 : 4}
                     className="w-full p-6 border border-border rounded-3xl bg-subtle-background/30 focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium placeholder:text-text-tertiary/50"
                     placeholder={reviewAction === 'approve' ? 'Optional authorization notes...' : 'Required justification for protocol denial...'}
                   />
                 </div>
+
+                {reviewAction === 'approve' && selectedRequest.targetRole && (
+                  <div className="mb-10 space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-tertiary px-1">
+                      Personnel Assignment <span className="text-secondary">*</span>
+                    </label>
+                    <div className="grid grid-cols-1 gap-2">
+                      {personnel.map(user => (
+                        <button
+                          key={user.id}
+                          type="button"
+                          onClick={() => setAssigneeId(user.id)}
+                          className={cn(
+                            "flex items-center gap-3 p-3 rounded-2xl border transition-all",
+                            assigneeId === user.id
+                              ? "bg-secondary text-white border-secondary shadow-lg shadow-secondary/10"
+                              : "bg-subtle-background/30 border-border hover:bg-subtle-background/50"
+                          )}
+                        >
+                          <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full border border-white/20" />
+                          <div className="text-left">
+                            <p className="text-xs font-black uppercase tracking-tight">{user.name}</p>
+                            <p className={cn("text-[10px] uppercase font-bold opacity-60", assigneeId === user.id ? "text-white" : "text-text-tertiary")}>
+                              {user.role}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                      {personnel.length === 0 && (
+                        <div className="p-4 bg-error/5 border border-error/10 rounded-2xl text-center">
+                          <p className="text-[10px] font-black text-error uppercase tracking-widest">No matching personnel available for this unit.</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <button

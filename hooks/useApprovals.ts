@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { 
-  collection, 
-  query, 
-  where, 
-  onSnapshot, 
-  addDoc, 
-  updateDoc, 
-  doc, 
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  doc,
   serverTimestamp,
   orderBy,
   Timestamp
@@ -45,17 +45,20 @@ export const useApprovalRequests = (filterStatus?: ApprovalStatus) => {
           requesterRole: data.requesterRole,
           title: data.title,
           description: data.description,
-          startDate: data.startDate ? (data.startDate as Timestamp).toDate() : undefined,
-          endDate: data.endDate ? (data.endDate as Timestamp).toDate() : undefined,
+          startDate: data.startDate && (data.startDate as any).toDate ? (data.startDate as Timestamp).toDate() : undefined,
+          endDate: data.endDate && (data.endDate as any).toDate ? (data.endDate as Timestamp).toDate() : undefined,
           duration: data.duration,
           status: data.status,
-          requestedAt: (data.requestedAt as Timestamp).toDate(),
-          reviewedAt: data.reviewedAt ? (data.reviewedAt as Timestamp).toDate() : undefined,
+          requestedAt: data.requestedAt && (data.requestedAt as any).toDate ? (data.requestedAt as Timestamp).toDate() : new Date(),
+          reviewedAt: data.reviewedAt && (data.reviewedAt as any).toDate ? (data.reviewedAt as Timestamp).toDate() : undefined,
           reviewedBy: data.reviewedBy,
           reviewerName: data.reviewerName,
           reviewerComments: data.reviewerComments,
           attachments: data.attachments || [],
           priority: data.priority || 'Medium',
+          contextId: data.contextId,
+          targetRole: data.targetRole,
+          assigneeId: data.assigneeId,
         });
       });
       setRequests(approvalRequests);
@@ -97,17 +100,20 @@ export const useMyApprovalRequests = (userId: string) => {
           requesterRole: data.requesterRole,
           title: data.title,
           description: data.description,
-          startDate: data.startDate ? (data.startDate as Timestamp).toDate() : undefined,
-          endDate: data.endDate ? (data.endDate as Timestamp).toDate() : undefined,
+          startDate: data.startDate && (data.startDate as any).toDate ? (data.startDate as Timestamp).toDate() : undefined,
+          endDate: data.endDate && (data.endDate as any).toDate ? (data.endDate as Timestamp).toDate() : undefined,
           duration: data.duration,
           status: data.status,
-          requestedAt: (data.requestedAt as Timestamp).toDate(),
-          reviewedAt: data.reviewedAt ? (data.reviewedAt as Timestamp).toDate() : undefined,
+          requestedAt: data.requestedAt && (data.requestedAt as any).toDate ? (data.requestedAt as Timestamp).toDate() : new Date(),
+          reviewedAt: data.reviewedAt && (data.reviewedAt as any).toDate ? (data.reviewedAt as Timestamp).toDate() : undefined,
           reviewedBy: data.reviewedBy,
           reviewerName: data.reviewerName,
           reviewerComments: data.reviewerComments,
           attachments: data.attachments || [],
           priority: data.priority || 'Medium',
+          contextId: data.contextId,
+          targetRole: data.targetRole,
+          assigneeId: data.assigneeId,
         });
       });
       setMyRequests(approvalRequests);
@@ -166,6 +172,7 @@ export const approveRequest = async (
   requestId: string,
   reviewerId: string,
   reviewerName: string,
+  assigneeId?: string,
   comments?: string
 ) => {
   try {
@@ -176,6 +183,7 @@ export const approveRequest = async (
       reviewedBy: reviewerId,
       reviewerName: reviewerName,
       reviewerComments: comments || '',
+      assigneeId: assigneeId || null,
     });
   } catch (error) {
     console.error('Error approving request:', error);
@@ -210,7 +218,7 @@ export const getApprovalStats = (requests: ApprovalRequest[]) => {
   const pending = requests.filter(r => r.status === ApprovalStatus.PENDING).length;
   const approved = requests.filter(r => r.status === ApprovalStatus.APPROVED).length;
   const rejected = requests.filter(r => r.status === ApprovalStatus.REJECTED).length;
-  
+
   const byType = requests.reduce((acc, request) => {
     acc[request.requestType] = (acc[request.requestType] || 0) + 1;
     return acc;

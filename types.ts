@@ -262,6 +262,12 @@ export enum ApprovalRequestType {
   TIME_OFF = "Time Off",
   OVERTIME = "Overtime Approval",
   EXPENSE = "Expense Approval",
+  SITE_VISIT_TOKEN = "Site Visit Token",
+  DESIGN_TOKEN = "Design Token",
+  QUOTATION_TOKEN = "Quotation Token",
+  PROCUREMENT_TOKEN = "Procurement Token",
+  EXECUTION_TOKEN = "Execution Token",
+  ACCOUNTS_TOKEN = "Accounts Token",
   OTHER = "Other",
 }
 
@@ -290,6 +296,11 @@ export interface ApprovalRequest {
   reviewerComments?: string;
   attachments?: string[]; // URLs to uploaded documents
   priority: 'High' | 'Medium' | 'Low';
+
+  // New fields for Workflow Orchestration
+  targetRole?: UserRole; // The role that needs to be assigned for this token
+  contextId?: string; // e.g., Lead ID or Project ID
+  assigneeId?: string; // Populated by admin during approval
 }
 
 export type ExpenseCategory = 'Travel' | 'Site' | 'Office' | 'Client Meeting' | 'Other';

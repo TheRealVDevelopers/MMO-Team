@@ -95,10 +95,10 @@ const MyLeadsPage: React.FC<MyLeadsPageProps> = ({ leads, onUpdateLead, onAddNew
     >
       {/* KPI Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Active Registry" value={totalLeads} icon={<IdentificationIcon />} type="primary" trend={{ value: 12, isPositive: true }} />
-        <StatCard title="New Opportunities" value={newLeadsCount} icon={<PlusIcon />} type="accent" />
-        <StatCard title="Conversion Efficiency" value={`${conversionRate.toFixed(1)}%`} icon={<ChartBarIcon />} type="purple" trend={{ value: 4, isPositive: true }} />
-        <StatCard title="Successful Closures" value={wonLeads} icon={<CheckCircleIcon />} type="secondary" />
+        <StatCard title="Active Registry" value={totalLeads} icon={<IdentificationIcon className="w-6 h-6" />} color="primary" trend={{ value: "12%", positive: true }} />
+        <StatCard title="New Opportunities" value={newLeadsCount} icon={<PlusIcon className="w-6 h-6" />} color="accent" />
+        <StatCard title="Conversion Efficiency" value={`${conversionRate.toFixed(1)}%`} icon={<ChartBarIcon className="w-6 h-6" />} color="purple" trend={{ value: "4%", positive: true }} />
+        <StatCard title="Successful Closures" value={wonLeads} icon={<CheckCircleIcon className="w-6 h-6" />} color="secondary" />
       </div>
 
       {/* Funnel Navigation */}

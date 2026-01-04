@@ -87,24 +87,24 @@ const ComplaintManagementPage: React.FC<{ setCurrentPage: (page: string) => void
             {/* Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <StatCard
-                    label="Active Grievances"
+                    title="Active Grievances"
                     value={activeComplaints}
-                    icon={ShieldExclamationIcon}
-                    trend={{ value: 'Pending Pulse', isPositive: false }}
+                    icon={<ShieldExclamationIcon className="w-6 h-6" />}
+                    trend={{ value: 'Pending Pulse', positive: false }}
                     className="ring-1 ring-primary/20"
                 />
                 <StatCard
-                    label="Critical Vectors"
+                    title="Critical Vectors"
                     value={highPriorityCount}
-                    icon={ExclamationTriangleIcon}
-                    trend={{ value: 'Priority Load', isPositive: false }}
+                    icon={<ExclamationTriangleIcon className="w-6 h-6" />}
+                    trend={{ value: 'Priority Load', positive: false }}
                     className="ring-1 ring-red-500/20"
                 />
                 <StatCard
-                    label="Resolution Output"
+                    title="Resolution Output"
                     value={stats[ComplaintStatus.RESOLVED] || 0}
-                    icon={CheckBadgeIcon}
-                    trend={{ value: 'Cycle Complete', isPositive: true }}
+                    icon={<CheckBadgeIcon className="w-6 h-6" />}
+                    trend={{ value: 'Cycle Complete', positive: true }}
                     className="ring-1 ring-green-500/20"
                 />
             </div>

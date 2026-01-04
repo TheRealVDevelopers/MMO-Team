@@ -5,32 +5,37 @@ import {
     UserGroupIcon,
     ExclamationTriangleIcon,
     RectangleStackIcon,
-    CalendarIcon
+    CalendarIcon,
+    CreditCardIcon
 } from '@heroicons/react/24/outline';
-import { USERS, PROJECTS, PENDING_APPROVALS_COUNT, LEADS, ACTIVITIES, formatLargeNumberINR } from '../../../constants';
-import { ActivityStatus, ProjectStatus, LeadPipelineStatus } from '../../../types';
-import TeamLiveStatusCard from './TeamLiveStatusCard';
+import { USERS, PROJECTS, PENDING_APPROVALS_COUNT, ACTIVITIES, formatLargeNumberINR, INVOICES } from '../../../constants';
+import { ActivityStatus, ProjectStatus, PaymentStatus } from '../../../types';
 import { ContentCard, StatCard, SectionHeader, staggerContainer, cn } from '../shared/DashboardUI';
 import { motion } from 'framer-motion';
 
-const AlertCard: React.FC<{ title: string; count: number; items: string[]; type?: 'error' | 'warning' }> = ({ title, count, items, type = 'error' }) => (
+// New Components
+import OngoingProjectsCard from './OngoingProjectsCard';
+import AttendanceStatsCard from './AttendanceStatsCard';
+import DashboardCalendar from './DashboardCalendar';
+
+const AlertCard: React.FC<{ title: string; count: number; items: string[]; type?: 'error' | 'warning' | 'primary' }> = ({ title, count, items, type = 'error' }) => (
     <ContentCard className={cn(
         "border-l-4",
-        type === 'error' ? "border-error" : "border-accent"
+        type === 'error' ? "border-error" : type === 'warning' ? "border-accent" : "border-primary"
     )}>
         <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
                 <div className={cn(
                     "p-2.5 rounded-xl bg-opacity-10",
-                    type === 'error' ? "bg-error text-error" : "bg-accent text-accent"
+                    type === 'error' ? "bg-error text-error" : type === 'warning' ? "bg-accent text-accent" : "bg-primary text-primary"
                 )}>
-                    <ExclamationTriangleIcon className="w-5 h-5" />
+                    {type === 'error' || type === 'warning' ? <ExclamationTriangleIcon className="w-5 h-5" /> : <CreditCardIcon className="w-5 h-5" />}
                 </div>
                 <h3 className="text-lg font-serif font-bold text-text-primary tracking-tight">{title}</h3>
             </div>
             <span className={cn(
                 "px-3 py-1 rounded-full text-xs font-black",
-                type === 'error' ? "bg-error/10 text-error" : "bg-accent/10 text-accent"
+                type === 'error' ? "bg-error/10 text-error" : type === 'warning' ? "bg-accent/10 text-accent" : "bg-primary/10 text-primary"
             )}>{count}</span>
         </div>
         {items.length > 0 ? (
@@ -45,7 +50,7 @@ const AlertCard: React.FC<{ title: string; count: number; items: string[]; type?
                     >
                         <span className={cn(
                             "w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 transition-transform group-hover:scale-150",
-                            type === 'error' ? "bg-error" : "bg-accent"
+                            type === 'error' ? "bg-error" : type === 'warning' ? "bg-accent" : "bg-primary"
                         )}></span>
                         <span className="text-text-secondary font-medium group-hover:text-text-primary transition-colors">{item}</span>
                     </motion.li>
@@ -69,19 +74,19 @@ interface OverviewDashboardProps {
 const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage }) => {
     // KPI Calculations
     const totalProjects = PROJECTS.length;
-    const activeProjects = PROJECTS.filter(p => p.status === ProjectStatus.IN_EXECUTION).length;
-    const completedProjects = PROJECTS.filter(p => p.status === ProjectStatus.COMPLETED).length;
+    const activeProjects = PROJECTS.filter(p => [ProjectStatus.IN_EXECUTION, ProjectStatus.PROCUREMENT, ProjectStatus.DESIGN_IN_PROGRESS].includes(p.status)).length;
 
-    const totalLeads = LEADS.length;
-    const newLeadsThisWeek = LEADS.filter(l => (new Date().getTime() - l.inquiryDate.getTime()) < 7 * 24 * 60 * 60 * 1000).length;
-    const convertedLeads = LEADS.filter(l => l.status === LeadPipelineStatus.WON).length;
-    const conversionRate = totalLeads > 0 ? ((convertedLeads / totalLeads) * 100).toFixed(1) : 0;
+    const totalLeads = PROJECTS.length; // Simplified for this view
+    const conversionRate = 12.5; // Mocked for simplicity here
 
     const teamMembers = USERS.length;
     const totalRevenue = PROJECTS.filter(p => p.status === ProjectStatus.COMPLETED || p.status === ProjectStatus.APPROVED).reduce((sum, p) => sum + p.budget, 0);
 
+    // Outstanding Payments Calculation
+    const unpaidInvoices = INVOICES.filter(i => i.status !== PaymentStatus.PAID);
+    const outstandingTotal = unpaidInvoices.reduce((sum, i) => sum + (i.total - (i.paidAmount || 0)), 0);
+
     // Alert Calculations
-    const projectDelays = PROJECTS.filter(p => p.progress < 50 && new Date(p.endDate) < new Date());
     const pendingApprovals = ACTIVITIES.filter(a => a.status === ActivityStatus.PENDING);
 
     return (
@@ -97,7 +102,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage })
                 actions={
                     <div className="flex items-center gap-2 bg-surface px-4 py-2 rounded-2xl border border-border shadow-sm">
                         <CalendarIcon className="w-4 h-4 text-text-tertiary" />
-                        <span className="text-xs font-black uppercase tracking-[0.15em] text-text-secondary">December 2025</span>
+                        <span className="text-xs font-black uppercase tracking-[0.15em] text-text-secondary">January 2026</span>
                     </div>
                 }
             />
@@ -142,10 +147,12 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage })
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                <div className="lg:col-span-2">
-                    <TeamLiveStatusCard />
+                <div className="lg:col-span-2 space-y-10">
+                    <OngoingProjectsCard />
+                    <DashboardCalendar />
                 </div>
                 <div className="lg:col-span-1 space-y-8">
+                    <AttendanceStatsCard />
                     <AlertCard
                         title="Strategic Approvals"
                         count={PENDING_APPROVALS_COUNT}
@@ -153,9 +160,9 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage })
                         type="warning"
                     />
                     <AlertCard
-                        title="Critical Latency"
-                        count={projectDelays.length}
-                        items={projectDelays.map(p => p.projectName)}
+                        title="Outstanding Payments"
+                        count={unpaidInvoices.length}
+                        items={unpaidInvoices.map(i => `${i.projectName}: ${formatLargeNumberINR(i.total - i.paidAmount)}`)}
                         type="error"
                     />
                 </div>
