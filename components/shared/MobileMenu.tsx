@@ -58,7 +58,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
             />
 
             {/* Slide-in Menu */}
-            <div className={`fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] bg-white dark:bg-surface border-l border-border dark:border-border shadow-2xl z-50 lg:hidden transform transition-transform duration-300 ease-out ${isOpen ? 'translate-x-0' : 'translate-x-full'
+            <div className={`fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] bg-surface dark:bg-surface border-l border-border dark:border-border shadow-2xl z-50 lg:hidden transform transition-transform duration-300 ease-out ${isOpen ? 'translate-x-0' : 'translate-x-full'
                 }`}>
                 <div className="h-full flex flex-col overflow-hidden">
                     {/* Header */}
@@ -89,8 +89,8 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                                         key={item.id}
                                         onClick={() => handleNavClick(item.id)}
                                         className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-left transition-all duration-200 ${currentPage === item.id
-                                                ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg'
-                                                : 'text-text-primary dark:text-text-primary hover:bg-subtle-background dark:hover:bg-background'
+                                            ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg'
+                                            : 'text-text-primary dark:text-text-primary hover:bg-subtle-background dark:hover:bg-background'
                                             }`}
                                     >
                                         <div className="flex items-center space-x-3">
@@ -101,8 +101,8 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                                         </div>
                                         {item.count !== undefined && (
                                             <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${currentPage === item.id
-                                                    ? 'bg-white/20 text-white'
-                                                    : 'bg-primary/10 text-primary'
+                                                ? 'bg-white/20 text-white'
+                                                : 'bg-primary/10 text-primary'
                                                 }`}>
                                                 {item.count}
                                             </span>
@@ -124,8 +124,8 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                                             key={item.id}
                                             onClick={() => handleNavClick(item.id)}
                                             className={`w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-left transition-all duration-200 ${currentPage === item.id
-                                                    ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg'
-                                                    : 'text-text-primary dark:text-text-primary hover:bg-subtle-background dark:hover:bg-background'
+                                                ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg'
+                                                : 'text-text-primary dark:text-text-primary hover:bg-subtle-background dark:hover:bg-background'
                                                 }`}
                                         >
                                             <div className={currentPage === item.id ? 'text-white' : 'text-primary'}>

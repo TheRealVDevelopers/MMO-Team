@@ -25,6 +25,13 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 const storage = getStorage(app);
+
+// Configure Auth Persistence - Keep users logged in across sessions
+import { setPersistence, browserLocalPersistence } from 'firebase/auth';
+setPersistence(auth, browserLocalPersistence).catch((error) => {
+  console.error('Error setting auth persistence:', error);
+});
+
 // Initialize Analytics only if in a browser environment
 const analytics = typeof window !== 'undefined' ? getAnalytics(app) : undefined;
 

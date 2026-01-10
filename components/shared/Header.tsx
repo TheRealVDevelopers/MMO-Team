@@ -4,7 +4,8 @@ import UserSelector from './UserSelector';
 import { CogIcon, BellIcon, BuildingOfficeIcon, ChevronRightIcon } from '../icons/IconComponents';
 import { Bars3Icon, XMarkIcon, SunIcon, MoonIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../../context/AuthContext';
-import { useTheme, themes } from '../../context/ThemeContext';
+import { useTheme } from '../../context/ThemeContext';
+import NotificationPopover from '../dashboard/shared/NotificationPopover';
 
 interface HeaderProps {
     openSettings: () => void;
@@ -13,18 +14,9 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ openSettings, onMenuToggle }) => {
     const { currentUser } = useAuth();
-    const { theme, setTheme } = useTheme();
+    const { isDark, toggleTheme, currentTheme } = useTheme();
     const [showNotifications, setShowNotifications] = useState(false);
     const [showMobileMenu, setShowMobileMenu] = useState(false);
-
-    const isDark = themes[theme]?.type === 'dark';
-
-    const toggleTheme = () => {
-        const availableThemes = Object.keys(themes);
-        const currentIndex = availableThemes.indexOf(theme);
-        const nextIndex = (currentIndex + 1) % availableThemes.length;
-        setTheme(availableThemes[nextIndex]);
-    };
 
     const handleMenuToggle = () => {
         setShowMobileMenu(!showMobileMenu);
@@ -32,7 +24,7 @@ const Header: React.FC<HeaderProps> = ({ openSettings, onMenuToggle }) => {
     };
 
     return (
-        <header className="bg-white dark:bg-surface border-b border-border/60 dark:border-border sticky top-0 z-20 flex-shrink-0 shadow-sm">
+        <header className="bg-surface dark:bg-surface border-b border-border/60 dark:border-border sticky top-0 z-20 flex-shrink-0 shadow-sm">
             <div className="flex items-center justify-between h-16 md:h-18 px-4 md:px-6 lg:px-8">
                 {/* Left Section - Branding & Hamburger */}
                 <div className="flex items-center space-x-3">
@@ -62,51 +54,26 @@ const Header: React.FC<HeaderProps> = ({ openSettings, onMenuToggle }) => {
                 <div className="flex items-center space-x-2 md:space-x-4">
                     {/* Theme Toggle */}
                     <button
-                        onClick={toggleTheme}
+                        onClick={() => {
+                            console.log('Theme button clicked!');
+                            console.log('toggleTheme function:', toggleTheme);
+                            console.log('isDark:', isDark);
+                            if (toggleTheme) {
+                                toggleTheme();
+                            } else {
+                                console.error('toggleTheme is undefined!');
+                            }
+                        }}
                         className="p-2.5 rounded-xl text-text-secondary dark:text-text-primary hover:bg-subtle-background dark:hover:bg-background hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                         aria-label="Toggle theme"
-                        title={`Current: ${themes[theme]?.name}`}
+                        title={`Current: ${currentTheme?.name || 'Unknown'}`}
                     >
                         {isDark ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
                     </button>
 
                     {/* Notifications */}
                     <div className="relative hidden sm:block">
-                        <button
-                            onClick={() => setShowNotifications(!showNotifications)}
-                            className="relative p-2.5 rounded-xl text-text-secondary dark:text-text-primary hover:bg-subtle-background dark:hover:bg-background hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                            aria-label="Notifications"
-                        >
-                            <BellIcon className="h-5 w-5" />
-                            {/* Notification Badge */}
-                            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full border-2 border-white dark:border-surface"></span>
-                        </button>
-
-                        {/* Notification Dropdown */}
-                        {showNotifications && (
-                            <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-surface rounded-xl shadow-luxury border border-border dark:border-border overflow-hidden z-30">
-                                <div className="px-4 py-3 border-b border-border dark:border-border bg-subtle-background dark:bg-background">
-                                    <h3 className="text-sm font-bold text-text-primary dark:text-white">Notifications</h3>
-                                </div>
-                                <div className="max-h-96 overflow-y-auto">
-                                    <div className="p-4 hover:bg-subtle-background dark:hover:bg-background cursor-pointer transition-colors border-b border-border dark:border-border">
-                                        <p className="text-sm font-medium text-text-primary dark:text-white mb-1">New lead assigned</p>
-                                        <p className="text-xs text-text-secondary">5 minutes ago</p>
-                                    </div>
-                                    <div className="p-4 hover:bg-subtle-background dark:hover:bg-background cursor-pointer transition-colors border-b border-border dark:border-border">
-                                        <p className="text-sm font-medium text-text-primary dark:text-white mb-1">Quotation approved</p>
-                                        <p className="text-xs text-text-secondary">2 hours ago</p>
-                                    </div>
-                                    <div className="p-4 hover:bg-subtle-background dark:hover:bg-background cursor-pointer transition-colors">
-                                        <p className="text-sm font-medium text-text-primary dark:text-white mb-1">Site visit scheduled</p>
-                                        <p className="text-xs text-text-secondary">Yesterday</p>
-                                    </div>
-                                </div>
-                                <div className="px-4 py-3 border-t border-border dark:border-border bg-subtle-background dark:bg-background text-center">
-                                    <button className="text-xs font-semibold text-primary hover:text-secondary">View all notifications</button>
-                                </div>
-                            </div>
-                        )}
+                        <NotificationPopover />
                     </div>
 
                     {/* User Profile Section (Hidden on small screens) */}

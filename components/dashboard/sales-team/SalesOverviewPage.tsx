@@ -1,7 +1,8 @@
 import React from 'react';
-import { LEADS, formatCurrencyINR, formatDateTime } from '../../../constants';
+import { formatCurrencyINR, formatDateTime } from '../../../constants';
 import { LeadPipelineStatus, SiteVisit } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
+import { useLeads } from '../../../hooks/useLeads';
 import {
     ChevronRightIcon,
     ClockIcon,
@@ -18,10 +19,11 @@ import { motion } from 'framer-motion';
 
 const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void, siteVisits: SiteVisit[] }> = ({ setCurrentPage, siteVisits }) => {
     const { currentUser } = useAuth();
+    const { leads, loading } = useLeads();
 
     if (!currentUser) return null;
 
-    const myLeads = LEADS.filter(l => l.assignedTo === currentUser.id);
+    const myLeads = leads.filter(l => l.assignedTo === currentUser.id);
     const leadsThisMonth = myLeads.filter(l => l.inquiryDate > new Date(new Date().setDate(1)));
     const activeLeads = myLeads.filter(l => ![LeadPipelineStatus.WON, LeadPipelineStatus.LOST].includes(l.status)).length;
     const projectsWon = leadsThisMonth.filter(l => l.status === LeadPipelineStatus.WON).length;

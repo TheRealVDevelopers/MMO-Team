@@ -1,5 +1,4 @@
-
-import React, { createContext, useState, useContext, ReactNode, useEffect, useMemo } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 
 export interface Theme {
   name: string;
@@ -14,6 +13,7 @@ export interface Theme {
     'surface': string;
     'text-primary': string;
     'text-secondary': string;
+    'text-tertiary': string;
     'border': string;
     'subtle-background': string;
     'toggle-background': string;
@@ -28,305 +28,144 @@ export interface Theme {
     'error-subtle-text': string;
     'purple-subtle-background': string;
     'purple-subtle-text': string;
-    'slate-subtle-background': string;
-    'slate-subtle-text': string;
   };
 }
 
 export const themes: Record<string, Theme> = {
-  'aura-luxe': {
-    name: 'Aura Luxe',
+  'light': {
+    name: 'Light (Soft Green)',
     type: 'light',
     colors: {
-      primary: '139 92 246', // Violet 500
-      secondary: '217 70 239', // Fuchsia 500
-      accent: '251 146 60', // Orange 400 (Rose Gold-ish)
-      error: '239 68 68',
-      purple: '167 139 250',
-      background: '250 248 255', // Very soft lavender tint
-      surface: '255 255 255',
-      'text-primary': '30 27 46', // Deep indigo-ish charcoal
-      'text-secondary': '107 114 128',
-      border: '231 229 242',
-      'subtle-background': '243 240 255',
-      'toggle-background': '216 210 240',
+      // Soft Green Theme (Professional)
+      primary: '34 197 94',       // #22C55E - Green-500 (softer)
+      secondary: '22 163 74',     // #16A34A - Green-600
+      accent: '74 222 128',       // #4ADE80 - Green-400
+      error: '239 68 68',         // Red-500
+      purple: '168 85 247',       // Purple-500 (for accents)
 
-      'primary-subtle-background': '245 243 255',
-      'primary-subtle-text': '139 92 246',
-      'secondary-subtle-background': '253 244 255',
-      'secondary-subtle-text': '217 70 239',
-      'accent-subtle-background': '255 247 237',
-      'accent-subtle-text': '251 146 60',
-      'error-subtle-background': '254 242 242',
-      'error-subtle-text': '185 28 28',
-      'purple-subtle-background': '245 243 255',
-      'purple-subtle-text': '124 58 237',
-      'slate-subtle-background': '248 250 252',
-      'slate-subtle-text': '71 85 105',
-    },
-  },
-  'luxury-heritage': {
-    name: 'Luxury Heritage',
-    type: 'light',
-    colors: {
-      primary: '196 163 90', // #C4A35A
-      secondary: '122 90 58', // #7A5A3A
-      accent: '191 194 184', // #BFC2B8
-      error: '185 28 28',
-      purple: '109 40 217',
-      background: '246 244 240', // #F6F4F0
-      surface: '255 255 255',
-      'text-primary': '42 42 42',
-      'text-secondary': '110 110 110',
-      border: '224 224 224',
-      'subtle-background': '238 234 227',
-      'toggle-background': '200 200 200',
+      // Backgrounds
+      background: '255 255 255',  // White
+      surface: '249 250 251',     // Gray-50 (very light)
+      'subtle-background': '243 244 246', // Gray-100
 
-      'primary-subtle-background': '245 240 230',
-      'primary-subtle-text': '196 163 90',
-      'secondary-subtle-background': '240 235 230',
-      'secondary-subtle-text': '122 90 58',
-      'accent-subtle-background': '240 242 240',
-      'accent-subtle-text': '100 100 100',
-      'error-subtle-background': '254 242 242',
-      'error-subtle-text': '153 27 27',
-      'purple-subtle-background': '243 232 255',
-      'purple-subtle-text': '107 33 168',
-      'slate-subtle-background': '241 245 249',
-      'slate-subtle-text': '51 65 85',
-    },
-  },
-  'serenity-white': {
-    name: 'Serenity White',
-    type: 'light',
-    colors: {
-      primary: '14 165 233', // Sky 500
-      secondary: '71 85 105', // Slate 600
-      accent: '20 184 166', // Teal 500
-      error: '225 29 72',
-      purple: '139 92 246',
-      background: '255 255 255',
-      surface: '255 255 255',
-      'text-primary': '15 23 42',
-      'text-secondary': '100 116 139',
-      border: '241 245 249',
-      'subtle-background': '248 250 252',
-      'toggle-background': '226 232 240',
+      // Text
+      'text-primary': '17 24 39',     // Gray-900
+      'text-secondary': '75 85 99',   // Gray-600
+      'text-tertiary': '156 163 175', // Gray-400
 
-      'primary-subtle-background': '240 249 255',
-      'primary-subtle-text': '14 165 233',
-      'secondary-subtle-background': '241 245 249',
-      'secondary-subtle-text': '71 85 105',
-      'accent-subtle-background': '240 253 250',
-      'accent-subtle-text': '20 184 166',
-      'error-subtle-background': '255 241 242',
-      'error-subtle-text': '190 18 60',
-      'purple-subtle-background': '245 243 255',
-      'purple-subtle-text': '124 58 237',
-      'slate-subtle-background': '241 245 249',
-      'slate-subtle-text': '71 85 105',
-    },
-  },
-  'corporate-classic': {
-    name: 'Corporate Classic',
-    type: 'light',
-    colors: {
-      primary: '37 99 235', // Blue 600
-      secondary: '71 85 105', // Slate 600
-      accent: '14 165 233', // Sky 500
-      error: '220 38 38',
-      purple: '124 58 237',
-      background: '248 250 252', // Slate 50
-      surface: '255 255 255',
-      'text-primary': '15 23 42', // Slate 900
-      'text-secondary': '100 116 139', // Slate 500
-      border: '226 232 240', // Slate 200
-      'subtle-background': '241 245 249', // Slate 100
-      'toggle-background': '203 213 225',
+      // UI Elements
+      border: '229 231 235',      // Gray-200
+      'toggle-background': '209 213 219',
 
-      'primary-subtle-background': '239 246 255', // Blue 50
-      'primary-subtle-text': '37 99 235',
-      'secondary-subtle-background': '241 245 249', // Slate 100
-      'secondary-subtle-text': '71 85 105',
-      'accent-subtle-background': '224 242 254', // Sky 100
-      'accent-subtle-text': '14 165 233',
+      // Subtle States
+      'primary-subtle-background': '240 253 244',
+      'primary-subtle-text': '22 101 52',
+      'secondary-subtle-background': '220 252 231',
+      'secondary-subtle-text': '20 83 45',
+      'accent-subtle-background': '236 253 245',
+      'accent-subtle-text': '5 150 105',
       'error-subtle-background': '254 242 242',
       'error-subtle-text': '185 28 28',
       'purple-subtle-background': '243 232 255',
-      'purple-subtle-text': '107 33 168',
-      'slate-subtle-background': '241 245 249',
-      'slate-subtle-text': '71 85 105',
+      'purple-subtle-text': '124 58 237',
     },
   },
-  'modern-minimal': {
-    name: 'Modern Minimal',
-    type: 'light',
-    colors: {
-      primary: '24 24 27', // Zinc 900
-      secondary: '82 82 91', // Zinc 600
-      accent: '113 113 122', // Zinc 500
-      error: '220 38 38',
-      purple: '88 28 135',
-      background: '255 255 255',
-      surface: '250 250 250', // Zinc 50
-      'text-primary': '9 9 11', // Zinc 950
-      'text-secondary': '113 113 122', // Zinc 500
-      border: '228 228 231', // Zinc 200
-      'subtle-background': '244 244 245', // Zinc 100
-      'toggle-background': '212 212 216',
-
-      'primary-subtle-background': '228 228 231',
-      'primary-subtle-text': '24 24 27',
-      'secondary-subtle-background': '244 244 245',
-      'secondary-subtle-text': '82 82 91',
-      'accent-subtle-background': '244 244 245',
-      'accent-subtle-text': '113 113 122',
-      'error-subtle-background': '254 242 242',
-      'error-subtle-text': '185 28 28',
-      'purple-subtle-background': '250 232 255',
-      'purple-subtle-text': '107 33 168',
-      'slate-subtle-background': '244 244 245',
-      'slate-subtle-text': '82 82 91',
-    },
-  },
-  'midnight-executive': {
-    name: 'Midnight Executive',
+  'dark': {
+    name: 'Dark (Purple & Black)',
     type: 'dark',
     colors: {
-      primary: '129 140 248', // Indigo 400
-      secondary: '148 163 184', // Slate 400
-      accent: '99 102 241', // Indigo 500
-      error: '248 113 113', // Red 400
-      purple: '167 139 250', // Violet 400
-      background: '15 23 42', // Slate 900
-      surface: '30 41 59', // Slate 800
-      'text-primary': '248 250 252', // Slate 50
-      'text-secondary': '148 163 184', // Slate 400
-      border: '51 65 85', // Slate 700
-      'subtle-background': '51 65 85', // Slate 700
-      'toggle-background': '71 85 105',
+      // Purple Theme on Black
+      primary: '168 85 247',      // #A855F7 - Purple-500
+      secondary: '147 51 234',    // #9333EA - Purple-600
+      accent: '192 132 252',      // #C084FC - Purple-400
+      error: '248 113 113',       // Red-400
+      purple: '196 181 253',      // Purple-300 (lighter for dark)
 
-      // Semantic subtle states for Dark Mode
-      'primary-subtle-background': '49 46 129', // Indigo 900
-      'primary-subtle-text': '199 210 254', // Indigo 200
-      'secondary-subtle-background': '30 41 59', // Slate 800
-      'secondary-subtle-text': '203 213 225', // Slate 200
-      'accent-subtle-background': '49 46 129',
-      'accent-subtle-text': '165 180 252',
-      'error-subtle-background': '69 10 10', // Red 950
-      'error-subtle-text': '252 165 165', // Red 300
-      'purple-subtle-background': '76 29 149', // Violet 900
-      'purple-subtle-text': '221 214 254', // Violet 200
-      'slate-subtle-background': '30 41 59',
-      'slate-subtle-text': '148 163 184',
-    },
-  },
-  'obsidian-gold': {
-    name: 'Obsidian Gold',
-    type: 'dark',
-    colors: {
-      primary: '252 211 77', // Amber 300
-      secondary: '214 211 209', // Stone 300
-      accent: '168 162 158', // Stone 400
-      error: '248 113 113',
-      purple: '192 132 252',
-      background: '12 10 9', // Stone 950
-      surface: '28 25 23', // Stone 900
-      'text-primary': '250 250 249', // Stone 50
-      'text-secondary': '168 162 158', // Stone 400
-      border: '68 64 60', // Stone 700
-      'subtle-background': '41 37 36', // Stone 800
-      'toggle-background': '87 83 78',
+      // Backgrounds - Pure Black Theme
+      background: '0 0 0',        // #000000 - Pure Black
+      surface: '23 23 23',        // #171717 - Very Dark Gray
+      'subtle-background': '38 38 38', // #262626
 
-      'primary-subtle-background': '66 32 6', // Yellow 950
-      'primary-subtle-text': '253 230 138', // Amber 200
-      'secondary-subtle-background': '41 37 36',
-      'secondary-subtle-text': '214 211 209',
-      'accent-subtle-background': '41 37 36',
-      'accent-subtle-text': '168 162 158',
-      'error-subtle-background': '69 10 10',
+      // Text - High Contrast
+      'text-primary': '250 250 250',   // Almost White
+      'text-secondary': '163 163 163', // Gray-400
+      'text-tertiary': '115 115 115',  // Gray-500
+
+      // UI Elements
+      border: '64 64 64',         // #404040
+      'toggle-background': '82 82 82',
+
+      // Subtle States - Purple tints
+      'primary-subtle-background': '88 28 135',
+      'primary-subtle-text': '233 213 255',
+      'secondary-subtle-background': '76 29 149',
+      'secondary-subtle-text': '221 214 254',
+      'accent-subtle-background': '107 33 168',
+      'accent-subtle-text': '243 232 255',
+      'error-subtle-background': '127 29 29',
       'error-subtle-text': '252 165 165',
       'purple-subtle-background': '88 28 135',
       'purple-subtle-text': '233 213 255',
-      'slate-subtle-background': '41 37 36',
-      'slate-subtle-text': '168 162 158',
-    },
-  },
-  'cyber-slate': {
-    name: 'Cyber Slate',
-    type: 'dark',
-    colors: {
-      primary: '56 189 248', // Sky 400
-      secondary: '45 212 191', // Teal 400
-      accent: '14 165 233', // Sky 500
-      error: '248 113 113',
-      purple: '168 85 247',
-      background: '15 23 42', // Slate 900
-      surface: '30 41 59', // Slate 800
-      'text-primary': '241 245 249', // Slate 100
-      'text-secondary': '148 163 184', // Slate 400
-      border: '51 65 85', // Slate 700
-      'subtle-background': '51 65 85',
-      'toggle-background': '71 85 105',
-
-      'primary-subtle-background': '12 74 110', // Sky 900
-      'primary-subtle-text': '186 230 253', // Sky 200
-      'secondary-subtle-background': '19 78 74', // Teal 900
-      'secondary-subtle-text': '153 242 230', // Teal 200
-      'accent-subtle-background': '12 74 110',
-      'accent-subtle-text': '186 230 253',
-      'error-subtle-background': '69 10 10',
-      'error-subtle-text': '252 165 165',
-      'purple-subtle-background': '88 28 135',
-      'purple-subtle-text': '233 213 255',
-      'slate-subtle-background': '30 41 59',
-      'slate-subtle-text': '148 163 184',
     },
   },
 };
 
 interface ThemeContextType {
-  theme: string;
-  setTheme: (name: string) => void;
+  currentTheme: Theme;
+  isDark: boolean;
+  toggleTheme: () => void;
+  setTheme: (themeName: string) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [theme, setTheme] = useState(() => {
-    if (typeof window === 'undefined') return 'serenity-white';
-
-    const savedTheme = localStorage.getItem('app-theme');
-    // Force migration from legacy themes or if no theme is saved
-    const legacyThemes = ['obsidian-gold', 'midnight-deep', 'kurchi-espresso'];
-    if (!savedTheme || legacyThemes.includes(savedTheme) || !themes[savedTheme]) {
-      return 'serenity-white';
-    }
-    return savedTheme;
+  const [currentThemeName, setCurrentThemeName] = useState<string>(() => {
+    // Load theme preference from localStorage
+    const saved = localStorage.getItem('theme-preference');
+    return saved || 'light';
   });
 
+  const currentTheme = themes[currentThemeName] || themes['light'];
+  const isDark = currentTheme.type === 'dark';
+
   useEffect(() => {
-    const selectedTheme = themes[theme] || themes['serenity-white'];
-    if (selectedTheme) {
-      const root = document.documentElement;
-      // Add or remove 'dark' class for Tailwind dark mode if needed (optional)
-      if (selectedTheme.type === 'dark') {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
-      }
+    // Apply theme to document
+    const root = document.documentElement;
 
-      Object.entries(selectedTheme.colors).forEach(([key, value]) => {
-        root.style.setProperty(`--color-${key}`, value);
-      });
-      localStorage.setItem('app-theme', theme);
+    // Add or remove dark class
+    if (isDark) {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
     }
-  }, [theme]);
 
-  const value = useMemo(() => ({ theme, setTheme }), [theme]);
+    // Apply all color variables
+    Object.entries(currentTheme.colors).forEach(([key, value]) => {
+      root.style.setProperty(`--color-${key}`, value);
+    });
+
+    // Save preference
+    localStorage.setItem('theme-preference', currentThemeName);
+  }, [currentThemeName, currentTheme, isDark]);
+
+  const toggleTheme = () => {
+    console.log('Toggle theme called, current:', currentThemeName);
+    setCurrentThemeName(prev => {
+      const next = prev === 'light' ? 'dark' : 'light';
+      console.log('Switching from', prev, 'to', next);
+      return next;
+    });
+  };
+
+  const setTheme = (themeName: string) => {
+    if (themes[themeName]) {
+      setCurrentThemeName(themeName);
+    }
+  };
 
   return (
-    <ThemeContext.Provider value={value}>
+    <ThemeContext.Provider value={{ currentTheme, isDark, toggleTheme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );

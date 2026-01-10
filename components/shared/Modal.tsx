@@ -43,11 +43,11 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, title, size = 
       onClick={onClose}
     >
       <div
-        className={`bg-white rounded-2xl shadow-2xl w-full ${sizeClasses[size]} max-h-[90vh] flex flex-col border border-border/50 animate-luxury-reveal`}
+        className={`bg-surface rounded-2xl shadow-2xl w-full ${sizeClasses[size]} max-h-[90vh] flex flex-col border border-border/50 animate-luxury-reveal`}
         onClick={(e) => e.stopPropagation()}
       >
         {title && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-border/50 sticky top-0 bg-white rounded-t-2xl">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border/50 sticky top-0 bg-surface rounded-t-2xl">
             <h2 id="modal-title" className="text-xl font-serif font-bold text-text-primary">
               {title}
             </h2>

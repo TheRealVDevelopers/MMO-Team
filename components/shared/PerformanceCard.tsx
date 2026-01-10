@@ -23,10 +23,10 @@ const PerformanceCard: React.FC<PerformanceCardProps> = ({ metricName, metricVal
         <div className={`p-4 rounded-lg flex flex-col h-full ${config.bg} border border-current ${config.text}`}>
             <div className="flex justify-between items-start">
                 <h4 className="font-bold">{metricName}</h4>
-                <div className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/50">{weightage}%</div>
+                <div className="text-xs font-semibold px-2 py-0.5 rounded-full bg-surface/50">{weightage}%</div>
             </div>
             <div className="flex-grow flex items-center justify-center my-4">
-                 <span className="text-4xl font-bold">{metricValue}</span>
+                <span className="text-4xl font-bold">{metricValue}</span>
             </div>
             <div className="text-xs text-center">{description}</div>
         </div>

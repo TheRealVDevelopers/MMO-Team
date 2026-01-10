@@ -128,6 +128,19 @@ export interface User {
   phone: string;
 }
 
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  user_id: string; // who should see it
+  entity_type: 'lead' | 'project' | 'message' | 'task' | 'system';
+  entity_id?: string;
+  is_read: boolean;
+  is_demo: boolean;
+  created_at: Date;
+  type?: 'info' | 'success' | 'warning' | 'error';
+}
+
 
 
 
@@ -160,13 +173,14 @@ export interface Lead {
     accountsRequests?: string[];
   }
   // Project tracking fields
-  clientEmail?: string;
-  clientMobile?: string;
+  clientEmail: string;
+  clientMobile: string;
   currentStage?: number; // 1-8 project stages
   deadline?: Date;
   milestones?: ProjectMilestone[];
   communicationMessages?: LeadCommunicationMessage[];
   files?: LeadFile[];
+  is_demo?: boolean;
 }
 
 export enum ProjectStatus {
@@ -301,6 +315,7 @@ export interface ApprovalRequest {
   targetRole?: UserRole; // The role that needs to be assigned for this token
   contextId?: string; // e.g., Lead ID or Project ID
   assigneeId?: string; // Populated by admin during approval
+  is_demo?: boolean;
 }
 
 export type ExpenseCategory = 'Travel' | 'Site' | 'Office' | 'Client Meeting' | 'Other';
@@ -360,6 +375,7 @@ export interface Project {
   totalExpenses?: number;
   documents?: Document[];
   salespersonId?: string; // User ID of the salesperson who won the deal
+  is_demo?: boolean;
 }
 
 export enum SiteVisitStatus {
@@ -801,9 +817,11 @@ export interface SiteReport {
 
 // New types for Productivity System
 export enum TaskStatus {
+  PENDING_ACCEPTANCE = "Pending Acceptance",
   PENDING = "Pending",
   IN_PROGRESS = "In Progress",
   COMPLETED = "Completed",
+  OVERDUE = "Overdue",
 }
 
 export interface Task {
@@ -815,8 +833,11 @@ export interface Task {
   endTime?: number; // timestamp
   timeSpent: number; // in seconds
   priority: 'High' | 'Medium' | 'Low';
+  priorityOrder?: number; // 1, 2, 3... for ordering
+  deadline?: string; // ISO date string for deadline
   isPaused: boolean;
   date: string; // YYYY-MM-DD to link to calendar
+  createdBy?: string; // who created this task
 }
 
 export enum AttendanceType {
@@ -849,6 +870,7 @@ export interface ChatMessage {
   senderId: string;
   content: string;
   timestamp: Date;
+  is_demo?: boolean;
 }
 
 // Fix: Add missing types for the Quick Clarify communication feature.

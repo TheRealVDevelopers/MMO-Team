@@ -12,16 +12,49 @@ interface AuthContextType {
   setCurrentVendor: (vendor: Vendor | null) => void;
   updateCurrentUserAvatar: (avatarDataUrl: string) => void;
   loading: boolean;
+  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    // Check localStorage for persisted user on initial load
+    const savedUser = localStorage.getItem('mmo-current-user');
+    if (savedUser) {
+      try {
+        const parsed = JSON.parse(savedUser);
+        console.log('Restored user from localStorage:', parsed.name);
+        return parsed;
+      } catch (e) {
+        console.error('Failed to parse saved user:', e);
+        localStorage.removeItem('mmo-current-user');
+      }
+    }
+    return null;
+  });
   const [currentVendor, setCurrentVendor] = useState<Vendor | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Persist user to localStorage whenever it changes
   useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem('mmo-current-user', JSON.stringify(currentUser));
+      console.log('User saved to localStorage:', currentUser.name);
+    } else {
+      localStorage.removeItem('mmo-current-user');
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    // First check if we have a localStorage user (mock login)
+    const savedUser = localStorage.getItem('mmo-current-user');
+    if (savedUser) {
+      setLoading(false);
+      return;
+    }
+
+    // Otherwise, listen for Firebase auth changes
     const unsubscribe = onAuthStateChange((user) => {
       setCurrentUser(user);
       setLoading(false);
@@ -40,8 +73,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const logout = () => {
+    console.log('Logging out...');
+    localStorage.removeItem('mmo-current-user');
+    setCurrentUser(null);
+    setCurrentVendor(null);
+  };
+
   return (
-    <AuthContext.Provider value={{ currentUser, setCurrentUser, currentVendor, setCurrentVendor, updateCurrentUserAvatar, loading }}>
+    <AuthContext.Provider value={{ currentUser, setCurrentUser, currentVendor, setCurrentVendor, updateCurrentUserAvatar, loading, logout }}>
       {children}
     </AuthContext.Provider>
   );

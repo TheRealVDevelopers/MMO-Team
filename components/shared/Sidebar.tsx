@@ -32,14 +32,14 @@ const NavItem: React.FC<{
                 onClick();
             }}
             className={`group flex items-center justify-between px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${isActive
-                    ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg scale-[1.02]'
-                    : 'text-text-secondary hover:bg-subtle-background hover:text-text-primary hover:translate-x-1'
+                ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg scale-[1.02]'
+                : 'text-text-secondary hover:bg-subtle-background hover:text-text-primary hover:translate-x-1'
                 }`}
         >
             <div className="flex items-center space-x-3">
                 <div className={`${isActive
-                        ? 'text-white'
-                        : 'text-text-secondary group-hover:text-primary'
+                    ? 'text-white'
+                    : 'text-text-secondary group-hover:text-primary'
                     } transition-colors`}>
                     {icon}
                 </div>
@@ -47,8 +47,8 @@ const NavItem: React.FC<{
             </div>
             {count !== undefined && (
                 <span className={`px-2.5 py-1 text-xs font-bold rounded-full transition-colors ${isActive
-                        ? 'bg-white/20 text-white'
-                        : 'bg-primary/10 text-primary group-hover:bg-primary/20'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-primary/10 text-primary group-hover:bg-primary/20'
                     }`}>
                     {count}
                 </span>
@@ -59,7 +59,7 @@ const NavItem: React.FC<{
 
 const Sidebar: React.FC<SidebarProps> = ({ title, currentPage, setCurrentPage, navItems, secondaryNavItems }) => {
     return (
-        <aside className="w-72 bg-white border-r border-border/50 flex-shrink-0 shadow-sm" aria-label="Sidebar">
+        <aside className="w-72 bg-surface border-r border-border/50 flex-shrink-0 shadow-sm" aria-label="Sidebar">
             <div className="h-full px-4 py-6 overflow-y-auto flex flex-col">
                 {/* Enhanced Sidebar Header */}
                 <div className="flex items-center pl-2 mb-8 h-16 -mt-2 flex-shrink-0">

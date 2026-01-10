@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { TASKS, LEADS, formatDateTime, ATTENDANCE_DATA } from '../../../constants';
+import { TASKS, formatDateTime, ATTENDANCE_DATA } from '../../../constants';
 import { Task, TaskStatus, AttendanceType, UserRole, Reminder, AttendanceStatus } from '../../../types';
 import TaskCard from './TaskCard';
 import {
@@ -18,9 +18,12 @@ import PersonalCalendar from './PersonalCalendar';
 import TimeTimeline from './TimeTimeline';
 import TimeTrackingSummary from '../TimeTrackingSummary';
 import RequestApprovalModal from './RequestApprovalModal';
+import AddTaskModal from './AddTaskModal';
 import { ContentCard, PrimaryButton, SecondaryButton, cn, staggerContainer } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTimeEntries } from '../../../hooks/useTimeTracking';
+import { useTimeEntries, addActivity } from '../../../hooks/useTimeTracking';
+import { useMyDayTasks, addTask, updateTask } from '../../../hooks/useMyDayTasks';
+import { useLeads } from '../../../hooks/useLeads';
 
 // Define a type for the reminder with its associated lead info
 interface EnrichedReminder extends Reminder {
@@ -85,7 +88,10 @@ const ReminderItem: React.FC<{ reminder: EnrichedReminder, onToggle: (id: string
 
 const MyDayPage: React.FC = () => {
     const { currentUser } = useAuth();
-    const [tasks, setTasks] = useState<Task[]>([]);
+    // Live Tasks Hook
+    const { tasks, loading: tasksLoading } = useMyDayTasks(currentUser?.id);
+    const { leads, loading: leadsLoading } = useLeads();
+
     const [reminders, setReminders] = useState<EnrichedReminder[]>([]);
     const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -97,12 +103,9 @@ const MyDayPage: React.FC = () => {
     const todayTimeEntry = timeEntries.find(e => e.date === todayStr);
 
     useEffect(() => {
-        if (currentUser) {
-            const userTasks = TASKS.filter(t => t.userId === currentUser.id).map(t => ({ ...t }));
-            setTasks(userTasks);
-
+        if (currentUser && !leadsLoading) {
             if (currentUser.role === UserRole.SALES_TEAM_MEMBER) {
-                const userLeads = LEADS.filter(lead => lead.assignedTo === currentUser.id);
+                const userLeads = leads.filter(lead => lead.assignedTo === currentUser.id);
                 const allReminders: EnrichedReminder[] = userLeads.flatMap(lead =>
                     (lead.reminders || []).map(reminder => ({
                         ...reminder,
@@ -122,32 +125,29 @@ const MyDayPage: React.FC = () => {
                 setReminders([]);
             }
         }
-    }, [currentUser]);
+    }, [currentUser, leads, leadsLoading]);
 
-    const handleUpdateStatus = (taskId: string, newStatus: TaskStatus) => {
-        setTasks(prevTasks => {
-            const now = Date.now();
-            return prevTasks.map(task => {
-                if (task.id === taskId) {
-                    const updatedTask = { ...task, status: newStatus };
+    const handleUpdateStatus = async (taskId: string, newStatus: TaskStatus) => {
+        const task = tasks.find(t => t.id === taskId);
+        if (!task) return;
 
-                    if (newStatus === TaskStatus.IN_PROGRESS) {
-                        updatedTask.startTime = now;
-                        updatedTask.isPaused = false;
-                    }
+        const now = Date.now();
+        const updates: Partial<Task> = { status: newStatus };
 
-                    if (newStatus === TaskStatus.COMPLETED) {
-                        const startTime = task.startTime || now;
-                        const timeSpent = task.timeSpent + Math.floor((now - startTime) / 1000);
-                        updatedTask.endTime = now;
-                        updatedTask.timeSpent = timeSpent;
-                        updatedTask.isPaused = true;
-                    }
-                    return updatedTask;
-                }
-                return task;
-            });
-        });
+        if (newStatus === TaskStatus.IN_PROGRESS) {
+            updates.startTime = now;
+            updates.isPaused = false;
+        }
+
+        if (newStatus === TaskStatus.COMPLETED) {
+            const startTime = task.startTime || now;
+            const timeSpent = task.timeSpent + Math.floor((now - startTime) / 1000);
+            updates.endTime = now;
+            updates.timeSpent = timeSpent;
+            updates.isPaused = true;
+        }
+
+        await updateTask(taskId, updates);
     };
 
     const handleToggleReminder = (reminderId: string) => {
@@ -165,12 +165,11 @@ const MyDayPage: React.FC = () => {
         });
     };
 
-    const handleAddTask = (e: React.FormEvent) => {
+    const handleAddTask = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newTaskTitle.trim() || !currentUser) return;
 
-        const newTask: Task = {
-            id: `task-${Date.now()}`,
+        const newTask: Omit<Task, 'id'> = {
             title: newTaskTitle,
             userId: currentUser.id,
             status: TaskStatus.PENDING,
@@ -180,7 +179,7 @@ const MyDayPage: React.FC = () => {
             date: selectedDate,
         };
 
-        setTasks(prev => [...prev, newTask]);
+        await addTask(newTask, currentUser.id);
         setNewTaskTitle('');
     };
 

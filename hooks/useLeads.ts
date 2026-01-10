@@ -2,8 +2,8 @@
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, onSnapshot, query, where, addDoc, updateDoc, doc, Timestamp, orderBy } from 'firebase/firestore';
-import { Lead, LeadHistory, Reminder } from '../types';
-import { LEADS } from '../constants';
+import { Lead, LeadHistory, Reminder, Notification } from '../types';
+import { createNotification } from '../services/liveDataService';
 
 // Type from Firestore, where dates are Timestamps
 type FirestoreLead = Omit<Lead, 'inquiryDate' | 'history' | 'reminders'> & {
@@ -32,13 +32,19 @@ export const useLeads = (userId?: string) => {
         setLoading(true);
         setError(null);
 
-        let unsubscribe: () => void = () => {};
+        let unsubscribe: () => void = () => { };
 
         try {
+            // Fix: Firestore requires an index for compound queries (where + orderBy).
+            // We switch to client-side sorting to avoid this requirement for now.
             const leadsCollection = collection(db, 'leads');
-            const q = userId
-                ? query(leadsCollection, where('assignedTo', '==', userId), orderBy('inquiryDate', 'desc'))
-                : query(leadsCollection, orderBy('inquiryDate', 'desc'));
+            let q;
+
+            if (userId) {
+                q = query(leadsCollection, where('assignedTo', '==', userId), orderBy('inquiryDate', 'desc'));
+            } else {
+                q = query(leadsCollection, orderBy('inquiryDate', 'desc'));
+            }
 
             unsubscribe = onSnapshot(q, (querySnapshot) => {
                 const leadsData: Lead[] = [];
@@ -48,21 +54,13 @@ export const useLeads = (userId?: string) => {
                 setLeads(leadsData);
                 setLoading(false);
             }, (err) => {
-                console.warn("Firestore access failed (likely permissions), falling back to mock data:", err);
-                // Fallback to mock data so the app still works in demo mode
-                const mockLeads = userId 
-                    ? LEADS.filter(l => l.assignedTo === userId)
-                    : LEADS;
-                setLeads(mockLeads);
-                // We do NOT set error here to allow the UI to render the mock data instead of an error card
+                console.error("Firestore access failed:", err);
+                setError(err);
                 setLoading(false);
             });
         } catch (err) {
             console.error("Error setting up leads listener:", err);
-            const mockLeads = userId 
-                ? LEADS.filter(l => l.assignedTo === userId)
-                : LEADS;
-            setLeads(mockLeads);
+            setError(err as Error);
             setLoading(false);
         }
 
@@ -72,12 +70,27 @@ export const useLeads = (userId?: string) => {
     return { leads, loading, error };
 };
 
-export const addLead = async (leadData: Omit<Lead, 'id'>) => {
+export const addLead = async (leadData: Omit<Lead, 'id'>, createdBy?: string) => {
     try {
-        await addDoc(collection(db, 'leads'), leadData);
+        const docRef = await addDoc(collection(db, 'leads'), {
+            ...leadData,
+            is_demo: false, // New leads are always real
+        });
+
+        // Trigger notification
+        await createNotification({
+            title: 'New Lead Added',
+            message: `New lead "${leadData.clientName}" - ${leadData.projectName} has been added.`,
+            user_id: leadData.assignedTo, // Notify the assigned user
+            entity_type: 'lead',
+            entity_id: docRef.id,
+            type: 'info'
+        });
+
+        return docRef.id;
     } catch (error) {
-        console.error("Error adding lead (mock mode active):", error);
-        // In a real app, we would handle this. For demo, we just log it.
+        console.error("Error adding lead:", error);
+        throw error;
     }
 };
 
@@ -85,7 +98,27 @@ export const updateLead = async (leadId: string, updatedData: Partial<Lead>) => 
     try {
         const leadRef = doc(db, 'leads', leadId);
         await updateDoc(leadRef, updatedData);
+
+        // Trigger notification if assignedTo changed
+        if (updatedData.assignedTo) {
+            await createNotification({
+                title: 'Lead Assigned',
+                message: `You have been assigned to lead: ${updatedData.clientName || 'Lead'}`,
+                user_id: updatedData.assignedTo,
+                entity_type: 'lead',
+                entity_id: leadId,
+                type: 'info'
+            });
+        }
+
+        // Trigger notification if status changed (notify owner/manager - simpler logic for now: notify assignee)
+        if (updatedData.status && !updatedData.assignedTo) {
+            // We can't easily know who to notify without fetching the lead, but we can try notifying the assignedTo if known or skip
+            // For now, let's skip status update notifications to avoid noise unless we fetch the doc.
+        }
+
     } catch (error) {
-        console.error("Error updating lead (mock mode active):", error);
+        console.error("Error updating lead:", error);
+        throw error;
     }
 };

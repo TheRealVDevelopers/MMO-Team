@@ -341,3 +341,68 @@ export const getTimeTrackingSummary = (entries: TimeEntry[]) => {
     averageHoursPerDay: parseFloat(averageHoursPerDay.toFixed(2)),
   };
 };
+
+// Add an activity to today's time entry (for task tracking in timeline)
+export const addActivity = async (userId: string, userName: string, activityName: string, isComplete: boolean = false) => {
+  try {
+    const today = new Date().toLocaleDateString('en-CA');
+
+    // Find today's time entry
+    const q = query(
+      collection(db, 'timeEntries'),
+      where('userId', '==', userId),
+      where('date', '==', today)
+    );
+    const snapshot = await getDocs(q);
+
+    let entryId: string;
+    let activities: any[] = [];
+
+    if (snapshot.empty) {
+      // Auto clock-in if not clocked in yet (starting first task starts the day)
+      const newEntry = {
+        userId,
+        userName,
+        clockIn: serverTimestamp(),
+        date: today,
+        breaks: [],
+        activities: [],
+        status: TimeTrackingStatus.CLOCKED_IN,
+      };
+      const docRef = await addDoc(collection(db, 'timeEntries'), newEntry);
+      entryId = docRef.id;
+      console.log('Auto clocked in for', userName);
+    } else {
+      entryId = snapshot.docs[0].id;
+      activities = snapshot.docs[0].data().activities || [];
+    }
+
+    // If marking complete, find the active activity and update it
+    if (isComplete) {
+      const activeIndex = activities.findIndex((a: any) => a.name === activityName && !a.endTime);
+      if (activeIndex !== -1) {
+        activities[activeIndex] = {
+          ...activities[activeIndex],
+          endTime: new Date(),
+        };
+      }
+    } else {
+      // Add new activity (task started)
+      activities.push({
+        id: `activity-${Date.now()}`,
+        name: activityName,
+        startTime: new Date(),
+        tags: ['task'],
+      });
+    }
+
+    const entryRef = doc(db, 'timeEntries', entryId);
+    await updateDoc(entryRef, { activities });
+
+    console.log(isComplete ? `Activity completed: ${activityName}` : `Activity started: ${activityName}`);
+    return entryId;
+  } catch (error) {
+    console.error('Error adding activity:', error);
+    throw error;
+  }
+};

@@ -49,7 +49,7 @@ const InternalLayout: React.FC<InternalLayoutProps> = ({
     secondaryNavItems = []
 }) => {
     const { currentUser, logout } = useAuth();
-    const { theme, setTheme } = useTheme();
+    const { isDark, toggleTheme } = useTheme();
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
@@ -187,10 +187,13 @@ const InternalLayout: React.FC<InternalLayoutProps> = ({
                     <div className="flex items-center gap-6">
                         {/* Theme Toggle */}
                         <button
-                            onClick={() => setTheme(theme === 'serenity-white' ? 'midnight-executive' : 'serenity-white')}
+                            onClick={() => {
+                                console.log('InternalLayout theme toggle clicked!');
+                                toggleTheme();
+                            }}
                             className="p-2 text-text-secondary hover:text-primary transition-colors"
                         >
-                            {theme === 'serenity-white' ? <MoonIcon className="w-6 h-6" /> : <SunIcon className="w-6 h-6" />}
+                            {isDark ? <SunIcon className="w-6 h-6" /> : <MoonIcon className="w-6 h-6" />}
                         </button>
 
                         <NotificationPopover />

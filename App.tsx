@@ -15,6 +15,7 @@ import {
   ViewColumnsIcon, TagIcon, ListBulletIcon, PresentationChartLineIcon, ReceiptPercentIcon, BuildingStorefrontIcon, BuildingLibraryIcon, CheckCircleIcon, DocumentTextIcon
 } from './components/icons/IconComponents';
 import { USERS } from './constants';
+import { seedDemoData } from './services/liveDataService';
 
 const navConfig = {
   [UserRole.SUPER_ADMIN]: {
@@ -134,6 +135,11 @@ const AppContent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState('overview');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showApp, setIsShowApp] = useState(false);
+
+  useEffect(() => {
+    // Seed demo data once on app start
+    seedDemoData().catch(console.error);
+  }, []);
 
   const handleSetPage = (page: string) => {
     setCurrentPage(page);

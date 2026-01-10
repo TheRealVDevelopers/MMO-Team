@@ -17,11 +17,15 @@ const salesTeam = USERS.filter(u => u.role === UserRole.SALES_TEAM_MEMBER);
 const pipelineOrder = Object.values(LeadPipelineStatus);
 
 const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; leads: Lead[] }> = ({ setCurrentPage, leads }) => {
-    // --- MOCK DATA CALCULATIONS ---
-    const leadsThisMonth = leads.filter(l => l.inquiryDate > new Date(new Date().setDate(1)));
+    // --- LIVE DATA CALCULATIONS ---
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const leadsThisMonth = leads.filter(l => l.inquiryDate >= startOfMonth);
     const totalLeads = leadsThisMonth.length;
     const projectsWon = leadsThisMonth.filter(l => l.status === LeadPipelineStatus.WON).length;
-    const totalRevenue = leadsThisMonth.filter(l => l.status === LeadPipelineStatus.WON).reduce((sum, l) => sum + l.value, 0);
+    const totalRevenue = leadsThisMonth.filter(l => l.status === LeadPipelineStatus.WON).reduce((sum, l) => sum + (l.value || 0), 0);
     const conversionRate = totalLeads > 0 ? ((projectsWon / totalLeads) * 100).toFixed(1) : '0';
 
     const pipelineCounts = leads.reduce((acc, lead) => {
@@ -29,7 +33,11 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; lead
         return acc;
     }, {} as Record<LeadPipelineStatus, number>);
 
-    const urgentAlerts = leads.filter(l => l.status === LeadPipelineStatus.NEW_NOT_CONTACTED && (new Date().getTime() - l.inquiryDate.getTime()) > 24 * 60 * 60 * 1000);
+    // Alert if lead is NEW and older than 24h
+    const urgentAlerts = leads.filter(l =>
+        l.status === LeadPipelineStatus.NEW_NOT_CONTACTED &&
+        (new Date().getTime() - l.inquiryDate.getTime()) > 24 * 60 * 60 * 1000
+    );
 
     return (
         <motion.div

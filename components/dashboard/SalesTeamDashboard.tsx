@@ -16,11 +16,13 @@ import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
 import { useLeads, addLead, updateLead } from '../../hooks/useLeads';
 import { SectionHeader, PrimaryButton } from './shared/DashboardUI';
-import { UserPlusIcon, ExclamationTriangleIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { UserPlusIcon, ExclamationTriangleIcon, ArrowPathIcon, PlusIcon } from '@heroicons/react/24/outline';
+import AddNewLeadModal from './sales-manager/AddNewLeadModal';
 
 // Simple Error Boundary Component for internal use
 interface ErrorBoundaryProps {
   children: React.ReactNode;
+  key?: React.Key;
 }
 
 interface ErrorBoundaryState {
@@ -54,7 +56,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
             type="button"
             // @ts-ignore
             onClick={() => this.setState({ hasError: false })}
-            className="mt-4 px-4 py-2 bg-white border border-border rounded-lg text-sm font-medium hover:bg-gray-50"
+            className="mt-4 px-4 py-2 bg-surface text-text-primary border border-border rounded-lg text-sm font-medium hover:bg-subtle-background transition-colors"
           >
             Try Again
           </button>
@@ -80,6 +82,7 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
   const [procurementRequests, setProcurementRequests] = useState<ProcurementRequest[]>([]);
   const [executionRequests, setExecutionRequests] = useState<ExecutionRequest[]>([]);
   const [accountsRequests, setAccountsRequests] = useState<AccountsRequest[]>([]);
+  const [isAddLeadModalOpen, setIsAddLeadModalOpen] = useState(false);
 
   useEffect(() => {
     if (currentUser?.id) {
@@ -216,7 +219,7 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
         subtitle={currentPage === 'my-day' ? `Good morning, ${currentUser?.name.split(' ')[0]}. Here's your objective focus for today.` : undefined}
         actions={
           currentPage === 'leads' ? (
-            <PrimaryButton onClick={() => { }} icon={<UserPlusIcon className="w-4 h-4" />}>
+            <PrimaryButton onClick={() => setIsAddLeadModalOpen(true)} icon={<PlusIcon className="w-4 h-4" />}>
               Add Registry
             </PrimaryButton>
           ) : undefined
@@ -227,6 +230,27 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
           {renderPage()}
         </ErrorBoundary>
       </div>
+
+      {/* Add Lead Modal */}
+      <AddNewLeadModal
+        isOpen={isAddLeadModalOpen}
+        onClose={() => setIsAddLeadModalOpen(false)}
+        onAddLead={async (data, reminder) => {
+          const newLead: Lead = {
+            ...data,
+            id: `lead-${Date.now()}`,
+            status: LeadPipelineStatus.NEW_NOT_CONTACTED,
+            inquiryDate: new Date(),
+            lastContacted: 'Just now',
+            history: [{ action: 'Lead Created', user: currentUser?.name || 'System', timestamp: new Date(), notes: 'Initial Registry' }],
+            reminders: reminder ? [{ id: `rem-${Date.now()}`, date: new Date(reminder.date), notes: reminder.notes, completed: false }] : [],
+            tasks: {},
+            assignedTo: currentUser?.id,
+          };
+          await addLead(newLead, currentUser?.id || '');
+          setIsAddLeadModalOpen(false);
+        }}
+      />
     </div>
   );
 };

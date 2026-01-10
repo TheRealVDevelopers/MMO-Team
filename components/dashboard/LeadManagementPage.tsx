@@ -693,7 +693,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
           </div>
 
           {/* Assigned To */}
-          <div className="bg-white dark:bg-background/90 rounded-xl shadow-md p-6">
+          <div className="bg-surface dark:bg-surface/90 rounded-xl shadow-md p-6">
             <h3 className="text-lg font-bold text-text-primary/90 dark:text-white mb-4">Assigned To</h3>
             <p className="text-text-primary/90 dark:text-white font-semibold">{currentUser?.name || 'Sales Team'}</p>
             <p className="text-sm text-gray-500 dark:text-gray-400">{currentUser?.role}</p>

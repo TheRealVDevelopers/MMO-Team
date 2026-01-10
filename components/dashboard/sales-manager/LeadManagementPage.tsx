@@ -111,7 +111,17 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leads }) => {
                 <StatCard title="Total Registry" value={totalLeads.toString()} icon={<FunnelIcon className="w-6 h-6" />} color="primary" />
                 <StatCard title="Win Ratio" value={`${conversionRate.toFixed(1)}%`} icon={<ChartBarIcon className="w-6 h-6" />} color="purple" />
                 <StatCard title="Pipeline Net" value={formatLargeNumberINR(pipelineValue)} icon={<BanknotesIcon className="w-6 h-6" />} color="secondary" />
-                <StatCard title="Won (Period)" value={(leads.filter(l => l.status === LeadPipelineStatus.WON && l.inquiryDate > new Date(new Date().setDate(1)))).length.toString()} icon={<CalendarIcon className="w-6 h-6" />} color="accent" />
+                <StatCard
+                    title="Won (Month)"
+                    value={(leads.filter(l => {
+                        const startOfMonth = new Date();
+                        startOfMonth.setDate(1);
+                        startOfMonth.setHours(0, 0, 0, 0);
+                        return l.status === LeadPipelineStatus.WON && l.inquiryDate >= startOfMonth;
+                    })).length.toString()}
+                    icon={<CalendarIcon className="w-6 h-6" />}
+                    color="accent"
+                />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
