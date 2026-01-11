@@ -1,9 +1,9 @@
-import React, { useMemo } from 'react';
-import { USERS, TASKS } from '../../../constants';
-import { UserRole, TaskStatus } from '../../../types';
-import { UsersIcon } from '@heroicons/react/24/outline';
+import React from 'react';
+import { UserRole } from '../../../types';
+import { UsersIcon, CheckCircleIcon, ClockIcon } from '@heroicons/react/24/outline';
 import { ContentCard, cn } from '../shared/DashboardUI';
 import { motion } from 'framer-motion';
+import { useStaffPerformance } from '../../../hooks/useStaffPerformance';
 
 const teamOrder: UserRole[] = [
     UserRole.SALES_TEAM_MEMBER,
@@ -16,38 +16,29 @@ const teamOrder: UserRole[] = [
 ];
 
 const TeamLiveStatusCard: React.FC = () => {
+    const { staff } = useStaffPerformance();
 
-    const teamStats = useMemo(() => {
-        const usersByRole: Record<string, string[]> = {};
-        for (const user of USERS) {
-            if (!usersByRole[user.role]) {
-                usersByRole[user.role] = [];
+    // Group staff by role
+    const groupedStaff = React.useMemo(() => {
+        const groups: Partial<Record<UserRole, { total: number; active: number; redFlag: number }>> = {};
+
+        staff.forEach(user => {
+            if (!groups[user.role]) {
+                groups[user.role] = { total: 0, active: 0, redFlag: 0 };
             }
-            usersByRole[user.role].push(user.id);
-        }
-
-        const stats: { team: UserRole, completed: number, inProgress: number, pending: number, members: number }[] = [];
-
-        for (const role of teamOrder) {
-            const userIds = usersByRole[role] || [];
-            if (userIds.length > 0) {
-                const teamTasks = TASKS.filter(task => userIds.includes(task.userId));
-                const completed = teamTasks.filter(t => t.status === TaskStatus.COMPLETED).length;
-                const inProgress = teamTasks.filter(t => t.status === TaskStatus.IN_PROGRESS).length;
-                const pending = teamTasks.filter(t => t.status === TaskStatus.PENDING).length;
-
-                stats.push({
-                    team: role,
-                    completed,
-                    inProgress,
-                    pending,
-                    members: userIds.length
-                });
+            if (groups[user.role]) {
+                groups[user.role]!.total++;
+                // Active if not red flagged (simplification for "Pulse")
+                if (user.performanceFlag !== 'red') {
+                    groups[user.role]!.active++;
+                }
+                if (user.performanceFlag === 'red') {
+                    groups[user.role]!.redFlag++;
+                }
             }
-        }
-        return stats;
-
-    }, []);
+        });
+        return groups;
+    }, [staff]);
 
     return (
         <ContentCard>
@@ -57,68 +48,59 @@ const TeamLiveStatusCard: React.FC = () => {
                 </div>
                 <div>
                     <h3 className="text-xl font-serif font-bold text-text-primary tracking-tight">Deployment Pulse</h3>
-                    <p className="text-xs text-text-tertiary">Real-time engagement across departments</p>
+                    <p className="text-xs text-text-tertiary">Real-time workforce availability</p>
                 </div>
             </div>
 
-            <div className="space-y-8">
-                {teamStats.map((stat, idx) => {
-                    const total = stat.completed + stat.inProgress + stat.pending;
-                    const compPerc = total > 0 ? (stat.completed / total) * 100 : 0;
-                    const progPerc = total > 0 ? (stat.inProgress / total) * 100 : 0;
-                    const pendPerc = total > 0 ? (stat.pending / total) * 100 : 0;
+            <div className="space-y-6">
+                {teamOrder.map((role, idx) => {
+                    const stats = groupedStaff[role] || { total: 0, active: 0, redFlag: 0 };
+                    if (stats.total === 0) return null;
+
+                    const activePercentage = stats.total > 0 ? (stats.active / stats.total) * 100 : 0;
 
                     return (
                         <motion.div
-                            key={stat.team}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
+                            key={role}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: idx * 0.05 }}
+                            className="bg-background rounded-xl p-4 border border-border"
                         >
-                            <div className="flex justify-between items-end mb-3">
-                                <div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-1">Squad</p>
-                                    <p className="text-sm font-bold text-text-primary">{stat.team}</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-1">Strength</p>
-                                    <p className="text-sm font-bold text-primary">{stat.members} <span className="text-[10px] text-text-tertiary font-medium">Headcount</span></p>
-                                </div>
+                            <div className="flex justify-between items-center mb-2">
+                                <h4 className="text-sm font-bold text-text-primary">{role}</h4>
+                                <span className={cn(
+                                    "px-2 py-0.5 rounded-full text-[10px] font-black uppercase",
+                                    activePercentage === 100 ? "bg-emerald-500/10 text-emerald-500" : "bg-text-secondary/10 text-text-secondary"
+                                )}>
+                                    {stats.active}/{stats.total} Active
+                                </span>
                             </div>
 
-                            <div className="relative">
-                                <div className="w-full bg-border/20 rounded-full h-2.5 flex overflow-hidden shadow-inner">
-                                    <motion.div
-                                        initial={{ width: 0 }}
-                                        animate={{ width: `${compPerc}%` }}
-                                        className="bg-secondary"
+                            {/* Status Bar */}
+                            <div className="flex gap-1 h-1.5 w-full rounded-full overflow-hidden bg-border/30">
+                                {Array.from({ length: stats.total }).map((_, i) => (
+                                    <div
+                                        key={i}
+                                        className={cn(
+                                            "flex-1 rounded-full",
+                                            i < stats.active ? "bg-emerald-500" : "bg-error"
+                                        )}
                                     />
-                                    <motion.div
-                                        initial={{ width: 0 }}
-                                        animate={{ width: `${progPerc}%` }}
-                                        className="bg-accent"
-                                    />
-                                    <motion.div
-                                        initial={{ width: 0 }}
-                                        animate={{ width: `${pendPerc}%` }}
-                                        className="bg-error"
-                                    />
-                                </div>
+                                ))}
+                            </div>
 
-                                <div className="flex items-center gap-4 mt-3">
-                                    <div className="flex items-center gap-1.5">
-                                        <div className="w-2 h-2 rounded-full bg-secondary" />
-                                        <span className="text-[10px] font-black uppercase tracking-tighter text-text-secondary">{stat.completed} Synchronized</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5">
-                                        <div className="w-2 h-2 rounded-full bg-accent" />
-                                        <span className="text-[10px] font-black uppercase tracking-tighter text-text-secondary">{stat.inProgress} Active</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5">
-                                        <div className="w-2 h-2 rounded-full bg-error" />
-                                        <span className="text-[10px] font-black uppercase tracking-tighter text-text-secondary">{stat.pending} Latency</span>
-                                    </div>
-                                </div>
+                            <div className="flex items-center gap-4 mt-3 text-[10px] font-medium text-text-tertiary">
+                                <span className="flex items-center gap-1.5">
+                                    <CheckCircleIcon className="w-3 h-3 text-emerald-500" />
+                                    {stats.active} Online
+                                </span>
+                                {stats.redFlag > 0 && (
+                                    <span className="flex items-center gap-1.5 text-error">
+                                        <ClockIcon className="w-3 h-3" />
+                                        {stats.redFlag} Delayed
+                                    </span>
+                                )}
                             </div>
                         </motion.div>
                     );

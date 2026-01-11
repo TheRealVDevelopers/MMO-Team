@@ -1,29 +1,47 @@
 import React, { useState, useMemo } from 'react';
-import { USERS } from '../../../constants';
 import { User, UserRole } from '../../../types';
+import { useStaffPerformance } from '../../../hooks/useStaffPerformance';
 import {
     ChevronRightIcon,
     UsersIcon,
     ArrowLeftIcon,
     MagnifyingGlassIcon,
-    AdjustmentsHorizontalIcon
+    AdjustmentsHorizontalIcon,
+    SignalIcon,
+    FlagIcon
 } from '@heroicons/react/24/outline';
 import TeamMemberDetailView from './TeamMemberDetailView';
-import PlaceholderDashboard from '../PlaceholderDashboard';
-import { ContentCard, SectionHeader, cn, staggerContainer } from '../shared/DashboardUI';
+import { ContentCard, cn, staggerContainer } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const TeamManagementPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
+    const { staff, loading } = useStaffPerformance();
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
-    const [selectedUser, setSelectedUser] = useState<User | null>(USERS[1]);
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
+    // Initial Selection Effect
+    React.useEffect(() => {
+        if (!selectedUser && staff.length > 0) {
+            setSelectedUser(staff[0]);
+        }
+    }, [staff, selectedUser]);
 
     const filteredUsers = useMemo(() => {
-        return USERS.filter(user =>
-            (user.name.toLowerCase().includes(searchTerm.toLowerCase())) &&
+        return staff.filter(user =>
+            (user.name?.toLowerCase().includes(searchTerm.toLowerCase())) &&
             (roleFilter === 'all' || user.role === roleFilter)
         );
-    }, [searchTerm, roleFilter]);
+    }, [staff, searchTerm, roleFilter]);
+
+    const getStatusColor = (flag?: string) => {
+        switch (flag) {
+            case 'red': return 'text-error bg-error/10 border-error/20';
+            case 'yellow': return 'text-amber-500 bg-amber-500/10 border-amber-500/20';
+            case 'green': return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
+            default: return 'text-text-tertiary bg-subtle-background border-border';
+        }
+    };
 
     return (
         <motion.div
@@ -78,50 +96,71 @@ const TeamManagementPage: React.FC<{ setCurrentPage: (page: string) => void }> =
                                         className="w-full pl-11 pr-10 py-3 bg-surface border border-border rounded-xl text-xs font-semibold focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none appearance-none transition-all shadow-inner"
                                     >
                                         <option value="all">Sectors: All</option>
-                                        {Object.values(UserRole).map(role => <option key={role} value={role}>{role}</option>)}
+                                        {Object.values(UserRole).filter(r => r !== UserRole.SUPER_ADMIN).map(role => <option key={role} value={role}>{role}</option>)}
                                     </select>
                                 </div>
                             </div>
                         </div>
 
                         <div className="flex-1 overflow-y-auto px-2 py-4 custom-scrollbar">
-                            <AnimatePresence mode="popLayout">
-                                {filteredUsers.map((user, idx) => (
-                                    <motion.div
-                                        key={user.id}
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: idx * 0.03 }}
-                                        onClick={() => setSelectedUser(user)}
-                                        className={cn(
-                                            "group p-3 mb-2 rounded-2xl cursor-pointer transition-all border",
-                                            selectedUser?.id === user.id
-                                                ? "bg-primary/5 border-primary/20 shadow-sm"
-                                                : "bg-transparent border-transparent hover:bg-subtle-background hover:border-border/40"
-                                        )}
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className="relative">
-                                                <img className="w-10 h-10 rounded-xl object-cover shadow-sm bg-surface" src={user.avatar} alt={user.name} />
-                                                {selectedUser?.id === user.id && (
-                                                    <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-primary border-2 border-surface" />
+                            {loading ? (
+                                <div className="flex justify-center pt-10">
+                                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                                </div>
+                            ) : (
+                                <AnimatePresence mode="popLayout">
+                                    {filteredUsers.map((user, idx) => {
+                                        const statusColor = getStatusColor(user.performanceFlag);
+                                        return (
+                                            <motion.div
+                                                key={user.id}
+                                                initial={{ opacity: 0, x: -20 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                transition={{ delay: idx * 0.03 }}
+                                                onClick={() => setSelectedUser(user)}
+                                                className={cn(
+                                                    "group p-3 mb-2 rounded-2xl cursor-pointer transition-all border",
+                                                    selectedUser?.id === user.id
+                                                        ? "bg-primary/5 border-primary/20 shadow-sm"
+                                                        : "bg-transparent border-transparent hover:bg-subtle-background hover:border-border/40"
                                                 )}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className={cn(
-                                                    "text-sm font-bold truncate transition-colors",
-                                                    selectedUser?.id === user.id ? "text-primary" : "text-text-primary"
-                                                )}>{user.name}</p>
-                                                <p className="text-[10px] font-semibold text-text-tertiary tracking-wide uppercase italic">{user.role}</p>
-                                            </div>
-                                            <ChevronRightIcon className={cn(
-                                                "w-4 h-4 transition-all",
-                                                selectedUser?.id === user.id ? "text-primary translate-x-1" : "text-text-tertiary opacity-0 group-hover:opacity-100 group-hover:translate-x-1"
-                                            )} />
-                                        </div>
-                                    </motion.div>
-                                ))}
-                            </AnimatePresence>
+                                            >
+                                                <div className="flex items-center gap-4">
+                                                    <div className="relative">
+                                                        <img className="w-10 h-10 rounded-xl object-cover shadow-sm bg-surface" src={user.avatar} alt={user.name} />
+
+                                                        {/* Status Dot */}
+                                                        <div className={cn(
+                                                            "absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-surface flex items-center justify-center",
+                                                            user.performanceFlag === 'green' ? "bg-emerald-500" :
+                                                                user.performanceFlag === 'red' ? "bg-error" : "bg-amber-500"
+                                                        )}>
+                                                            {user.performanceFlag === 'red' && <FlagIcon className="w-2 h-2 text-white" />}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex justify-between items-center mb-0.5">
+                                                            <p className={cn(
+                                                                "text-sm font-bold truncate transition-colors",
+                                                                selectedUser?.id === user.id ? "text-primary" : "text-text-primary"
+                                                            )}>{user.name}</p>
+                                                            {/* Mini Pulse Indicator */}
+                                                            {user.activeTaskCount && user.activeTaskCount > 0 && (
+                                                                <SignalIcon className="w-3 h-3 text-emerald-500 animate-pulse" />
+                                                            )}
+                                                        </div>
+                                                        <p className="text-[10px] font-semibold text-text-tertiary tracking-wide uppercase italic truncate">{user.role}</p>
+                                                    </div>
+                                                    <ChevronRightIcon className={cn(
+                                                        "w-4 h-4 transition-all",
+                                                        selectedUser?.id === user.id ? "text-primary translate-x-1" : "text-text-tertiary opacity-0 group-hover:opacity-100 group-hover:translate-x-1"
+                                                    )} />
+                                                </div>
+                                            </motion.div>
+                                        );
+                                    })}
+                                </AnimatePresence>
+                            )}
                         </div>
                     </ContentCard>
                 </div>

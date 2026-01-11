@@ -42,21 +42,33 @@ export const calculateUserPerformance = (tasks: Task[]): {
     let flag: 'green' | 'yellow' | 'red' = 'green';
     let reason = 'Green Flag: On Track';
 
-    // Strict Rule Implementation
-    // 6:00 PM (18:00) Rule -> RED FLAG if tasks pending
-    if (currentHour >= 18 && pendingTasks.length > 0) {
+    // Proximity Tasks (Due within 1 hour)
+    const upcomingTasks = pendingTasks.filter(t => {
+        if (!t.dueAt) return false;
+        const dueAt = t.dueAt instanceof Date ? t.dueAt : (t.dueAt as any).toDate?.() || new Date(t.dueAt);
+        const timeDiff = dueAt.getTime() - now.getTime();
+        return timeDiff > 0 && timeDiff <= 60 * 60 * 1000; // 0 to 60 minutes
+    });
+
+    // 1. Overdue = RED FLAG (Highest Priority)
+    if (overdueTasks.length > 0) {
+        flag = 'red';
+        reason = `Red Flag: ${overdueTasks.length} tasks overdue`;
+    }
+    // 2. 6:00 PM (18:00) Rule -> RED FLAG
+    else if (currentHour >= 18 && pendingTasks.length > 0) {
         flag = 'red';
         reason = `Red Flag: ${pendingTasks.length} tasks incomplete after 6 PM`;
     }
-    // 4:00 PM (16:00) Rule -> YELLOW FLAG if tasks pending
+    // 3. Deadline < 1 Hour -> YELLOW FLAG
+    else if (upcomingTasks.length > 0) {
+        flag = 'yellow';
+        reason = `Yellow Flag: ${upcomingTasks.length} tasks due in <1 hr`;
+    }
+    // 4. 4:00 PM (16:00) Rule -> YELLOW FLAG
     else if (currentHour >= 16 && pendingTasks.length > 0) {
         flag = 'yellow';
         reason = `Yellow Flag: ${pendingTasks.length} tasks pending (4 PM Warning)`;
-    }
-    // Standard Overdue Rule (applies anytime)
-    else if (overdueTasks.length > 0) {
-        flag = 'red';
-        reason = `Red Flag: ${overdueTasks.length} tasks overdue`;
     }
 
     return {

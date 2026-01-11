@@ -99,7 +99,9 @@ export const LEADS: Lead[] = [
         tasks: {
             siteVisits: ['sv-1'],
             quotationRequests: ['qr-2'],
-        }
+        },
+        clientEmail: 'info@innovatecorp.com',
+        clientMobile: '+91 9999911111'
     },
     {
         id: 'lead-2',
@@ -123,7 +125,9 @@ export const LEADS: Lead[] = [
         tasks: {
             siteVisits: ['sv-4', 'sv-6'],
             drawingRequests: ['dr-1'],
-        }
+        },
+        clientEmail: 'contact@techsolutions.com',
+        clientMobile: '+91 9999922222'
     },
     {
         id: 'lead-3',
@@ -146,7 +150,9 @@ export const LEADS: Lead[] = [
         ],
         tasks: {
             siteVisits: ['sv-3', 'sv-5'],
-        }
+        },
+        clientEmail: 'procure@globalventures.com',
+        clientMobile: '+91 9999933333'
     },
     {
         id: 'lead-4',
@@ -162,6 +168,8 @@ export const LEADS: Lead[] = [
             { action: 'Quotation Sent', user: 'Mike Quote', timestamp: new Date(now.getTime() - 5 * 60 * 60 * 1000), notes: 'Quotation v1 sent.' }
         ],
         priority: 'High',
+        clientEmail: 'hello@startuphub.io',
+        clientMobile: '+91 9999944444'
     },
     {
         id: 'lead-5',
@@ -177,6 +185,8 @@ export const LEADS: Lead[] = [
             { action: 'Negotiation Call', user: 'John Sales', timestamp: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000), notes: 'Client is asking for a 10% discount.' }
         ],
         priority: 'Medium',
+        clientEmail: 'biz@marketinggurus.com',
+        clientMobile: '+91 9999955555'
     },
     {
         id: 'lead-6',
@@ -197,7 +207,9 @@ export const LEADS: Lead[] = [
             procurementRequests: ['pr-1'],
             executionRequests: ['er-1'],
             accountsRequests: ['ar-1'],
-        }
+        },
+        clientEmail: 'accounts@financepartners.com',
+        clientMobile: '+91 9999966666'
     },
     {
         id: 'lead-7',
@@ -213,6 +225,8 @@ export const LEADS: Lead[] = [
             { action: 'Deal Lost', user: 'John Sales', timestamp: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000), notes: 'Lost to competitor pricing.' }
         ],
         priority: 'Low',
+        clientEmail: 'admin@healthfirst.clinic',
+        clientMobile: '+91 9999977777'
     },
     {
         id: 'lead-8',
@@ -228,6 +242,8 @@ export const LEADS: Lead[] = [
             { action: 'Lead Created', user: 'System', timestamp: new Date(now.getTime() - 48 * 60 * 60 * 1000) }
         ],
         priority: 'Medium',
+        clientEmail: 'manager@highrise.com',
+        clientMobile: '+91 9999988888'
     }
 ];
 
@@ -560,12 +576,12 @@ export const EXPENSE_CLAIMS: ExpenseClaim[] = [
 ];
 
 export const TASKS: Task[] = [
-    { id: 'task-1', title: 'Prepare proposal for Innovate Corp', userId: 'user-3', status: TaskStatus.IN_PROGRESS, timeSpent: 3600, priority: 'High', isPaused: false, startTime: Date.now() - 3600 * 1000, date: new Date().toISOString().split('T')[0] },
-    { id: 'task-2', title: 'Follow up with Global Ventures re: pantry', userId: 'user-3', status: TaskStatus.PENDING, timeSpent: 0, priority: 'Medium', isPaused: false, date: new Date().toISOString().split('T')[0] },
-    { id: 'task-3', title: 'Update CRM with new contacts', userId: 'user-3', status: TaskStatus.COMPLETED, timeSpent: 1800, priority: 'Low', isPaused: false, endTime: Date.now() - 2 * 3600 * 1000, date: new Date().toISOString().split('T')[0] },
-    { id: 'task-4', title: '3D renders for Pantry Renovation', userId: 'user-4', status: TaskStatus.IN_PROGRESS, timeSpent: 7200, priority: 'High', isPaused: false, startTime: Date.now() - 7200 * 1000, date: new Date().toISOString().split('T')[0] },
-    { id: 'task-5', title: 'Draft floorplan for Server Room Layout', userId: 'user-4', status: TaskStatus.PENDING, timeSpent: 0, priority: 'Medium', isPaused: false, date: new Date().toISOString().split('T')[0] },
-    { id: 'task-6', title: 'Revise quote for Art Studio Conversion', userId: 'user-5', status: TaskStatus.IN_PROGRESS, timeSpent: 900, priority: 'High', isPaused: false, startTime: Date.now() - 900 * 1000, date: new Date().toISOString().split('T')[0] },
+    { id: 'task-1', title: 'Prepare proposal for Innovate Corp', userId: 'user-3', status: TaskStatus.IN_PROGRESS, timeSpent: 3600, priority: 'High', isPaused: false, startTime: Date.now() - 3600 * 1000, date: new Date().toISOString().split('T')[0], createdAt: new Date() },
+    { id: 'task-2', title: 'Follow up with Global Ventures re: pantry', userId: 'user-3', status: TaskStatus.PENDING, timeSpent: 0, priority: 'Medium', isPaused: false, date: new Date().toISOString().split('T')[0], createdAt: new Date() },
+    { id: 'task-3', title: 'Update CRM with new contacts', userId: 'user-3', status: TaskStatus.COMPLETED, timeSpent: 1800, priority: 'Low', isPaused: false, endTime: Date.now() - 2 * 3600 * 1000, date: new Date().toISOString().split('T')[0], createdAt: new Date() },
+    { id: 'task-4', title: '3D renders for Pantry Renovation', userId: 'user-4', status: TaskStatus.IN_PROGRESS, timeSpent: 7200, priority: 'High', isPaused: false, startTime: Date.now() - 7200 * 1000, date: new Date().toISOString().split('T')[0], createdAt: new Date() },
+    { id: 'task-5', title: 'Draft floorplan for Server Room Layout', userId: 'user-4', status: TaskStatus.PENDING, timeSpent: 0, priority: 'Medium', isPaused: false, date: new Date().toISOString().split('T')[0], createdAt: new Date() },
+    { id: 'task-6', title: 'Revise quote for Art Studio Conversion', userId: 'user-5', status: TaskStatus.IN_PROGRESS, timeSpent: 900, priority: 'High', isPaused: false, startTime: Date.now() - 900 * 1000, date: new Date().toISOString().split('T')[0], createdAt: new Date() },
 ];
 
 export const ATTENDANCE_DATA: Record<string, Attendance[]> = {};

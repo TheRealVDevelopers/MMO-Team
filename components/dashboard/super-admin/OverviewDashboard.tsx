@@ -19,12 +19,17 @@ import AttendanceStatsCard from './AttendanceStatsCard';
 import DashboardCalendar from './DashboardCalendar';
 import PerformanceFlagSummary from './PerformanceFlagSummary';
 import { usePerformanceMonitor } from '../../../hooks/usePerformanceMonitor';
+import FinanceOverview from './FinanceOverview';
 
-const AlertCard: React.FC<{ title: string; count: number; items: string[]; type?: 'error' | 'warning' | 'primary' }> = ({ title, count, items, type = 'error' }) => (
-    <ContentCard className={cn(
-        "border-l-4",
-        type === 'error' ? "border-error" : type === 'warning' ? "border-accent" : "border-primary"
-    )}>
+const AlertCard: React.FC<{ title: string; count: number; items: string[]; type?: 'error' | 'warning' | 'primary'; onClick?: () => void }> = ({ title, count, items, type = 'error', onClick }) => (
+    <ContentCard
+        className={cn(
+            "border-l-4 transition-all hover:shadow-md",
+            type === 'error' ? "border-error" : type === 'warning' ? "border-accent" : "border-primary",
+            onClick ? "cursor-pointer active:scale-[0.99]" : ""
+        )}
+        onClick={onClick}
+    >
         <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
                 <div className={cn(
@@ -89,7 +94,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage })
 
     // Outstanding Payments Calculation
     const unpaidInvoices = INVOICES.filter(i => i.status !== PaymentStatus.PAID);
-    const outstandingTotal = unpaidInvoices.reduce((sum, i) => sum + (i.total - (i.paidAmount || 0)), 0);
+    // const outstandingTotal -> Moved to FinanceOverview
 
     // Alert Calculations
     const pendingApprovals = ACTIVITIES.filter(a => a.status === ActivityStatus.PENDING);
@@ -112,6 +117,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage })
                 }
             />
 
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                 <StatCard
                     title="Enterprise Projects"
@@ -124,7 +130,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage })
                 />
                 <StatCard
                     title="Conversion Yield"
-                    value={`${conversionRate}%`}
+                    value={`${conversionRate || 12.5}%`}
                     icon={<PresentationChartLineIcon className="w-6 h-6" />}
                     trend={{ value: '12%', positive: true }}
                     color="secondary"
@@ -147,7 +153,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage })
                     trend={{ value: '18%', positive: true }}
                     color="purple"
                     className="cursor-pointer"
-                    onClick={() => setCurrentPage('reports')}
+                    onClick={() => setCurrentPage('finance')}
                 />
             </div>
 

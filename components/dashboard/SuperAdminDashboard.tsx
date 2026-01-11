@@ -9,6 +9,7 @@ import CommunicationDashboard from '../communication/CommunicationDashboard';
 import ComplaintManagementPage from './super-admin/ComplaintManagementPage';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
 import ApprovalsPage from './super-admin/ApprovalsPage';
+import FinancePage from './super-admin/FinancePage';
 
 interface SuperAdminDashboardProps {
     currentPage: string;
@@ -35,6 +36,8 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ currentPage, 
             return <ComplaintManagementPage setCurrentPage={setCurrentPage} />;
         case 'escalate-issue':
             return <EscalateIssuePage setCurrentPage={setCurrentPage} />;
+        case 'finance':
+            return <FinancePage />;
         default:
             return <OverviewDashboard setCurrentPage={setCurrentPage} />;
     }

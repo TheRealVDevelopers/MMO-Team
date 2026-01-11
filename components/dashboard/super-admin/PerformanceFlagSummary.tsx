@@ -162,9 +162,9 @@ const PerformanceFlagSummary: React.FC = () => {
             id: 'yellow',
             title: 'Yellow Flag',
             count: performanceStats.yellow,
-            color: 'text-accent',
-            bg: 'bg-accent/10',
-            borderColor: 'border-accent',
+            color: 'text-yellow-500',
+            bg: 'bg-yellow-500/10',
+            borderColor: 'border-yellow-500',
             icon: <ExclamationTriangleIcon className="w-6 h-6" />,
             description: 'Pending tasks (4 PM Warning)'
         },

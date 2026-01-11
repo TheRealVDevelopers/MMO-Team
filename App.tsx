@@ -26,6 +26,7 @@ const navConfig = {
       { id: 'projects', label: 'Projects', icon: <RectangleStackIcon className="w-6 h-6" /> },
       { id: 'leads', label: 'Leads', icon: <FunnelIcon className="w-6 h-6" /> },
       { id: 'approvals', label: 'Approvals', icon: <CheckCircleIcon className="w-6 h-6" /> },
+      { id: 'finance', label: 'Finance', icon: <BanknotesIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
     ],
     secondaryNavItems: [

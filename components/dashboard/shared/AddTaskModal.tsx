@@ -31,7 +31,6 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onClose, onAddTask,
     const [priorityOrder, setPriorityOrder] = useState(existingTaskCount + 1);
     const [priority, setPriority] = useState<'High' | 'Medium' | 'Low'>('Medium');
     const [deadline, setDeadline] = useState('');
-    const [hasDeadline, setHasDeadline] = useState(false);
 
     // Assignment State
     const [assignedTo, setAssignedTo] = useState<string>('');
@@ -74,7 +73,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onClose, onAddTask,
             title: title.trim(),
             priorityOrder,
             priority,
-            deadline: hasDeadline && deadline ? deadline : undefined,
+            deadline: deadline || undefined,
             assignedTo: canAssign && assignedTo ? assignedTo : undefined
         });
 
@@ -83,7 +82,6 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onClose, onAddTask,
         setPriorityOrder(existingTaskCount + 2);
         setPriority('Medium');
         setDeadline('');
-        setHasDeadline(false);
         setAssignedTo('');
         onClose();
     };
@@ -223,37 +221,18 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onClose, onAddTask,
                         <div>
                             <label className="flex items-center gap-2 text-xs font-bold text-text-secondary uppercase tracking-widest mb-2">
                                 <CalendarIcon className="w-4 h-4" />
-                                Deadline
-                                <button
-                                    type="button"
-                                    onClick={() => setHasDeadline(!hasDeadline)}
-                                    className={cn(
-                                        "ml-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase transition-all",
-                                        hasDeadline
-                                            ? "bg-primary text-white"
-                                            : "bg-background text-text-tertiary border border-border hover:border-primary"
-                                    )}
-                                >
-                                    {hasDeadline ? 'Enabled' : 'Optional'}
-                                </button>
+                                Deadline *
                             </label>
-                            {hasDeadline && (
-                                <motion.div
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: 'auto' }}
-                                    exit={{ opacity: 0, height: 0 }}
-                                >
-                                    <input
-                                        type="datetime-local"
-                                        value={deadline}
-                                        onChange={(e) => setDeadline(e.target.value)}
-                                        className="w-full px-5 py-4 bg-background border border-border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-text-primary"
-                                    />
-                                    <p className="text-xs text-error mt-2">
-                                        ⚠️ Tasks past deadline will be marked with a RED FLAG
-                                    </p>
-                                </motion.div>
-                            )}
+                            <input
+                                type="datetime-local"
+                                value={deadline}
+                                onChange={(e) => setDeadline(e.target.value)}
+                                className="w-full px-5 py-4 bg-background border border-border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-text-primary"
+                                required
+                            />
+                            <p className="text-xs text-error mt-2">
+                                ⚠️ Tasks past deadline will be marked with a RED FLAG
+                            </p>
                         </div>
 
                         {/* Actions */}
@@ -267,10 +246,10 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onClose, onAddTask,
                             </button>
                             <button
                                 type="submit"
-                                disabled={!title.trim()}
+                                disabled={!title.trim() || !deadline}
                                 className={cn(
                                     "flex-1 py-4 px-6 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all",
-                                    title.trim()
+                                    title.trim() && deadline
                                         ? "bg-primary text-white hover:bg-secondary shadow-lg shadow-primary/30"
                                         : "bg-border text-text-tertiary cursor-not-allowed"
                                 )}

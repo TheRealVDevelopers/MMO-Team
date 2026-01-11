@@ -1,209 +1,206 @@
 import React, { useState } from 'react';
-import { COMPLAINTS, formatDate } from '../../../constants';
-import { Complaint, ComplaintStatus } from '../../../types';
+import { COMPLAINTS, USERS, formatDate } from '../../../constants';
+import { Complaint, ComplaintStatus, UserRole } from '../../../types';
 import {
-    ArrowLeftIcon,
-    ExclamationTriangleIcon,
     ShieldExclamationIcon,
-    CheckBadgeIcon,
-    ArrowPathIcon,
-    FunnelIcon,
-    MagnifyingGlassIcon
+    PlusIcon,
+    UserIcon,
+    ChatBubbleBottomCenterTextIcon,
+    CheckCircleIcon,
+    ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
-import { ContentCard, StatCard, SectionHeader, cn, staggerContainer } from '../shared/DashboardUI';
+import { ContentCard, SectionHeader, cn } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
-import ComplaintDetailModal from './ComplaintDetailModal';
-
-const getStatusConfig = (status: ComplaintStatus) => {
-    switch (status) {
-        case ComplaintStatus.SUBMITTED: return { color: 'text-accent-subtle-text', bg: 'bg-accent-subtle-background/10', border: 'border-accent-subtle-text/20' };
-        case ComplaintStatus.UNDER_REVIEW: return { color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20' };
-        case ComplaintStatus.INVESTIGATION: return { color: 'text-purple-500', bg: 'bg-purple-500/10', border: 'border-purple-500/20' };
-        case ComplaintStatus.RESOLVED: return { color: 'text-green-500', bg: 'bg-green-500/10', border: 'border-green-500/20' };
-        case ComplaintStatus.ESCALATED: return { color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20' };
-        default: return { color: 'text-text-tertiary', bg: 'bg-subtle-background', border: 'border-border' };
-    }
-};
 
 const ComplaintManagementPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
     const [complaints, setComplaints] = useState<Complaint[]>(COMPLAINTS);
-    const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null);
-    const [searchTerm, setSearchTerm] = useState('');
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-    const handleUpdateStatus = (complaintId: string, newStatus: ComplaintStatus) => {
-        setComplaints(prev => prev.map(c => c.id === complaintId ? { ...c, status: newStatus } : c));
+    // Simple Add Form State
+    const [newComplaint, setNewComplaint] = useState({
+        submittedBy: '',
+        against: '',
+        description: ''
+    });
+
+    const handleAddComplaint = (e: React.FormEvent) => {
+        e.preventDefault();
+        const newId = `CMP-${Date.now()}`;
+        const complaint: Complaint = {
+            id: newId,
+            submittedBy: newComplaint.submittedBy, // Mocking ID as name for simplicity in this view or need to map
+            against: newComplaint.against,
+            description: newComplaint.description,
+            status: ComplaintStatus.SUBMITTED,
+            priority: 'High', // Default
+            submissionDate: new Date().toISOString(),
+            // Mocking other required fields
+            type: 'Internal',
+            evidence: 'N/A',
+            projectContext: 'General',
+            resolutionAttempts: 'None',
+            desiredResolution: 'Review'
+        };
+
+        setComplaints(prev => [complaint, ...prev]);
+        setIsAddModalOpen(false);
+        setNewComplaint({ submittedBy: '', against: '', description: '' });
     };
 
-    const stats = complaints.reduce((acc, curr) => {
-        acc[curr.status] = (acc[curr.status] || 0) + 1;
-        return acc;
-    }, {} as Record<ComplaintStatus, number>);
-
-    const activeComplaints = (stats[ComplaintStatus.SUBMITTED] || 0) + (stats[ComplaintStatus.UNDER_REVIEW] || 0) + (stats[ComplaintStatus.INVESTIGATION] || 0);
-    const highPriorityCount = complaints.filter(c => c.priority === 'High' || c.priority === 'Critical').length;
-
-    const filteredComplaints = complaints.filter(c =>
-        c.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.against.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.id.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
     return (
-        <motion.div
-            variants={staggerContainer}
-            initial="initial"
-            animate="animate"
-            className="space-y-8 pb-20"
-        >
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                <div className="flex items-center gap-5">
+        <ContentCard className="min-h-screen">
+            <SectionHeader
+                title="Complaint Registry"
+                subtitle="Simplified grievance log and resolution tracking."
+                actions={
                     <button
-                        onClick={() => setCurrentPage('overview')}
-                        className="group p-3 rounded-2xl border border-border bg-surface hover:bg-subtle-background hover:scale-105 transition-all text-text-tertiary shadow-sm"
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-error text-white rounded-xl hover:bg-error/90 transition-colors shadow-lg shadow-error/20"
                     >
-                        <ArrowLeftIcon className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+                        <PlusIcon className="w-4 h-4" />
+                        <span className="text-xs font-bold uppercase tracking-wider">Log Complaint</span>
                     </button>
-                    <div>
-                        <h2 className="text-4xl font-serif font-black text-text-primary tracking-tighter">Resolution HUB</h2>
-                        <p className="text-text-tertiary text-sm font-medium mt-1 uppercase tracking-[0.15em]">Internal Integrity & Grievance Registry</p>
-                    </div>
-                </div>
+                }
+            />
 
-                <div className="flex items-center gap-3">
-                    <div className="relative group">
-                        <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary group-focus-within:text-primary transition-colors" />
-                        <input
-                            type="text"
-                            placeholder="Search Registry..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="bg-surface border border-border/60 rounded-2xl py-3 pl-11 pr-6 text-xs font-bold focus:ring-4 focus:ring-primary/10 transition-all w-64 placeholder:text-text-tertiary/50 uppercase tracking-widest"
-                        />
-                    </div>
-                </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                <AnimatePresence>
+                    {complaints.map((complaint, idx) => (
+                        <motion.div
+                            key={complaint.id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: idx * 0.05 }}
+                            className="bg-surface border border-border p-5 rounded-2xl hover:shadow-md transition-all group"
+                        >
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center text-white",
+                                        complaint.status === ComplaintStatus.RESOLVED ? "bg-green-500" : "bg-error"
+                                    )}>
+                                        <ShieldExclamationIcon className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-text-primary text-sm">{complaint.type}</h4>
+                                        <span className="text-[10px] text-text-tertiary uppercase tracking-wider">
+                                            {formatDate(complaint.submissionDate)} • #{complaint.id.slice(-4)}
+                                        </span>
+                                    </div>
+                                </div>
+                                <span className={cn(
+                                    "px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border",
+                                    complaint.status === ComplaintStatus.RESOLVED ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                                )}>
+                                    {complaint.status}
+                                </span>
+                            </div>
+
+                            <div className="space-y-3 bg-subtle-background/30 p-4 rounded-xl border border-border/50">
+                                <div className="flex items-start gap-3">
+                                    <UserIcon className="w-4 h-4 text-text-tertiary mt-0.5" />
+                                    <div>
+                                        <p className="text-[10px] font-black text-text-tertiary uppercase tracking-wider">Who Reported</p>
+                                        <p className="text-xs font-bold text-text-primary">
+                                            {USERS.find(u => u.id === complaint.submittedBy)?.name || complaint.submittedBy || "Unknown"}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3">
+                                    <ExclamationTriangleIcon className="w-4 h-4 text-error mt-0.5" />
+                                    <div>
+                                        <p className="text-[10px] font-black text-text-tertiary uppercase tracking-wider">About Whom</p>
+                                        <p className="text-xs font-bold text-text-primary">{complaint.against}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3">
+                                    <ChatBubbleBottomCenterTextIcon className="w-4 h-4 text-text-tertiary mt-0.5" />
+                                    <div>
+                                        <p className="text-[10px] font-black text-text-tertiary uppercase tracking-wider">What Happened</p>
+                                        <p className="text-xs text-text-secondary leading-relaxed line-clamp-2 hover:line-clamp-none transition-all">
+                                            {complaint.description}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    ))}
+                </AnimatePresence>
             </div>
 
-            {/* Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <StatCard
-                    title="Active Grievances"
-                    value={activeComplaints}
-                    icon={<ShieldExclamationIcon className="w-6 h-6" />}
-                    trend={{ value: 'Pending Pulse', positive: false }}
-                    className="ring-1 ring-primary/20"
-                />
-                <StatCard
-                    title="Critical Vectors"
-                    value={highPriorityCount}
-                    icon={<ExclamationTriangleIcon className="w-6 h-6" />}
-                    trend={{ value: 'Priority Load', positive: false }}
-                    className="ring-1 ring-red-500/20"
-                />
-                <StatCard
-                    title="Resolution Output"
-                    value={stats[ComplaintStatus.RESOLVED] || 0}
-                    icon={<CheckBadgeIcon className="w-6 h-6" />}
-                    trend={{ value: 'Cycle Complete', positive: true }}
-                    className="ring-1 ring-green-500/20"
-                />
-            </div>
+            {/* Simple Add Modal */}
+            <AnimatePresence>
+                {isAddModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-surface w-full max-w-md rounded-3xl p-6 shadow-2xl border border-border"
+                        >
+                            <h3 className="text-xl font-bold text-text-primary mb-6">Log New Complaint</h3>
+                            <form onSubmit={handleAddComplaint} className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-text-secondary mb-1.5 ml-1">Who is complaining?</label>
+                                    <select
+                                        required
+                                        value={newComplaint.submittedBy}
+                                        onChange={e => setNewComplaint({ ...newComplaint, submittedBy: e.target.value })}
+                                        className="w-full bg-subtle-background border-transparent rounded-xl focus:border-primary focus:ring-primary text-sm p-3"
+                                    >
+                                        <option value="">Select Staff Member</option>
+                                        {USERS.map(user => (
+                                            <option key={user.id} value={user.id}>{user.name} ({user.role})</option>
+                                        ))}
+                                    </select>
+                                </div>
 
-            {/* Registry Table */}
-            <ContentCard className="overflow-hidden !p-0 shadow-2xl">
-                <div className="p-8 border-b border-border/40 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                        <h3 className="text-xl font-serif font-black text-text-primary tracking-tight">Active Registry Feed</h3>
-                    </div>
-                    <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-tertiary hover:text-primary transition-colors">
-                        <FunnelIcon className="w-4 h-4" />
-                        Advanced Filter
-                    </button>
-                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-text-secondary mb-1.5 ml-1">About whom?</label>
+                                    <select
+                                        required
+                                        value={newComplaint.against}
+                                        onChange={e => setNewComplaint({ ...newComplaint, against: e.target.value })}
+                                        className="w-full bg-subtle-background border-transparent rounded-xl focus:border-primary focus:ring-primary text-sm p-3"
+                                    >
+                                        <option value="">Select Target Staff</option>
+                                        {USERS.map(user => (
+                                            <option key={user.id} value={user.name}>{user.name} ({user.role})</option>
+                                        ))}
+                                    </select>
+                                </div>
 
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-border/20">
-                        <thead className="bg-subtle-background/50">
-                            <tr>
-                                <th className="px-8 py-4 text-left text-[10px] font-black text-text-tertiary uppercase tracking-[0.2em]">Deployment ID</th>
-                                <th className="px-8 py-4 text-left text-[10px] font-black text-text-tertiary uppercase tracking-[0.2em]">Subject Protocol</th>
-                                <th className="px-8 py-4 text-left text-[10px] font-black text-text-tertiary uppercase tracking-[0.2em]">Target Entity</th>
-                                <th className="px-8 py-4 text-left text-[10px] font-black text-text-tertiary uppercase tracking-[0.2em]">Status Sync</th>
-                                <th className="px-8 py-4 text-right text-[10px] font-black text-text-tertiary uppercase tracking-[0.2em]">Priority</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-surface/50 divide-y divide-border/10">
-                            <AnimatePresence>
-                                {filteredComplaints.map((complaint, idx) => {
-                                    const status = getStatusConfig(complaint.status);
-                                    return (
-                                        <motion.tr
-                                            key={complaint.id}
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: idx * 0.05 }}
-                                            onClick={() => setSelectedComplaint(complaint)}
-                                            className="group cursor-pointer hover:bg-subtle-background transition-colors"
-                                        >
-                                            <td className="px-8 py-6 whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span className="text-xs font-black text-text-primary tracking-widest uppercase">#{complaint.id.slice(0, 8)}</span>
-                                                    <span className="text-[10px] font-bold text-text-tertiary mt-1">{formatDate(complaint.submissionDate)}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-6 whitespace-nowrap">
-                                                <span className="text-sm font-bold text-text-primary group-hover:text-primary transition-colors">{complaint.type}</span>
-                                            </td>
-                                            <td className="px-8 py-6 whitespace-nowrap">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-text-tertiary/20" />
-                                                    <span className="text-xs font-black uppercase text-text-secondary">{complaint.against}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-6 whitespace-nowrap">
-                                                <span className={cn(
-                                                    "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
-                                                    status.bg, status.color, status.border
-                                                )}>
-                                                    {complaint.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-8 py-6 whitespace-nowrap text-right">
-                                                <span className={cn(
-                                                    "text-[10px] font-black uppercase tracking-widest",
-                                                    (complaint.priority === 'Critical' || complaint.priority === 'High') ? "text-error" : "text-text-tertiary"
-                                                )}>
-                                                    {complaint.priority}
-                                                </span>
-                                            </td>
-                                        </motion.tr>
-                                    );
-                                })}
-                            </AnimatePresence>
-                        </tbody>
-                    </table>
-                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-text-secondary mb-1.5 ml-1">What happened?</label>
+                                    <textarea
+                                        required
+                                        value={newComplaint.description}
+                                        onChange={e => setNewComplaint({ ...newComplaint, description: e.target.value })}
+                                        className="w-full bg-subtle-background border-transparent rounded-xl focus:border-primary focus:ring-primary text-sm p-3 min-h-[100px]"
+                                        placeholder="Describe the issue briefly..."
+                                    />
+                                </div>
 
-                {filteredComplaints.length === 0 && (
-                    <div className="p-20 flex flex-col items-center justify-center text-center">
-                        <div className="w-16 h-16 bg-subtle-background rounded-3xl border border-dashed border-border flex items-center justify-center mb-6">
-                            <ArrowPathIcon className="w-8 h-8 text-text-tertiary opacity-20" />
-                        </div>
-                        <p className="text-text-tertiary font-serif italic text-lg max-w-xs mx-auto">
-                            "Registry scan complete. No grievances found matching current parameters."
-                        </p>
+                                <div className="flex justify-end gap-3 pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsAddModalOpen(false)}
+                                        className="px-4 py-2 text-text-secondary hover:bg-subtle-background rounded-xl text-xs font-bold"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="px-6 py-2 bg-error text-white rounded-xl text-xs font-bold hover:bg-error/90 shadow-lg shadow-error/20"
+                                    >
+                                        Submit Report
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
                     </div>
                 )}
-            </ContentCard>
-
-            <ComplaintDetailModal
-                isOpen={!!selectedComplaint}
-                onClose={() => setSelectedComplaint(null)}
-                complaint={selectedComplaint}
-                onUpdateStatus={handleUpdateStatus}
-            />
-        </motion.div>
+            </AnimatePresence>
+        </ContentCard>
     );
 };
 
