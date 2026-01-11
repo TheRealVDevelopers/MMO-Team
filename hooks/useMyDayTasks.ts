@@ -3,6 +3,7 @@ import { db } from '../firebase';
 import { collection, onSnapshot, query, where, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, orderBy, Timestamp } from 'firebase/firestore';
 import { Task, TaskStatus } from '../types';
 import { createNotification } from '../services/liveDataService';
+import { updateUserPerformanceFlag } from '../services/performanceService';
 
 // Firestore Task Type
 type FirestoreTask = Omit<Task, 'id' | 'date'> & {
@@ -73,9 +74,14 @@ export const addTask = async (taskData: Omit<Task, 'id'>, createdBy: string) => 
         const tasksRef = collection(db, 'myDayTasks');
         const docRef = await addDoc(tasksRef, {
             ...taskData,
+            dueAt: taskData.deadline ? new Date(taskData.deadline) : null,
             createdBy,
             created_at: serverTimestamp(),
+            createdAt: new Date(),
         });
+
+        // Trigger performance update
+        await updateUserPerformanceFlag(taskData.userId);
 
         // Notify if assigned to someone else
         if (taskData.userId !== createdBy) {
@@ -99,7 +105,25 @@ export const addTask = async (taskData: Omit<Task, 'id'>, createdBy: string) => 
 export const updateTask = async (taskId: string, updates: Partial<Task>) => {
     try {
         const taskRef = doc(db, 'myDayTasks', taskId);
-        await updateDoc(taskRef, updates);
+
+        // Prepare updates
+        const finalUpdates = { ...updates };
+        if (updates.status === TaskStatus.COMPLETED) {
+            finalUpdates.completedAt = new Date();
+        }
+        if (updates.deadline) {
+            finalUpdates.dueAt = new Date(updates.deadline);
+        }
+
+        await updateDoc(taskRef, finalUpdates);
+
+        // Get task to know whose flag to update
+        const { getDoc } = await import('firebase/firestore');
+        const taskSnap = await getDoc(taskRef);
+        if (taskSnap.exists()) {
+            const userId = taskSnap.data().userId;
+            await updateUserPerformanceFlag(userId);
+        }
     } catch (error) {
         console.error('Error updating task:', error);
         throw error;

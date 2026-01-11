@@ -95,6 +95,7 @@ const MyDayPage: React.FC = () => {
     const [reminders, setReminders] = useState<EnrichedReminder[]>([]);
     const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [newTaskTitle, setNewTaskTitle] = useState('');
+    const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
     const [showRequestApprovalModal, setShowRequestApprovalModal] = useState(false);
 
     // Fetch today's time entry for the timeline
@@ -129,7 +130,7 @@ const MyDayPage: React.FC = () => {
 
     const handleUpdateStatus = async (taskId: string, newStatus: TaskStatus) => {
         const task = tasks.find(t => t.id === taskId);
-        if (!task) return;
+        if (!task || !currentUser) return;
 
         const now = Date.now();
         const updates: Partial<Task> = { status: newStatus };
@@ -137,6 +138,8 @@ const MyDayPage: React.FC = () => {
         if (newStatus === TaskStatus.IN_PROGRESS) {
             updates.startTime = now;
             updates.isPaused = false;
+            // Activity Integration: Task Started
+            await addActivity(currentUser.id, currentUser.name, `Task: ${task.title}`);
         }
 
         if (newStatus === TaskStatus.COMPLETED) {
@@ -145,6 +148,8 @@ const MyDayPage: React.FC = () => {
             updates.endTime = now;
             updates.timeSpent = timeSpent;
             updates.isPaused = true;
+            // Activity Integration: Task Finished
+            await addActivity(currentUser.id, currentUser.name, `Task: ${task.title}`, true);
         }
 
         await updateTask(taskId, updates);
@@ -165,26 +170,38 @@ const MyDayPage: React.FC = () => {
         });
     };
 
-    const handleAddTask = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newTaskTitle.trim() || !currentUser) return;
+    const handleAddTask = async (taskData: {
+        title: string;
+        priorityOrder: number;
+        priority: 'High' | 'Medium' | 'Low';
+        deadline?: string;
+        assignedTo?: string;
+    }) => {
+        if (!currentUser) return;
 
         const newTask: Omit<Task, 'id'> = {
-            title: newTaskTitle,
-            userId: currentUser.id,
+            title: taskData.title,
+            userId: taskData.assignedTo || currentUser.id,
             status: TaskStatus.PENDING,
             timeSpent: 0,
-            priority: 'Medium',
+            priority: taskData.priority,
+            priorityOrder: taskData.priorityOrder,
+            deadline: taskData.deadline,
             isPaused: false,
             date: selectedDate,
+            description: '',
+            createdAt: new Date(),
+            createdBy: currentUser.id,
+            createdByName: currentUser.name,
         };
 
         await addTask(newTask, currentUser.id);
-        setNewTaskTitle('');
     };
 
     const daysTasks = useMemo(() => {
-        return tasks.filter(task => task.date === selectedDate);
+        return tasks
+            .filter(task => task.date === selectedDate)
+            .sort((a, b) => (a.priorityOrder || 99) - (b.priorityOrder || 99));
     }, [tasks, selectedDate]);
 
     const attendanceStats = useMemo(() => {
@@ -220,12 +237,20 @@ const MyDayPage: React.FC = () => {
                     <h2 className="text-3xl font-serif font-black text-text-primary tracking-tight">Today's Focus</h2>
                     <p className="text-text-secondary font-light">Optimize your daily workflow and objectives.</p>
                 </div>
-                <PrimaryButton
-                    onClick={() => setShowRequestApprovalModal(true)}
-                    icon={<SparklesIcon className="w-4 h-4" />}
-                >
-                    Request Validation
-                </PrimaryButton>
+                <div className="flex items-center gap-3">
+                    <PrimaryButton
+                        onClick={() => setIsAddTaskModalOpen(true)}
+                        icon={<PlusIcon className="w-4 h-4" />}
+                    >
+                        Add Task
+                    </PrimaryButton>
+                    <SecondaryButton
+                        onClick={() => setShowRequestApprovalModal(true)}
+                        icon={<SparklesIcon className="w-4 h-4" />}
+                    >
+                        Request Validation
+                    </SecondaryButton>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -279,18 +304,6 @@ const MyDayPage: React.FC = () => {
                                 <h3 className="text-2xl font-serif font-bold text-text-primary tracking-tight">Execution Stream</h3>
                                 <p className="text-sm text-text-tertiary font-medium mt-1">{formattedDateHeader}</p>
                             </div>
-                            <form onSubmit={handleAddTask} className="flex-1 max-w-md relative group">
-                                <input
-                                    type="text"
-                                    placeholder="Add objective..."
-                                    value={newTaskTitle}
-                                    onChange={(e) => setNewTaskTitle(e.target.value)}
-                                    className="w-full pl-6 pr-14 py-4 bg-subtle-background border border-border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-text-tertiary"
-                                />
-                                <button type="submit" className="absolute right-2 top-2 bottom-2 px-3 bg-primary text-white rounded-xl hover:bg-secondary transition-colors shadow-lg shadow-primary/20">
-                                    <PlusIcon className="w-5 h-5" />
-                                </button>
-                            </form>
                         </div>
 
                         <div className="space-y-4">
@@ -339,6 +352,14 @@ const MyDayPage: React.FC = () => {
             <RequestApprovalModal
                 isOpen={showRequestApprovalModal}
                 onClose={() => setShowRequestApprovalModal(false)}
+            />
+
+            <AddTaskModal
+                isOpen={isAddTaskModalOpen}
+                onClose={() => setIsAddTaskModalOpen(false)}
+                onAddTask={handleAddTask}
+                existingTaskCount={daysTasks.length}
+                currentUser={currentUser}
             />
         </motion.div>
     );

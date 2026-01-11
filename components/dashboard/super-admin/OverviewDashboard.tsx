@@ -17,6 +17,8 @@ import { motion } from 'framer-motion';
 import OngoingProjectsCard from './OngoingProjectsCard';
 import AttendanceStatsCard from './AttendanceStatsCard';
 import DashboardCalendar from './DashboardCalendar';
+import PerformanceFlagSummary from './PerformanceFlagSummary';
+import { usePerformanceMonitor } from '../../../hooks/usePerformanceMonitor';
 
 const AlertCard: React.FC<{ title: string; count: number; items: string[]; type?: 'error' | 'warning' | 'primary' }> = ({ title, count, items, type = 'error' }) => (
     <ContentCard className={cn(
@@ -72,6 +74,9 @@ interface OverviewDashboardProps {
 }
 
 const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage }) => {
+    // Activate Background Performance Monitoring
+    usePerformanceMonitor();
+
     // KPI Calculations
     const totalProjects = PROJECTS.length;
     const activeProjects = PROJECTS.filter(p => [ProjectStatus.IN_EXECUTION, ProjectStatus.PROCUREMENT, ProjectStatus.DESIGN_IN_PROGRESS].includes(p.status)).length;
@@ -153,6 +158,16 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage })
                 </div>
                 <div className="lg:col-span-1 space-y-8">
                     <AttendanceStatsCard />
+
+                    {/* Performance Flag System */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2 px-1">
+                            <span className="w-2 h-4 bg-primary rounded-full"></span>
+                            <h3 className="text-sm font-black uppercase tracking-widest text-text-secondary">Workforce Velocity</h3>
+                        </div>
+                        <PerformanceFlagSummary />
+                    </div>
+
                     <AlertCard
                         title="Strategic Approvals"
                         count={PENDING_APPROVALS_COUNT}

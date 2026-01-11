@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { XMarkIcon, PlusIcon, FlagIcon, CalendarIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, PlusIcon, FlagIcon, CalendarIcon } from '@heroicons/react/24/outline';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from './DashboardUI';
+import { db } from '../../../firebase';
+import { collection, query, getDocs } from 'firebase/firestore';
+import { UserRole } from '../../../types';
 
 interface AddTaskModalProps {
     isOpen: boolean;
@@ -11,8 +14,10 @@ interface AddTaskModalProps {
         priorityOrder: number;
         priority: 'High' | 'Medium' | 'Low';
         deadline?: string;
+        assignedTo?: string;
     }) => void;
     existingTaskCount: number;
+    currentUser: any; // Pass auth context
 }
 
 const priorityOptions = [
@@ -21,12 +26,45 @@ const priorityOptions = [
     { value: 'Low', label: 'Low Priority', color: 'bg-text-secondary/10 text-text-secondary border-text-secondary/30' },
 ];
 
-const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onClose, onAddTask, existingTaskCount }) => {
+const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onClose, onAddTask, existingTaskCount, currentUser }) => {
     const [title, setTitle] = useState('');
     const [priorityOrder, setPriorityOrder] = useState(existingTaskCount + 1);
     const [priority, setPriority] = useState<'High' | 'Medium' | 'Low'>('Medium');
     const [deadline, setDeadline] = useState('');
     const [hasDeadline, setHasDeadline] = useState(false);
+
+    // Assignment State
+    const [assignedTo, setAssignedTo] = useState<string>('');
+    const [users, setUsers] = useState<{ id: string, name: string, role: string }[]>([]);
+    const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+
+    // Check permissions
+    const canAssign = currentUser?.role === UserRole.SUPER_ADMIN ||
+        currentUser?.role === UserRole.MANAGER ||
+        currentUser?.role === UserRole.SALES_GENERAL_MANAGER;
+
+    React.useEffect(() => {
+        if (isOpen && canAssign && users.length === 0) {
+            const fetchUsers = async () => {
+                setIsLoadingUsers(true);
+                try {
+                    const q = query(collection(db, 'users'));
+                    const snapshot = await getDocs(q);
+                    const userData = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        name: doc.data().name,
+                        role: doc.data().role
+                    }));
+                    setUsers(userData);
+                } catch (error) {
+                    console.error("Error fetching users", error);
+                } finally {
+                    setIsLoadingUsers(false);
+                }
+            };
+            fetchUsers();
+        }
+    }, [isOpen, canAssign]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -37,6 +75,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onClose, onAddTask,
             priorityOrder,
             priority,
             deadline: hasDeadline && deadline ? deadline : undefined,
+            assignedTo: canAssign && assignedTo ? assignedTo : undefined
         });
 
         // Reset form
@@ -45,6 +84,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onClose, onAddTask,
         setPriority('Medium');
         setDeadline('');
         setHasDeadline(false);
+        setAssignedTo('');
         onClose();
     };
 
@@ -104,6 +144,28 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onClose, onAddTask,
                                 autoFocus
                             />
                         </div>
+
+                        {/* Assignment Dropdown (Privileged) */}
+                        {canAssign && (
+                            <div>
+                                <label className="block text-xs font-bold text-text-secondary uppercase tracking-widest mb-2">
+                                    Assign To (Optional)
+                                </label>
+                                <select
+                                    value={assignedTo}
+                                    onChange={(e) => setAssignedTo(e.target.value)}
+                                    className="w-full px-5 py-4 bg-background border border-border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-text-primary appearance-none cursor-pointer"
+                                    disabled={isLoadingUsers}
+                                >
+                                    <option value="">Myself ({currentUser?.name})</option>
+                                    {users.map(user => (
+                                        <option key={user.id} value={user.id}>
+                                            {user.name} ({user.role})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
 
                         {/* Priority Order */}
                         <div>

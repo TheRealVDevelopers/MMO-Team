@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Task, TaskStatus } from '../../../types';
 import { FireIcon, PlayIcon, PauseIcon, CheckCircleIcon, ClockIcon } from '../../icons/IconComponents';
-import { ExclamationTriangleIcon } from '@heroicons/react/24/solid';
+import { ExclamationTriangleIcon, UserIcon } from '@heroicons/react/24/solid';
 import { motion } from 'framer-motion';
 import { cn } from './DashboardUI';
 
@@ -105,6 +105,13 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdateStatus }) => {
                 <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-lg flex items-center gap-1", deadlineDisplay.color)}>
                   <ClockIcon className="w-3 h-3" />
                   {deadlineDisplay.text}
+                </span>
+              )}
+              {/* Assignment Badge */}
+              {task.createdBy && task.createdBy !== task.userId && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg flex items-center gap-1 text-text-tertiary bg-subtle-background border border-border">
+                  <UserIcon className="w-3 h-3" />
+                  {task.createdByName ? `By ${task.createdByName}` : 'Assigned'}
                 </span>
               )}
             </div>

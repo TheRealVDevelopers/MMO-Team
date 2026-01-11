@@ -1,0 +1,169 @@
+import { db } from '../firebase';
+import {
+    collection,
+    query,
+    where,
+    getDocs,
+    doc,
+    updateDoc,
+    Timestamp
+} from 'firebase/firestore';
+import { Task, TaskStatus, User, UserRole } from '../types';
+import { createNotification } from './liveDataService';
+
+/**
+ * Calculates the performance flag for a user based on their tasks
+ */
+export const calculateUserPerformance = (tasks: Task[]): {
+    flag: 'green' | 'yellow' | 'red';
+    reason: string;
+    metrics: {
+        activeTaskCount: number;
+        overdueTaskCount: number;
+        upcomingDeadlineCount: number;
+    }
+} => {
+    const now = new Date();
+    const currentHour = now.getHours();
+
+    // Filter tasks for TODAY only (since rules are about "today's tasks")
+    const todayStr = now.toISOString().split('T')[0];
+    const todaysTasks = tasks.filter(t => t.date === todayStr);
+    const pendingTasks = todaysTasks.filter(t => t.status !== TaskStatus.COMPLETED);
+
+    // Legacy metrics calculation (still useful for UI)
+    const overdueTasks = tasks.filter(t => {
+        if (t.status === TaskStatus.COMPLETED) return false;
+        if (!t.dueAt) return false;
+        const dueAt = t.dueAt instanceof Date ? t.dueAt : (t.dueAt as any).toDate?.() || new Date(t.dueAt);
+        return dueAt < now;
+    });
+
+    let flag: 'green' | 'yellow' | 'red' = 'green';
+    let reason = 'Green Flag: On Track';
+
+    // Strict Rule Implementation
+    // 6:00 PM (18:00) Rule -> RED FLAG if tasks pending
+    if (currentHour >= 18 && pendingTasks.length > 0) {
+        flag = 'red';
+        reason = `Red Flag: ${pendingTasks.length} tasks incomplete after 6 PM`;
+    }
+    // 4:00 PM (16:00) Rule -> YELLOW FLAG if tasks pending
+    else if (currentHour >= 16 && pendingTasks.length > 0) {
+        flag = 'yellow';
+        reason = `Yellow Flag: ${pendingTasks.length} tasks pending (4 PM Warning)`;
+    }
+    // Standard Overdue Rule (applies anytime)
+    else if (overdueTasks.length > 0) {
+        flag = 'red';
+        reason = `Red Flag: ${overdueTasks.length} tasks overdue`;
+    }
+
+    return {
+        flag,
+        reason,
+        metrics: {
+            activeTaskCount: pendingTasks.length,
+            overdueTaskCount: overdueTasks.length,
+            upcomingDeadlineCount: 0
+        }
+    };
+};
+
+/**
+ * Updates a user's performance flag in Firestore
+ */
+export const updateUserPerformanceFlag = async (userId: string) => {
+    try {
+        // 1. Fetch all tasks for this user
+        const tasksRef = collection(db, 'myDayTasks');
+        const q = query(tasksRef, where('userId', '==', userId));
+        const snapshot = await getDocs(q);
+
+        const tasks: Task[] = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            tasks.push({
+                ...data,
+                id: doc.id,
+                // Ensure dueAt is a Date
+                dueAt: data.dueAt?.toDate ? data.dueAt.toDate() : (data.dueAt ? new Date(data.dueAt) : undefined)
+            } as Task);
+        });
+
+        // 2. Calculate performance
+        const { flag, reason, metrics } = calculateUserPerformance(tasks);
+
+        // 3. Get current user data to check for changes
+        const userRef = doc(db, 'users', userId);
+        const userSnap = await getDocs(query(collection(db, 'users'), where('__name__', '==', userId)));
+        const userData = userSnap.docs[0]?.data() as User;
+
+        // 4. Update user document
+        await updateDoc(userRef, {
+            performanceFlag: flag,
+            flagReason: reason,
+            activeTaskCount: metrics.activeTaskCount,
+            overdueTaskCount: metrics.overdueTaskCount,
+            upcomingDeadlineCount: metrics.upcomingDeadlineCount,
+            flagUpdatedAt: new Date()
+        });
+
+        // 5. Escalation: Notify if flag turned RED
+        if (flag === 'red' && userData?.performanceFlag !== 'red') {
+            await notifyManagersOfEscalation(userData?.name || 'A team member', reason, userId);
+        }
+
+        return { flag, reason };
+    } catch (error) {
+        console.error(`Error updating performance for user ${userId}:`, error);
+        throw error;
+    }
+};
+
+/**
+ * Notifies all managers and super admins about a performance escalation
+ */
+const notifyManagersOfEscalation = async (userName: string, reason: string, userId: string) => {
+    try {
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where('role', 'in', [UserRole.MANAGER, UserRole.SUPER_ADMIN]));
+        const snapshot = await getDocs(q);
+
+        const notifications = [];
+        for (const managerDoc of snapshot.docs) {
+            notifications.push(createNotification({
+                title: 'Performance Escalation',
+                message: `ALERT: ${userName} has been flagged RED: ${reason}`,
+                user_id: managerDoc.id,
+                entity_type: 'system',
+                entity_id: userId,
+                type: 'error'
+            }));
+        }
+        await Promise.all(notifications);
+        console.log(`Managers notified about ${userName}'s escalation`);
+    } catch (error) {
+        console.error('Error notifying managers:', error);
+    }
+};
+
+/**
+ * Runs a global update for all users (Maintenance)
+ */
+export const updateAllUsersPerformance = async () => {
+    try {
+        const usersRef = collection(db, 'users');
+        const snapshot = await getDocs(usersRef);
+
+        const updates = [];
+        for (const userDoc of snapshot.docs) {
+            updates.push(updateUserPerformanceFlag(userDoc.id));
+        }
+
+        await Promise.all(updates);
+        console.log('Global performance update completed');
+    } catch (error) {
+        console.error('Error in global performance update:', error);
+    }
+};

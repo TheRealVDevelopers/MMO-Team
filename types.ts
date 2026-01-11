@@ -126,6 +126,14 @@ export interface User {
   region?: string; // e.g., 'North', 'South', 'West', 'East'
   email: string;
   phone: string;
+
+  // Performance Metrics
+  activeTaskCount?: number;
+  overdueTaskCount?: number;
+  upcomingDeadlineCount?: number;
+  performanceFlag?: 'green' | 'yellow' | 'red';
+  flagReason?: string;
+  flagUpdatedAt?: Date;
 }
 
 export interface Notification {
@@ -827,6 +835,7 @@ export enum TaskStatus {
 export interface Task {
   id: string;
   title: string;
+  description?: string;
   userId: string;
   status: TaskStatus;
   startTime?: number; // timestamp
@@ -834,10 +843,14 @@ export interface Task {
   timeSpent: number; // in seconds
   priority: 'High' | 'Medium' | 'Low';
   priorityOrder?: number; // 1, 2, 3... for ordering
-  deadline?: string; // ISO date string for deadline
+  deadline?: string; // ISO date string for deadline (dueAt)
+  dueAt?: Date; // Formal Date object for calculation
   isPaused: boolean;
   date: string; // YYYY-MM-DD to link to calendar
   createdBy?: string; // who created this task
+  createdByName?: string; // name of creator
+  createdAt: Date;
+  completedAt?: Date;
 }
 
 export enum AttendanceType {
