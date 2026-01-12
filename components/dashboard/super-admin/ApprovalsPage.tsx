@@ -12,7 +12,7 @@ import {
   ArchiveBoxIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../../context/AuthContext';
-import { useApprovalRequests, approveRequest, rejectRequest, getApprovalStats } from '../../../hooks/useApprovals';
+import { useApprovalRequests, approveRequest, rejectRequest, getApprovalStats } from '../../../hooks/useApprovalSystem';
 import { ApprovalRequest, ApprovalStatus, ApprovalRequestType } from '../../../types';
 import { formatDateTime, USERS } from '../../../constants';
 import { ContentCard, StatCard, SectionHeader, cn, staggerContainer } from '../shared/DashboardUI';

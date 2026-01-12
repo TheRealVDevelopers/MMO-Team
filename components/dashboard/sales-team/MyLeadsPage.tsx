@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { Lead, LeadPipelineStatus } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import LeadDetailModal from '../../shared/LeadDetailModal';
-import LeadManagementModal from '../LeadManagementModal';
+
+
 import {
   PlusIcon,
   ChartBarIcon,
@@ -14,7 +15,9 @@ import {
   MagnifyingGlassIcon,
   AdjustmentsHorizontalIcon
 } from '@heroicons/react/24/outline';
-import AddNewLeadModal from '../sales-manager/AddNewLeadModal';
+import RaiseRequestModal from './RaiseRequestModal';
+
+
 import { USERS, formatDateTime, formatLargeNumberINR } from '../../../constants';
 import {
   StatCard,
@@ -65,26 +68,39 @@ const MyLeadsPage: React.FC<MyLeadsPageProps> = ({ leads, onUpdateLead, onAddNew
   const { currentUser } = useAuth();
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
-  const [showManagementModal, setShowManagementModal] = useState(false);
+  const [showRaiseRequestModal, setShowRaiseRequestModal] = useState(false); // Restored state
   const [isAddLeadModalOpen, setAddLeadModalOpen] = useState(false);
-  const [selectedStage, setSelectedStage] = useState<string>('All');
 
-  const pipelineCounts = useMemo(() => {
-    return leads.reduce((acc, lead) => {
-      acc[lead.status] = (acc[lead.status] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+  // Divide leads into two categories
+  const newLeads = useMemo(() => {
+    return leads.filter(lead =>
+      [
+        LeadPipelineStatus.NEW_NOT_CONTACTED,
+        LeadPipelineStatus.CONTACTED_CALL_DONE,
+        LeadPipelineStatus.SITE_VISIT_SCHEDULED,
+        LeadPipelineStatus.WAITING_FOR_DRAWING,
+        LeadPipelineStatus.QUOTATION_SENT,
+        LeadPipelineStatus.NEGOTIATION
+      ].includes(lead.status)
+    );
   }, [leads]);
 
-  const filteredLeads = useMemo(() => {
-    if (selectedStage === 'All') return leads;
-    return leads.filter(lead => lead.status === selectedStage);
-  }, [leads, selectedStage]);
+  const ongoingProjects = useMemo(() => {
+    return leads.filter(lead =>
+      [
+        LeadPipelineStatus.IN_PROCUREMENT,
+        LeadPipelineStatus.IN_EXECUTION,
+        LeadPipelineStatus.WON,
+        LeadPipelineStatus.LOST // Optionally include lost here or separate
+      ].includes(lead.status)
+    );
+  }, [leads]);
 
+  // Statistics
   const totalLeads = leads.length;
   const wonLeads = leads.filter(l => l.status === LeadPipelineStatus.WON).length;
   const conversionRate = totalLeads > 0 ? (wonLeads / totalLeads) * 100 : 0;
-  const newLeadsCount = pipelineCounts[LeadPipelineStatus.NEW_NOT_CONTACTED] || 0;
+  const newLeadsCount = newLeads.length;
 
   return (
     <motion.div
@@ -101,132 +117,125 @@ const MyLeadsPage: React.FC<MyLeadsPageProps> = ({ leads, onUpdateLead, onAddNew
         <StatCard title="Successful Closures" value={wonLeads} icon={<CheckCircleIcon className="w-6 h-6" />} color="secondary" />
       </div>
 
-      {/* Funnel Navigation */}
-      <ContentCard className="overflow-hidden p-1.5 bg-subtle-background/30 border-transparent shadow-none">
-        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
-          {funnelStages.map((config) => (
-            <button
-              key={config.stage}
-              onClick={() => setSelectedStage(config.stage)}
-              className={cn(
-                "flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-bold transition-all whitespace-nowrap",
-                selectedStage === config.stage
-                  ? "bg-surface text-primary shadow-sm border border-primary/10"
-                  : "text-text-secondary hover:text-text-primary hover:bg-surface/50"
-              )}
-            >
-              <span className={cn("p-1.5 rounded-lg", selectedStage === config.stage ? "bg-primary/10 text-primary" : "bg-transparent text-text-secondary")}>
-                {config.icon}
-              </span>
-              {config.stage}
-              <span className={cn(
-                "ml-2 px-2 py-0.5 rounded-full text-[10px]",
-                selectedStage === config.stage ? "bg-primary text-white" : "bg-border text-text-secondary"
-              )}>
-                {config.stage === 'All' ? totalLeads : (pipelineCounts[config.stage] || 0)}
-              </span>
-            </button>
-          ))}
-        </div>
-      </ContentCard>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-      {/* Registry Table */}
-      <ContentCard className="p-0 overflow-hidden">
-        <div className="p-6 border-b border-border flex justify-between items-center bg-surface">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
-              <IdentificationIcon className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-lg font-serif font-bold text-text-primary">Opportunity Registry</h3>
-              <p className="text-xs text-text-secondary font-light">Listing {filteredLeads.length} active engagements</p>
+        {/* Column 1: New Leads */}
+        <ContentCard className="p-0 overflow-hidden h-full flex flex-col">
+          <div className="p-6 border-b border-border bg-surface sticky top-0 z-10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-accent/10 rounded-xl flex items-center justify-center text-accent">
+                <PlusIcon className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-serif font-bold text-text-primary">New Leads</h3>
+                <p className="text-xs text-text-secondary font-light">Not yet in active project</p>
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button className="p-2.5 text-text-secondary hover:text-primary transition-colors rounded-xl border border-border bg-background">
-              <MagnifyingGlassIcon className="w-4 h-4" />
-            </button>
-            <button className="p-2.5 text-text-secondary hover:text-primary transition-colors rounded-xl border border-border bg-background">
-              <AdjustmentsHorizontalIcon className="w-4 h-4" />
-            </button>
+          <div className="overflow-y-auto flex-1 min-h-[400px] max-h-[800px]">
+            {newLeads.length === 0 ? (
+              <div className="text-center py-20">
+                <p className="text-sm text-text-secondary">No new leads pending interaction.</p>
+              </div>
+            ) : (
+              <table className="w-full">
+                <tbody className="divide-y divide-border/60">
+                  {newLeads.map(lead => (
+                    <tr key={lead.id} className="group hover:bg-primary/[0.02] cursor-pointer transition-all" onClick={() => setSelectedLead(lead)}>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-subtle-background flex items-center justify-center font-bold text-accent text-xs border border-border">
+                            {lead.clientName[0]}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-text-primary group-hover:text-accent transition-colors">{lead.clientName}</p>
+                            <p className="text-[10px] text-text-secondary">{lead.mobile || 'No Contact'}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <LeadStatusPill status={lead.status} />
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedLeadId(lead.id);
+                            setShowRaiseRequestModal(true);
+                          }}
+                          className="p-2 text-text-secondary hover:text-accent transition-colors"
+                          title="Raise Request"
+                        >
+                          <ChevronRightIcon className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
-        </div>
+        </ContentCard>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-subtle-background/50 border-b border-border">
-                <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-text-secondary">Engagement Client</th>
-                <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-text-secondary">Financial Value</th>
-                <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-text-secondary">Current Status</th>
-                <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-text-secondary">Last Interaction</th>
-                <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-text-secondary">Management</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/60">
-              <AnimatePresence mode="popLayout">
-                {filteredLeads.map((lead) => (
-                  <motion.tr
-                    layout
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    key={lead.id}
-                    className="group hover:bg-primary/[0.02] cursor-pointer transition-all"
-                  >
-                    <td className="px-6 py-5" onClick={() => setSelectedLead(lead)}>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-subtle-background flex items-center justify-center font-bold text-primary border border-border group-hover:border-primary/20 transition-all">
-                          {lead.clientName[0]}
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-text-primary group-hover:text-primary transition-colors">{lead.clientName}</p>
-                          <p className="text-[10px] text-text-secondary uppercase tracking-tighter mt-0.5">{lead.projectName}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="text-sm font-bold text-text-primary">
-                        {formatLargeNumberINR(lead.value)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      <LeadStatusPill status={lead.status} />
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-2 text-xs text-text-secondary">
-                        <ArrowPathIcon className="w-3 h-3 text-primary/40" />
-                        {lead.history.length > 0 ? formatDateTime(lead.history[lead.history.length - 1].timestamp) : 'N/A'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-5 text-right">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedLeadId(lead.id);
-                          setShowManagementModal(true);
-                        }}
-                        className="px-4 py-2 bg-background border border-border rounded-xl text-[10px] font-black uppercase tracking-widest text-text-secondary hover:bg-primary hover:text-white hover:border-primary transition-all flex items-center gap-2 ml-auto group/btn"
-                      >
-                        Manage Hub
-                        <ChevronRightIcon className="w-3 h-3 group-hover/btn:translate-x-1 transition-transform" />
-                      </button>
-                    </td>
-                  </motion.tr>
-                ))}
-              </AnimatePresence>
-            </tbody>
-          </table>
-        </div>
-        {filteredLeads.length === 0 && (
-          <div className="text-center py-20 bg-surface">
-            <div className="w-16 h-16 bg-subtle-background rounded-2xl flex items-center justify-center mx-auto mb-4 border border-border">
-              <IdentificationIcon className="w-8 h-8 text-text-secondary/20" />
+        {/* Column 2: Ongoing Projects */}
+        <ContentCard className="p-0 overflow-hidden h-full flex flex-col">
+          <div className="p-6 border-b border-border bg-surface sticky top-0 z-10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+                <BriefcaseIcon className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-serif font-bold text-text-primary">Ongoing Projects</h3>
+                <p className="text-xs text-text-secondary font-light">Active execution & monitoring</p>
+              </div>
             </div>
-            <p className="text-sm text-text-secondary font-medium uppercase tracking-widest">No matching Registry Entries found</p>
           </div>
-        )}
-      </ContentCard>
+          <div className="overflow-y-auto flex-1 min-h-[400px] max-h-[800px]">
+            {ongoingProjects.length === 0 ? (
+              <div className="text-center py-20">
+                <p className="text-sm text-text-secondary">No active projects currently.</p>
+              </div>
+            ) : (
+              <table className="w-full">
+                <tbody className="divide-y divide-border/60">
+                  {ongoingProjects.map(lead => (
+                    <tr key={lead.id} className="group hover:bg-primary/[0.02] cursor-pointer transition-all" onClick={() => setSelectedLead(lead)}>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-subtle-background flex items-center justify-center font-bold text-primary text-xs border border-border">
+                            {lead.clientName[0]}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-text-primary group-hover:text-primary transition-colors">{lead.clientName}</p>
+                            <p className="text-[10px] text-text-secondary uppercase tracking-tighter">{lead.projectName}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <LeadStatusPill status={lead.status} />
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedLeadId(lead.id);
+                            setShowRaiseRequestModal(true);
+                          }}
+                          className="px-3 py-1.5 bg-background border border-border rounded-lg text-[10px] font-bold uppercase text-text-secondary hover:bg-primary hover:text-white hover:border-primary transition-all flex items-center gap-1 ml-auto"
+                        >
+                          Request
+                          <ChevronRightIcon className="w-3 h-3" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </ContentCard>
+
+      </div>
 
       {/* Modals */}
       <LeadDetailModal
@@ -238,14 +247,18 @@ const MyLeadsPage: React.FC<MyLeadsPageProps> = ({ leads, onUpdateLead, onAddNew
           setSelectedLead(updatedLead);
         }}
       />
-      <LeadManagementModal
-        isOpen={showManagementModal}
-        leadId={selectedLeadId!}
+
+      <RaiseRequestModal
+        isOpen={showRaiseRequestModal}
         onClose={() => {
-          setShowManagementModal(false);
+          setShowRaiseRequestModal(false);
           setSelectedLeadId(null);
         }}
+        leadId={selectedLead?.id || selectedLeadId || undefined}
+        clientName={selectedLead?.clientName || leads.find(l => l.id === selectedLeadId)?.clientName}
+        projectId={selectedLead?.projectName || leads.find(l => l.id === selectedLeadId)?.projectName}
       />
+
       <AddNewLeadModal
         isOpen={isAddLeadModalOpen}
         onClose={() => setAddLeadModalOpen(false)}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { XMarkIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../../../context/AuthContext';
-import { createApprovalRequest } from '../../../hooks/useApprovals';
+import { createApprovalRequest } from '../../../hooks/useApprovalSystem';
 import { ApprovalRequestType } from '../../../types';
 
 interface RequestApprovalModalProps {

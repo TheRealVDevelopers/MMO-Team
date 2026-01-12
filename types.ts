@@ -284,7 +284,17 @@ export enum ApprovalRequestType {
   TIME_OFF = "Time Off",
   OVERTIME = "Overtime Approval",
   EXPENSE = "Expense Approval",
-  SITE_VISIT_TOKEN = "Site Visit Token",
+  // Work Requests
+  SITE_VISIT = "Site Visit",
+  DESIGN_CHANGE = "Design Change",
+  MATERIAL_CHANGE = "Material Change",
+  PAYMENT_QUERY = "Payment Query",
+  CLARIFICATION = "Clarification",
+  MODIFICATION = "Modification",
+  PROPOSAL_REQUEST = "Proposal Request",
+
+  // Legacy/Tokens (Keep for compatibility if needed, or consolidate)
+  SITE_VISIT_TOKEN = "Site Visit Token", // Can be deprecated in favor of SITE_VISIT
   DESIGN_TOKEN = "Design Token",
   QUOTATION_TOKEN = "Quotation Token",
   PROCUREMENT_TOKEN = "Procurement Token",
@@ -875,6 +885,14 @@ export interface ChatChannel {
   avatar: string;
   members: string[]; // user IDs
   lastMessage?: ChatMessage;
+
+  // Extended fields
+  type?: 'dm' | 'group';
+  memberNames?: Record<string, string>;
+  memberAvatars?: Record<string, string>;
+  admins?: string[];
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface ChatMessage {

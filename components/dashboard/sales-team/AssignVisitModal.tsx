@@ -4,7 +4,7 @@ import Modal from '../../shared/Modal';
 import { USERS } from '../../../constants';
 import { Lead, SiteType, ApprovalRequestType, UserRole } from '../../../types';
 import { MapPinIcon, PaperClipIcon, CalendarDaysIcon, BuildingOfficeIcon } from '../../icons/IconComponents';
-import { createApprovalRequest } from '../../../hooks/useApprovals';
+import { createApprovalRequest } from '../../../hooks/useApprovalSystem';
 
 const siteTypes: SiteType[] = ['Apartment', 'Office', 'School', 'Hospital', 'Other'];
 

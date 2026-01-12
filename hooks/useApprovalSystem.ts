@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+// Hook for managing approvals
 import {
   collection,
   query,
@@ -13,6 +14,21 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { ApprovalRequest, ApprovalRequestType, ApprovalStatus, UserRole } from '../types';
+
+export const useApprovals = () => {
+  const [loading, setLoading] = useState(false);
+
+  const submitRequest = async (requestData: Omit<ApprovalRequest, 'id' | 'requestedAt' | 'status'>) => {
+    setLoading(true);
+    try {
+      await createApprovalRequest(requestData);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { submitRequest, loading };
+};
 
 // Get all approval requests (for Admin)
 export const useApprovalRequests = (filterStatus?: ApprovalStatus) => {
@@ -173,10 +189,13 @@ export const approveRequest = async (
   reviewerId: string,
   reviewerName: string,
   assigneeId?: string,
-  comments?: string
+  comments?: string,
+  deadline?: Date
 ) => {
   try {
     const requestRef = doc(db, 'approvalRequests', requestId);
+
+    // update request status
     await updateDoc(requestRef, {
       status: ApprovalStatus.APPROVED,
       reviewedAt: serverTimestamp(),
@@ -185,6 +204,32 @@ export const approveRequest = async (
       reviewerComments: comments || '',
       assigneeId: assigneeId || null,
     });
+
+    // If assigned, create a task
+    if (assigneeId) {
+      // We need to fetch the request to get title/desc
+      const { getDoc } = await import('firebase/firestore');
+      const requestSnap = await getDoc(requestRef);
+
+      if (requestSnap.exists()) {
+        const data = requestSnap.data() as ApprovalRequest;
+        const { addTask } = await import('./useMyDayTasks'); // Dynamic import to avoid circular dependency issues
+
+        await addTask({
+          title: data.title,
+          description: `Request Approved. \n\nContext: ${data.description}\n\nInstructions: ${comments || 'None'}`,
+          userId: assigneeId, // Assignee
+          status: 'Pending' as any, // TaskStatus.PENDING
+          priority: data.priority,
+          deadline: deadline ? deadline.toISOString() : (data.endDate ? (data.endDate as any).toDate().toISOString() : undefined),
+          date: new Date().toISOString().split('T')[0],
+          timeSpent: 0,
+          isPaused: false,
+          createdAt: new Date(),
+        }, reviewerId);
+      }
+    }
+
   } catch (error) {
     console.error('Error approving request:', error);
     throw error;

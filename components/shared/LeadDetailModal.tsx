@@ -4,7 +4,7 @@ import { Lead, LeadPipelineStatus, LeadHistory, Reminder, UserRole } from '../..
 import LeadHistoryView from './LeadHistoryView';
 import { useAuth } from '../../context/AuthContext';
 import { PlusIcon, BellIcon, MapPinIcon, PaintBrushIcon, CalculatorIcon, TruckIcon, WrenchScrewdriverIcon, CreditCardIcon } from '../icons/IconComponents';
-import TaskAssignmentModal from '../dashboard/sales-team/TaskAssignmentModal';
+import RaiseRequestModal from '../dashboard/sales-team/RaiseRequestModal';
 
 interface LeadDetailModalProps {
     isOpen: boolean;
@@ -23,13 +23,9 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
     const [reminderNote, setReminderNote] = useState('');
     const [reminderDate, setReminderDate] = useState('');
 
-    const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-    const [taskType, setTaskType] = useState<UserRole | null>(null);
+    const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
 
-    const handleOpenTaskModal = (type: UserRole) => {
-        setTaskType(type);
-        setIsTaskModalOpen(true);
-    };
+    // Removed handleOpenTaskModal as we now use RaiseRequestModal directly
 
     const handleLogActivity = (e: React.FormEvent) => {
         e.preventDefault();
@@ -207,15 +203,17 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
 
                         {isSalesperson && (
                             <div>
-                                <h3 className="text-md font-bold text-text-primary mb-2">Universal Task Assignment</h3>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {taskButtons.map(task => (
-                                        <button key={task.role} onClick={() => handleOpenTaskModal(task.role)} className="flex flex-col items-center justify-center p-3 bg-surface border border-border rounded-lg hover:bg-primary-subtle-background hover:border-primary transition-colors">
-                                            <span className="text-primary">{task.icon}</span>
-                                            <span className="mt-1 text-xs font-semibold">{task.label}</span>
-                                        </button>
-                                    ))}
-                                </div>
+                                <h3 className="text-md font-bold text-text-primary mb-2">Work Requests</h3>
+                                <p className="text-xs text-text-secondary mb-4">
+                                    Need a site visit, design change, or technical support? Raise a formal request here.
+                                </p>
+                                <button
+                                    onClick={() => setIsRequestModalOpen(true)}
+                                    className="w-full flex items-center justify-center p-3 bg-primary text-white font-bold rounded-xl hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all"
+                                >
+                                    <PlusIcon className="w-5 h-5 mr-2" />
+                                    Raise New Request
+                                </button>
                             </div>
                         )}
                     </div>
@@ -223,12 +221,12 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
             </Modal>
 
             {isSalesperson && (
-                <TaskAssignmentModal
-                    isOpen={isTaskModalOpen}
-                    onClose={() => setIsTaskModalOpen(false)}
-                    lead={lead}
-                    taskType={taskType}
-                    onUpdateLead={onUpdate}
+                <RaiseRequestModal
+                    isOpen={isRequestModalOpen}
+                    onClose={() => setIsRequestModalOpen(false)}
+                    leadId={lead.id}
+                    clientName={lead.clientName}
+                    projectId={lead.projectName}
                 />
             )}
         </>
