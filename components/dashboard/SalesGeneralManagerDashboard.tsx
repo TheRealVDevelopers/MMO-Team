@@ -14,6 +14,7 @@ import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
 import { useLeads, addLead, updateLead } from '../../hooks/useLeads';
 import { useNewEnquiries, useEnquiries } from '../../hooks/useEnquiries';
+import ApprovalsPage from './super-admin/ApprovalsPage';
 import EnquiryNotificationBanner from './EnquiryNotificationBanner';
 import EnquiriesListModal from './EnquiriesListModal';
 import { SectionHeader, PrimaryButton, SecondaryButton } from './shared/DashboardUI';
@@ -35,6 +36,7 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
     reports: 'Business Reports',
     performance: 'Personal Performance',
     communication: 'Team Chat',
+    approvals: 'Request Inbox',
     'escalate-issue': 'Issue Escalation',
   };
 
@@ -151,6 +153,8 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
         return <PerformancePage />;
       case 'communication':
         return <CommunicationDashboard />;
+      case 'approvals':
+        return <ApprovalsPage />;
       case 'escalate-issue':
         return <EscalateIssuePage setCurrentPage={setCurrentPage} />;
       default:

@@ -1,22 +1,16 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState } from 'react';
 import MyLeadsPage from './sales-team/MyLeadsPage';
 import { useAuth } from '../../context/AuthContext';
-import { Lead, SiteVisit, DrawingRequest, QuotationRequest, ProcurementRequest, ExecutionRequest, AccountsRequest, SiteVisitStatus, DrawingRequestStatus, QuotationRequestStatus, LeadPipelineStatus } from '../../types';
-import { SITE_VISITS, DRAWING_REQUESTS, QUOTATION_REQUESTS, PROCUREMENT_REQUESTS, EXECUTION_REQUESTS, ACCOUNTS_REQUESTS, USERS } from '../../constants';
-import SiteVisitTasksPage from './sales-team/SiteVisitTasksPage';
-import DrawingTasksPage from './sales-team/DrawingTasksPage';
-import QuotationTasksPage from './sales-team/QuotationTasksPage';
-import ProcurementTasksPage from './sales-team/ProcurementTasksPage';
-import ExecutionTasksPage from './sales-team/ExecutionTasksPage';
-import AccountsTasksPage from './sales-team/AccountsTasksPage';
+import { Lead, LeadPipelineStatus } from '../../types';
+import { USERS } from '../../constants';
+import MyRequestsPage from './sales-team/MyRequestsPage';
 import MyPerformancePage from './sales-team/MyPerformancePage';
-import SalesOverviewPage from './sales-team/SalesOverviewPage';
 import MyDayPage from './shared/MyDayPage';
 import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
 import { useLeads, addLead, updateLead } from '../../hooks/useLeads';
 import { SectionHeader, PrimaryButton } from './shared/DashboardUI';
-import { UserPlusIcon, ExclamationTriangleIcon, ArrowPathIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { ExclamationTriangleIcon, ArrowPathIcon, PlusIcon } from '@heroicons/react/24/outline';
 import AddNewLeadModal from './sales-manager/AddNewLeadModal';
 
 // Simple Error Boundary Component for internal use
@@ -71,42 +65,13 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
 const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
-
   const { leads, loading: leadsLoading, error: leadsError } = useLeads(currentUser?.id);
-
-  // Use state but initialize safely. using useEffect to keep in sync with local "database" (constants)
-  // In a real app this would be API calls. Here we reset from constants on mount.
-  const [siteVisits, setSiteVisits] = useState<SiteVisit[]>([]);
-  const [drawingRequests, setDrawingRequests] = useState<DrawingRequest[]>([]);
-  const [quotationRequests, setQuotationRequests] = useState<QuotationRequest[]>([]);
-  const [procurementRequests, setProcurementRequests] = useState<ProcurementRequest[]>([]);
-  const [executionRequests, setExecutionRequests] = useState<ExecutionRequest[]>([]);
-  const [accountsRequests, setAccountsRequests] = useState<AccountsRequest[]>([]);
   const [isAddLeadModalOpen, setIsAddLeadModalOpen] = useState(false);
-
-  useEffect(() => {
-    if (currentUser?.id) {
-      // Safe access to imported constants
-      setSiteVisits((SITE_VISITS || []).filter(sv => sv.requesterId === currentUser.id));
-      setDrawingRequests((DRAWING_REQUESTS || []).filter(dr => dr.requesterId === currentUser.id));
-      setQuotationRequests((QUOTATION_REQUESTS || []).filter(qr => qr.requesterId === currentUser.id));
-      setProcurementRequests((PROCUREMENT_REQUESTS || []).filter(pr => pr.requesterId === currentUser.id));
-      setExecutionRequests((EXECUTION_REQUESTS || []).filter(er => er.requesterId === currentUser.id));
-      setAccountsRequests((ACCOUNTS_REQUESTS || []).filter(ar => ar.requesterId === currentUser.id));
-    }
-  }, [currentUser?.id]);
-
 
   const pageTitles: { [key: string]: string } = {
     'my-day': 'Personal Agenda',
-    overview: 'Performance Hub',
     leads: 'My Registry',
-    'site-visits': 'Site Inspections',
-    'drawing-tasks': 'Design Coordination',
-    'quotation-tasks': 'Quotation Flow',
-    'procurement-tasks': 'Strategic Sourcing',
-    'execution-tasks': 'Project Oversight',
-    'accounts-tasks': 'Financial Registry',
+    'my-requests': 'My Request History',
     performance: 'Career Analytics',
     communication: 'Executive Chat',
     'escalate-issue': 'Priority Escalation',
@@ -155,11 +120,6 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
     await addLead(newLead);
   };
 
-  const handleScheduleVisit = (visitData: Omit<SiteVisit, 'id' | 'status'>) => {
-    const newVisit: SiteVisit = { ...visitData, id: `sv-${Date.now()}`, status: SiteVisitStatus.SCHEDULED };
-    setSiteVisits(prev => [newVisit, ...prev]);
-  };
-
   const renderPage = () => {
     // Shared Loading State
     if (leadsLoading && ['my-day', 'leads'].includes(currentPage)) {
@@ -184,23 +144,10 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
     switch (currentPage) {
       case 'my-day':
         return <MyDayPage />;
-      case 'overview':
-        return <SalesOverviewPage setCurrentPage={setCurrentPage} siteVisits={siteVisits} />;
       case 'leads':
         return <MyLeadsPage leads={leads} onUpdateLead={handleLeadUpdate} onAddNewLead={handleAddNewLead} />;
-      // Wrapped sub-pages with strict props
-      case 'site-visits':
-        return <SiteVisitTasksPage setCurrentPage={setCurrentPage} siteVisits={siteVisits || []} onScheduleVisit={handleScheduleVisit} />;
-      case 'drawing-tasks':
-        return <DrawingTasksPage setCurrentPage={setCurrentPage} drawingRequests={drawingRequests || []} />;
-      case 'quotation-tasks':
-        return <QuotationTasksPage setCurrentPage={setCurrentPage} quotationRequests={quotationRequests || []} />;
-      case 'procurement-tasks':
-        return <ProcurementTasksPage setCurrentPage={setCurrentPage} procurementRequests={procurementRequests || []} />;
-      case 'execution-tasks':
-        return <ExecutionTasksPage setCurrentPage={setCurrentPage} executionRequests={executionRequests || []} />;
-      case 'accounts-tasks':
-        return <AccountsTasksPage setCurrentPage={setCurrentPage} accountsRequests={accountsRequests || []} />;
+      case 'my-requests':
+        return <MyRequestsPage />;
       case 'performance':
         return <MyPerformancePage setCurrentPage={setCurrentPage} />;
       case 'communication':

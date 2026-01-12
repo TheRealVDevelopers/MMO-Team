@@ -26,6 +26,7 @@ const ApprovalsPage: React.FC = () => {
   const [reviewAction, setReviewAction] = useState<'approve' | 'reject'>('approve');
   const [reviewComments, setReviewComments] = useState('');
   const [assigneeId, setAssigneeId] = useState('');
+  const [deadline, setDeadline] = useState<string>('');
   const [processing, setProcessing] = useState(false);
 
   const { requests, loading } = useApprovalRequests(filterStatus === 'All' ? undefined : filterStatus);
@@ -76,7 +77,8 @@ const ApprovalsPage: React.FC = () => {
           currentUser.id,
           currentUser.name,
           assigneeId || undefined,
-          reviewComments
+          reviewComments,
+          deadline ? new Date(deadline) : undefined
         );
       } else {
         await rejectRequest(
@@ -109,6 +111,11 @@ const ApprovalsPage: React.FC = () => {
         return <UserIcon className="w-5 h-5" />;
       case ApprovalRequestType.EXPENSE:
         return <DocumentTextIcon className="w-5 h-5" />;
+      case 'Site Visit' as any:
+        return <BoltIcon className="w-5 h-5" />;
+      case 'Design Change' as any:
+      case 'Material Change' as any:
+        return <AdjustmentsHorizontalIcon className="w-5 h-5" />;
       default:
         return <DocumentTextIcon className="w-5 h-5" />;
     }
@@ -133,8 +140,8 @@ const ApprovalsPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h2 className="text-4xl font-serif font-black text-text-primary tracking-tighter">Authorization Registry</h2>
-          <p className="text-text-tertiary text-sm font-medium mt-1 uppercase tracking-[0.15em]">Personnel Protocol Queue</p>
+          <h2 className="text-4xl font-serif font-black text-text-primary tracking-tighter">Request Inbox</h2>
+          <p className="text-text-tertiary text-sm font-medium mt-1 uppercase tracking-[0.15em]">Admin & Manager Control Center</p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -330,9 +337,23 @@ const ApprovalsPage: React.FC = () => {
                     onChange={(e) => setReviewComments(e.target.value)}
                     rows={reviewAction === 'approve' && selectedRequest.targetRole ? 2 : 4}
                     className="w-full p-6 border border-border rounded-3xl bg-subtle-background/30 focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium placeholder:text-text-tertiary/50"
-                    placeholder={reviewAction === 'approve' ? 'Optional authorization notes...' : 'Required justification for protocol denial...'}
+                    placeholder={reviewAction === 'approve' ? 'Internal notes & instructions for the worker...' : 'Required justification for protocol denial...'}
                   />
                 </div>
+
+                {reviewAction === 'approve' && (
+                  <div className="mb-10 space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-tertiary px-1">
+                      Task Deadline (Mandatory) <span className="text-primary">*</span>
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={deadline}
+                      onChange={(e) => setDeadline(e.target.value)}
+                      className="w-full p-4 border border-border rounded-2xl bg-subtle-background/30 focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium"
+                    />
+                  </div>
+                )}
 
                 {reviewAction === 'approve' && selectedRequest.targetRole && (
                   <div className="mb-10 space-y-3">
@@ -380,7 +401,7 @@ const ApprovalsPage: React.FC = () => {
                   </button>
                   <button
                     onClick={handleSubmitReview}
-                    disabled={processing || (reviewAction === 'reject' && !reviewComments.trim())}
+                    disabled={processing || (reviewAction === 'reject' && !reviewComments.trim()) || (reviewAction === 'approve' && !deadline)}
                     className={cn(
                       "p-5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl disabled:opacity-50",
                       reviewAction === 'approve'

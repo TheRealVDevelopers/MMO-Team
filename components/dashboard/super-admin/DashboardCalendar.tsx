@@ -127,8 +127,8 @@ const DashboardCalendar: React.FC = () => {
 
         return (
             <div className="grid grid-cols-7 gap-1">
-                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(day => (
-                    <div key={day} className="text-center text-[10px] font-black text-text-tertiary py-2">{day}</div>
+                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, idx) => (
+                    <div key={`${day}-${idx}`} className="text-center text-[10px] font-black text-text-tertiary py-2">{day}</div>
                 ))}
                 {days.map((day, i) => {
                     const dateKey = format(day, 'yyyy-MM-dd');
