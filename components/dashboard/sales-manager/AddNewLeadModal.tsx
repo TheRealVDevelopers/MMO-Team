@@ -4,6 +4,7 @@ import { USERS } from '../../../constants';
 import { UserRole, Lead } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { BanknotesIcon, BuildingOfficeIcon, TagIcon, UserCircleIcon, CheckCircleIcon, CalendarDaysIcon, PencilSquareIcon } from '../../icons/IconComponents';
+import SmartDateTimePicker from '../../shared/SmartDateTimePicker';
 
 const salesTeam = USERS.filter(u => u.role === UserRole.SALES_TEAM_MEMBER);
 
@@ -168,8 +169,11 @@ const AddNewLeadModal: React.FC<AddNewLeadModalProps> = ({ isOpen, onClose, onAd
                     <label className="block text-sm font-medium text-text-primary mb-2">Add a Reminder (Optional)</label>
                     <div className="space-y-4">
                         <div className="relative">
-                            <CalendarDaysIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
-                            <input type="datetime-local" name="reminderDate" value={formData.reminderDate} onChange={handleInputChange} className="pl-10 w-full p-2 border border-border bg-subtle-background rounded-md shadow-sm" />
+                            <SmartDateTimePicker
+                                value={formData.reminderDate}
+                                onChange={(val) => setFormData(prev => ({ ...prev, reminderDate: val }))}
+                                placeholder="Select Reminder Date & Time"
+                            />
                         </div>
                         <div className="relative">
                             <PencilSquareIcon className="w-5 h-5 absolute left-3 top-3 text-text-secondary" />

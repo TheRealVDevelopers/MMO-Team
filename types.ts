@@ -393,6 +393,7 @@ export interface Project {
   totalExpenses?: number;
   documents?: Document[];
   salespersonId?: string; // User ID of the salesperson who won the deal
+  history?: LeadHistory[];
   is_demo?: boolean;
 }
 

@@ -1,30 +1,30 @@
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, onSnapshot, query, orderBy, Timestamp, doc, updateDoc, where } from 'firebase/firestore';
-import { Project } from '../types';
+import { Project, LeadHistory } from '../types';
 import { createNotification } from '../services/liveDataService';
 
-type FirestoreProject = Omit<Project, 'startDate' | 'endDate' | 'documents'> & {
+type FirestoreProject = Omit<Project, 'startDate' | 'endDate' | 'documents' | 'history'> & {
     startDate: Timestamp;
     endDate: Timestamp;
     documents?: (Omit<Project['documents'][0], 'uploaded'> & { uploaded: Timestamp })[];
+    history?: (Omit<LeadHistory, 'timestamp'> & { timestamp: Timestamp })[];
 };
 
 const fromFirestore = (docData: FirestoreProject, id: string): Project => {
-    const data = { ...docData } as any;
-
-    if (data.documents) {
-        data.documents = data.documents.map((doc: any) => ({
-            ...doc,
-            uploaded: doc.uploaded?.toDate ? doc.uploaded.toDate() : new Date(),
-        }));
-    }
-
     return {
-        ...data,
+        ...docData,
         id,
-        startDate: data.startDate.toDate(),
-        endDate: data.endDate.toDate(),
+        startDate: docData.startDate.toDate(),
+        endDate: docData.endDate.toDate(),
+        documents: docData.documents?.map(doc => ({
+            ...doc,
+            uploaded: doc.uploaded.toDate(),
+        })) || [],
+        history: docData.history?.map(h => ({
+            ...h,
+            timestamp: h.timestamp.toDate(),
+        })) || [],
     } as Project;
 };
 

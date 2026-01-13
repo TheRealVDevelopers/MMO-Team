@@ -3,6 +3,7 @@ import { formatCurrencyINR, formatDateTime } from '../../../constants';
 import { LeadPipelineStatus, SiteVisit } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { useLeads } from '../../../hooks/useLeads';
+import { useProjects } from '../../../hooks/useProjects';
 import {
     ChevronRightIcon,
     ClockIcon,
@@ -19,11 +20,14 @@ import { motion } from 'framer-motion';
 
 const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void, siteVisits: SiteVisit[] }> = ({ setCurrentPage, siteVisits }) => {
     const { currentUser } = useAuth();
-    const { leads, loading } = useLeads();
+    const { leads, loading: leadsLoading } = useLeads();
+    const { projects, loading: projectsLoading } = useProjects();
 
     if (!currentUser) return null;
 
     const myLeads = leads.filter(l => l.assignedTo === currentUser.id);
+    const myProjects = projects.filter(p => p.salespersonId === currentUser.id);
+
     const leadsThisMonth = myLeads.filter(l => l.inquiryDate > new Date(new Date().setDate(1)));
     const activeLeads = myLeads.filter(l => ![LeadPipelineStatus.WON, LeadPipelineStatus.LOST].includes(l.status)).length;
     const projectsWon = leadsThisMonth.filter(l => l.status === LeadPipelineStatus.WON).length;
@@ -31,7 +35,14 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void, site
     const conversionRate = leadsThisMonth.length > 0 ? ((projectsWon / leadsThisMonth.length) * 100).toFixed(1) : '0';
 
     const todaysFollowUps = myLeads.filter(l => l.status === LeadPipelineStatus.CONTACTED_CALL_DONE || l.status === LeadPipelineStatus.NEW_NOT_CONTACTED);
-    const recentActivities = myLeads.flatMap(l => l.history).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()).slice(0, 5);
+
+    // Merge History from Leads and Projects
+    const leadHistory = myLeads.flatMap(l => l.history.map(h => ({ ...h, entity: l.clientName })));
+    const projectHistory = myProjects.flatMap(p => (p.history || []).map(h => ({ ...h, entity: p.projectName })));
+
+    const recentActivities = [...leadHistory, ...projectHistory]
+        .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+        .slice(0, 6);
 
     const mySiteVisits = siteVisits.filter(v => v.requesterId === currentUser?.id);
     const upcomingVisits = mySiteVisits.filter(v => v.date >= new Date()).sort((a, b) => a.date.getTime() - b.date.getTime()).slice(0, 3);
@@ -166,8 +177,9 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void, site
                                 <div key={idx} className="relative pl-6">
                                     <div className="absolute left-0 top-1.5 w-3 h-3 rounded-full border-2 border-surface bg-border ring-1 ring-border/20" />
                                     <p className="text-xs font-medium text-text-primary leading-snug">
-                                        {activity.action}
+                                        <span className="text-primary font-bold">{activity.entity}:</span> {activity.action}
                                     </p>
+                                    {activity.notes && <p className="text-[10px] text-text-secondary italic line-clamp-1">{activity.notes}</p>}
                                     <p className="text-[10px] text-text-tertiary mt-0.5">
                                         {formatDateTime(activity.timestamp)}
                                     </p>

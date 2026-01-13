@@ -13,10 +13,11 @@ import {
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../../context/AuthContext';
 import { useApprovalRequests, approveRequest, rejectRequest, getApprovalStats } from '../../../hooks/useApprovalSystem';
-import { ApprovalRequest, ApprovalStatus, ApprovalRequestType } from '../../../types';
+import { ApprovalRequest, ApprovalStatus, ApprovalRequestType, UserRole } from '../../../types';
 import { formatDateTime, USERS } from '../../../constants';
 import { ContentCard, StatCard, SectionHeader, cn, staggerContainer } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
+import SmartDateTimePicker from '../../shared/SmartDateTimePicker';
 
 const ApprovalsPage: React.FC = () => {
   const { currentUser } = useAuth();
@@ -32,11 +33,37 @@ const ApprovalsPage: React.FC = () => {
   const { requests, loading } = useApprovalRequests(filterStatus === 'All' ? undefined : filterStatus);
   const { requests: allRequests } = useApprovalRequests(); // For stats or full list if needed
 
-  // Personnel for assignment
-  const personnel = useMemo(() => {
-    if (!selectedRequest?.targetRole) return [];
-    return USERS.filter(u => u.role === selectedRequest.targetRole);
+  // Fallback mapping from request type to target role (for requests without targetRole set)
+  const derivedTargetRole = useMemo(() => {
+    if (!selectedRequest) return undefined;
+    if (selectedRequest.targetRole) return selectedRequest.targetRole;
+
+    // Derive from request type if not explicitly set
+    const typeToRole: Record<string, UserRole> = {
+      [ApprovalRequestType.SITE_VISIT]: UserRole.SITE_ENGINEER,
+      [ApprovalRequestType.DESIGN_CHANGE]: UserRole.DRAWING_TEAM,
+      [ApprovalRequestType.MATERIAL_CHANGE]: UserRole.PROCUREMENT_TEAM,
+      [ApprovalRequestType.PAYMENT_QUERY]: UserRole.ACCOUNTS_TEAM,
+      [ApprovalRequestType.PROPOSAL_REQUEST]: UserRole.QUOTATION_TEAM,
+      [ApprovalRequestType.MODIFICATION]: UserRole.EXECUTION_TEAM,
+    };
+    return typeToRole[selectedRequest.requestType];
   }, [selectedRequest]);
+
+  // Personnel for assignment - show everyone but sort matching role to top for convenience
+  const personnel = useMemo(() => {
+    return [...USERS].sort((a, b) => {
+      // Put users with the "correct" role at the top
+      const aIsMatch = a.role === derivedTargetRole;
+      const bIsMatch = b.role === derivedTargetRole;
+
+      if (aIsMatch && !bIsMatch) return -1;
+      if (!aIsMatch && bIsMatch) return 1;
+
+      // Secondary sort by name
+      return a.name.localeCompare(b.name);
+    });
+  }, [derivedTargetRole]);
 
   // Handle personnel selection reset
   useEffect(() => {
@@ -335,32 +362,29 @@ const ApprovalsPage: React.FC = () => {
                   <textarea
                     value={reviewComments}
                     onChange={(e) => setReviewComments(e.target.value)}
-                    rows={reviewAction === 'approve' && selectedRequest.targetRole ? 2 : 4}
+                    rows={reviewAction === 'approve' && derivedTargetRole ? 2 : 4}
                     className="w-full p-6 border border-border rounded-3xl bg-subtle-background/30 focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium placeholder:text-text-tertiary/50"
                     placeholder={reviewAction === 'approve' ? 'Internal notes & instructions for the worker...' : 'Required justification for protocol denial...'}
                   />
                 </div>
 
                 {reviewAction === 'approve' && (
-                  <div className="mb-10 space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-tertiary px-1">
-                      Task Deadline (Mandatory) <span className="text-primary">*</span>
-                    </label>
-                    <input
-                      type="datetime-local"
+                  <div className="mb-10">
+                    <SmartDateTimePicker
+                      label="Deadline"
                       value={deadline}
-                      onChange={(e) => setDeadline(e.target.value)}
-                      className="w-full p-4 border border-border rounded-2xl bg-subtle-background/30 focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium"
+                      onChange={setDeadline}
+                      required
                     />
                   </div>
                 )}
 
-                {reviewAction === 'approve' && selectedRequest.targetRole && (
+                {reviewAction === 'approve' && (
                   <div className="mb-10 space-y-3">
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-tertiary px-1">
                       Personnel Assignment <span className="text-secondary">*</span>
                     </label>
-                    <div className="grid grid-cols-1 gap-2">
+                    <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                       {personnel.map(user => (
                         <button
                           key={user.id}
@@ -374,19 +398,26 @@ const ApprovalsPage: React.FC = () => {
                           )}
                         >
                           <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full border border-white/20" />
-                          <div className="text-left">
-                            <p className="text-xs font-black uppercase tracking-tight">{user.name}</p>
+                          <div className="text-left flex-1">
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs font-black uppercase tracking-tight">{user.name}</p>
+                              {user.role === derivedTargetRole && (
+                                <span className={cn(
+                                  "text-[8px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider border",
+                                  assigneeId === user.id
+                                    ? "bg-white/20 border-white/30 text-white"
+                                    : "bg-secondary/10 border-secondary/20 text-secondary"
+                                )}>
+                                  Spec
+                                </span>
+                              )}
+                            </div>
                             <p className={cn("text-[10px] uppercase font-bold opacity-60", assigneeId === user.id ? "text-white" : "text-text-tertiary")}>
                               {user.role}
                             </p>
                           </div>
                         </button>
                       ))}
-                      {personnel.length === 0 && (
-                        <div className="p-4 bg-error/5 border border-error/10 rounded-2xl text-center">
-                          <p className="text-[10px] font-black text-error uppercase tracking-widest">No matching personnel available for this unit.</p>
-                        </div>
-                      )}
                     </div>
                   </div>
                 )}
@@ -401,7 +432,7 @@ const ApprovalsPage: React.FC = () => {
                   </button>
                   <button
                     onClick={handleSubmitReview}
-                    disabled={processing || (reviewAction === 'reject' && !reviewComments.trim()) || (reviewAction === 'approve' && !deadline)}
+                    disabled={processing || (reviewAction === 'reject' && !reviewComments.trim()) || (reviewAction === 'approve' && (!deadline || !assigneeId))}
                     className={cn(
                       "p-5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl disabled:opacity-50",
                       reviewAction === 'approve'

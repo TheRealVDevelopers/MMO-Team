@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { XMarkIcon, PlusIcon, FlagIcon, CalendarIcon } from '@heroicons/react/24/outline';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from './DashboardUI';
+import SmartDateTimePicker from '../../shared/SmartDateTimePicker';
 import { db } from '../../../firebase';
 import { collection, query, getDocs } from 'firebase/firestore';
 import { UserRole } from '../../../types';
@@ -219,15 +220,10 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onClose, onAddTask,
 
                         {/* Deadline */}
                         <div>
-                            <label className="flex items-center gap-2 text-xs font-bold text-text-secondary uppercase tracking-widest mb-2">
-                                <CalendarIcon className="w-4 h-4" />
-                                Deadline *
-                            </label>
-                            <input
-                                type="datetime-local"
+                            <SmartDateTimePicker
+                                label="Deadline"
                                 value={deadline}
-                                onChange={(e) => setDeadline(e.target.value)}
-                                className="w-full px-5 py-4 bg-background border border-border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-text-primary"
+                                onChange={setDeadline}
                                 required
                             />
                             <p className="text-xs text-error mt-2">

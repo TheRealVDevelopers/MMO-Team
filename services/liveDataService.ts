@@ -17,7 +17,7 @@ import {
     CHAT_CHANNELS,
     ACTIVITIES
 } from '../constants';
-import { Notification } from '../types';
+import { Notification, Activity } from '../types';
 
 export const seedDemoData = async () => {
     console.log("Starting demo data seeding...");
@@ -130,5 +130,17 @@ export const createNotification = async (notification: Omit<Notification, 'id' |
         });
     } catch (error) {
         console.error("Error creating notification:", error);
+    }
+};
+
+export const logActivity = async (activity: Omit<Activity, 'id' | 'timestamp'>) => {
+    try {
+        const activitiesRef = collection(db, 'activities');
+        await addDoc(activitiesRef, {
+            ...activity,
+            timestamp: serverTimestamp(),
+        });
+    } catch (error) {
+        console.error("Error logging activity:", error);
     }
 };

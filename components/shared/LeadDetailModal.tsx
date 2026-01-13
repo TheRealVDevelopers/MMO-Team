@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import Modal from './Modal';
-import { Lead, LeadPipelineStatus, LeadHistory, Reminder, UserRole } from '../../types';
+import { Lead, LeadPipelineStatus, LeadHistory, Reminder, UserRole, TaskStatus } from '../../types';
 import LeadHistoryView from './LeadHistoryView';
 import { useAuth } from '../../context/AuthContext';
-import { PlusIcon, BellIcon, MapPinIcon, PaintBrushIcon, CalculatorIcon, TruckIcon, WrenchScrewdriverIcon, CreditCardIcon } from '../icons/IconComponents';
+import { PlusIcon, BellIcon, MapPinIcon, PaintBrushIcon, CalculatorIcon, TruckIcon, WrenchScrewdriverIcon, CreditCardIcon, PhoneIcon, ChatBubbleLeftRightIcon, BanknotesIcon, CalendarIcon, UserCircleIcon, FireIcon } from '../icons/IconComponents';
 import RaiseRequestModal from '../dashboard/sales-team/RaiseRequestModal';
+import { addTask } from '../../hooks/useMyDayTasks';
+import { formatLargeNumberINR, formatDateTime } from '../../constants';
+import SmartDateTimePicker from './SmartDateTimePicker';
 
 interface LeadDetailModalProps {
     isOpen: boolean;
@@ -60,7 +63,7 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
         setNewNote('');
     };
 
-    const handleAddReminder = (e: React.FormEvent) => {
+    const handleAddReminder = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!reminderNote.trim() || !reminderDate) return;
 
@@ -71,18 +74,46 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
             completed: false,
         };
 
-        const historyItem: LeadHistory = {
-            action: `Reminder set`,
-            user: currentUser?.name || 'Unknown',
-            timestamp: new Date(),
-            notes: reminderNote,
-        };
-
+        // Update lead with the new reminder
         const updatedLead = {
             ...lead,
             reminders: [...(lead.reminders || []), newReminder],
-            history: [...lead.history, historyItem],
+            history: [
+                ...lead.history,
+                {
+                    action: 'Reminder set',
+                    user: currentUser?.name || 'Unknown',
+                    timestamp: new Date(),
+                    notes: reminderNote
+                }
+            ]
         };
+
+        // Create a task in My Day for the selected date
+        if (currentUser) {
+            const selectedDate = new Date(reminderDate);
+            const dateStr = selectedDate.toISOString().split('T')[0];
+
+            try {
+                await addTask({
+                    title: `[Reminder] ${lead.clientName}: ${reminderNote}`,
+                    userId: currentUser.id,
+                    status: TaskStatus.PENDING,
+                    timeSpent: 0,
+                    priority: 'Medium',
+                    priorityOrder: 50,
+                    deadline: reminderDate,
+                    isPaused: false,
+                    date: dateStr,
+                    description: `Lead: ${lead.clientName} - ${lead.projectName}`,
+                    createdAt: new Date(),
+                    createdBy: currentUser.id,
+                    createdByName: currentUser.name,
+                }, currentUser.id);
+            } catch (error) {
+                console.error('Error adding reminder task:', error);
+            }
+        }
 
         onUpdate(updatedLead);
         setReminderNote('');
@@ -113,6 +144,71 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
         <>
             <Modal isOpen={isOpen} onClose={onClose} title={`Activity for ${lead.clientName}`} size="4xl">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-8 gap-y-6">
+                    {/* Project Details Section */}
+                    <div className="lg:col-span-3 pb-6 border-b border-border mb-2">
+                        <h3 className="text-md font-bold text-text-primary mb-4 flex items-center">
+                            <FireIcon className="w-5 h-5 mr-2 text-primary" />
+                            Project Details
+                        </h3>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            <div className="bg-subtle-background p-3 rounded-xl">
+                                <div className="flex items-center gap-2 text-text-tertiary text-xs font-medium mb-1">
+                                    <MapPinIcon className="w-4 h-4" />
+                                    Project Name
+                                </div>
+                                <p className="text-sm font-bold text-text-primary">{lead.projectName}</p>
+                            </div>
+                            <div className="bg-subtle-background p-3 rounded-xl">
+                                <div className="flex items-center gap-2 text-text-tertiary text-xs font-medium mb-1">
+                                    <UserCircleIcon className="w-4 h-4" />
+                                    Client Name
+                                </div>
+                                <p className="text-sm font-bold text-text-primary">{lead.clientName}</p>
+                            </div>
+                            <div className="bg-subtle-background p-3 rounded-xl">
+                                <div className="flex items-center gap-2 text-text-tertiary text-xs font-medium mb-1">
+                                    <PhoneIcon className="w-4 h-4" />
+                                    Contact Number
+                                </div>
+                                <p className="text-sm font-bold text-text-primary">{lead.mobile || lead.clientMobile || 'N/A'}</p>
+                            </div>
+                            <div className="bg-subtle-background p-3 rounded-xl">
+                                <div className="flex items-center gap-2 text-text-tertiary text-xs font-medium mb-1">
+                                    <ChatBubbleLeftRightIcon className="w-4 h-4" />
+                                    Email
+                                </div>
+                                <p className="text-sm font-bold text-text-primary truncate">{lead.clientEmail || 'N/A'}</p>
+                            </div>
+                            <div className="bg-subtle-background p-3 rounded-xl">
+                                <div className="flex items-center gap-2 text-text-tertiary text-xs font-medium mb-1">
+                                    <BanknotesIcon className="w-4 h-4" />
+                                    Project Value
+                                </div>
+                                <p className="text-sm font-bold text-primary">{formatLargeNumberINR(lead.value)}</p>
+                            </div>
+                            <div className="bg-subtle-background p-3 rounded-xl">
+                                <div className="flex items-center gap-2 text-text-tertiary text-xs font-medium mb-1">
+                                    <CalendarIcon className="w-4 h-4" />
+                                    Inquiry Date
+                                </div>
+                                <p className="text-sm font-bold text-text-primary">{formatDateTime(lead.inquiryDate)}</p>
+                            </div>
+                            <div className="bg-subtle-background p-3 rounded-xl">
+                                <div className="flex items-center gap-2 text-text-tertiary text-xs font-medium mb-1">
+                                    <FireIcon className="w-4 h-4" />
+                                    Source
+                                </div>
+                                <p className="text-sm font-bold text-text-primary">{lead.source || 'N/A'}</p>
+                            </div>
+                            <div className="bg-subtle-background p-3 rounded-xl">
+                                <div className="flex items-center gap-2 text-text-tertiary text-xs font-medium mb-1">
+                                    <BellIcon className="w-4 h-4" />
+                                    Current Status
+                                </div>
+                                <p className="text-sm font-bold text-accent">{lead.status}</p>
+                            </div>
+                        </div>
+                    </div>
                     <div className="lg:col-span-2 space-y-6">
                         <div>
                             <h3 className="text-md font-bold text-text-primary mb-2">Log New Activity</h3>
@@ -157,8 +253,23 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
                         </div>
 
                         <div className="mt-6">
-                            <h3 className="text-md font-bold text-text-primary mb-2">Activity History</h3>
-                            <div className="max-h-96 overflow-y-auto pr-2">
+                            <h3 className="text-md font-bold text-text-primary mb-4">Activity History</h3>
+                            <div className="max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+                                <style>{`
+                                    .custom-scrollbar::-webkit-scrollbar {
+                                        width: 5px;
+                                    }
+                                    .custom-scrollbar::-webkit-scrollbar-track {
+                                        background: transparent;
+                                    }
+                                    .custom-scrollbar::-webkit-scrollbar-thumb {
+                                        background: #e2e8f0;
+                                        border-radius: 10px;
+                                    }
+                                    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                                        background: #cbd5e1;
+                                    }
+                                `}</style>
                                 <LeadHistoryView lead={lead} />
                             </div>
                         </div>
@@ -173,8 +284,13 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
                             </h3>
                             <form onSubmit={handleAddReminder} className="space-y-3 p-3 border border-border rounded-md bg-subtle-background mb-4">
                                 <div>
-                                    <label htmlFor="reminder-date" className="block text-xs font-medium text-text-primary">Date & Time</label>
-                                    <input type="datetime-local" id="reminder-date" value={reminderDate} onChange={e => setReminderDate(e.target.value)} className="mt-1 block w-full text-sm rounded-md border-border shadow-sm focus:border-primary focus:ring-primary bg-surface" />
+                                    <label htmlFor="reminder-date" className="block text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-1">Date & Time</label>
+                                    <SmartDateTimePicker
+                                        value={reminderDate}
+                                        onChange={setReminderDate}
+                                        placeholder="Pick Date & Time"
+                                        variant="compact"
+                                    />
                                 </div>
                                 <div>
                                     <label htmlFor="reminder-notes" className="block text-xs font-medium text-text-primary">Notes</label>

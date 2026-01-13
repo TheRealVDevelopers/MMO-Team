@@ -4,9 +4,9 @@ import React, { useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { ApprovalRequestType, UserRole } from '../../../types';
 import { useApprovals } from '../../../hooks/useApprovalSystem';
-import { Dialog } from '@headlessui/react';
 import { XMarkIcon } from '../../icons/IconComponents';
 import { PrimaryButton, SecondaryButton } from '../shared/DashboardUI';
+import SmartDateTimePicker from '../../shared/SmartDateTimePicker';
 
 interface RaiseRequestModalProps {
     isOpen: boolean;
@@ -28,6 +28,16 @@ const REQUEST_TYPES = [
     { label: 'Other', value: ApprovalRequestType.OTHER },
 ];
 
+// Mapping request types to the role that should be assigned
+const REQUEST_TYPE_TO_ROLE: Partial<Record<ApprovalRequestType, UserRole>> = {
+    [ApprovalRequestType.SITE_VISIT]: UserRole.SITE_ENGINEER,
+    [ApprovalRequestType.DESIGN_CHANGE]: UserRole.DRAWING_TEAM,
+    [ApprovalRequestType.MATERIAL_CHANGE]: UserRole.PROCUREMENT_TEAM,
+    [ApprovalRequestType.PAYMENT_QUERY]: UserRole.ACCOUNTS_TEAM,
+    [ApprovalRequestType.PROPOSAL_REQUEST]: UserRole.QUOTATION_TEAM,
+    [ApprovalRequestType.MODIFICATION]: UserRole.EXECUTION_TEAM,
+};
+
 const URGENCY_LEVELS = ['Low', 'Medium', 'High'];
 
 const RaiseRequestModal: React.FC<RaiseRequestModalProps> = ({ isOpen, onClose, projectId, clientId, clientName, leadId }) => {
@@ -36,8 +46,7 @@ const RaiseRequestModal: React.FC<RaiseRequestModalProps> = ({ isOpen, onClose, 
 
     const [requestType, setRequestType] = useState<ApprovalRequestType>(ApprovalRequestType.SITE_VISIT);
     const [description, setDescription] = useState('');
-    const [preferredDate, setPreferredDate] = useState('');
-    const [preferredTime, setPreferredTime] = useState('');
+    const [preferredDateTime, setPreferredDateTime] = useState('');
     const [urgency, setUrgency] = useState<'Low' | 'Medium' | 'High'>('Medium');
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -46,26 +55,26 @@ const RaiseRequestModal: React.FC<RaiseRequestModalProps> = ({ isOpen, onClose, 
 
         try {
             // Context Description to append to the main description
-            const contextInfo = `\n\n-- Context --\nClient: ${clientName || 'N/A'}\nProject ID: ${projectId || 'N/A'}\nLead ID: ${leadId || 'N/A'}\nPreferred Date: ${preferredDate}\nPreferred Time: ${preferredTime}`;
+            const contextInfo = `\n\n-- Context --\nClient: ${clientName || 'N/A'}\nProject ID: ${projectId || 'N/A'}\nLead ID: ${leadId || 'N/A'}\nPreferred Date/Time: ${preferredDateTime}`;
 
             await submitRequest({
                 requestType,
                 title: `${requestType} for ${clientName || 'Client'}`,
                 description: description + contextInfo,
                 priority: urgency,
-                contextId: projectId || leadId,
+                contextId: leadId || projectId, // Favor Lead ID for history logging
                 // These are workflow fields we rely on
                 requesterId: currentUser.id,
                 requesterName: currentUser.name,
                 requesterRole: currentUser.role,
-                status: 'Pending' as any
+                // Map request type to the role that should handle it
+                targetRole: REQUEST_TYPE_TO_ROLE[requestType],
             });
 
             onClose();
             // Reset form
             setDescription('');
-            setPreferredDate('');
-            setPreferredTime('');
+            setPreferredDateTime('');
             setUrgency('Medium');
         } catch (error) {
             console.error("Failed to submit request", error);
@@ -75,11 +84,11 @@ const RaiseRequestModal: React.FC<RaiseRequestModalProps> = ({ isOpen, onClose, 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="fixed inset-0 z-[100] overflow-y-auto">
             <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-                <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={onClose}></div>
+                <div className="fixed inset-0 z-[100] transition-opacity bg-gray-500 bg-opacity-75" onClick={onClose}></div>
 
-                <div className="inline-block align-bottom bg-surface rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
+                <div className="inline-block align-bottom bg-surface rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full relative z-[101]">
                     <div className="px-6 py-5 border-b border-border flex justify-between items-center">
                         <h3 className="text-xl font-serif font-black text-text-primary">Raise Work Request</h3>
                         <button onClick={onClose} className="text-text-tertiary hover:text-text-primary transition-colors">
@@ -120,25 +129,13 @@ const RaiseRequestModal: React.FC<RaiseRequestModalProps> = ({ isOpen, onClose, 
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-bold text-text-secondary mb-1">Preferred Date</label>
-                                <input
-                                    type="date"
-                                    value={preferredDate}
-                                    onChange={(e) => setPreferredDate(e.target.value)}
-                                    className="w-full rounded-xl border-border bg-subtle-background focus:ring-primary focus:border-primary text-sm py-2"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-text-secondary mb-1">Preferred Time</label>
-                                <input
-                                    type="time"
-                                    value={preferredTime}
-                                    onChange={(e) => setPreferredTime(e.target.value)}
-                                    className="w-full rounded-xl border-border bg-subtle-background focus:ring-primary focus:border-primary text-sm py-2"
-                                />
-                            </div>
+                        <div>
+                            <SmartDateTimePicker
+                                label="Preferred Date & Time"
+                                value={preferredDateTime}
+                                onChange={setPreferredDateTime}
+                                variant="compact"
+                            />
                         </div>
 
                         <div>

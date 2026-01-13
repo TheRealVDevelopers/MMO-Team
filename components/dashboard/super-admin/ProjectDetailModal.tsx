@@ -1,6 +1,7 @@
 import React from 'react';
 import { Project, User, MaterialRequestStatus } from '../../../types';
-import { ACTIVITIES, USERS, MATERIAL_REQUESTS, VENDORS, VENDOR_BILLS, formatCurrencyINR } from '../../../constants';
+import { USERS, MATERIAL_REQUESTS, VENDORS, VENDOR_BILLS, formatCurrencyINR } from '../../../constants';
+import { useActivities } from '../../../hooks/useActivities';
 import Modal from '../../shared/Modal';
 import {
     BanknotesIcon,
@@ -28,6 +29,7 @@ const getStatusConfig = (status: MaterialRequestStatus) => {
 }
 
 const ProjectDetailModal: React.FC<{ project: Project; isOpen: boolean; onClose: () => void; }> = ({ project, isOpen, onClose }) => {
+    const { activities, loading: activitiesLoading } = useActivities(project.id);
 
     const assignedTeamMembers = Object.entries(project.assignedTeam)
         .flatMap(([role, userIdOrIds]) => {
@@ -39,7 +41,6 @@ const ProjectDetailModal: React.FC<{ project: Project; isOpen: boolean; onClose:
         })
         .filter((user): user is User & { designatedRole: string } => user !== null);
 
-    const projectActivities = ACTIVITIES.filter(a => a.projectId === project.id);
     const projectMaterials = MATERIAL_REQUESTS.filter(m => m.projectId === project.id);
     const projectVendors = VENDORS.filter(v => VENDOR_BILLS.some(b => b.projectId === project.id && b.vendorId === v.id));
 
@@ -132,7 +133,11 @@ const ProjectDetailModal: React.FC<{ project: Project; isOpen: boolean; onClose:
                             <ClockIcon className="w-5 h-5 text-accent" />
                             <h4 className="text-sm font-black uppercase tracking-widest text-text-primary">Engagement Registry</h4>
                         </div>
-                        <ProjectActivityHistory activities={projectActivities} />
+                        {activitiesLoading ? (
+                            <div className="text-xs text-text-tertiary animate-pulse">Syncing registry...</div>
+                        ) : (
+                            <ProjectActivityHistory activities={activities} />
+                        )}
                     </ContentCard>
                 </div>
 

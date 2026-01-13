@@ -5,6 +5,7 @@ import { USERS } from '../../../constants';
 import { Lead, SiteType, ApprovalRequestType, UserRole } from '../../../types';
 import { MapPinIcon, PaperClipIcon, CalendarDaysIcon, BuildingOfficeIcon } from '../../icons/IconComponents';
 import { createApprovalRequest } from '../../../hooks/useApprovalSystem';
+import SmartDateTimePicker from '../../shared/SmartDateTimePicker';
 
 const siteTypes: SiteType[] = ['Apartment', 'Office', 'School', 'Hospital', 'Other'];
 
@@ -108,10 +109,14 @@ Priority: ${formData.priority}`,
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-text-secondary mb-1">Preferred Date & Time</label>
                                     <div className="relative">
-                                        <CalendarDaysIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
-                                        <input type="datetime-local" name="date" value={formData.date} onChange={handleChange} className="pl-10 w-full pr-4 py-2 text-base border-border bg-surface focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md shadow-sm" required />
+                                        <SmartDateTimePicker
+                                            label="Preferred Date & Time"
+                                            value={formData.date}
+                                            onChange={(val) => setFormData(prev => ({ ...prev, date: val }))}
+                                            placeholder="Select Date & Time"
+                                            variant="compact"
+                                        />
                                     </div>
                                 </div>
                             </div>

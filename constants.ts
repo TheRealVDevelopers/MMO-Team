@@ -114,8 +114,10 @@ export const LEADS: Lead[] = [
         value: 22000000,
         source: 'Referral',
         history: [
-            { action: 'Lead Created', user: 'System', timestamp: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000) },
-            { action: 'Initial Call', user: 'Jane Doe', timestamp: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000), notes: 'Client is interested in a modern design.' }
+            { action: 'Lead Created', user: 'Sarah Manager', timestamp: new Date(2026, 0, 12, 22, 46), notes: 'Assigned to Jane Doe' },
+            { action: 'Reminder set', user: 'Jane Doe', timestamp: new Date(2026, 0, 12, 22, 49), notes: 'call' },
+            { action: 'Status changed to Contacted - Call Done', user: 'Jane Doe', timestamp: new Date(2026, 0, 12, 22, 59) },
+            { action: 'Note added', user: 'Jane Doe', timestamp: new Date(2026, 0, 12, 22, 59), notes: 'asked for site visit on monday ' }
         ],
         priority: 'High',
         reminders: [
