@@ -15,7 +15,7 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { ApprovalRequest, ApprovalRequestType, ApprovalStatus, UserRole, LeadPipelineStatus, ActivityStatus } from '../types';
+import { ApprovalRequest, ApprovalRequestType, ApprovalStatus, UserRole, LeadPipelineStatus, ActivityStatus, ProjectStatus } from '../types';
 import { USERS } from '../constants';
 import { createNotification, logActivity } from '../services/liveDataService';
 
@@ -228,6 +228,27 @@ export const approveRequest = async (
       type: 'success'
     });
 
+    // 3. Pre-fetch Context info for task and status updates
+    let contextType: 'lead' | 'project' | undefined;
+    let leadSnap: any;
+    let projectSnap: any;
+    let leadRef: any;
+    let projectRef: any;
+
+    if (data.contextId) {
+      leadRef = doc(db, 'leads', data.contextId);
+      leadSnap = await getDoc(leadRef);
+      if (leadSnap.exists()) {
+        contextType = 'lead';
+      } else {
+        projectRef = doc(db, 'projects', data.contextId);
+        projectSnap = await getDoc(projectRef);
+        if (projectSnap.exists()) {
+          contextType = 'project';
+        }
+      }
+    }
+
     // 2. If assigned, create a task (existing logic simplified since we have data)
     if (assigneeId) {
       const { addTask } = await import('./useMyDayTasks');
@@ -244,16 +265,16 @@ export const approveRequest = async (
         createdAt: new Date(),
         createdBy: reviewerId,
         createdByName: reviewerName,
+        // Linkage
+        contextId: data.contextId,
+        contextType: contextType,
+        requesterId: data.requesterId
       }, reviewerId);
     }
 
-    // 3. Update Lead/Project if contextId exists
+    // 4. Update Lead/Project if contextId exists
     if (data.contextId) {
-      // Try Lead first
-      const leadRef = doc(db, 'leads', data.contextId);
-      const leadSnap = await getDoc(leadRef);
-
-      if (leadSnap.exists()) {
+      if (contextType === 'lead') {
         const leadData = leadSnap.data();
         const scheduledTime = deadline ? format(deadline, 'PPP p') : (data.endDate ? format((data.endDate as any).toDate(), 'PPP p') : 'TBD');
 
@@ -275,66 +296,83 @@ export const approveRequest = async (
           if (!updates.tasks) updates.tasks = leadData.tasks || {};
           if (!updates.tasks.siteVisits) updates.tasks.siteVisits = [];
           updates.tasks.siteVisits.push(`${assigneeName} - Assigned ${new Date().toLocaleDateString()}`);
-        } else if (data.requestType === ApprovalRequestType.DESIGN_CHANGE || data.requestType === ApprovalRequestType.DESIGN_TOKEN) {
-          updates.status = LeadPipelineStatus.WAITING_FOR_DRAWING;
+        } else if (data.requestType === ApprovalRequestType.RESCHEDULE_SITE_VISIT) {
+          updates.status = LeadPipelineStatus.SITE_VISIT_RESCHEDULED;
+        } else if (data.requestType === ApprovalRequestType.START_DRAWING) {
+          updates.status = LeadPipelineStatus.DRAWING_IN_PROGRESS;
           if (!updates.tasks) updates.tasks = leadData.tasks || {};
           if (!updates.tasks.drawingRequests) updates.tasks.drawingRequests = [];
-          updates.tasks.drawingRequests.push(`${assigneeName} - Assigned ${new Date().toLocaleDateString()}`);
+          updates.tasks.drawingRequests.push(`${assigneeName} - Drawing Started ${new Date().toLocaleDateString()}`);
+        } else if (data.requestType === ApprovalRequestType.DESIGN_CHANGE || data.requestType === ApprovalRequestType.DESIGN_TOKEN || data.requestType === ApprovalRequestType.DRAWING_REVISIONS) {
+          updates.status = LeadPipelineStatus.DRAWING_REVISIONS;
+          if (!updates.tasks) updates.tasks = leadData.tasks || {};
+          if (!updates.tasks.drawingRequests) updates.tasks.drawingRequests = [];
+          updates.tasks.drawingRequests.push(`${assigneeName} - Revision Assigned ${new Date().toLocaleDateString()}`);
+        } else if (data.requestType === ApprovalRequestType.PROPOSAL_REQUEST || data.requestType === ApprovalRequestType.QUOTATION_TOKEN) {
+          updates.status = LeadPipelineStatus.WAITING_FOR_QUOTATION;
+        } else if (data.requestType === ApprovalRequestType.MODIFICATION) {
+          updates.status = LeadPipelineStatus.IN_EXECUTION;
         }
 
         await updateDoc(leadRef, updates);
 
         // Also log to global activity registry
         await logActivity({
-          description: `STRATEGIC ALLOTMENT: ${data.requestType} authorized for ${assigneeName}. Scheduled: ${scheduledTime}`,
+          description: `STRATEGIC OVERRIDE: ${data.requestType} authorized by Admin for ${assigneeName}. Project timeline advanced.`,
           team: data.targetRole || UserRole.SUPER_ADMIN,
-          userId: data.assigneeId || '',
+          userId: reviewerId,
           status: ActivityStatus.DONE,
-          projectId: data.contextId // This is leadId in this context
+          projectId: data.contextId
         });
-      } else {
-        // Try Project
-        const projectRef = doc(db, 'projects', data.contextId);
-        const projectSnap = await getDoc(projectRef);
-        if (projectSnap.exists()) {
-          const projectData = projectSnap.data();
-          const scheduledTime = deadline ? format(deadline, 'PPP p') : (data.endDate ? format((data.endDate as any).toDate(), 'PPP p') : 'TBD');
+      } else if (contextType === 'project') {
+        const projectData = projectSnap.data();
+        const scheduledTime = deadline ? format(deadline, 'PPP p') : (data.endDate ? format((data.endDate as any).toDate(), 'PPP p') : 'TBD');
 
-          await updateDoc(projectRef, {
-            communication: [
-              ...(projectData.communication || []),
-              {
-                id: Date.now().toString(),
-                user: 'System Authorization',
-                avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Admin',
-                message: `🚀 ACTIVITY INITIATED: ${data.requestType} approved by ${reviewerName}. Specialist ${assigneeName} (${assigneeRole}) is allotted for ${scheduledTime}.`,
-                timestamp: new Date()
-              }
-            ],
-            history: [
-              ...(projectData.history || []),
-              {
-                action: 'Authorization Initiated',
-                user: reviewerName,
-                timestamp: new Date(),
-                notes: `${data.requestType} approved for ${assigneeName}.`
-              }
-            ]
-          });
+        let projectUpdates: any = {
+          communication: [
+            ...(projectData.communication || []),
+            {
+              id: Date.now().toString(),
+              user: 'System Authorization',
+              avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Admin',
+              message: `🚀 ACTIVITY INITIATED: ${data.requestType} approved by ${reviewerName}. Specialist ${assigneeName} (${assigneeRole}) is allotted for ${scheduledTime}.`,
+              timestamp: new Date()
+            }
+          ],
+          history: [
+            ...(projectData.history || []),
+            {
+              action: 'Authorization Initiated',
+              user: reviewerName,
+              timestamp: new Date(),
+              notes: `${data.requestType} approved for ${assigneeName}.`
+            }
+          ]
+        };
 
-          // Also log to global activity registry
-          await logActivity({
-            description: `ACTIVITY INITIATED: ${data.requestType} approved for ${assigneeName}.`,
-            team: data.targetRole || UserRole.SUPER_ADMIN,
-            userId: data.assigneeId || '',
-            status: ActivityStatus.DONE,
-            projectId: data.contextId
-          });
+        // Auto-Status Updates for Project
+        if (data.requestType === ApprovalRequestType.START_DRAWING) {
+          projectUpdates.status = ProjectStatus.DESIGN_IN_PROGRESS;
+        } else if (data.requestType === ApprovalRequestType.DESIGN_CHANGE || data.requestType === ApprovalRequestType.DRAWING_REVISIONS) {
+          projectUpdates.status = ProjectStatus.REVISIONS_IN_PROGRESS;
+        } else if (data.requestType === ApprovalRequestType.PROPOSAL_REQUEST || data.requestType === ApprovalRequestType.QUOTATION_TOKEN) {
+          projectUpdates.status = ProjectStatus.AWAITING_QUOTATION;
+        } else if (data.requestType === ApprovalRequestType.RESCHEDULE_SITE_VISIT) {
+          projectUpdates.status = ProjectStatus.SITE_VISIT_RESCHEDULED;
         }
+
+        await updateDoc(projectRef, projectUpdates);
+
+        // Also log to global activity registry
+        await logActivity({
+          description: `ACTIVITY INITIATED: ${data.requestType} approved for ${assigneeName}.`,
+          team: data.targetRole || UserRole.SUPER_ADMIN,
+          userId: reviewerId,
+          status: ActivityStatus.DONE,
+          projectId: data.contextId
+        });
       }
     }
-
-
   } catch (error) {
     console.error('Error approving request:', error);
     throw error;

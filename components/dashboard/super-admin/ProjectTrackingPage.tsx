@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { PROJECTS, formatDate, formatCurrencyINR } from '../../../constants';
+import { formatDate, formatCurrencyINR } from '../../../constants';
+import { useProjects } from '../../../hooks/useProjects';
 import { Project, ProjectStatus } from '../../../types';
 import ProjectDetailModal from './ProjectDetailModal';
 import GanttChart from './GanttChart';
@@ -32,19 +33,20 @@ const getProgressColor = (progress: number): string => {
 };
 
 const ProjectTrackingPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
+    const { projects, loading } = useProjects();
     const [view, setView] = useState<'list' | 'gantt'>('list');
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
     const [statusFilter, setStatusFilter] = useState<ProjectStatus | 'all'>('all');
     const [searchTerm, setSearchTerm] = useState('');
 
     const filteredProjects = useMemo(() => {
-        return PROJECTS.filter(project => {
+        return projects.filter(project => {
             const matchesStatus = statusFilter === 'all' || project.status === statusFilter;
             const matchesSearch = project.projectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 project.clientName.toLowerCase().includes(searchTerm.toLowerCase());
             return matchesStatus && matchesSearch;
         });
-    }, [statusFilter, searchTerm]);
+    }, [projects, statusFilter, searchTerm]);
 
 
     return (

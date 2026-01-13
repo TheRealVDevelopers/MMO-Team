@@ -1,6 +1,6 @@
 import React from 'react';
 import { LEADS, USERS, formatLargeNumberINR, formatDateTime } from '../../../constants';
-import { LeadPipelineStatus } from '../../../types';
+import { LeadPipelineStatus, UserRole } from '../../../types';
 import {
     BanknotesIcon,
     PresentationChartLineIcon,
@@ -9,10 +9,14 @@ import {
     ArrowLeftIcon,
     ChevronRightIcon,
     ClockIcon,
-    CalendarIcon
+    CalendarIcon,
+    MagnifyingGlassIcon,
+    AdjustmentsHorizontalIcon
 } from '@heroicons/react/24/outline';
 import { ContentCard, StatCard, cn, staggerContainer } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLeads, updateLead } from '../../../hooks/useLeads';
+import LeadDetailModal from '../../shared/LeadDetailModal';
 
 const getStatusConfig = (status: LeadPipelineStatus) => {
     switch (status) {
@@ -30,15 +34,38 @@ const getStatusConfig = (status: LeadPipelineStatus) => {
 
 
 const LeadsManagementPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
-    const pipelineCounts = LEADS.reduce((acc, lead) => {
+    const { leads, loading } = useLeads();
+    const [selectedLead, setSelectedLead] = React.useState<any>(null);
+    const [searchTerm, setSearchTerm] = React.useState('');
+    const [statusFilter, setStatusFilter] = React.useState<LeadPipelineStatus | 'all'>('all');
+    const [repFilter, setRepFilter] = React.useState<string | 'all'>('all');
+
+    const pipelineCounts = leads.reduce((acc, lead) => {
         acc[lead.status] = (acc[lead.status] || 0) + 1;
         return acc;
     }, {} as Record<LeadPipelineStatus, number>);
 
-    const totalLeads = LEADS.length;
+    const totalLeads = leads.length;
     const wonLeads = pipelineCounts[LeadPipelineStatus.WON] || 0;
     const conversionRate = totalLeads > 0 ? (wonLeads / totalLeads) * 100 : 0;
-    const totalValue = LEADS.reduce((sum, l) => sum + l.value, 0);
+    const totalValue = leads.reduce((sum, l) => sum + l.value, 0);
+
+    const filteredLeads = React.useMemo(() => {
+        return leads.filter(lead => {
+            const matchesSearch = lead.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                lead.projectName.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
+            const matchesRep = repFilter === 'all' || lead.assignedTo === repFilter;
+            return matchesSearch && matchesStatus && matchesRep;
+        });
+    }, [leads, searchTerm, statusFilter, repFilter]);
+
+    const salesTeam = USERS.filter(u => u.role === UserRole.SALES_TEAM_MEMBER || u.role === UserRole.SALES_GENERAL_MANAGER);
+
+    const handleLeadUpdate = async (updatedLead: any) => {
+        await updateLead(updatedLead.id, updatedLead);
+        setSelectedLead(updatedLead);
+    };
 
     const funnelStages = [
         { status: LeadPipelineStatus.NEW_NOT_CONTACTED, color: 'bg-error' },
@@ -49,9 +76,7 @@ const LeadsManagementPage: React.FC<{ setCurrentPage: (page: string) => void }> 
         { status: LeadPipelineStatus.WON, color: 'bg-secondary' },
     ];
 
-    const maxLeadsInStage = Math.max(...funnelStages.map(stage => pipelineCounts[stage.status] || 0));
-
-    const recentLeads = [...LEADS].sort((a, b) => b.inquiryDate.getTime() - a.inquiryDate.getTime()).slice(0, 10);
+    const maxLeadsInStage = Math.max(...funnelStages.map(stage => pipelineCounts[stage.status] || 0), 1);
 
     return (
         <motion.div
@@ -153,14 +178,39 @@ const LeadsManagementPage: React.FC<{ setCurrentPage: (page: string) => void }> 
             </div>
 
             <ContentCard className="!p-0 overflow-hidden shadow-2xl">
-                <div className="p-8 border-b border-border/40 bg-subtle-background/30 flex items-center justify-between">
+                <div className="p-8 border-b border-border/40 bg-subtle-background/30 flex flex-col md:flex-row items-center justify-between gap-6">
                     <div className="flex items-center gap-3">
                         <ClockIcon className="w-5 h-5 text-accent" />
-                        <h3 className="text-xl font-serif font-bold text-text-primary tracking-tight">Recent Intelligence</h3>
+                        <h3 className="text-xl font-serif font-bold text-text-primary tracking-tight">Lead Registry</h3>
                     </div>
-                    <div className="flex items-center gap-2 px-4 py-2 bg-surface rounded-xl border border-border shadow-sm">
-                        <CalendarIcon className="w-4 h-4 text-text-tertiary" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Live Registry Feed</span>
+
+                    <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
+                        <div className="relative flex-grow md:w-64">
+                            <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary" />
+                            <input
+                                type="text"
+                                placeholder="Search leads..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-11 pr-4 py-2 bg-surface border border-border rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-primary/10 transition-all"
+                            />
+                        </div>
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value as any)}
+                            className="px-4 py-2 bg-surface border border-border rounded-xl text-xs font-black uppercase tracking-widest outline-none"
+                        >
+                            <option value="all">Statuses</option>
+                            {Object.values(LeadPipelineStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                        <select
+                            value={repFilter}
+                            onChange={(e) => setRepFilter(e.target.value)}
+                            className="px-4 py-2 bg-surface border border-border rounded-xl text-xs font-black uppercase tracking-widest outline-none"
+                        >
+                            <option value="all">Strategists</option>
+                            {salesTeam.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                        </select>
                     </div>
                 </div>
 
@@ -176,7 +226,15 @@ const LeadsManagementPage: React.FC<{ setCurrentPage: (page: string) => void }> 
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border/20 bg-surface">
-                            {recentLeads.map((lead, idx) => {
+                            {loading ? (
+                                <tr>
+                                    <td colSpan={5} className="px-8 py-12 text-center text-text-tertiary animate-pulse font-black uppercase tracking-[0.2em]">Syncing Intelligence Stream...</td>
+                                </tr>
+                            ) : filteredLeads.length === 0 ? (
+                                <tr>
+                                    <td colSpan={5} className="px-8 py-12 text-center text-text-tertiary italic">No leads found matching criteria.</td>
+                                </tr>
+                            ) : filteredLeads.map((lead, idx) => {
                                 const config = getStatusConfig(lead.status);
                                 return (
                                     <motion.tr
@@ -184,6 +242,7 @@ const LeadsManagementPage: React.FC<{ setCurrentPage: (page: string) => void }> 
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: idx * 0.03 }}
+                                        onClick={() => setSelectedLead(lead)}
                                         className="group hover:bg-subtle-background/20 cursor-pointer transition-colors"
                                     >
                                         <td className="px-8 py-6">
@@ -218,6 +277,15 @@ const LeadsManagementPage: React.FC<{ setCurrentPage: (page: string) => void }> 
                     </table>
                 </div>
             </ContentCard>
+
+            {selectedLead && (
+                <LeadDetailModal
+                    isOpen={!!selectedLead}
+                    onClose={() => setSelectedLead(null)}
+                    lead={selectedLead}
+                    onUpdate={handleLeadUpdate}
+                />
+            )}
         </motion.div>
     );
 };

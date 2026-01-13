@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, onSnapshot, query, where, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, orderBy, Timestamp } from 'firebase/firestore';
 import { Task, TaskStatus } from '../types';
-import { createNotification } from '../services/liveDataService';
+import { createNotification, logActivity } from '../services/liveDataService';
 import { updateUserPerformanceFlag } from '../services/performanceService';
+import { UserRole, ActivityStatus } from '../types';
 
 // Firestore Task Type
 type FirestoreTask = Omit<Task, 'id' | 'date'> & {
@@ -116,6 +117,56 @@ export const updateTask = async (taskId: string, updates: Partial<Task>) => {
         }
 
         await updateDoc(taskRef, finalUpdates);
+
+        // Logic for Task Completion (Notifications & Logging)
+        if (updates.status === TaskStatus.COMPLETED) {
+            const { getDoc } = await import('firebase/firestore');
+            const taskSnap = await getDoc(taskRef);
+            if (taskSnap.exists()) {
+                const taskData = taskSnap.data() as Task;
+
+                // 1. Notify the requester (Sales Member)
+                if (taskData.requesterId) {
+                    await createNotification({
+                        title: 'Mission Task Completed',
+                        message: `Strategic Update: The task "${taskData.title}" has been completed by the specialist. You can now update the client.`,
+                        user_id: taskData.requesterId,
+                        entity_type: 'task',
+                        entity_id: taskId,
+                        type: 'success'
+                    });
+                }
+
+                // 2. Log to Lead/Project History
+                if (taskData.contextId && taskData.contextType) {
+                    const contextRef = doc(db, taskData.contextType === 'lead' ? 'leads' : 'projects', taskData.contextId);
+                    const contextSnap = await getDoc(contextRef);
+                    if (contextSnap.exists()) {
+                        const contextData = contextSnap.data();
+                        await updateDoc(contextRef, {
+                            history: [
+                                ...(contextData.history || []),
+                                {
+                                    action: 'Mission Task Completed',
+                                    user: 'Specialist System',
+                                    timestamp: new Date(),
+                                    notes: `Task "${taskData.title}" completed. Audit trail updated.`
+                                }
+                            ]
+                        });
+                    }
+
+                    // 3. Log to Global Activity Registry
+                    await logActivity({
+                        description: `MISSION COMPLETE: Task "${taskData.title}" finished. Registry synchronized.`,
+                        team: UserRole.SUPER_ADMIN, // Logged as system/admin event
+                        userId: taskData.userId,
+                        status: ActivityStatus.DONE,
+                        projectId: taskData.contextId
+                    });
+                }
+            }
+        }
 
         // Get task to know whose flag to update
         const { getDoc } = await import('firebase/firestore');

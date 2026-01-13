@@ -4,7 +4,11 @@ export enum LeadPipelineStatus {
   NEW_NOT_CONTACTED = "New - Not Contacted",
   CONTACTED_CALL_DONE = "Contacted - Call Done",
   SITE_VISIT_SCHEDULED = "Site Visit Scheduled",
+  SITE_VISIT_RESCHEDULED = "Site Visit Rescheduled",
   WAITING_FOR_DRAWING = "Waiting for Drawing",
+  DRAWING_IN_PROGRESS = "Drawing In Progress",
+  DRAWING_REVISIONS = "Drawing Revisions",
+  WAITING_FOR_QUOTATION = "Waiting for Quotation",
   QUOTATION_SENT = "Quotation Sent",
   NEGOTIATION = "Negotiation",
   IN_PROCUREMENT = "In Procurement",
@@ -194,6 +198,7 @@ export interface Lead {
 export enum ProjectStatus {
   AWAITING_DESIGN = "Awaiting Design",
   DESIGN_IN_PROGRESS = "Design In Progress",
+  REVISIONS_IN_PROGRESS = "Revisions In Progress",
   PENDING_REVIEW = "Pending Review",
   REVISIONS_REQUESTED = "Revisions Requested",
   AWAITING_QUOTATION = "Awaiting Quotation",
@@ -205,6 +210,7 @@ export enum ProjectStatus {
   IN_EXECUTION = "In Execution",
   COMPLETED = "Completed",
   ON_HOLD = "On Hold",
+  SITE_VISIT_RESCHEDULED = "Site Visit Rescheduled",
 }
 
 export enum PaymentStatus {
@@ -286,7 +292,10 @@ export enum ApprovalRequestType {
   EXPENSE = "Expense Approval",
   // Work Requests
   SITE_VISIT = "Site Visit",
+  RESCHEDULE_SITE_VISIT = "Reschedule Site Visit",
+  START_DRAWING = "Start Drawing",
   DESIGN_CHANGE = "Design Change",
+  DRAWING_REVISIONS = "Drawing Revisions",
   MATERIAL_CHANGE = "Material Change",
   PAYMENT_QUERY = "Payment Query",
   CLARIFICATION = "Clarification",
@@ -862,6 +871,10 @@ export interface Task {
   createdByName?: string; // name of creator
   createdAt: Date;
   completedAt?: Date;
+  // Context for automated logging and notifications
+  contextId?: string; // ID of Lead or Project
+  contextType?: 'lead' | 'project';
+  requesterId?: string; // Sales user who raised the request
 }
 
 export enum AttendanceType {

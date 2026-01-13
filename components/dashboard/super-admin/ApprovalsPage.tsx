@@ -85,7 +85,8 @@ const ApprovalsPage: React.FC = () => {
     setSelectedRequest(request);
     setReviewAction(action);
     setShowReviewModal(true);
-    setReviewComments('');
+    setReviewComments(request.reviewerComments || '');
+    if (request.assigneeId) setAssigneeId(request.assigneeId);
   };
 
   const handleSubmitReview = async () => {
@@ -130,19 +131,26 @@ const ApprovalsPage: React.FC = () => {
   const getRequestTypeIcon = (type: ApprovalRequestType) => {
     switch (type) {
       case ApprovalRequestType.LEAVE:
+      case ApprovalRequestType.TIME_OFF:
         return <CalendarDaysIcon className="w-5 h-5" />;
       case ApprovalRequestType.EARLY_DEPARTURE:
       case ApprovalRequestType.LATE_ARRIVAL:
+      case ApprovalRequestType.OVERTIME:
         return <ClockIcon className="w-5 h-5" />;
       case ApprovalRequestType.WORK_FROM_HOME:
         return <UserIcon className="w-5 h-5" />;
       case ApprovalRequestType.EXPENSE:
         return <DocumentTextIcon className="w-5 h-5" />;
-      case 'Site Visit' as any:
+      case ApprovalRequestType.SITE_VISIT:
+      case ApprovalRequestType.SITE_VISIT_TOKEN:
         return <BoltIcon className="w-5 h-5" />;
-      case 'Design Change' as any:
-      case 'Material Change' as any:
+      case ApprovalRequestType.DESIGN_CHANGE:
+      case ApprovalRequestType.DESIGN_TOKEN:
+      case ApprovalRequestType.MODIFICATION:
         return <AdjustmentsHorizontalIcon className="w-5 h-5" />;
+      case ApprovalRequestType.PROPOSAL_REQUEST:
+      case ApprovalRequestType.QUOTATION_TOKEN:
+        return <DocumentTextIcon className="w-5 h-5" />;
       default:
         return <DocumentTextIcon className="w-5 h-5" />;
     }
@@ -293,9 +301,17 @@ const ApprovalsPage: React.FC = () => {
                           </button>
                         </>
                       ) : (
-                        <div className="text-right">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-1">Reviewed By</p>
-                          <p className="text-sm font-bold text-text-primary">{request.reviewerName}</p>
+                        <div className="flex flex-col items-end gap-2">
+                          <div className="text-right">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-1">Reviewed By</p>
+                            <p className="text-sm font-bold text-text-primary">{request.reviewerName}</p>
+                          </div>
+                          <button
+                            onClick={() => handleReview(request, request.status === ApprovalStatus.APPROVED ? 'approve' : 'reject')}
+                            className="text-[9px] font-black uppercase tracking-widest text-primary hover:text-secondary transition-colors underline decoration-2 underline-offset-4"
+                          >
+                            Edit Review
+                          </button>
                         </div>
                       )}
                     </div>

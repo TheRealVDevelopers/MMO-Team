@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { 
-    collection, 
-    addDoc, 
-    updateDoc, 
-    doc, 
-    onSnapshot, 
-    query, 
+import {
+    collection,
+    addDoc,
+    updateDoc,
+    doc,
+    onSnapshot,
+    query,
     where,
     orderBy,
     serverTimestamp,
@@ -22,10 +22,10 @@ export const useEnquiries = () => {
 
     useEffect(() => {
         const q = query(
-            collection(db, 'projectEnquiries'), 
+            collection(db, 'projectEnquiries'),
             orderBy('createdAt', 'desc')
         );
-        
+
         const unsubscribe = onSnapshot(
             q,
             (snapshot) => {
@@ -66,13 +66,13 @@ export const useNewEnquiries = (userId?: string) => {
             where('status', '==', EnquiryStatus.NEW),
             orderBy('createdAt', 'desc')
         );
-        
+
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const enquiriesData: ProjectEnquiry[] = [];
             snapshot.forEach((doc) => {
                 const data = doc.data();
                 const viewedBy = data.viewedBy || [];
-                
+
                 // Show if not viewed by this user
                 if (!userId || !viewedBy.includes(userId)) {
                     enquiriesData.push({
@@ -105,7 +105,7 @@ export const useMyEnquiries = (userId: string) => {
             where('status', '==', EnquiryStatus.ASSIGNED),
             orderBy('createdAt', 'desc')
         );
-        
+
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const enquiriesData: ProjectEnquiry[] = [];
             snapshot.forEach((doc) => {
@@ -143,8 +143,8 @@ export const createEnquiry = async (enquiryData: Omit<ProjectEnquiry, 'id' | 'cr
 
 // Function to assign enquiry to sales member
 export const assignEnquiry = async (
-    enquiryId: string, 
-    userId: string, 
+    enquiryId: string,
+    userId: string,
     userName: string,
     clientPassword: string
 ) => {
@@ -157,6 +157,15 @@ export const assignEnquiry = async (
             clientPassword: clientPassword,
             updatedAt: serverTimestamp(),
         });
+
+        // Log assignment activity
+        await logActivity({
+            description: `ENQUIRY ASSIGNED: Assigned to ${userName} by Manager. Client portal password established.`,
+            team: UserRole.SALES_TEAM_MEMBER,
+            userId: userId,
+            status: ActivityStatus.DONE,
+            projectId: enquiryId
+        });
     } catch (error) {
         console.error('Error assigning enquiry:', error);
         throw error;
@@ -168,7 +177,7 @@ export const markEnquiryAsViewed = async (enquiryId: string, userId: string) => 
     try {
         const enquiryRef = doc(db, 'projectEnquiries', enquiryId);
         const enquiryDoc = await import('firebase/firestore').then(m => m.getDoc(enquiryRef));
-        
+
         if (enquiryDoc.exists()) {
             const currentViewedBy = enquiryDoc.data().viewedBy || [];
             if (!currentViewedBy.includes(userId)) {
@@ -228,6 +237,15 @@ export const convertEnquiryToLead = async (
             consultantId: enquiry.assignedTo || '',
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
+        });
+
+        // Log overall project creation activity
+        await logActivity({
+            description: `NEW PROJECT CREATED: Converted from enquiry ${enquiry.enquiryId} for ${enquiry.clientName}. Project ID: ${enquiry.enquiryId.replace('ENQ', 'PRJ')}`,
+            team: UserRole.SALES_GENERAL_MANAGER,
+            userId: enquiry.assignedTo || '',
+            status: ActivityStatus.DONE,
+            projectId: leadRef.id
         });
 
         return leadRef.id;

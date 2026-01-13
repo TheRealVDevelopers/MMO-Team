@@ -1,7 +1,9 @@
 import React from 'react';
-import { Project, User, MaterialRequestStatus } from '../../../types';
+import { Project, User, MaterialRequestStatus, ProjectStatus } from '../../../types';
 import { USERS, MATERIAL_REQUESTS, VENDORS, VENDOR_BILLS, formatCurrencyINR } from '../../../constants';
 import { useActivities } from '../../../hooks/useActivities';
+import { logActivity } from '../../../services/liveDataService';
+import { updateProject } from '../../../hooks/useProjects';
 import Modal from '../../shared/Modal';
 import {
     BanknotesIcon,
@@ -12,7 +14,9 @@ import {
     ArrowTrendingUpIcon,
     DocumentTextIcon,
     ClockIcon,
-    CheckCircleIcon
+    CheckCircleIcon,
+    PlusIcon,
+    ChevronDownIcon
 } from '@heroicons/react/24/outline';
 import ProjectActivityHistory from '../../shared/ProjectActivityHistory';
 import { ContentCard, cn } from '../shared/DashboardUI';
@@ -46,6 +50,38 @@ const ProjectDetailModal: React.FC<{ project: Project; isOpen: boolean; onClose:
 
     const remainingBalance = project.budget - project.advancePaid;
     const budgetUsedPercentage = project.totalExpenses ? (project.totalExpenses / project.budget) * 100 : 0;
+
+    const [isUpdating, setIsUpdating] = React.useState(false);
+    const [newNote, setNewNote] = React.useState('');
+    const [newStatus, setNewStatus] = React.useState<ProjectStatus>(project.status);
+
+    const handleUpdateProject = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsUpdating(true);
+        try {
+            const updates: Partial<Project> = { status: newStatus };
+
+            // If there's a note, we could potentially add it to a history field if one exists, 
+            // but for now we log it as a global activity.
+            await updateProject(project.id, updates);
+
+            if (newNote.trim()) {
+                await logActivity({
+                    description: `ADMIN OVERRIDE: ${newNote}`,
+                    team: project.assignedTeam.drawing ? (USERS.find(u => u.id === project.assignedTeam.drawing)?.role || project.assignedTeam.drawing as any) : 'Management' as any,
+                    userId: 'admin',
+                    status: 'done' as any,
+                    projectId: project.id
+                });
+            }
+
+            setNewNote('');
+        } catch (error) {
+            console.error("Failed to update project:", error);
+        } finally {
+            setIsUpdating(false);
+        }
+    };
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={`${project.projectName} Detail View`}>
@@ -164,6 +200,44 @@ const ProjectDetailModal: React.FC<{ project: Project; isOpen: boolean; onClose:
                                 <span className="text-xs font-semibold text-text-secondary">{project.clientContact.phone}</span>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Project Control Panel */}
+                    <div className="bg-surface border border-border/40 p-6 rounded-3xl shadow-sm">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-primary mb-6 pb-2 border-b border-primary/10">Project Command</h4>
+                        <form onSubmit={handleUpdateProject} className="space-y-4">
+                            <div>
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-2">Update Mission Status</label>
+                                <div className="relative">
+                                    <select
+                                        value={newStatus}
+                                        onChange={(e) => setNewStatus(e.target.value as ProjectStatus)}
+                                        className="w-full bg-subtle-background border border-border rounded-xl px-4 py-3 text-xs font-bold text-text-primary appearance-none focus:ring-2 focus:ring-primary/10 outline-none"
+                                    >
+                                        {Object.values(ProjectStatus).map(status => (
+                                            <option key={status} value={status}>{status}</option>
+                                        ))}
+                                    </select>
+                                    <ChevronDownIcon className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary pointer-events-none" />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-2">Internal Protocol Note</label>
+                                <textarea
+                                    value={newNote}
+                                    onChange={(e) => setNewNote(e.target.value)}
+                                    placeholder="Log strategic update or operational note..."
+                                    className="w-full bg-subtle-background border border-border rounded-xl px-4 py-3 text-xs font-medium text-text-primary min-h-[100px] focus:ring-2 focus:ring-primary/10 outline-none transition-all"
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={isUpdating || (newStatus === project.status && !newNote.trim())}
+                                className="w-full bg-primary text-white font-black text-[10px] uppercase tracking-[0.2em] py-4 rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100"
+                            >
+                                {isUpdating ? 'Synchronizing Intelligence...' : 'Update Project Registry'}
+                            </button>
+                        </form>
                     </div>
 
                     {/* Operational Task Force */}

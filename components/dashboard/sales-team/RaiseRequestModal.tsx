@@ -19,7 +19,10 @@ interface RaiseRequestModalProps {
 
 const REQUEST_TYPES = [
     { label: 'Site Visit', value: ApprovalRequestType.SITE_VISIT },
+    { label: 'Reschedule Site Visit', value: ApprovalRequestType.RESCHEDULE_SITE_VISIT },
+    { label: 'Start Drawing', value: ApprovalRequestType.START_DRAWING },
     { label: 'Design Change', value: ApprovalRequestType.DESIGN_CHANGE },
+    { label: 'Drawing Revisions', value: ApprovalRequestType.DRAWING_REVISIONS },
     { label: 'Material Change', value: ApprovalRequestType.MATERIAL_CHANGE },
     { label: 'Payment Query', value: ApprovalRequestType.PAYMENT_QUERY },
     { label: 'Clarification', value: ApprovalRequestType.CLARIFICATION },
@@ -31,7 +34,10 @@ const REQUEST_TYPES = [
 // Mapping request types to the role that should be assigned
 const REQUEST_TYPE_TO_ROLE: Partial<Record<ApprovalRequestType, UserRole>> = {
     [ApprovalRequestType.SITE_VISIT]: UserRole.SITE_ENGINEER,
+    [ApprovalRequestType.RESCHEDULE_SITE_VISIT]: UserRole.SITE_ENGINEER,
+    [ApprovalRequestType.START_DRAWING]: UserRole.DRAWING_TEAM,
     [ApprovalRequestType.DESIGN_CHANGE]: UserRole.DRAWING_TEAM,
+    [ApprovalRequestType.DRAWING_REVISIONS]: UserRole.DRAWING_TEAM,
     [ApprovalRequestType.MATERIAL_CHANGE]: UserRole.PROCUREMENT_TEAM,
     [ApprovalRequestType.PAYMENT_QUERY]: UserRole.ACCOUNTS_TEAM,
     [ApprovalRequestType.PROPOSAL_REQUEST]: UserRole.QUOTATION_TEAM,

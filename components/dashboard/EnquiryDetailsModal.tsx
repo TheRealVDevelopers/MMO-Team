@@ -10,6 +10,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { USERS } from '../../constants';
 import { assignEnquiry, convertEnquiryToLead, markEnquiryAsViewed } from '../../hooks/useEnquiries';
+import { generateRandomPassword } from '../../services/liveDataService';
 
 interface EnquiryDetailsModalProps {
     isOpen: boolean;
@@ -25,7 +26,7 @@ const EnquiryDetailsModal: React.FC<EnquiryDetailsModalProps> = ({
     currentUserId
 }) => {
     const [selectedSalesUser, setSelectedSalesUser] = useState('');
-    const [clientPassword, setClientPassword] = useState('123456');
+    const [clientPassword, setClientPassword] = useState(generateRandomPassword());
     const [isAssigning, setIsAssigning] = useState(false);
     const [isConverting, setIsConverting] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
@@ -245,13 +246,23 @@ const EnquiryDetailsModal: React.FC<EnquiryDetailsModalProps> = ({
                                     <KeyIcon className="w-4 h-4" />
                                     <span>Set Client Password</span>
                                 </label>
-                                <input
-                                    type="text"
-                                    value={clientPassword}
-                                    onChange={(e) => setClientPassword(e.target.value)}
-                                    className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-primary outline-none"
-                                    placeholder="Enter password for client portal"
-                                />
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        value={clientPassword}
+                                        onChange={(e) => setClientPassword(e.target.value)}
+                                        className="flex-1 p-3 border-2 border-gray-300 rounded-lg focus:border-primary outline-none"
+                                        placeholder="Enter password for client portal"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setClientPassword(generateRandomPassword())}
+                                        className="p-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors border-2 border-gray-300"
+                                        title="Regenerate Password"
+                                    >
+                                        <ArrowPathIcon className="w-5 h-5 text-gray-600" />
+                                    </button>
+                                </div>
                             </div>
 
                             <button

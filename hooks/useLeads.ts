@@ -87,6 +87,15 @@ export const addLead = async (leadData: Omit<Lead, 'id'>, createdBy?: string) =>
             type: 'info'
         });
 
+        // Log lead creation activity
+        await logActivity({
+            description: `LEAD PROTOCOL INITIATED: New lead "${leadData.clientName}" registered in system.`,
+            team: UserRole.SALES_TEAM_MEMBER,
+            userId: leadData.assignedTo,
+            status: ActivityStatus.DONE,
+            projectId: docRef.id
+        });
+
         return docRef.id;
     } catch (error) {
         console.error("Error adding lead:", error);
@@ -109,14 +118,27 @@ export const updateLead = async (leadId: string, updatedData: Partial<Lead>) => 
                 entity_id: leadId,
                 type: 'info'
             });
+
+            // Log re-assignment activity
+            await logActivity({
+                description: `LEAD RE-ASSIGNMENT: Lead "${updatedData.clientName || 'Lead'}" assigned to specialist.`,
+                team: UserRole.SALES_TEAM_MEMBER,
+                userId: updatedData.assignedTo,
+                status: ActivityStatus.DONE,
+                projectId: leadId
+            });
         }
 
-        // Trigger notification if status changed (notify owner/manager - simpler logic for now: notify assignee)
-        if (updatedData.status && !updatedData.assignedTo) {
-            // We can't easily know who to notify without fetching the lead, but we can try notifying the assignedTo if known or skip
-            // For now, let's skip status update notifications to avoid noise unless we fetch the doc.
+        // Log status change activity
+        if (updatedData.status) {
+            await logActivity({
+                description: `PIPELINE TRANSITION: Project status synchronized to "${updatedData.status}".`,
+                team: UserRole.SALES_GENERAL_MANAGER,
+                userId: '', // Generic update
+                status: ActivityStatus.DONE,
+                projectId: leadId
+            });
         }
-
     } catch (error) {
         console.error("Error updating lead:", error);
         throw error;
