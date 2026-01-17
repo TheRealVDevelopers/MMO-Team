@@ -75,7 +75,6 @@ const navConfig = {
       { id: 'negotiations', label: 'Quotations', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       { id: 'catalog', label: 'Items Catalog', icon: <TagIcon className="w-6 h-6" /> },
       { id: 'templates', label: 'Templates', icon: <ListBulletIcon className="w-6 h-6" /> },
-      { id: 'analytics', label: 'Price Analytics', icon: <PresentationChartLineIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
       { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
       { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },

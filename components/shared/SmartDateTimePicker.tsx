@@ -274,8 +274,8 @@ const SmartDateTimePicker: React.FC<SmartDateTimePickerProps> = ({
 
                                         {/* Calendar Grid */}
                                         <div className="grid grid-cols-7 gap-1">
-                                            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => (
-                                                <div key={d} className="text-center text-[8px] font-black text-text-tertiary pb-2">{d}</div>
+                                            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, idx) => (
+                                                <div key={`${d}-${idx}`} className="text-center text-[8px] font-black text-text-tertiary pb-2">{d}</div>
                                             ))}
                                             {calendarDays.map((day, i) => {
                                                 const isSel = isSameDay(day, tempDate);

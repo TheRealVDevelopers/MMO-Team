@@ -39,14 +39,18 @@ const LeadStatusPill: React.FC<{ status: LeadPipelineStatus }> = ({ status }) =>
     [LeadPipelineStatus.NEW_NOT_CONTACTED]: { color: 'text-error bg-error/10', label: 'New' },
     [LeadPipelineStatus.CONTACTED_CALL_DONE]: { color: 'text-accent bg-accent/10', label: 'Contacted' },
     [LeadPipelineStatus.SITE_VISIT_SCHEDULED]: { color: 'text-purple bg-purple/10', label: 'Site Visit' },
+    [LeadPipelineStatus.SITE_VISIT_RESCHEDULED]: { color: 'text-orange-500 bg-orange-500/10', label: 'Rescheduled' },
     [LeadPipelineStatus.WAITING_FOR_DRAWING]: { color: 'text-kurchi-gold-600 bg-kurchi-gold-400/10', label: 'Drawing' },
+    [LeadPipelineStatus.DRAWING_IN_PROGRESS]: { color: 'text-blue-500 bg-blue-500/10', label: 'Refining' },
+    [LeadPipelineStatus.DRAWING_REVISIONS]: { color: 'text-indigo-500 bg-indigo-500/10', label: 'Revision' },
+    [LeadPipelineStatus.WAITING_FOR_QUOTATION]: { color: 'text-teal-500 bg-teal-500/10', label: 'Estimation' },
     [LeadPipelineStatus.QUOTATION_SENT]: { color: 'text-primary bg-primary/10', label: 'Quotation' },
     [LeadPipelineStatus.NEGOTIATION]: { color: 'text-amber-500 bg-amber-500/10', label: 'Negotiation' },
     [LeadPipelineStatus.IN_PROCUREMENT]: { color: 'text-purple bg-purple/10', label: 'Procurement' },
     [LeadPipelineStatus.IN_EXECUTION]: { color: 'text-accent bg-accent/10', label: 'Execution' },
     [LeadPipelineStatus.WON]: { color: 'text-secondary bg-secondary/10', label: 'Won' },
     [LeadPipelineStatus.LOST]: { color: 'text-slate-400 bg-slate-400/10', label: 'Lost' },
-  }[status];
+  }[status] || { color: 'text-text-tertiary bg-subtle-background', label: status };
 
   return (
     <span className={cn("px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider", statusConfig.color)}>

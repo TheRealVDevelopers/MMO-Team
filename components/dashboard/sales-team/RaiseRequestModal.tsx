@@ -27,7 +27,7 @@ const REQUEST_TYPES = [
     { label: 'Payment Query', value: ApprovalRequestType.PAYMENT_QUERY },
     { label: 'Clarification', value: ApprovalRequestType.CLARIFICATION },
     { label: 'Modification', value: ApprovalRequestType.MODIFICATION },
-    { label: 'Proposal Request', value: ApprovalRequestType.PROPOSAL_REQUEST },
+    { label: 'Request for Quotation', value: ApprovalRequestType.REQUEST_FOR_QUOTATION },
     { label: 'Other', value: ApprovalRequestType.OTHER },
 ];
 
@@ -40,7 +40,7 @@ const REQUEST_TYPE_TO_ROLE: Partial<Record<ApprovalRequestType, UserRole>> = {
     [ApprovalRequestType.DRAWING_REVISIONS]: UserRole.DRAWING_TEAM,
     [ApprovalRequestType.MATERIAL_CHANGE]: UserRole.PROCUREMENT_TEAM,
     [ApprovalRequestType.PAYMENT_QUERY]: UserRole.ACCOUNTS_TEAM,
-    [ApprovalRequestType.PROPOSAL_REQUEST]: UserRole.QUOTATION_TEAM,
+    [ApprovalRequestType.REQUEST_FOR_QUOTATION]: UserRole.QUOTATION_TEAM,
     [ApprovalRequestType.MODIFICATION]: UserRole.EXECUTION_TEAM,
 };
 
@@ -60,15 +60,13 @@ const RaiseRequestModal: React.FC<RaiseRequestModalProps> = ({ isOpen, onClose, 
         if (!currentUser) return;
 
         try {
-            // Context Description to append to the main description
-            const contextInfo = `\n\n-- Context --\nClient: ${clientName || 'N/A'}\nProject ID: ${projectId || 'N/A'}\nLead ID: ${leadId || 'N/A'}\nPreferred Date/Time: ${preferredDateTime}`;
-
             await submitRequest({
                 requestType,
                 title: `${requestType} for ${clientName || 'Client'}`,
-                description: description + contextInfo,
+                description: description, // Keep description clean for pre-filling in approval
                 priority: urgency,
-                contextId: leadId || projectId, // Favor Lead ID for history logging
+                contextId: leadId || projectId,
+                endDate: preferredDateTime ? new Date(preferredDateTime) : undefined,
                 // These are workflow fields we rely on
                 requesterId: currentUser.id,
                 requesterName: currentUser.name,

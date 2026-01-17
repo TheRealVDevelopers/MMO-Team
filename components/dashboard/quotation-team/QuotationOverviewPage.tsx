@@ -3,7 +3,7 @@ import Card from '../../shared/Card';
 import { PROJECTS, formatCurrencyINR, formatDate } from '../../../constants';
 import { Project, ProjectStatus } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
-import { FireIcon, ClockIcon } from '../../icons/IconComponents';
+import { FireIcon, ClockIcon, PlusIcon } from '../../icons/IconComponents';
 import StatusPill from '../../shared/StatusPill';
 
 const PriorityIndicator: React.FC<{ priority: 'High' | 'Medium' | 'Low' }> = ({ priority }) => {
@@ -14,19 +14,23 @@ const PriorityIndicator: React.FC<{ priority: 'High' | 'Medium' | 'Low' }> = ({ 
 
 const KpiCard: React.FC<{ title: string; value: string; subtext?: string }> = ({ title, value, subtext }) => (
     <Card>
-      <p className="text-sm font-medium text-text-secondary">{title}</p>
-      <p className="text-2xl font-bold text-text-primary tracking-tight">{value}</p>
-      {subtext && <p className="text-xs text-text-secondary mt-1">{subtext}</p>}
+        <p className="text-sm font-medium text-text-secondary">{title}</p>
+        <p className="text-2xl font-bold text-text-primary tracking-tight">{value}</p>
+        {subtext && <p className="text-xs text-text-secondary mt-1">{subtext}</p>}
     </Card>
 );
 
-const QuotationOverviewPage: React.FC<{ onProjectSelect: (project: Project) => void }> = ({ onProjectSelect }) => {
+const QuotationOverviewPage: React.FC<{
+    projects: Project[];
+    onProjectSelect: (project: Project) => void;
+    onCreateProject: () => void;
+}> = ({ projects, onProjectSelect, onCreateProject }) => {
     const { currentUser } = useAuth();
     if (!currentUser) return null;
 
-    const myProjects = PROJECTS.filter(p => p.assignedTeam.quotation === currentUser.id);
+    const myProjects = projects.filter(p => p.assignedTeam.quotation === currentUser.id);
     const quotationQueue = myProjects.filter(p => p.status === ProjectStatus.AWAITING_QUOTATION);
-    
+
     // Performance Metrics
     const quotesSent = myProjects.filter(p => p.status !== ProjectStatus.AWAITING_QUOTATION).length;
     const dealsWon = myProjects.filter(p => p.status === ProjectStatus.APPROVED).length;
@@ -35,7 +39,16 @@ const QuotationOverviewPage: React.FC<{ onProjectSelect: (project: Project) => v
 
     return (
         <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-text-primary">Welcome, {currentUser.name.split(' ')[0]}</h2>
+            <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-text-primary">Welcome, {currentUser.name.split(' ')[0]}</h2>
+                <button
+                    onClick={onCreateProject}
+                    className="flex items-center space-x-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg shadow-primary/20 hover:bg-secondary transition-all"
+                >
+                    <PlusIcon className="w-5 h-5" />
+                    <span>Start New Project</span>
+                </button>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <KpiCard title="Projects in Queue" value={quotationQueue.length.toString()} subtext="Awaiting your pricing" />
@@ -65,7 +78,7 @@ const QuotationOverviewPage: React.FC<{ onProjectSelect: (project: Project) => v
                                         <p className="text-xs text-text-secondary">{project.clientName}</p>
                                     </td>
                                     <td className="px-4 py-3 text-sm text-text-secondary">{formatDate(project.startDate)}</td>
-                                    <td className="px-4 py-3 text-sm text-text-secondary flex items-center"><ClockIcon className="w-4 h-4 mr-1.5"/>{project.deadline}</td>
+                                    <td className="px-4 py-3 text-sm text-text-secondary flex items-center"><ClockIcon className="w-4 h-4 mr-1.5" />{project.deadline}</td>
                                     <td className="px-4 py-3"><PriorityIndicator priority={project.priority} /></td>
                                 </tr>
                             )) : (

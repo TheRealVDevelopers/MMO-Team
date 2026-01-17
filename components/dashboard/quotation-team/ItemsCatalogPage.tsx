@@ -17,18 +17,24 @@ const ItemCard: React.FC<{ item: Item }> = ({ item }) => (
     </div>
 );
 
-const ItemsCatalogPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
+interface ItemsCatalogPageProps {
+    items: Item[];
+    setCurrentPage: (page: string) => void;
+    onAddItem: () => void;
+}
+
+const ItemsCatalogPage: React.FC<ItemsCatalogPageProps> = ({ items, setCurrentPage, onAddItem }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('All');
-    
-    const categories = useMemo(() => ['All', ...new Set(ITEMS.map(item => item.category))], []);
-    
+
+    const categories = useMemo(() => ['All', ...new Set(items.map(item => item.category))], [items]);
+
     const filteredItems = useMemo(() => {
-        return ITEMS.filter(item => 
+        return items.filter(item =>
             (item.name.toLowerCase().includes(searchTerm.toLowerCase())) &&
             (categoryFilter === 'All' || item.category === categoryFilter)
         );
-    }, [searchTerm, categoryFilter]);
+    }, [searchTerm, categoryFilter, items]);
 
     return (
         <div className="space-y-6">
@@ -43,7 +49,10 @@ const ItemsCatalogPage: React.FC<{ setCurrentPage: (page: string) => void }> = (
                     </button>
                     <h2 className="text-2xl font-bold text-text-primary">Items Catalog</h2>
                 </div>
-                <button className="flex items-center space-x-2 bg-primary text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-secondary mt-2 sm:mt-0">
+                <button
+                    onClick={onAddItem}
+                    className="flex items-center space-x-2 bg-primary text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-secondary mt-2 sm:mt-0"
+                >
                     <PlusIcon className="w-4 h-4" />
                     <span>Add New Item</span>
                 </button>
@@ -52,7 +61,7 @@ const ItemsCatalogPage: React.FC<{ setCurrentPage: (page: string) => void }> = (
             <Card>
                 <div className="flex flex-col sm:flex-row gap-4 mb-4">
                     <div className="relative flex-grow">
-                        <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary"/>
+                        <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
                         <input
                             type="text"
                             placeholder="Search items..."
@@ -69,11 +78,11 @@ const ItemsCatalogPage: React.FC<{ setCurrentPage: (page: string) => void }> = (
                         {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                     </select>
                 </div>
-                
+
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                     {filteredItems.map(item => <ItemCard key={item.id} item={item} />)}
                 </div>
-                 {filteredItems.length === 0 && (
+                {filteredItems.length === 0 && (
                     <div className="text-center py-12 text-text-secondary">
                         <p>No items found.</p>
                         <p className="text-sm">Try adjusting your search or filter.</p>

@@ -41,7 +41,7 @@ const PriceAnalyticsPage: React.FC<{ setCurrentPage: (page: string) => void }> =
                 </button>
                 <h2 className="text-2xl font-bold text-text-primary">Price Analytics</h2>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <KpiCard title="Avg. Quote Value" value={formatCurrencyINR(2250000)} icon={<BanknotesIcon />} />
                 <KpiCard title="Win Rate (vs. Target)" value="68%" icon={<ChartPieIcon />} />
@@ -52,12 +52,33 @@ const PriceAnalyticsPage: React.FC<{ setCurrentPage: (page: string) => void }> =
                 <Card>
                     <h3 className="text-lg font-bold">Price Trend Analysis</h3>
                     <p className="text-sm text-text-secondary mb-4">Tracking cost of common items over time.</p>
-                    <PriceTrendChart />
+                    <div className="h-64 flex items-end justify-between px-4 pb-2 bg-subtle-background/30 rounded-lg">
+                        {[40, 65, 55, 80, 70, 90, 85].map((h, i) => (
+                            <div key={i} className="w-8 bg-primary/20 rounded-t-sm hover:bg-primary transition-all relative group" style={{ height: `${h}%` }}>
+                                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-surface shadow-lg rounded px-2 py-1 text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                    {h}% increase
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </Card>
                 <Card>
                     <h3 className="text-lg font-bold">Profitability by Project Type</h3>
                     <p className="text-sm text-text-secondary mb-4">Comparing profit margins across different types of projects.</p>
-                    <ProfitabilityChart />
+                    <div className="h-64 flex items-center justify-center bg-subtle-background/30 rounded-lg relative overflow-hidden">
+                        <div className="flex gap-4 items-end h-full py-8">
+                            {[
+                                { label: 'Commercial', h: 80, color: 'bg-secondary' },
+                                { label: 'Residential', h: 60, color: 'bg-primary' },
+                                { label: 'Industrial', h: 40, color: 'bg-kurchi-gold-400' }
+                            ].map((d, i) => (
+                                <div key={i} className="flex flex-col items-center gap-2 group">
+                                    <div className={`w-16 ${d.color} rounded-t-lg transition-all group-hover:opacity-80`} style={{ height: `${d.h}%` }}></div>
+                                    <span className="text-xs font-bold text-text-secondary">{d.label}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </Card>
             </div>
         </div>

@@ -44,7 +44,7 @@ const ApprovalsPage: React.FC = () => {
       [ApprovalRequestType.DESIGN_CHANGE]: UserRole.DRAWING_TEAM,
       [ApprovalRequestType.MATERIAL_CHANGE]: UserRole.PROCUREMENT_TEAM,
       [ApprovalRequestType.PAYMENT_QUERY]: UserRole.ACCOUNTS_TEAM,
-      [ApprovalRequestType.PROPOSAL_REQUEST]: UserRole.QUOTATION_TEAM,
+      [ApprovalRequestType.REQUEST_FOR_QUOTATION]: UserRole.QUOTATION_TEAM,
       [ApprovalRequestType.MODIFICATION]: UserRole.EXECUTION_TEAM,
     };
     return typeToRole[selectedRequest.requestType];
@@ -85,7 +85,15 @@ const ApprovalsPage: React.FC = () => {
     setSelectedRequest(request);
     setReviewAction(action);
     setShowReviewModal(true);
-    setReviewComments(request.reviewerComments || '');
+
+    // Pre-fill with original request data for review/editing
+    setReviewComments(request.reviewerComments || request.description || '');
+    if (request.endDate) {
+      setDeadline(new Date(request.endDate).toISOString());
+    } else {
+      setDeadline('');
+    }
+
     if (request.assigneeId) setAssigneeId(request.assigneeId);
   };
 
@@ -148,7 +156,7 @@ const ApprovalsPage: React.FC = () => {
       case ApprovalRequestType.DESIGN_TOKEN:
       case ApprovalRequestType.MODIFICATION:
         return <AdjustmentsHorizontalIcon className="w-5 h-5" />;
-      case ApprovalRequestType.PROPOSAL_REQUEST:
+      case ApprovalRequestType.REQUEST_FOR_QUOTATION:
       case ApprovalRequestType.QUOTATION_TOKEN:
         return <DocumentTextIcon className="w-5 h-5" />;
       default:

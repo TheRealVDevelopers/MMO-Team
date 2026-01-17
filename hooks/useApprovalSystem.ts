@@ -252,14 +252,18 @@ export const approveRequest = async (
     // 2. If assigned, create a task (existing logic simplified since we have data)
     if (assigneeId) {
       const { addTask } = await import('./useMyDayTasks');
+
+      // If comments were edited/provided, use them. Otherwise fallback to original description.
+      const taskDescription = comments || data.description;
+
       await addTask({
         title: data.title,
-        description: `Request Approved. \n\nContext: ${data.description}\n\nInstructions: ${comments || 'None'}`,
+        description: `Strategic Assignment for ${data.requestType}.\n\nInstructions: ${taskDescription}`,
         userId: assigneeId,
         status: 'Pending' as any,
         priority: data.priority,
         deadline: deadline ? deadline.toISOString() : (data.endDate ? (data.endDate as any).toDate().toISOString() : undefined),
-        date: deadline ? deadline.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        date: deadline ? deadline.toISOString().split('T')[0] : (data.endDate ? (data.endDate as any).toDate().toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
         timeSpent: 0,
         isPaused: false,
         createdAt: new Date(),
@@ -308,7 +312,7 @@ export const approveRequest = async (
           if (!updates.tasks) updates.tasks = leadData.tasks || {};
           if (!updates.tasks.drawingRequests) updates.tasks.drawingRequests = [];
           updates.tasks.drawingRequests.push(`${assigneeName} - Revision Assigned ${new Date().toLocaleDateString()}`);
-        } else if (data.requestType === ApprovalRequestType.PROPOSAL_REQUEST || data.requestType === ApprovalRequestType.QUOTATION_TOKEN) {
+        } else if (data.requestType === ApprovalRequestType.REQUEST_FOR_QUOTATION || data.requestType === ApprovalRequestType.QUOTATION_TOKEN) {
           updates.status = LeadPipelineStatus.WAITING_FOR_QUOTATION;
         } else if (data.requestType === ApprovalRequestType.MODIFICATION) {
           updates.status = LeadPipelineStatus.IN_EXECUTION;
@@ -355,7 +359,7 @@ export const approveRequest = async (
           projectUpdates.status = ProjectStatus.DESIGN_IN_PROGRESS;
         } else if (data.requestType === ApprovalRequestType.DESIGN_CHANGE || data.requestType === ApprovalRequestType.DRAWING_REVISIONS) {
           projectUpdates.status = ProjectStatus.REVISIONS_IN_PROGRESS;
-        } else if (data.requestType === ApprovalRequestType.PROPOSAL_REQUEST || data.requestType === ApprovalRequestType.QUOTATION_TOKEN) {
+        } else if (data.requestType === ApprovalRequestType.REQUEST_FOR_QUOTATION || data.requestType === ApprovalRequestType.QUOTATION_TOKEN) {
           projectUpdates.status = ProjectStatus.AWAITING_QUOTATION;
         } else if (data.requestType === ApprovalRequestType.RESCHEDULE_SITE_VISIT) {
           projectUpdates.status = ProjectStatus.SITE_VISIT_RESCHEDULED;

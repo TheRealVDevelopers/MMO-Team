@@ -22,11 +22,20 @@ const LeadStatusPill: React.FC<{ status: LeadPipelineStatus }> = ({ status }) =>
         [LeadPipelineStatus.NEW_NOT_CONTACTED]: 'bg-error/10 text-error',
         [LeadPipelineStatus.CONTACTED_CALL_DONE]: 'bg-accent/10 text-accent',
         [LeadPipelineStatus.SITE_VISIT_SCHEDULED]: 'bg-purple/10 text-purple',
+        [LeadPipelineStatus.SITE_VISIT_RESCHEDULED]: 'bg-orange-500/10 text-orange-500',
+        [LeadPipelineStatus.WAITING_FOR_DRAWING]: 'bg-kurchi-gold-400/10 text-kurchi-gold-600',
+        [LeadPipelineStatus.DRAWING_IN_PROGRESS]: 'bg-blue-500/10 text-blue-500',
+        [LeadPipelineStatus.DRAWING_REVISIONS]: 'bg-indigo-500/10 text-indigo-500',
+        [LeadPipelineStatus.WAITING_FOR_QUOTATION]: 'bg-teal-500/10 text-teal-500',
+        [LeadPipelineStatus.QUOTATION_SENT]: 'bg-primary/10 text-primary',
+        [LeadPipelineStatus.NEGOTIATION]: 'bg-amber-500/10 text-amber-500',
+        [LeadPipelineStatus.IN_PROCUREMENT]: 'bg-purple/10 text-purple',
+        [LeadPipelineStatus.IN_EXECUTION]: 'bg-accent/10 text-accent',
         [LeadPipelineStatus.WON]: 'bg-green-500/10 text-green-500',
         [LeadPipelineStatus.LOST]: 'bg-text-secondary/10 text-text-secondary',
     };
     return (
-        <span className={cn("px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter", variants[status] || 'bg-primary/10 text-primary')}>
+        <span className={cn("px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter", variants[status] || 'bg-subtle-background text-text-tertiary')}>
             {status}
         </span>
     );

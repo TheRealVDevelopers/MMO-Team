@@ -300,7 +300,7 @@ export enum ApprovalRequestType {
   PAYMENT_QUERY = "Payment Query",
   CLARIFICATION = "Clarification",
   MODIFICATION = "Modification",
-  PROPOSAL_REQUEST = "Proposal Request",
+  REQUEST_FOR_QUOTATION = "Request for Quotation",
 
   // Legacy/Tokens (Keep for compatibility if needed, or consolidate)
   SITE_VISIT_TOKEN = "Site Visit Token", // Can be deprecated in favor of SITE_VISIT
@@ -372,6 +372,15 @@ export interface Document {
   size: string; // e.g., '2.5MB'
 }
 
+export interface CounterOffer {
+  id: string;
+  userId: string;
+  userName: string;
+  amount: number;
+  timestamp: Date;
+  notes?: string;
+}
+
 export interface Project {
   id: string;
   clientName: string;
@@ -404,6 +413,8 @@ export interface Project {
   salespersonId?: string; // User ID of the salesperson who won the deal
   history?: LeadHistory[];
   is_demo?: boolean;
+  items?: Item[];
+  counterOffers?: CounterOffer[];
 }
 
 export enum SiteVisitStatus {
