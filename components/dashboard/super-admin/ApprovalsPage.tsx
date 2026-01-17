@@ -42,10 +42,11 @@ const ApprovalsPage: React.FC = () => {
     const typeToRole: Record<string, UserRole> = {
       [ApprovalRequestType.SITE_VISIT]: UserRole.SITE_ENGINEER,
       [ApprovalRequestType.DESIGN_CHANGE]: UserRole.DRAWING_TEAM,
-      [ApprovalRequestType.MATERIAL_CHANGE]: UserRole.PROCUREMENT_TEAM,
+      [ApprovalRequestType.MATERIAL_CHANGE]: UserRole.SOURCING_TEAM,
       [ApprovalRequestType.PAYMENT_QUERY]: UserRole.ACCOUNTS_TEAM,
       [ApprovalRequestType.REQUEST_FOR_QUOTATION]: UserRole.QUOTATION_TEAM,
       [ApprovalRequestType.MODIFICATION]: UserRole.EXECUTION_TEAM,
+      [ApprovalRequestType.SOURCING_TOKEN]: UserRole.SOURCING_TEAM,
     };
     return typeToRole[selectedRequest.requestType];
   }, [selectedRequest]);
@@ -158,6 +159,7 @@ const ApprovalsPage: React.FC = () => {
         return <AdjustmentsHorizontalIcon className="w-5 h-5" />;
       case ApprovalRequestType.REQUEST_FOR_QUOTATION:
       case ApprovalRequestType.QUOTATION_TOKEN:
+      case ApprovalRequestType.SOURCING_TOKEN:
         return <DocumentTextIcon className="w-5 h-5" />;
       default:
         return <DocumentTextIcon className="w-5 h-5" />;

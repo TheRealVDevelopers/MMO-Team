@@ -73,13 +73,20 @@ export const useMyDayTasks = (userId?: string) => {
 export const addTask = async (taskData: Omit<Task, 'id'>, createdBy: string) => {
     try {
         const tasksRef = collection(db, 'myDayTasks');
-        const docRef = await addDoc(tasksRef, {
+
+        // Clean data of undefined values which Firestore doesn't support
+        const cleanData = Object.entries({
             ...taskData,
             dueAt: taskData.deadline ? new Date(taskData.deadline) : null,
             createdBy,
             created_at: serverTimestamp(),
             createdAt: new Date(),
-        });
+        }).reduce((acc, [key, value]) => {
+            if (value !== undefined) acc[key] = value;
+            return acc;
+        }, {} as any);
+
+        const docRef = await addDoc(tasksRef, cleanData);
 
         // Trigger performance update
         await updateUserPerformanceFlag(taskData.userId);

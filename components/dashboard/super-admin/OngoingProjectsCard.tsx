@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 const getPhase = (progress: number) => {
     if (progress <= 20) return "Mobilization";
     if (progress <= 40) return "Design Finalization";
-    if (progress <= 60) return "Procurement & Sourcing";
+    if (progress <= 60) return "Sourcing & Planning";
     if (progress <= 80) return "Structural Execution";
     if (progress <= 95) return "Finishing & snagging";
     return "Closure & Handover";
@@ -17,7 +17,7 @@ const getPhase = (progress: number) => {
 const OngoingProjectsCard: React.FC = () => {
     const ongoingProjects = PROJECTS.filter(p =>
         p.status === ProjectStatus.IN_EXECUTION ||
-        p.status === ProjectStatus.PROCUREMENT ||
+        p.status === ProjectStatus.SOURCING ||
         p.status === ProjectStatus.DESIGN_IN_PROGRESS
     ).slice(0, 5); // Show top 5 ongoing
 

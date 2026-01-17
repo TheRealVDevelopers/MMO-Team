@@ -11,7 +11,7 @@ export enum LeadPipelineStatus {
   WAITING_FOR_QUOTATION = "Waiting for Quotation",
   QUOTATION_SENT = "Quotation Sent",
   NEGOTIATION = "Negotiation",
-  IN_PROCUREMENT = "In Procurement",
+  IN_SOURCING = "In Sourcing",
   IN_EXECUTION = "In Execution",
   WON = "Won",
   LOST = "Lost",
@@ -115,7 +115,7 @@ export enum UserRole {
   DRAWING_TEAM = "Drawing Team",
   QUOTATION_TEAM = "Quotation Team",
   SITE_ENGINEER = "Site Engineer",
-  PROCUREMENT_TEAM = "Procurement Team",
+  SOURCING_TEAM = "Sourcing Team",
   EXECUTION_TEAM = "Execution Team",
   ACCOUNTS_TEAM = "Accounts Team",
 }
@@ -180,7 +180,7 @@ export interface Lead {
     siteVisits?: string[];
     drawingRequests?: string[];
     quotationRequests?: string[];
-    procurementRequests?: string[];
+    sourcingRequests?: string[];
     executionRequests?: string[];
     accountsRequests?: string[];
   }
@@ -206,11 +206,13 @@ export enum ProjectStatus {
   NEGOTIATING = "Negotiating",
   APPROVED = "Approved",
   REJECTED = "Rejected",
-  PROCUREMENT = "Procurement",
+  SOURCING = "Sourcing",
   IN_EXECUTION = "In Execution",
   COMPLETED = "Completed",
   ON_HOLD = "On Hold",
   SITE_VISIT_RESCHEDULED = "Site Visit Rescheduled",
+  APPROVAL_REQUESTED = "Approval Requested",
+  TERMINATED = "Terminated",
 }
 
 export enum PaymentStatus {
@@ -306,9 +308,11 @@ export enum ApprovalRequestType {
   SITE_VISIT_TOKEN = "Site Visit Token", // Can be deprecated in favor of SITE_VISIT
   DESIGN_TOKEN = "Design Token",
   QUOTATION_TOKEN = "Quotation Token",
-  PROCUREMENT_TOKEN = "Procurement Token",
+  SOURCING_TOKEN = "Sourcing Token",
   EXECUTION_TOKEN = "Execution Token",
   ACCOUNTS_TOKEN = "Accounts Token",
+  QUOTATION_APPROVAL = "Quotation Approval",
+  NEGOTIATION = "Negotiation",
   OTHER = "Other",
 }
 
@@ -548,7 +552,7 @@ export interface RFQ {
   rfqNumber: string; // RFQ-2024-001
   projectId: string;
   projectName: string;
-  procurementRequestId?: string; // Link to internal PR
+  sourcingRequestId?: string; // Link to internal PR
   items: RFQItem[];
   createdDate: Date;
   deadline: Date;
@@ -585,6 +589,7 @@ export interface Bid {
   warranty: string;
   status: BidStatus;
   notes?: string;
+  isUpdated?: boolean;
 }
 
 export enum POStatus {
@@ -749,19 +754,19 @@ export interface DrawingRequest {
   notes?: string;
 }
 
-export enum ProcurementRequestStatus {
+export enum SourcingRequestStatus {
   REQUESTED = "Requested",
   IN_PROGRESS = "In Progress",
   COMPLETED = "Completed",
 }
 
-export interface ProcurementRequest {
+export interface SourcingRequest {
   id: string;
   leadId: string;
   projectName: string;
   requesterId: string;
   assigneeId: string;
-  status: ProcurementRequestStatus;
+  status: SourcingRequestStatus;
   requestDate: Date;
   requiredByDate?: Date;
   materials: string;

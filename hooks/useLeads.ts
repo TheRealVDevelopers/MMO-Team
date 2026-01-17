@@ -2,8 +2,8 @@
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, onSnapshot, query, where, addDoc, updateDoc, doc, Timestamp, orderBy } from 'firebase/firestore';
-import { Lead, LeadHistory, Reminder, Notification } from '../types';
-import { createNotification } from '../services/liveDataService';
+import { Lead, LeadHistory, Reminder, Notification, UserRole, ActivityStatus } from '../types';
+import { createNotification, logActivity } from '../services/liveDataService';
 
 // Type from Firestore, where dates are Timestamps
 type FirestoreLead = Omit<Lead, 'inquiryDate' | 'history' | 'reminders'> & {

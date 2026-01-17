@@ -10,13 +10,14 @@ import {
   updateDoc,
   doc,
   getDoc,
+  setDoc,
   serverTimestamp,
   orderBy,
   Timestamp
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { ApprovalRequest, ApprovalRequestType, ApprovalStatus, UserRole, LeadPipelineStatus, ActivityStatus, ProjectStatus } from '../types';
-import { USERS } from '../constants';
+import { USERS, formatCurrencyINR } from '../constants';
 import { createNotification, logActivity } from '../services/liveDataService';
 
 export const useApprovals = () => {
@@ -25,7 +26,22 @@ export const useApprovals = () => {
   const submitRequest = async (requestData: Omit<ApprovalRequest, 'id' | 'requestedAt' | 'status'>) => {
     setLoading(true);
     try {
-      await createApprovalRequest(requestData);
+      const requestId = await createApprovalRequest(requestData);
+
+      // Notify Sales Managers (Sarah Manager and others with the role)
+      const salesManagers = USERS.filter(u => u.role === UserRole.SALES_GENERAL_MANAGER);
+      for (const manager of salesManagers) {
+        await createNotification({
+          title: 'New Service Request',
+          message: `Strategic Alert: ${requestData.requesterName} has raised a "${requestData.requestType}" request for ${requestData.title.split('for ')[1] || 'client'}.`,
+          user_id: manager.id,
+          entity_type: 'system',
+          entity_id: requestId,
+          type: 'info'
+        });
+      }
+
+      return requestId;
     } finally {
       setLoading(false);
     }
@@ -245,6 +261,24 @@ export const approveRequest = async (
         projectSnap = await getDoc(projectRef);
         if (projectSnap.exists()) {
           contextType = 'project';
+        } else {
+          // Fallback based on request type if not found in Firestore (e.g. demo data)
+          const isLeadRequest = [
+            ApprovalRequestType.SITE_VISIT,
+            ApprovalRequestType.SITE_VISIT_TOKEN,
+            ApprovalRequestType.RESCHEDULE_SITE_VISIT
+          ].includes(data.requestType);
+
+          const isProjectRequest = [
+            ApprovalRequestType.START_DRAWING,
+            ApprovalRequestType.DESIGN_CHANGE,
+            ApprovalRequestType.DRAWING_REVISIONS,
+            ApprovalRequestType.QUOTATION_APPROVAL,
+            ApprovalRequestType.QUOTATION_TOKEN
+          ].includes(data.requestType);
+
+          if (isLeadRequest) contextType = 'lead';
+          else if (isProjectRequest) contextType = 'project';
         }
       }
     }
@@ -277,8 +311,8 @@ export const approveRequest = async (
     }
 
     // 4. Update Lead/Project if contextId exists
-    if (data.contextId) {
-      if (contextType === 'lead') {
+    if (data.contextId && contextType) {
+      if (contextType === 'lead' && leadSnap && leadSnap.exists()) {
         const leadData = leadSnap.data();
         const scheduledTime = deadline ? format(deadline, 'PPP p') : (data.endDate ? format((data.endDate as any).toDate(), 'PPP p') : 'TBD');
 
@@ -300,7 +334,48 @@ export const approveRequest = async (
           if (!updates.tasks) updates.tasks = leadData.tasks || {};
           if (!updates.tasks.siteVisits) updates.tasks.siteVisits = [];
           updates.tasks.siteVisits.push(`${assigneeName} - Assigned ${new Date().toLocaleDateString()}`);
-        } else if (data.requestType === ApprovalRequestType.RESCHEDULE_SITE_VISIT) {
+
+          // Automatic Project Conversion
+          try {
+            const projectsRef = collection(db, 'projects');
+            // Check if already converted
+            if (!leadData.isConverted) {
+              const projectData: any = {
+                id: leadData.id, // Keep same ID for easy linkage or generate new
+                clientName: leadData.clientName,
+                projectName: leadData.projectName,
+                status: ProjectStatus.AWAITING_DESIGN,
+                budget: leadData.value || 0,
+                priority: leadData.priority,
+                clientAddress: '',
+                clientContact: {
+                  name: leadData.clientName,
+                  phone: leadData.clientMobile || ''
+                },
+                assignedTeam: {
+                  salespersonId: leadData.assignedTo,
+                },
+                progress: 0,
+                milestones: [],
+                startDate: serverTimestamp(),
+                endDate: leadData.deadline ? leadData.deadline : null,
+                is_demo: false,
+                sourceLeadId: leadData.id,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+              };
+
+              // Use setDoc to map lead ID to project ID for predictability
+              await setDoc(doc(db, 'projects', leadData.id), projectData);
+              updates.isConverted = true;
+              updates.convertedProjectId = leadData.id;
+              console.log(`Lead ${leadData.id} converted to Project ${leadData.id}`);
+            }
+          } catch (projError) {
+            console.error('Error creating project during conversion:', projError);
+          }
+        }
+        else if (data.requestType === ApprovalRequestType.RESCHEDULE_SITE_VISIT) {
           updates.status = LeadPipelineStatus.SITE_VISIT_RESCHEDULED;
         } else if (data.requestType === ApprovalRequestType.START_DRAWING) {
           updates.status = LeadPipelineStatus.DRAWING_IN_PROGRESS;
@@ -314,8 +389,12 @@ export const approveRequest = async (
           updates.tasks.drawingRequests.push(`${assigneeName} - Revision Assigned ${new Date().toLocaleDateString()}`);
         } else if (data.requestType === ApprovalRequestType.REQUEST_FOR_QUOTATION || data.requestType === ApprovalRequestType.QUOTATION_TOKEN) {
           updates.status = LeadPipelineStatus.WAITING_FOR_QUOTATION;
+        } else if (data.requestType === ApprovalRequestType.SOURCING_TOKEN) {
+          updates.status = LeadPipelineStatus.IN_SOURCING;
         } else if (data.requestType === ApprovalRequestType.MODIFICATION) {
           updates.status = LeadPipelineStatus.IN_EXECUTION;
+        } else if (data.requestType === ApprovalRequestType.NEGOTIATION) {
+          updates.status = LeadPipelineStatus.NEGOTIATION;
         }
 
         await updateDoc(leadRef, updates);
@@ -328,7 +407,7 @@ export const approveRequest = async (
           status: ActivityStatus.DONE,
           projectId: data.contextId
         });
-      } else if (contextType === 'project') {
+      } else if (contextType === 'project' && projectSnap && projectSnap.exists()) {
         const projectData = projectSnap.data();
         const scheduledTime = deadline ? format(deadline, 'PPP p') : (data.endDate ? format((data.endDate as any).toDate(), 'PPP p') : 'TBD');
 
@@ -359,13 +438,32 @@ export const approveRequest = async (
           projectUpdates.status = ProjectStatus.DESIGN_IN_PROGRESS;
         } else if (data.requestType === ApprovalRequestType.DESIGN_CHANGE || data.requestType === ApprovalRequestType.DRAWING_REVISIONS) {
           projectUpdates.status = ProjectStatus.REVISIONS_IN_PROGRESS;
-        } else if (data.requestType === ApprovalRequestType.REQUEST_FOR_QUOTATION || data.requestType === ApprovalRequestType.QUOTATION_TOKEN) {
+        } else if (data.requestType === ApprovalRequestType.QUOTATION_TOKEN || data.requestType === ApprovalRequestType.REQUEST_FOR_QUOTATION) {
           projectUpdates.status = ProjectStatus.AWAITING_QUOTATION;
         } else if (data.requestType === ApprovalRequestType.RESCHEDULE_SITE_VISIT) {
           projectUpdates.status = ProjectStatus.SITE_VISIT_RESCHEDULED;
+        } else if (data.requestType === ApprovalRequestType.SOURCING_TOKEN) {
+          projectUpdates.status = ProjectStatus.SOURCING;
+        } else if (data.requestType === ApprovalRequestType.NEGOTIATION) {
+          projectUpdates.status = ProjectStatus.NEGOTIATING;
+        } else if (data.requestType === ApprovalRequestType.QUOTATION_APPROVAL) {
+          projectUpdates.status = ProjectStatus.QUOTATION_SENT;
+          // Log specific activity for Sales Team notification
+          projectUpdates.communication = [
+            ...(projectData.communication || []),
+            {
+              id: Date.now().toString(),
+              user: 'System Authorization',
+              avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Admin',
+              message: `✅ QUOTATION APPROVED: The quotation for ${formatCurrencyINR(projectData.budget)} has been approved by ${reviewerName}. Sales Team, please inform the client.`,
+              timestamp: new Date()
+            }
+          ];
         }
 
-        await updateDoc(projectRef, projectUpdates);
+        if (projectRef) {
+          await updateDoc(projectRef, projectUpdates);
+        }
 
         // Also log to global activity registry
         await logActivity({

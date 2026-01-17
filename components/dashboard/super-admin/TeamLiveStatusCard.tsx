@@ -10,7 +10,7 @@ const teamOrder: UserRole[] = [
     UserRole.SITE_ENGINEER,
     UserRole.DRAWING_TEAM,
     UserRole.QUOTATION_TEAM,
-    UserRole.PROCUREMENT_TEAM,
+    UserRole.SOURCING_TEAM,
     UserRole.EXECUTION_TEAM,
     UserRole.ACCOUNTS_TEAM,
 ];

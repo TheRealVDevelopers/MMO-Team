@@ -70,8 +70,8 @@ const STAFF_MEMBERS: StaffMember[] = [
     },
     {
         email: 'anna.p@makemyoffice.com',
-        name: 'Anna Procurement',
-        role: UserRole.PROCUREMENT_TEAM,
+        name: 'Anna Sourcing',
+        role: UserRole.SOURCING_TEAM,
         avatar: 'https://i.pravatar.cc/150?u=user-7',
         phone: '+91 98765 43216',
     },
@@ -111,7 +111,7 @@ export const initializeAllStaffUsers = async () => {
     for (const member of STAFF_MEMBERS) {
         try {
             console.log(`Creating account for: ${member.name} (${member.email})...`);
-            
+
             const userId = await createStaffAccount(
                 member.email,
                 member.name,
@@ -130,7 +130,7 @@ export const initializeAllStaffUsers = async () => {
             const errorMessage = error.message || 'Unknown error';
             results.failed.push({ email: member.email, error: errorMessage });
             console.error(`❌ Failed to create ${member.email}: ${errorMessage}\n`);
-            
+
             // Sign out even on failure to reset state
             try {
                 await signOut(auth);

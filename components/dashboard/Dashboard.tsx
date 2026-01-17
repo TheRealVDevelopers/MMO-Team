@@ -10,7 +10,7 @@ import SalesGeneralManagerDashboard from './SalesGeneralManagerDashboard';
 import DrawingTeamDashboard from './DrawingTeamDashboard';
 import QuotationTeamDashboard from './QuotationTeamDashboard';
 import SiteEngineerDashboard from './SiteEngineerDashboard';
-import ProcurementTeamDashboard from './ProcurementTeamDashboard';
+import SourcingTeamDashboard from './SourcingTeamDashboard';
 import ExecutionTeamDashboard from './ExecutionTeamDashboard';
 import AccountsTeamDashboard from './AccountsTeamDashboard';
 import SuperAdminDashboard from './SuperAdminDashboard';
@@ -52,8 +52,8 @@ const Dashboard: React.FC<{ currentPage: string; setCurrentPage: (page: string) 
         return <QuotationTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.SITE_ENGINEER:
         return <SiteEngineerDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
-      case UserRole.PROCUREMENT_TEAM:
-        return <ProcurementTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
+      case UserRole.SOURCING_TEAM:
+        return <SourcingTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.EXECUTION_TEAM:
         return <ExecutionTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.ACCOUNTS_TEAM:

@@ -5,19 +5,19 @@ import { ArrowLeftIcon, TrophyIcon, SparklesIcon } from '../../icons/IconCompone
 import PerformanceCard from '../../shared/PerformanceCard';
 
 const getStatus = (value: number, green: number, yellow: number): 'green' | 'yellow' | 'red' => {
-  if (value >= green) return 'green';
-  if (value >= yellow) return 'yellow';
-  return 'red';
+    if (value >= green) return 'green';
+    if (value >= yellow) return 'yellow';
+    return 'red';
 };
 
 const getStatusInverted = (value: number, green: number, yellow: number): 'green' | 'yellow' | 'red' => {
-  if (value <= green) return 'green';
-  if (value <= yellow) return 'yellow';
-  return 'red';
+    if (value <= green) return 'green';
+    if (value <= yellow) return 'yellow';
+    return 'red';
 };
 
 const MyPerformancePage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
-    
+
     const metrics = useMemo(() => {
         const costSavings = 12; // %
         const qualityCompliance = 1; // % rejection
@@ -27,7 +27,7 @@ const MyPerformancePage: React.FC<{ setCurrentPage: (page: string) => void }> = 
         const onTimeDelivery = MATERIAL_REQUESTS.length > 0 ? (onTimeRequests / MATERIAL_REQUESTS.length) * 100 : 0;
 
         const avgVendorRating = VENDORS.reduce((sum, v) => sum + v.rating, 0) / VENDORS.length;
-        
+
         return {
             costSavings: { value: costSavings, status: getStatus(costSavings, 15, 5) },
             onTimeDelivery: { value: onTimeDelivery, status: getStatus(onTimeDelivery, 95, 85) },
@@ -36,14 +36,14 @@ const MyPerformancePage: React.FC<{ setCurrentPage: (page: string) => void }> = 
             inventory: { value: inventory, status: getStatus(inventory, 1, 0) },
         };
     }, []);
-    
+
     const overallScore =
         (metrics.costSavings.status === 'green' ? 100 : metrics.costSavings.status === 'yellow' ? 60 : 20) * 0.30 +
         (metrics.onTimeDelivery.status === 'green' ? 100 : metrics.onTimeDelivery.status === 'yellow' ? 60 : 20) * 0.25 +
         (metrics.qualityCompliance.status === 'green' ? 100 : metrics.qualityCompliance.status === 'yellow' ? 60 : 20) * 0.20 +
         (metrics.vendorManagement.status === 'green' ? 100 : metrics.vendorManagement.status === 'yellow' ? 60 : 20) * 0.15 +
         (metrics.inventory.status === 'green' ? 100 : metrics.inventory.status === 'yellow' ? 60 : 20) * 0.10;
-        
+
     const overallStatus = getStatus(overallScore, 80, 50);
     const overallLabel = overallStatus === 'green' ? 'High Performer' : overallStatus === 'yellow' ? 'Solid Performer' : 'Needs Improvement';
     const overallColor = overallStatus === 'green' ? 'text-secondary' : overallStatus === 'yellow' ? 'text-accent' : 'text-error';
@@ -54,7 +54,7 @@ const MyPerformancePage: React.FC<{ setCurrentPage: (page: string) => void }> = 
                 <button onClick={() => setCurrentPage('overview')} className="flex items-center space-x-2 text-sm font-medium text-text-secondary hover:text-text-primary">
                     <ArrowLeftIcon className="w-5 h-5" /><span>Back</span>
                 </button>
-                <h2 className="text-2xl font-bold text-text-primary">Procurement Performance</h2>
+                <h2 className="text-2xl font-bold text-text-primary">Sourcing Performance</h2>
             </div>
 
             <Card className={`text-center p-4 rounded-lg ${overallStatus === 'green' ? 'bg-secondary/10' : overallStatus === 'yellow' ? 'bg-accent/10' : 'bg-error/10'}`}>
@@ -71,15 +71,15 @@ const MyPerformancePage: React.FC<{ setCurrentPage: (page: string) => void }> = 
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <Card>
-                    <h3 className="text-lg font-bold flex items-center"><TrophyIcon className="w-5 h-5 mr-2 text-accent"/> Achievements</h3>
+                <Card>
+                    <h3 className="text-lg font-bold flex items-center"><TrophyIcon className="w-5 h-5 mr-2 text-accent" /> Achievements</h3>
                     <ul className="mt-4 list-disc pl-5 space-y-1 text-sm text-text-secondary">
                         <li>'Master Negotiator' badge for achieving 12% cost savings.</li>
                         <li>'Quality Guardian' for maintaining a low 1% rejection rate.</li>
                     </ul>
                 </Card>
-                 <Card>
-                    <h3 className="text-lg font-bold flex items-center"><SparklesIcon className="w-5 h-5 mr-2 text-primary"/> Improvement Suggestions</h3>
+                <Card>
+                    <h3 className="text-lg font-bold flex items-center"><SparklesIcon className="w-5 h-5 mr-2 text-primary" /> Improvement Suggestions</h3>
                     <ul className="mt-4 list-disc pl-5 space-y-1 text-sm text-text-secondary">
                         <li>Focus on improving on-time delivery from 92% to over 95%.</li>
                     </ul>

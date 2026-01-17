@@ -26,7 +26,7 @@ const PROJECT_STAGES = [
   { id: 3, name: 'Design & Planning', icon: '✏️' },
   { id: 4, name: 'Quotation', icon: '💰' },
   { id: 5, name: 'Approval', icon: '✅' },
-  { id: 6, name: 'Procurement', icon: '📦' },
+  { id: 6, name: 'Sourcing', icon: '📦' },
   { id: 7, name: 'Execution', icon: '🔨' },
   { id: 8, name: 'Completion', icon: '🎉' },
 ];

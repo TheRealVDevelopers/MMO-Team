@@ -2,7 +2,7 @@ import React from 'react';
 import { PURCHASE_ORDERS, formatDate, formatCurrencyINR } from '../../../constants';
 import { useAuth } from '../../../context/AuthContext';
 import { DocumentTextIcon, TruckIcon, CheckCircleIcon, ClockIcon } from '@heroicons/react/24/outline';
-import { POStatus } from '../../../types';
+import { POStatus, PurchaseOrder } from '../../../types';
 
 const STATUS_CONFIG = {
     [POStatus.ISSUED]: { color: 'text-primary bg-primary/5 border-primary/10', icon: ClockIcon, label: 'Received' },
@@ -14,7 +14,13 @@ const STATUS_CONFIG = {
 
 const VendorOrders: React.FC = () => {
     const { currentVendor } = useAuth();
-    const vendorOrders = PURCHASE_ORDERS.filter(po => po.vendorId === currentVendor?.id);
+
+    const [orders] = React.useState<PurchaseOrder[]>(() => {
+        const saved = localStorage.getItem('mmo_purchase_orders');
+        return saved ? JSON.parse(saved) : PURCHASE_ORDERS;
+    });
+
+    const vendorOrders = orders.filter(po => po.vendorId === currentVendor?.id);
 
     return (
         <div className="p-8 space-y-8">
@@ -47,7 +53,9 @@ const VendorOrders: React.FC = () => {
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                         <div className="space-y-1">
                                             <p className="text-[10px] text-text-secondary uppercase font-black">Project</p>
-                                            <p className="text-sm font-bold text-text-primary">Full Floor Fit-out</p>
+                                            <p className="text-sm font-bold text-text-primary ellipsis max-w-[150px] truncate">
+                                                {po.projectId === 'proj-1' || po.projectId === 'proj-104' ? 'Full Floor Fit-out' : 'Client Project'}
+                                            </p>
                                         </div>
                                         <div className="space-y-1">
                                             <p className="text-[10px] text-text-secondary uppercase font-black">Total Amount</p>

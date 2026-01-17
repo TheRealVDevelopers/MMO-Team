@@ -14,7 +14,7 @@ interface ComparativeStatementProps {
 
 const ComparativeStatement: React.FC<ComparativeStatementProps> = ({ isOpen, onClose, requestId, onAward }) => {
     // Find RFQ linked to this material request
-    const rfq = RFQS.find(r => r.procurementRequestId === requestId);
+    const rfq = RFQS.find(r => r.sourcingRequestId === requestId);
 
     if (!rfq) return null;
 

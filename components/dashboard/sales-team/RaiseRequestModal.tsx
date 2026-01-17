@@ -28,6 +28,7 @@ const REQUEST_TYPES = [
     { label: 'Clarification', value: ApprovalRequestType.CLARIFICATION },
     { label: 'Modification', value: ApprovalRequestType.MODIFICATION },
     { label: 'Request for Quotation', value: ApprovalRequestType.REQUEST_FOR_QUOTATION },
+    { label: 'Negotiation', value: ApprovalRequestType.NEGOTIATION },
     { label: 'Other', value: ApprovalRequestType.OTHER },
 ];
 
@@ -38,9 +39,10 @@ const REQUEST_TYPE_TO_ROLE: Partial<Record<ApprovalRequestType, UserRole>> = {
     [ApprovalRequestType.START_DRAWING]: UserRole.DRAWING_TEAM,
     [ApprovalRequestType.DESIGN_CHANGE]: UserRole.DRAWING_TEAM,
     [ApprovalRequestType.DRAWING_REVISIONS]: UserRole.DRAWING_TEAM,
-    [ApprovalRequestType.MATERIAL_CHANGE]: UserRole.PROCUREMENT_TEAM,
+    [ApprovalRequestType.MATERIAL_CHANGE]: UserRole.SOURCING_TEAM,
     [ApprovalRequestType.PAYMENT_QUERY]: UserRole.ACCOUNTS_TEAM,
     [ApprovalRequestType.REQUEST_FOR_QUOTATION]: UserRole.QUOTATION_TEAM,
+    [ApprovalRequestType.NEGOTIATION]: UserRole.QUOTATION_TEAM,
     [ApprovalRequestType.MODIFICATION]: UserRole.EXECUTION_TEAM,
 };
 

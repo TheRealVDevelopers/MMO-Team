@@ -59,7 +59,7 @@ npx ts-node scripts/initializeStaffUsers.ts
 - emily.d@makemyoffice.com (Drawing Team)
 - mike.q@makemyoffice.com (Quotation Team)
 - david.e@makemyoffice.com (Site Engineer)
-- anna.p@makemyoffice.com (Procurement Team)
+- anna.p@makemyoffice.com (Sourcing Team)
 - chris.e@makemyoffice.com (Execution Team)
 - olivia.a@makemyoffice.com (Accounts Team)
 - jane.d@makemyoffice.com (Sales Team)

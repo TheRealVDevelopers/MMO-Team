@@ -1,92 +1,52 @@
-
 import React from 'react';
-import VendorOverview from './VendorOverview';
-import ActiveRFQs from './ActiveRFQs';
-import MyBids from './MyBids';
-import VendorOrders from './VendorOrders';
-import { Squares2X2Icon, ClipboardDocumentListIcon, DocumentCheckIcon, ArrowLeftOnRectangleIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../../../context/AuthContext';
+import { ArrowLeftOnRectangleIcon } from '@heroicons/react/24/outline';
+import UnifiedBiddingBoard from './UnifiedBiddingBoard';
 
-interface VendorDashboardProps {
-    currentPage: string;
-    setCurrentPage: (page: string) => void;
-}
-
-const VendorDashboard: React.FC<VendorDashboardProps> = ({ currentPage, setCurrentPage }) => {
-    const { setCurrentVendor } = useAuth();
-
-    const handleLogout = () => {
-        setCurrentVendor(null);
-        // Refresh or clean state handled by App.tsx
-    };
-
-    const renderContent = () => {
-        switch (currentPage) {
-            case 'overview':
-                return <VendorOverview />;
-            case 'rfqs':
-                return <ActiveRFQs />;
-            case 'bids':
-                return <MyBids />;
-            case 'orders':
-                return <VendorOrders />;
-            default:
-                return <VendorOverview />;
-        }
-    };
-
-    const NavItem = ({ id, label, icon: Icon }: any) => (
-        <button
-            onClick={() => setCurrentPage(id)}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${currentPage === id
-                ? 'bg-primary text-white shadow-lg'
-                : 'text-text-secondary hover:bg-surface hover:text-primary'
-                }`}
-        >
-            <Icon className="w-5 h-5" />
-            <span className="font-bold text-sm tracking-wide">{label}</span>
-        </button>
-    );
+const VendorDashboard: React.FC = () => {
+    const { logout, currentVendor } = useAuth();
 
     return (
         <div className="flex h-screen bg-background overflow-hidden">
-            {/* Sidebar */}
-            <aside className="w-64 bg-surface border-r border-border hidden md:flex flex-col">
-                <div className="p-6 border-b border-border">
-                    <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-secondary rounded-lg flex items-center justify-center text-white font-serif font-bold">V</div>
-                        <span className="font-serif font-bold text-text-primary text-lg">Vendor Portal</span>
-                    </div>
-                </div>
-
-                <nav className="flex-1 p-4 space-y-2">
-                    <NavItem id="overview" label="Overview" icon={Squares2X2Icon} />
-                    <NavItem id="rfqs" label="Active RFQs" icon={ClipboardDocumentListIcon} />
-                    <NavItem id="bids" label="My Bids" icon={DocumentCheckIcon} />
-                    <NavItem id="orders" label="Purchase Orders" icon={DocumentTextIcon} />
-                </nav>
-
-                <div className="p-4 border-t border-border">
-                    <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 transition-colors"
-                    >
-                        <ArrowLeftOnRectangleIcon className="w-5 h-5" />
-                        <span className="font-bold text-sm">Sign Out</span>
-                    </button>
-                </div>
-            </aside>
-
             {/* Main Content */}
-            <main className="flex-1 overflow-y-auto">
-                {/* Mobile Header (visible only on small screens) */}
-                <div className="md:hidden p-4 bg-surface border-b border-border flex justify-between items-center">
-                    <span className="font-serif font-bold">Vendor Portal</span>
-                    <button onClick={handleLogout}><ArrowLeftOnRectangleIcon className="w-5 h-5" /></button>
-                </div>
+            <div className="flex-1 flex flex-col h-full overflow-hidden">
+                {/* Header */}
+                <header className="bg-surface border-b border-border h-20 shrink-0 flex items-center justify-between px-8 z-10">
+                    <div className="flex items-center space-x-4 text-primary">
+                        <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center">
+                            <span className="font-serif font-black text-2xl">M</span>
+                        </div>
+                        <div>
+                            <h1 className="font-serif font-black text-text-primary text-xl leading-tight">Vendor Portal</h1>
+                            <p className="text-[10px] text-text-tertiary uppercase tracking-[0.2em] font-black">Live Bidding Board</p>
+                        </div>
+                    </div>
 
-                {renderContent()}
-            </main>
+                    <div className="flex items-center space-x-6">
+                        <div className="text-right hidden sm:block">
+                            <p className="text-sm font-black text-text-primary">{currentVendor?.name || 'Vendor Partner'}</p>
+                            <div className="flex items-center justify-end space-x-2 mt-0.5">
+                                <span className="text-[10px] text-primary font-black uppercase tracking-widest">★ {currentVendor?.rating || '5.0'} Rating</span>
+                                <span className="w-1 h-1 rounded-full bg-border"></span>
+                                <span className="text-[10px] text-text-tertiary font-bold uppercase tracking-widest">Active Partner</span>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={logout}
+                            className="p-3 bg-subtle-background text-text-secondary hover:text-error hover:bg-error/10 rounded-2xl transition-all border border-border/50 group"
+                            title="Sign Out"
+                        >
+                            <ArrowLeftOnRectangleIcon className="w-6 h-6 group-hover:scale-110 transition-transform" />
+                        </button>
+                    </div>
+                </header>
+
+                {/* Unified Bidding Board */}
+                <main className="flex-1 overflow-y-auto p-4 sm:p-8 bg-background/50">
+                    <UnifiedBiddingBoard />
+                </main>
+            </div>
         </div>
     );
 };

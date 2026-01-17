@@ -1,20 +1,20 @@
 
 import React from 'react';
-import ProcurementOverviewPage from './procurement-team/ProcurementOverviewPage';
-import BiddingManagementPage from './procurement-team/BiddingManagementPage';
-import VendorManagementPage from './procurement-team/VendorManagementPage';
-import MyPerformancePage from './procurement-team/MyPerformancePage';
-import POManagementPage from './procurement-team/POManagementPage';
+import SourcingOverviewPage from './sourcing-team/SourcingOverviewPage';
+import BiddingManagementPage from './sourcing-team/BiddingManagementPage';
+import VendorManagementPage from './sourcing-team/VendorManagementPage';
+import MyPerformancePage from './sourcing-team/MyPerformancePage';
+import POManagementPage from './sourcing-team/POManagementPage';
 import MyDayPage from './shared/MyDayPage';
 import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
 
-const ProcurementTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
+const SourcingTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   switch (currentPage) {
     case 'my-day':
       return <MyDayPage />;
     case 'overview':
-      return <ProcurementOverviewPage />;
+      return <SourcingOverviewPage />;
     case 'bidding':
       return <BiddingManagementPage setCurrentPage={setCurrentPage} />;
     case 'purchase-orders':
@@ -32,4 +32,4 @@ const ProcurementTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: 
   }
 };
 
-export default ProcurementTeamDashboard;
+export default SourcingTeamDashboard;

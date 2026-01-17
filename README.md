@@ -66,13 +66,15 @@ npm run dev
 
 ## 📦 What's Included
 
-- **Role-based dashboards** for different team members
-- **Team management** system
-- **Project tracking** and oversight
-- **Lead management** with assignment
-- **Communication hub** for internal messaging
-- **Reports & Analytics** for performance tracking
-- **AI Integration** with Gemini API
+-   **Role-based dashboards** for different team members
+-   **Team management** system
+-   **Project tracking** and oversight
+-   **Lead management** with assignment
+-   **Sourcing Hub**: Material request fulfillment, RFQ management, and vendor bidding portal.
+-   **Execution Engine**: Kanban-style project tracking, site reports, and timeline management.
+-   **Communication hub** for internal messaging
+-   **Reports & Analytics** for performance tracking
+-   **AI Integration** with Gemini API
 
 ## 🔐 User Roles
 
@@ -82,7 +84,7 @@ npm run dev
 - Drawing Team
 - Quotation Team
 - Site Engineer
-- Procurement Team
+- Sourcing Team
 - Execution Team
 - Accounts Team
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { RFQ, BidStatus, Bid, Vendor } from '../../types';
 import { formatCurrencyINR, VENDORS } from '../../constants';
 import { CheckCircleIcon } from '@heroicons/react/24/outline';
@@ -14,18 +14,40 @@ interface SubmitQuoteModalProps {
 
 const SubmitQuoteModal: React.FC<SubmitQuoteModalProps> = ({ isOpen, onClose, rfq, currentVendor, onSuccess }) => {
     const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(currentVendor || null);
-    const [itemBids, setItemBids] = useState(
-        rfq.items.map(item => ({
-            rfqItemId: item.id,
-            unitPrice: 0,
-            remarks: ''
-        }))
-    );
-    const [deliveryTimeline, setDeliveryTimeline] = useState('');
-    const [paymentTerms, setPaymentTerms] = useState(selectedVendor?.paymentTerms || '');
-    const [warranty, setWarranty] = useState('');
-    const [notes, setNotes] = useState('');
+    const [quoteMode, setQuoteMode] = useState<'itemized' | 'lumpsum'>('itemized');
+    const [lumpsumAmount, setLumpsumAmount] = useState<number>(0);
     const [isSubmitted, setIsSubmitted] = useState(false);
+
+    // Re-bid detection - get the LATEST bid from our history
+    const existingBid = useMemo(() => {
+        const allBids = JSON.parse(localStorage.getItem('mmo_bids') || '[]');
+        return allBids
+            .filter((b: Bid) => b.rfqId === rfq.id && b.vendorId === (currentVendor?.id || selectedVendor?.id))
+            .sort((a: any, b: any) => new Date(b.submittedDate).getTime() - new Date(a.submittedDate).getTime())[0];
+    }, [rfq.id, currentVendor?.id, selectedVendor?.id, isSubmitted]);
+
+    const [itemBids, setItemBids] = useState(
+        rfq.items.map(item => {
+            const existingItem = existingBid?.items?.find((bi: any) => bi.rfqItemId === item.id);
+            return {
+                rfqItemId: item.id,
+                unitPrice: existingItem?.unitPrice || 0,
+                remarks: existingItem?.remarks || ''
+            };
+        })
+    );
+
+    const [deliveryTimeline, setDeliveryTimeline] = useState(existingBid?.deliveryTimeline || '');
+    const [paymentTerms, setPaymentTerms] = useState(existingBid?.paymentTerms || selectedVendor?.paymentTerms || '');
+    const [warranty, setWarranty] = useState(existingBid?.warranty || '');
+    const [notes, setNotes] = useState(existingBid?.notes || '');
+
+    useEffect(() => {
+        if (existingBid && existingBid.totalAmount > 0 && existingBid.items.length === 0) {
+            setQuoteMode('lumpsum');
+            setLumpsumAmount(existingBid.totalAmount);
+        }
+    }, [existingBid]);
 
     const handlePriceChange = (index: number, price: number) => {
         const newBids = [...itemBids];
@@ -39,9 +61,9 @@ const SubmitQuoteModal: React.FC<SubmitQuoteModalProps> = ({ isOpen, onClose, rf
         setItemBids(newBids);
     };
 
-    const totalAmount = itemBids.reduce((sum, item, idx) => {
-        return sum + (item.unitPrice * rfq.items[idx].quantity);
-    }, 0);
+    const totalAmount = quoteMode === 'itemized'
+        ? itemBids.reduce((sum, item, idx) => sum + (item.unitPrice * rfq.items[idx].quantity), 0)
+        : lumpsumAmount;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -52,28 +74,31 @@ const SubmitQuoteModal: React.FC<SubmitQuoteModalProps> = ({ isOpen, onClose, rf
         }
 
         const newBid: Bid = {
-            id: `bid-${Date.now()}`,
+            id: `bid-${Date.now()}`, // Always new ID to track history
             rfqId: rfq.id,
             vendorId: selectedVendor.id,
             vendorName: selectedVendor.name,
             submittedDate: new Date(),
             validityDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-            items: itemBids.map((item, idx) => ({
+            items: quoteMode === 'itemized' ? itemBids.map((item, idx) => ({
                 rfqItemId: item.rfqItemId,
                 unitPrice: item.unitPrice,
                 totalPrice: item.unitPrice * rfq.items[idx].quantity,
                 remarks: item.remarks
-            })),
+            })) : [],
             totalAmount,
             deliveryTimeline,
             paymentTerms,
             warranty,
             status: BidStatus.SUBMITTED,
-            notes
+            notes,
+            isUpdated: !!existingBid
         };
 
-        const existingBids = JSON.parse(localStorage.getItem('mmo_mock_bids') || '[]');
-        localStorage.setItem('mmo_mock_bids', JSON.stringify([...existingBids, newBid]));
+        const existingBids = JSON.parse(localStorage.getItem('mmo_bids') || '[]');
+        const updatedBids = [...existingBids, newBid];
+
+        localStorage.setItem('mmo_bids', JSON.stringify(updatedBids));
 
         setIsSubmitted(true);
         if (onSuccess) onSuccess();
@@ -121,44 +146,83 @@ const SubmitQuoteModal: React.FC<SubmitQuoteModalProps> = ({ isOpen, onClose, rf
                     </div>
                 )}
 
-                <div className="bg-subtle-background p-4 rounded-xl border border-border">
-                    <p className="text-xs font-bold text-text-secondary uppercase tracking-widest mb-2">Items to Quote</p>
-                    <div className="space-y-4">
-                        {rfq.items.map((item, index) => (
-                            <div key={item.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end bg-white p-4 rounded-lg border border-border/50">
-                                <div className="md:col-span-5">
-                                    <p className="font-bold text-text-primary">{item.name}</p>
-                                    <p className="text-xs text-text-secondary">{item.description}</p>
-                                    <p className="text-xs mt-1">Quantity: <span className="font-bold">{item.quantity} {item.unit}</span></p>
+                {/* Bidding Mode Selector */}
+                <div className="flex bg-subtle-background p-1.5 rounded-2xl border border-border w-fit mx-auto">
+                    <button
+                        type="button"
+                        onClick={() => setQuoteMode('itemized')}
+                        className={`px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${quoteMode === 'itemized' ? 'bg-primary text-white shadow-lg' : 'text-text-tertiary hover:bg-white'}`}
+                    >
+                        Itemized Pricing
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setQuoteMode('lumpsum')}
+                        className={`px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${quoteMode === 'lumpsum' ? 'bg-secondary text-white shadow-lg' : 'text-text-tertiary hover:bg-white'}`}
+                    >
+                        Lumpsum Quote
+                    </button>
+                </div>
+
+                <div className="bg-subtle-background p-6 rounded-2xl border border-border">
+                    {quoteMode === 'itemized' ? (
+                        <div className="space-y-4">
+                            <p className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] mb-4">Line Item Breakdown</p>
+                            {rfq.items.map((item, index) => (
+                                <div key={item.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end bg-white p-5 rounded-2xl border border-border/50 group hover:border-primary transition-colors">
+                                    <div className="md:col-span-5">
+                                        <p className="font-bold text-text-primary text-sm">{item.name}</p>
+                                        <p className="text-[10px] text-text-tertiary mt-0.5">{item.description}</p>
+                                        <div className="mt-2 flex items-center space-x-2">
+                                            <span className="text-[10px] font-mono bg-subtle-background px-2 py-0.5 rounded text-text-secondary">QTY: {item.quantity} {item.unit}</span>
+                                        </div>
+                                    </div>
+                                    <div className="md:col-span-3">
+                                        <label className="block text-[10px] font-black text-text-tertiary uppercase mb-1.5 ml-1">Unit Price (₹)</label>
+                                        <input
+                                            type="number"
+                                            required={quoteMode === 'itemized'}
+                                            min="0"
+                                            value={itemBids[index].unitPrice || ''}
+                                            onChange={(e) => handlePriceChange(index, parseFloat(e.target.value))}
+                                            className="w-full p-2.5 border border-border rounded-xl bg-background text-sm font-bold focus:ring-2 focus:ring-primary/20 transition-all"
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                    <div className="md:col-span-4">
+                                        <label className="block text-[10px] font-black text-text-tertiary uppercase mb-1.5 ml-1">Remarks</label>
+                                        <input
+                                            type="text"
+                                            value={itemBids[index].remarks}
+                                            onChange={(e) => handleRemarkChange(index, e.target.value)}
+                                            className="w-full p-2.5 border border-border rounded-xl bg-background text-sm focus:ring-2 focus:ring-primary/20 transition-all"
+                                            placeholder="Notes for this item..."
+                                        />
+                                    </div>
                                 </div>
-                                <div className="md:col-span-3">
-                                    <label className="block text-xs font-bold text-text-secondary mb-1">Unit Price (₹)</label>
-                                    <input
-                                        type="number"
-                                        required
-                                        min="0"
-                                        value={itemBids[index].unitPrice || ''}
-                                        onChange={(e) => handlePriceChange(index, parseFloat(e.target.value))}
-                                        className="w-full p-2 border border-border rounded-lg bg-background text-sm font-mono"
-                                        placeholder="0.00"
-                                    />
-                                </div>
-                                <div className="md:col-span-4">
-                                    <label className="block text-xs font-bold text-text-secondary mb-1">Remarks (Optional)</label>
-                                    <input
-                                        type="text"
-                                        value={itemBids[index].remarks}
-                                        onChange={(e) => handleRemarkChange(index, e.target.value)}
-                                        className="w-full p-2 border border-border rounded-lg bg-background text-sm"
-                                        placeholder="e.g. In stock, Express delivery"
-                                    />
-                                </div>
-                                <div className="md:col-span-12 text-right text-xs text-text-secondary italic">
-                                    Total for Item: <span className="font-bold text-text-primary">{formatCurrencyINR(itemBids[index].unitPrice * item.quantity)}</span>
-                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="py-12 px-6 bg-white rounded-3xl border border-border flex flex-col items-center max-w-lg mx-auto shadow-sm">
+                            <div className="w-16 h-16 bg-secondary/10 rounded-full flex items-center justify-center text-secondary mb-6">
+                                <span className="text-2xl font-serif font-black">₹</span>
                             </div>
-                        ))}
-                    </div>
+                            <h3 className="text-lg font-black text-text-primary mb-2">Total Project Amount</h3>
+                            <p className="text-text-secondary text-xs text-center mb-8">Enter a single consolidated amount for all items in this RFQ.</p>
+                            <div className="w-full relative">
+                                <span className="absolute left-6 top-1/2 -translate-y-1/2 text-2xl font-serif font-black text-text-tertiary">₹</span>
+                                <input
+                                    type="number"
+                                    required={quoteMode === 'lumpsum'}
+                                    min="1"
+                                    value={lumpsumAmount || ''}
+                                    onChange={(e) => setLumpsumAmount(parseFloat(e.target.value))}
+                                    className="w-full pl-12 pr-6 py-5 bg-background border-2 border-border rounded-[2rem] text-3xl font-serif font-black text-text-primary text-center focus:border-secondary transition-all outline-none"
+                                    placeholder="0"
+                                />
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -209,24 +273,24 @@ const SubmitQuoteModal: React.FC<SubmitQuoteModalProps> = ({ isOpen, onClose, rf
                     </div>
                 </div>
 
-                <div className="flex justify-between items-center bg-primary/5 p-6 rounded-xl border border-primary/20">
+                <div className="flex justify-between items-center bg-primary/5 p-8 rounded-[2.5rem] border border-primary/20">
                     <div>
-                        <p className="text-xs font-bold text-primary uppercase tracking-widest">Total Quote Amount</p>
-                        <p className="text-3xl font-serif font-bold text-primary">{formatCurrencyINR(totalAmount)}</p>
+                        <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">Grand Total Quote</p>
+                        <p className="text-4xl font-serif font-black text-primary">{formatCurrencyINR(totalAmount)}</p>
                     </div>
-                    <div className="flex space-x-3">
+                    <div className="flex items-center space-x-4">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-6 py-2 text-sm font-bold text-text-secondary uppercase tracking-wider hover:text-text-primary transition-colors"
+                            className="px-8 py-3 text-sm font-black text-text-tertiary uppercase tracking-widest hover:text-text-primary transition-colors"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
-                            className="px-8 py-2 bg-primary text-white text-sm font-bold uppercase tracking-widest rounded-lg hover:bg-secondary transition-all shadow-lg active:scale-95"
+                            className="px-12 py-4 bg-primary text-white text-sm font-bold uppercase tracking-widest rounded-3xl hover:bg-secondary transition-all shadow-2xl shadow-primary/30 active:scale-95 flex items-center"
                         >
-                            Submit Quote
+                            {existingBid ? 'Update My Quotation' : 'Submit Final Quote'}
                         </button>
                     </div>
                 </div>

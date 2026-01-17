@@ -84,7 +84,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage })
 
     // KPI Calculations
     const totalProjects = PROJECTS.length;
-    const activeProjects = PROJECTS.filter(p => [ProjectStatus.IN_EXECUTION, ProjectStatus.PROCUREMENT, ProjectStatus.DESIGN_IN_PROGRESS].includes(p.status)).length;
+    const activeProjects = PROJECTS.filter(p => [ProjectStatus.IN_EXECUTION, ProjectStatus.SOURCING, ProjectStatus.DESIGN_IN_PROGRESS].includes(p.status)).length;
 
     const totalLeads = PROJECTS.length; // Simplified for this view
     const conversionRate = 12.5; // Mocked for simplicity here
@@ -165,7 +165,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage })
                 <div className="lg:col-span-1 space-y-8">
                     <AttendanceStatsCard />
 
-                    {/* Performance Flag System */}
+                    {/* Sourcing Stream */}
                     <div className="space-y-4">
                         <div className="flex items-center gap-2 px-1">
                             <span className="w-2 h-4 bg-primary rounded-full"></span>

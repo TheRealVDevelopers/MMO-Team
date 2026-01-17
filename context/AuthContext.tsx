@@ -33,7 +33,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
     return null;
   });
-  const [currentVendor, setCurrentVendor] = useState<Vendor | null>(null);
+  const [currentVendor, setCurrentVendor] = useState<Vendor | null>(() => {
+    // Check localStorage for persisted vendor on initial load
+    const savedVendor = localStorage.getItem('mmo-current-vendor');
+    if (savedVendor) {
+      try {
+        const parsed = JSON.parse(savedVendor);
+        console.log('Restored vendor from localStorage:', parsed.name);
+        return parsed;
+      } catch (e) {
+        console.error('Failed to parse saved vendor:', e);
+        localStorage.removeItem('mmo-current-vendor');
+      }
+    }
+    return null;
+  });
   const [loading, setLoading] = useState(true);
 
   // Persist user to localStorage whenever it changes
@@ -45,6 +59,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.removeItem('mmo-current-user');
     }
   }, [currentUser]);
+
+  // Persist vendor to localStorage whenever it changes
+  useEffect(() => {
+    if (currentVendor) {
+      localStorage.setItem('mmo-current-vendor', JSON.stringify(currentVendor));
+      console.log('Vendor saved to localStorage:', currentVendor.name);
+    } else {
+      localStorage.removeItem('mmo-current-vendor');
+    }
+  }, [currentVendor]);
 
   useEffect(() => {
     // First check if we have a localStorage user (mock login)
@@ -76,6 +100,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = () => {
     console.log('Logging out...');
     localStorage.removeItem('mmo-current-user');
+    localStorage.removeItem('mmo-current-vendor');
     setCurrentUser(null);
     setCurrentVendor(null);
   };

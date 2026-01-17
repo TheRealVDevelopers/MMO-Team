@@ -221,7 +221,7 @@ const BentoStructure = () => {
             image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=400&auto=format&fit=crop"
         },
         {
-            title: "Procurement",
+            title: "Sourcing",
             icon: <TruckIcon />,
             size: "col-span-1 row-span-1",
             color: "bg-surface",

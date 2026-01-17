@@ -4,7 +4,7 @@ import { PROJECT_TEMPLATES, formatCurrencyINR } from '../../../constants';
 import { ProjectTemplate } from '../../../types';
 import { ArrowLeftIcon, PlusIcon, ListBulletIcon, BanknotesIcon, BuildingOfficeIcon } from '../../icons/IconComponents';
 
-const TemplateCard: React.FC<{ template: ProjectTemplate }> = ({ template }) => (
+const TemplateCard: React.FC<{ template: ProjectTemplate; onUse: (template: ProjectTemplate) => void }> = ({ template, onUse }) => (
     <Card className="hover:border-primary hover:shadow-md transition-all">
         <h3 className="font-bold text-text-primary">{template.name}</h3>
         <p className="text-xs text-text-secondary mt-1 h-8">{template.description}</p>
@@ -22,7 +22,10 @@ const TemplateCard: React.FC<{ template: ProjectTemplate }> = ({ template }) => 
                 <span className="font-bold text-primary">{formatCurrencyINR(template.avgCost)}</span>
             </div>
         </div>
-        <button className="w-full mt-4 py-1.5 bg-primary-subtle-background text-primary text-sm font-semibold rounded-md hover:bg-primary/30">
+        <button
+            onClick={() => onUse(template)}
+            className="w-full mt-4 py-1.5 bg-primary-subtle-background text-primary text-sm font-semibold rounded-md hover:bg-primary/30 transition-all active:scale-95"
+        >
             Use Template
         </button>
     </Card>
@@ -33,9 +36,10 @@ interface ProjectTemplatesPageProps {
     templates: ProjectTemplate[];
     setCurrentPage: (page: string) => void;
     onAddTemplate: () => void;
+    onUseTemplate: (template: ProjectTemplate) => void;
 }
 
-const ProjectTemplatesPage: React.FC<ProjectTemplatesPageProps> = ({ templates, setCurrentPage, onAddTemplate }) => {
+const ProjectTemplatesPage: React.FC<ProjectTemplatesPageProps> = ({ templates, setCurrentPage, onAddTemplate, onUseTemplate }) => {
     return (
         <div className="space-y-6">
             <div className="sm:flex justify-between items-center">
@@ -58,7 +62,13 @@ const ProjectTemplatesPage: React.FC<ProjectTemplatesPageProps> = ({ templates, 
                 </button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {templates.map(template => <TemplateCard key={template.id} template={template} />)}
+                {templates.map(template => (
+                    <TemplateCard
+                        key={template.id}
+                        template={template}
+                        onUse={onUseTemplate}
+                    />
+                ))}
             </div>
         </div>
     );

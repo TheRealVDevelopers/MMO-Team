@@ -8,7 +8,7 @@ I've completed the **foundational Firebase integration** for your Kurchi applica
 - ✅ **File:** `firestore.rules`
 - ✅ **Status:** DEPLOYED to Firebase production
 - ✅ **Features:**
-  - Role-based access control for 9 staff types
+  - Role-based access control for 9 staff types (including Sourcing)
   - Secure client project access without authentication
   - Granular permissions for all data collections
   - Super Admin override capabilities
@@ -53,7 +53,7 @@ This creates 10 accounts (all with password `123456`):
 - emily.d@makemyoffice.com (Drawing Team)
 - mike.q@makemyoffice.com (Quotation Team)
 - david.e@makemyoffice.com (Site Engineer)
-- anna.p@makemyoffice.com (Procurement Team)
+- anna.p@makemyoffice.com (Sourcing Team)
 - chris.e@makemyoffice.com (Execution Team)
 - olivia.a@makemyoffice.com (Accounts Team)
 - jane.d@makemyoffice.com (Sales Team)

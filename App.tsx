@@ -91,8 +91,8 @@ const navConfig = {
       { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
     ]
   },
-  [UserRole.PROCUREMENT_TEAM]: {
-    title: 'Procurement',
+  [UserRole.SOURCING_TEAM]: {
+    title: 'Sourcing Hub',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
       { id: 'bidding', label: 'Bidding', icon: <TagIcon className="w-6 h-6" /> },

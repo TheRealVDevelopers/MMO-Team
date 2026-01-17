@@ -14,22 +14,22 @@ const PriorityIndicator: React.FC<{ priority: 'High' | 'Medium' | 'Low' }> = ({ 
 
 const KpiCard: React.FC<{ title: string; value: string; subtext?: string }> = ({ title, value, subtext }) => (
     <Card>
-      <p className="text-sm font-medium text-text-secondary">{title}</p>
-      <p className="text-2xl font-bold text-text-primary tracking-tight">{value}</p>
-      {subtext && <p className="text-xs text-text-secondary mt-1">{subtext}</p>}
+        <p className="text-sm font-medium text-text-secondary">{title}</p>
+        <p className="text-2xl font-bold text-text-primary tracking-tight">{value}</p>
+        {subtext && <p className="text-xs text-text-secondary mt-1">{subtext}</p>}
     </Card>
 );
 
-const ProcurementOverviewPage: React.FC = () => {
+const SourcingOverviewPage: React.FC = () => {
     const { currentUser } = useAuth();
     if (!currentUser) return null;
 
     const requestQueue = MATERIAL_REQUESTS.filter(r => r.status === 'RFQ Pending' || r.status === 'Bidding Open');
     const urgentRequests = requestQueue.filter(r => r.priority === 'High').length;
-    
+
     return (
         <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-text-primary">Procurement Dashboard</h2>
+            <h2 className="text-2xl font-bold text-text-primary">Sourcing Dashboard</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <KpiCard title="Requests in Queue" value={requestQueue.length.toString()} subtext={`${urgentRequests} urgent`} />
@@ -75,4 +75,4 @@ const ProcurementOverviewPage: React.FC = () => {
     );
 };
 
-export default ProcurementOverviewPage;
+export default SourcingOverviewPage;

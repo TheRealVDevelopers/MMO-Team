@@ -2,31 +2,40 @@
 import React from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { RFQS, BIDS_DATA } from '../../../constants';
-import { RFQStatus, BidStatus } from '../../../types';
-import { ClipboardDocumentListIcon, DocumentCheckIcon, TrophyIcon } from '@heroicons/react/24/outline';
+import { RFQStatus, BidStatus, RFQ, Bid } from '../../../types';
+import { ClipboardDocumentListIcon, DocumentCheckIcon, TrophyIcon, FireIcon, ClockIcon } from '@heroicons/react/24/outline';
 
 const VendorOverview: React.FC = () => {
     const { currentVendor } = useAuth();
 
+    // Load from localStorage
+    const [rfqs] = React.useState<RFQ[]>(() => {
+        const saved = localStorage.getItem('mmo_rfqs');
+        return saved ? JSON.parse(saved) : RFQS;
+    });
+
+    const [bids] = React.useState<Bid[]>(() => {
+        const saved = localStorage.getItem('mmo_bids');
+        return saved ? JSON.parse(saved) : BIDS_DATA;
+    });
+
     if (!currentVendor) return null;
 
-    // Calc Stats
-    const activeRFQs = RFQS.filter(r =>
-        r.status === RFQStatus.OPEN &&
-        r.invitedVendorIds.includes(currentVendor.id)
-    ).length;
+    // Filter RFQs where the current vendor is invited and status is OPEN
+    const myActiveRFQs = rfqs.filter(rfq =>
+        rfq.status === RFQStatus.OPEN &&
+        rfq.invitedVendorIds.includes(currentVendor.id)
+    );
 
-    const myBids = BIDS_DATA.filter(b => b.vendorId === currentVendor.id);
-    const submittedBidsCount = myBids.length;
-    const wins = myBids.filter(b => b.status === BidStatus.ACCEPTED).length;
-
-    // Win Rate logic (mock)
-    const winRate = submittedBidsCount > 0 ? Math.round((wins / submittedBidsCount) * 100) : 0;
+    const activeRFQsCount = myActiveRFQs.length;
+    const mySubmittedBids = bids.filter(b => b.vendorId === currentVendor.id);
+    const submittedBidsCount = mySubmittedBids.length;
+    const wins = mySubmittedBids.filter(b => b.status === BidStatus.ACCEPTED).length;
 
     const StatCard = ({ icon: Icon, label, value, colorClass }: any) => (
         <div className="bg-surface border border-border rounded-xl p-6 flex items-center space-x-4 shadow-sm hover:shadow-md transition-shadow">
             <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${colorClass}`}>
-                <Icon className="w-6 h-6" />
+                {Icon && <Icon className="w-6 h-6" />}
             </div>
             <div>
                 <p className="text-sm text-text-secondary font-medium uppercase tracking-wider">{label}</p>
@@ -51,32 +60,83 @@ const VendorOverview: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <StatCard
                     icon={ClipboardDocumentListIcon}
-                    label="Pending RFQs"
-                    value={activeRFQs}
+                    label="Active RFQs"
+                    value={activeRFQsCount}
                     colorClass="bg-primary/10 text-primary"
                 />
                 <StatCard
-                    label="Submitted Bids"
+                    icon={DocumentCheckIcon}
+                    label="All Bids"
                     value={submittedBidsCount}
                     colorClass="bg-purple/10 text-purple"
                 />
                 <StatCard
                     icon={TrophyIcon}
-                    label="Bids Won"
+                    label="Contracts Won"
                     value={wins}
                     colorClass="bg-secondary/10 text-secondary"
                 />
             </div>
 
-            {/* Quick Tips */}
-            <div className="bg-primary/5 border border-primary/20 rounded-xl p-6">
-                <h3 className="font-bold text-primary mb-2 flex items-center">
-                    <span className="w-2 h-2 rounded-full bg-primary mr-2"></span>
-                    Procurement Notice
-                </h3>
-                <p className="text-sm text-text-secondary">
-                    Please ensure all bids for Project #104 are submitted by EOD tomorrow. Late submissions will not be considered for the Comparative Statement evaluation.
-                </p>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Live Opportunities */}
+                <div className="space-y-4">
+                    <h3 className="text-lg font-serif font-bold text-text-primary flex items-center">
+                        <FireIcon className="w-5 h-5 mr-2 text-primary" />
+                        Hot Opportunities
+                    </h3>
+                    <div className="space-y-3">
+                        {myActiveRFQs.slice(0, 3).map(rfq => {
+                            const diff = new Date(rfq.deadline).getTime() - new Date().getTime();
+                            const isUrgent = diff > 0 && diff < (24 * 60 * 60 * 1000); // Less than 24h
+                            return (
+                                <div key={rfq.id} className="bg-surface border border-border rounded-xl p-4 flex justify-between items-center group hover:border-primary transition-colors">
+                                    <div>
+                                        <p className="font-bold text-text-primary">{rfq.projectName}</p>
+                                        <div className="flex items-center text-[10px] text-text-secondary mt-1">
+                                            <ClockIcon className="w-3 h-3 mr-1" />
+                                            Deadline: {new Date(rfq.deadline).toLocaleDateString()}
+                                            {isUrgent && <span className="ml-2 text-red-500 font-bold uppercase tracking-tighter">Urgent!</span>}
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-xs font-bold text-text-tertiary uppercase mb-1">{rfq.items.length} Items</p>
+                                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <span className="text-[10px] font-black text-primary uppercase">View Details →</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                        {myActiveRFQs.length === 0 && (
+                            <div className="p-8 text-center bg-subtle-background rounded-xl border border-dashed border-border text-text-tertiary">
+                                No new opportunities at the moment.
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Performance Analytics (Placeholders for now) */}
+                <div className="bg-subtle-background rounded-2xl p-6 border border-border">
+                    <h3 className="text-lg font-serif font-bold text-text-primary mb-6">Bidding Insights</h3>
+                    <div className="space-y-6">
+                        <div>
+                            <div className="flex justify-between text-xs mb-2">
+                                <span className="text-text-secondary uppercase">Success Rate</span>
+                                <span className="font-bold text-text-primary">{submittedBidsCount > 0 ? Math.round((wins / submittedBidsCount) * 100) : 0}%</span>
+                            </div>
+                            <div className="h-2 bg-border rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-secondary transition-all duration-1000"
+                                    style={{ width: `${submittedBidsCount > 0 ? (wins / submittedBidsCount) * 100 : 0}%` }}
+                                ></div>
+                            </div>
+                        </div>
+                        <p className="text-xs text-text-secondary italic">
+                            <b>Pro Tip:</b> Competitive pricing (within 5% of target) improves your win rate by 40%. Check "Lowest Bid" data in Active RFQs frequently.
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
     );

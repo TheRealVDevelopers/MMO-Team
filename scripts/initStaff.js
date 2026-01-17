@@ -9,13 +9,13 @@ const { getFirestore, doc, setDoc, serverTimestamp } = require('firebase/firesto
 
 // Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyAJr5z0XiOL-SRHA6hgM3V2NHJbN3BolPQ",
-  authDomain: "kurchi-app.firebaseapp.com",
-  projectId: "kurchi-app",
-  storageBucket: "kurchi-app.firebasestorage.app",
-  messagingSenderId: "140677067488",
-  appId: "1:140677067488:web:803d5ec5f091bdfc015685",
-  measurementId: "G-1D13ZD3C2F"
+    apiKey: "AIzaSyAJr5z0XiOL-SRHA6hgM3V2NHJbN3BolPQ",
+    authDomain: "kurchi-app.firebaseapp.com",
+    projectId: "kurchi-app",
+    storageBucket: "kurchi-app.firebasestorage.app",
+    messagingSenderId: "140677067488",
+    appId: "1:140677067488:web:803d5ec5f091bdfc015685",
+    measurementId: "G-1D13ZD3C2F"
 };
 
 // Initialize Firebase
@@ -73,8 +73,8 @@ const STAFF_MEMBERS = [
     },
     {
         email: 'anna.p@makemyoffice.com',
-        name: 'Anna Procurement',
-        role: 'Procurement Team',
+        name: 'Anna Sourcing',
+        role: 'Sourcing Team',
         avatar: 'https://i.pravatar.cc/150?u=user-7',
         phone: '+91 98765 43216',
     },
@@ -144,7 +144,7 @@ async function initializeAllStaffUsers() {
     for (const member of STAFF_MEMBERS) {
         try {
             console.log(`Creating account for: ${member.name} (${member.email})...`);
-            
+
             const userId = await createStaffAccount(
                 member.email,
                 member.name,
@@ -163,7 +163,7 @@ async function initializeAllStaffUsers() {
             const errorMessage = error.message || 'Unknown error';
             results.failed.push({ email: member.email, error: errorMessage });
             console.error(`❌ Failed to create ${member.email}: ${errorMessage}\n`);
-            
+
             // Sign out even on failure to reset state
             try {
                 await signOut(auth);
