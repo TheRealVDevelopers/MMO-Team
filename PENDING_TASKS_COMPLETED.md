@@ -51,7 +51,7 @@ This document summarizes all the pending tasks that have been completed for the 
   - Drawing Team
   - Quotation Team
   - Site Engineer
-  - Sourcing Team
+  - Procurement Team
   - Execution Team
   - Accounts Team
 

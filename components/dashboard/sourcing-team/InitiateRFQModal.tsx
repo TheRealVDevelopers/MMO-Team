@@ -48,13 +48,13 @@ const InitiateRFQModal: React.FC<InitiateRFQModalProps> = ({ isOpen, onClose, re
         onInitiate({
             projectId: request.projectId,
             projectName: request.projectName,
-            sourcingRequestId: request.id,
+            procurementRequestId: request.id,
             items: rfqItems,
             deadline: new Date(deadline),
             status: RFQStatus.OPEN,
             invitedVendorIds: selectedVendorIds,
             notes,
-            createdBy: 'user-7', // Anna Sourcing
+            createdBy: 'user-7', // Anna Procurement
         });
     };
 

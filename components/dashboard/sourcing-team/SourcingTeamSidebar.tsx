@@ -29,8 +29,8 @@ const NavItem: React.FC<{
                 onClick();
             }}
             className={`flex items-center p-2 text-base font-normal rounded-lg transition-colors duration-150 ${isActive
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-text-secondary hover:bg-subtle-background hover:text-text-primary'
+                ? 'bg-primary/10 text-primary'
+                : 'text-text-secondary hover:bg-subtle-background hover:text-text-primary'
                 }`}
         >
             {icon}
@@ -55,7 +55,7 @@ const SourcingTeamSidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPa
                 <div className="flex items-center pl-2.5 mb-5 h-16 -mt-4">
                     <BuildingOfficeIcon className="h-8 w-8 text-primary" />
                     <h1 className="ml-3 text-xl font-bold text-text-primary tracking-tight">
-                        Sourcing
+                        Quotation Hub
                     </h1>
                 </div>
                 <ul className="space-y-2">

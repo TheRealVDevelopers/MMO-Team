@@ -36,7 +36,7 @@ const FinancePage: React.FC = () => {
     const breakdown = [
         { label: 'Design Services', value: totalRevenue * 0.15, color: 'bg-indigo-500', icon: '🎨' },
         { label: 'Site Execution', value: totalRevenue * 0.60, color: 'bg-emerald-500', icon: '🏗️' },
-        { label: 'Sourcing', value: totalRevenue * 0.25, color: 'bg-amber-500', icon: '📦' },
+        { label: 'Procurement', value: totalRevenue * 0.25, color: 'bg-amber-500', icon: '📦' },
     ];
 
     // Mock Chart Data (YTD Monthly)

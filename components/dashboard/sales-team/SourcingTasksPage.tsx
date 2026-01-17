@@ -1,6 +1,6 @@
 import React from 'react';
 import { USERS, formatDate } from '../../../constants';
-import { SourcingRequest, SourcingRequestStatus } from '../../../types';
+import { ProcurementRequest, ProcurementRequestStatus } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import {
     ArchiveBoxIcon,
@@ -18,20 +18,20 @@ import {
 } from '../shared/DashboardUI';
 import { motion } from 'framer-motion';
 
-const getStatusConfig = (status: SourcingRequestStatus) => {
+const getStatusConfig = (status: ProcurementRequestStatus) => {
     switch (status) {
-        case SourcingRequestStatus.REQUESTED:
+        case ProcurementRequestStatus.REQUESTED:
             return { color: 'text-accent-subtle-text bg-accent-subtle-background/10 border-accent-subtle-text/20', icon: ClockIcon };
-        case SourcingRequestStatus.IN_PROGRESS:
+        case ProcurementRequestStatus.IN_PROGRESS:
             return { color: 'text-amber-500 bg-amber-500/10 border-amber-500/20', icon: ClockIcon };
-        case SourcingRequestStatus.COMPLETED:
+        case ProcurementRequestStatus.COMPLETED:
             return { color: 'text-green-500 bg-green-500/10 border-green-500/20', icon: CheckCircleIcon };
         default:
             return { color: 'text-gray-500 bg-gray-500/10 border-gray-500/20', icon: ClockIcon };
     }
 };
 
-const SourcingStatusPill: React.FC<{ status: SourcingRequestStatus }> = ({ status }) => {
+const ProcurementStatusPill: React.FC<{ status: ProcurementRequestStatus }> = ({ status }) => {
     const config = getStatusConfig(status);
     const Icon = config.icon;
 
@@ -46,9 +46,9 @@ const SourcingStatusPill: React.FC<{ status: SourcingRequestStatus }> = ({ statu
     );
 };
 
-const SourcingTasksPage: React.FC<{ setCurrentPage: (page: string) => void, sourcingRequests: SourcingRequest[] }> = ({ setCurrentPage, sourcingRequests }) => {
+const ProcurementTasksPage: React.FC<{ setCurrentPage: (page: string) => void, procurementRequests: ProcurementRequest[] }> = ({ setCurrentPage, procurementRequests }) => {
     const { currentUser } = useAuth();
-    const myRequests = sourcingRequests.filter(v => v.requesterId === currentUser?.id);
+    const myRequests = procurementRequests.filter(v => v.requesterId === currentUser?.id);
 
     return (
         <motion.div
@@ -58,8 +58,8 @@ const SourcingTasksPage: React.FC<{ setCurrentPage: (page: string) => void, sour
             className="space-y-6"
         >
             <ContentCard
-                title="Sourcing Requests"
-                subtitle="Track and manage material sourcing for your projects"
+                title="Procurement Requests"
+                subtitle="Track and manage material procurement for your projects"
                 icon={ShoppingBagIcon}
             >
                 <div className="overflow-x-auto">
@@ -107,7 +107,7 @@ const SourcingTasksPage: React.FC<{ setCurrentPage: (page: string) => void, sour
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        <SourcingStatusPill status={req.status} />
+                                        <ProcurementStatusPill status={req.status} />
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="max-w-xs truncate text-sm text-text-secondary italic">
@@ -121,7 +121,7 @@ const SourcingTasksPage: React.FC<{ setCurrentPage: (page: string) => void, sour
                                     <td colSpan={5} className="text-center py-12">
                                         <div className="flex flex-col items-center gap-2 text-text-tertiary">
                                             <ShoppingBagIcon className="w-12 h-12 opacity-20" />
-                                            <p className="text-sm font-medium">No sourcing tasks found</p>
+                                            <p className="text-sm font-medium">No procurement tasks found</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -134,4 +134,4 @@ const SourcingTasksPage: React.FC<{ setCurrentPage: (page: string) => void, sour
     );
 };
 
-export default SourcingTasksPage;
+export default ProcurementTasksPage;

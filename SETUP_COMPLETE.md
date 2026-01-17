@@ -63,7 +63,7 @@ john.s@makemyoffice.com         - Sales Team
 emily.d@makemyoffice.com        - Drawing Team
 mike.q@makemyoffice.com         - Quotation Team
 david.e@makemyoffice.com        - Site Engineer
-anna.p@makemyoffice.com         - Sourcing Team
+anna.p@makemyoffice.com         - Procurement Team
 chris.e@makemyoffice.com        - Execution Team
 olivia.a@makemyoffice.com       - Accounts Team
 jane.d@makemyoffice.com         - Sales Team

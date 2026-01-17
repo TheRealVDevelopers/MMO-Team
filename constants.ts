@@ -3,7 +3,7 @@
 
 
 
-import { User, Lead, UserRole, Project, ProjectStatus, Vendor, Invoice, PaymentStatus, LeadPipelineStatus, Activity, ActivityStatus, SiteVisit, SiteVisitStatus, MaterialRequest, MaterialRequestStatus, Issue, ChecklistItem, CommunicationMessage, Expense, VendorBill, Attendance, AttendanceStatus, Document, QuotationRequest, QuotationRequestStatus, DrawingRequest, DrawingRequestStatus, SourcingRequest, SourcingRequestStatus, ExecutionRequest, ExecutionRequestStatus, AccountsRequest, AccountsRequestStatus, Item, ProjectTemplate, ExpenseClaim, ExpenseClaimStatus, Task, TaskStatus, ChatChannel, ChatMessage, Complaint, ComplaintType, ComplaintPriority, ComplaintStatus, SiteReport, RFQ, RFQStatus, Bid, BidStatus, PurchaseOrder, POStatus } from './types';
+import { User, Lead, UserRole, Project, ProjectStatus, Vendor, Invoice, PaymentStatus, LeadPipelineStatus, Activity, ActivityStatus, SiteVisit, SiteVisitStatus, MaterialRequest, MaterialRequestStatus, Issue, ChecklistItem, CommunicationMessage, Expense, VendorBill, Attendance, AttendanceStatus, Document, QuotationRequest, QuotationRequestStatus, DrawingRequest, DrawingRequestStatus, ProcurementRequest, ProcurementRequestStatus, ExecutionRequest, ExecutionRequestStatus, AccountsRequest, AccountsRequestStatus, Item, ProjectTemplate, ExpenseClaim, ExpenseClaimStatus, Task, TaskStatus, ChatChannel, ChatMessage, Complaint, ComplaintType, ComplaintPriority, ComplaintStatus, SiteReport, RFQ, RFQStatus, Bid, BidStatus, PurchaseOrder, POStatus } from './types';
 
 export const formatCurrencyINR = (value: number) =>
     new Intl.NumberFormat('en-IN', {
@@ -80,7 +80,7 @@ export const USERS: User[] = [
     { id: 'user-4', name: 'Emily Designer', role: UserRole.DRAWING_TEAM, avatar: 'https://i.pravatar.cc/150?u=user-4', currentTask: 'Working on 3D renders for Pantry Renovation.', lastUpdateTimestamp: new Date(now.getTime() - 1 * 60 * 60 * 1000), email: 'emily.d@makemyoffice.com', phone: '+91 98765 43213' },
     { id: 'user-5', name: 'Mike Quote', role: UserRole.QUOTATION_TEAM, avatar: 'https://i.pravatar.cc/150?u=user-5', currentTask: 'Revising quote for Art Studio Conversion.', lastUpdateTimestamp: new Date(now.getTime() - 2 * 60 * 60 * 1000), email: 'mike.q@makemyoffice.com', phone: '+91 98765 43214' },
     { id: 'user-6', name: 'David Engineer', role: UserRole.SITE_ENGINEER, avatar: 'https://i.pravatar.cc/150?u=user-6', currentTask: 'On-site visit at Enterprise Suites.', lastUpdateTimestamp: new Date(now.getTime() - 45 * 60 * 1000), email: 'david.e@makemyoffice.com', phone: '+91 98765 43215' },
-    { id: 'user-7', name: 'Anna Sourcing', role: UserRole.SOURCING_TEAM, avatar: 'https://i.pravatar.cc/150?u=user-7', currentTask: 'Negotiating with furniture vendors.', lastUpdateTimestamp: new Date(now.getTime() - 2 * 60 * 60 * 1000), email: 'anna.s@makemyoffice.com', phone: '+91 98765 43216' },
+    { id: 'user-7', name: 'Anna Procurement', role: UserRole.PROCUREMENT_TEAM, avatar: 'https://i.pravatar.cc/150?u=user-7', currentTask: 'Negotiating with furniture vendors.', lastUpdateTimestamp: new Date(now.getTime() - 2 * 60 * 60 * 1000), email: 'anna.p@makemyoffice.com', phone: '+91 98765 43216' },
     { id: 'user-8', name: 'Chris Executor', role: UserRole.EXECUTION_TEAM, avatar: 'https://i.pravatar.cc/150?u=user-8', currentTask: 'Supervising electrical work at Enterprise Suites.', lastUpdateTimestamp: new Date(now.getTime() - 10 * 60 * 1000), email: 'chris.e@makemyoffice.com', phone: '+91 98765 43217' },
     { id: 'user-9', name: 'Olivia Accounts', role: UserRole.ACCOUNTS_TEAM, avatar: 'https://i.pravatar.cc/150?u=user-9', currentTask: 'Processing invoices for completed projects.', lastUpdateTimestamp: new Date(now.getTime() - 3 * 60 * 60 * 1000), email: 'olivia.a@makemyoffice.com', phone: '+91 98765 43218' },
     { id: 'user-10', name: 'Jane Doe', role: UserRole.SALES_TEAM_MEMBER, avatar: 'https://i.pravatar.cc/150?u=user-10', currentTask: 'Following up with Tech Solutions Ltd.', lastUpdateTimestamp: new Date(now.getTime() - 25 * 60 * 1000), region: 'South', email: 'jane.d@makemyoffice.com', phone: '+91 98765 43219' },
@@ -212,7 +212,7 @@ export const LEADS: Lead[] = [
         priority: 'High',
         tasks: {
             quotationRequests: ['qr-1'],
-            sourcingRequests: ['pr-1'],
+            procurementRequests: ['pr-1'],
             executionRequests: ['er-1'],
             accountsRequests: ['ar-1'],
         },
@@ -290,7 +290,7 @@ export const CHECKLISTS: Record<string, { daily: ChecklistItem[], quality: Check
 
 export const COMMUNICATION: Record<string, CommunicationMessage[]> = {
     'proj-104': [
-        { id: 'c1', user: 'Anna Sourcing', avatar: 'https://i.pravatar.cc/150?u=user-7', message: 'Just a heads-up, the light fixtures will be on site by Thursday.', timestamp: new Date(now.getTime() - 5 * 60 * 60 * 1000) },
+        { id: 'c1', user: 'Anna Procurement', avatar: 'https://i.pravatar.cc/150?u=user-7', message: 'Just a heads-up, the light fixtures will be on site by Thursday.', timestamp: new Date(now.getTime() - 5 * 60 * 60 * 1000) },
         { id: 'c2', user: 'Chris Executor', avatar: 'https://i.pravatar.cc/150?u=user-8', message: 'Thanks, Anna. We\'ll be ready for them.', timestamp: new Date(now.getTime() - 4 * 60 * 60 * 1000) },
         { id: 'c3', user: 'Sarah Manager', avatar: 'https://i.pravatar.cc/150?u=user-2', message: 'Client called, they are very happy with the progress so far!', timestamp: new Date(now.getTime() - 1 * 60 * 60 * 1000) },
     ],
@@ -320,7 +320,7 @@ export const PROJECTS: Project[] = [
     { id: 'proj-103', clientName: 'Creative Minds', projectName: 'Art Studio Conversion', status: ProjectStatus.NEGOTIATING, deadline: '3 days', priority: 'High', budget: 6000000, advancePaid: 2500000, clientAddress: '789 Art Lane, Delhi', clientContact: { name: 'Anjali Mehta', phone: '+91 9123456789' }, progress: 40, assignedTeam: { quotation: 'user-5' }, milestones: [], startDate: new Date(2024, 6, 1), endDate: new Date(2024, 8, 30), totalExpenses: 0, salespersonId: 'user-3' },
     { id: 'proj-104', clientName: 'Enterprise Suites', projectName: 'Full Floor Fit-out', status: ProjectStatus.IN_EXECUTION, priority: 'Medium', budget: 20000000, advancePaid: 10000000, clientAddress: '101 Corporate Towers, Gurgaon', clientContact: { name: 'Vikram Singh', phone: '+91 9876543210' }, progress: 60, assignedTeam: { execution: ['user-8'], site_engineer: 'user-6' }, milestones: [{ name: 'Advance Paid', completed: true }, { name: 'Milestone 1', completed: false }], startDate: new Date(2024, 4, 15), endDate: new Date(2024, 9, 15), issues: ISSUES.filter(i => i.projectId === 'proj-104'), checklists: CHECKLISTS['proj-104'], communication: COMMUNICATION['proj-104'], totalExpenses: 8800000 },
     { id: 'proj-105', clientName: 'Legal Eagles LLP', projectName: 'Conference Room AV', status: ProjectStatus.COMPLETED, priority: 'Low', budget: 3600000, advancePaid: 3600000, clientAddress: '212 Law Chambers, Pune', clientContact: { name: 'Sunita Rao', phone: '+91 9555512345' }, progress: 100, assignedTeam: { drawing: 'user-4' }, milestones: [{ name: 'Project Handover', completed: true }], startDate: new Date(2024, 3, 1), endDate: new Date(2024, 4, 30), totalExpenses: 2560000 },
-    { id: 'proj-106', clientName: 'Health First Clinic', projectName: 'Reception Area Redesign', status: ProjectStatus.SOURCING, priority: 'Medium', budget: 4800000, advancePaid: 2000000, clientAddress: '333 Wellness Rd, Hyderabad', clientContact: { name: 'Dr. Kumar', phone: '+91 9000011111' }, progress: 50, assignedTeam: {}, milestones: [], startDate: new Date(2024, 6, 20), endDate: new Date(2024, 8, 20), totalExpenses: 1200000, salespersonId: 'user-3' },
+    { id: 'proj-106', clientName: 'Health First Clinic', projectName: 'Reception Area Redesign', status: ProjectStatus.PROCUREMENT, priority: 'Medium', budget: 4800000, advancePaid: 2000000, clientAddress: '333 Wellness Rd, Hyderabad', clientContact: { name: 'Dr. Kumar', phone: '+91 9000011111' }, progress: 50, assignedTeam: {}, milestones: [], startDate: new Date(2024, 6, 20), endDate: new Date(2024, 8, 20), totalExpenses: 1200000, salespersonId: 'user-3' },
     { id: 'proj-107', clientName: 'Finance Partners', projectName: 'Executive Floor Interiors', status: ProjectStatus.APPROVED, priority: 'High', budget: 25600000, advancePaid: 12800000, clientAddress: '444 Money Street, Mumbai', clientContact: { name: 'Rajesh Gupta', phone: '+91 9820198201' }, progress: 100, assignedTeam: { drawing: 'user-4', quotation: 'user-5' }, milestones: [], startDate: new Date(2024, 2, 1), endDate: new Date(2024, 5, 30), totalExpenses: 20000000, salespersonId: 'user-10', documents: [DOCUMENTS[3]] },
     { id: 'proj-108', clientName: 'Innovate Corp', projectName: 'HQ Remodel', status: ProjectStatus.PENDING_REVIEW, priority: 'High', budget: 12000000, advancePaid: 6000000, clientAddress: '555 Innovation Dr, Bangalore', clientContact: { name: 'Amit Desai', phone: '+91 9988776650' }, progress: 95, assignedTeam: { execution: ['user-8'], drawing: 'user-4', site_engineer: 'user-6' }, milestones: [], startDate: new Date(2024, 5, 1), endDate: new Date(2024, 10, 1), issues: ISSUES.filter(i => i.projectId === 'proj-108'), checklists: CHECKLISTS['proj-108'], communication: COMMUNICATION['proj-108'], totalExpenses: 7600000, salespersonId: 'user-3' },
     { id: 'proj-109', clientName: 'Startup Hub', projectName: 'Co-working Space', status: ProjectStatus.REVISIONS_REQUESTED, priority: 'Medium', budget: 36000000, advancePaid: 15000000, clientAddress: '666 Growth Ave, Delhi', clientContact: { name: 'Sneha Reddy', phone: '+91 9123456780' }, progress: 30, assignedTeam: { drawing: 'user-4' }, milestones: [], startDate: new Date(2024, 6, 1), endDate: new Date(2025, 1, 1), totalExpenses: 9600000, salespersonId: 'user-10' },
@@ -345,7 +345,7 @@ export const RFQS: RFQ[] = [
         rfqNumber: 'RFQ-2024-101',
         projectId: 'proj-104',
         projectName: 'Full Floor Fit-out',
-        sourcingRequestId: 'mr-2',
+        procurementRequestId: 'mr-2',
         items: [
             { id: 'item-1', name: 'LED Panel 2x2', description: '36W Cool White, Philips or Equivalent', quantity: 100, unit: 'nos', targetPrice: 2200 },
             { id: 'item-2', name: 'Track Light 15W', description: 'Warm White, Adjustable Beam', quantity: 40, unit: 'nos', targetPrice: 1500 }
@@ -430,7 +430,7 @@ export const PURCHASE_ORDERS: PurchaseOrder[] = [
         status: POStatus.IN_TRANSIT,
         billingAddress: COMPANY_DETAILS.address,
         shippingAddress: '333 Wellness Rd, Hyderabad',
-        termsAndConditions: 'Standard MMO Sourcing Terms apply.'
+        termsAndConditions: 'Standard MMO Procurement Terms apply.'
     }
 ];
 
@@ -510,7 +510,7 @@ export const ACTIVITIES: Activity[] = [
     { id: 'act-9', description: 'Submitted design for Pantry Renovation', team: UserRole.DRAWING_TEAM, userId: 'user-4', timestamp: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000), status: ActivityStatus.DONE, projectId: 'proj-101' },
     { id: 'act-10', description: 'Revised quote for Art Studio Conversion', team: UserRole.QUOTATION_TEAM, userId: 'user-5', timestamp: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000), status: ActivityStatus.DONE, projectId: 'proj-103' },
     { id: 'act-11', description: 'Lost deal with Health First Clinic', team: UserRole.SALES_TEAM_MEMBER, userId: 'user-3', timestamp: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000), status: ActivityStatus.DONE, projectId: 'lead-7' },
-    { id: 'act-12', description: 'Started sourcing for Reception Redesign', team: UserRole.SOURCING_TEAM, userId: 'user-7', timestamp: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000), status: ActivityStatus.IN_PROGRESS, projectId: 'proj-106' },
+    { id: 'act-12', description: 'Started procurement for Reception Redesign', team: UserRole.PROCUREMENT_TEAM, userId: 'user-7', timestamp: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000), status: ActivityStatus.IN_PROGRESS, projectId: 'proj-106' },
     { id: 'act-13', description: 'Processed invoice for Legal Eagles LLP', team: UserRole.ACCOUNTS_TEAM, userId: 'user-9', timestamp: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000), status: ActivityStatus.DONE, projectId: 'inv-001' },
 ];
 
@@ -538,8 +538,8 @@ export const DRAWING_REQUESTS: DrawingRequest[] = [
     { id: 'dr-1', leadId: 'lead-2', projectName: 'New Office Wing', clientName: 'Tech Solutions Ltd.', requesterId: 'user-10', assigneeId: 'user-4', status: DrawingRequestStatus.REQUESTED, requestDate: new Date(now.getTime() - 24 * 60 * 60 * 1000), notes: 'Client wants a modern, open-plan layout. Please provide 2D floorplan and 3D renders.' },
 ];
 
-export const SOURCING_REQUESTS: SourcingRequest[] = [
-    { id: 'pr-1', leadId: 'lead-6', projectName: 'Executive Floor Interiors', requesterId: 'user-10', assigneeId: 'user-7', status: SourcingRequestStatus.REQUESTED, requestDate: new Date(now.getTime() - 24 * 60 * 60 * 1000), materials: 'Premium marble for flooring, teak wood for paneling.' },
+export const PROCUREMENT_REQUESTS: ProcurementRequest[] = [
+    { id: 'pr-1', leadId: 'lead-6', projectName: 'Executive Floor Interiors', requesterId: 'user-10', assigneeId: 'user-7', status: ProcurementRequestStatus.REQUESTED, requestDate: new Date(now.getTime() - 24 * 60 * 60 * 1000), materials: 'Premium marble for flooring, teak wood for paneling.' },
 ];
 
 export const EXECUTION_REQUESTS: ExecutionRequest[] = [
@@ -667,5 +667,5 @@ export const CHAT_MESSAGES: ChatMessage[] = [
 
 export const COMPLAINTS: Complaint[] = [
     { id: 'comp-1', submittedBy: 'user-3', against: 'Emily Designer', type: ComplaintType.TIMELINE_VIOLATIONS, priority: ComplaintPriority.MEDIUM, status: ComplaintStatus.SUBMITTED, projectContext: 'HQ Remodel (proj-108)', description: 'Drawings were promised EOD yesterday but have not been received. This is delaying the client presentation.', evidence: ['Chat logs from yesterday'], resolutionAttempts: 'Followed up on chat twice, no response.', desiredResolution: 'Immediate delivery of the drawings.', submissionDate: new Date(now.getTime() - 18 * 3600 * 1000) },
-    { id: 'comp-2', submittedBy: 'user-8', against: UserRole.SOURCING_TEAM, type: ComplaintType.WORKFLOW_BLOCKAGES, priority: ComplaintPriority.HIGH, status: ComplaintStatus.UNDER_REVIEW, projectContext: 'Full Floor Fit-out (proj-104)', description: 'Materials for the west wing are delayed by 3 days, causing a halt in work. No clear ETA provided by sourcing.', evidence: ['Material request ticket', 'Email chain'], resolutionAttempts: 'Called sourcing lead twice, was told they are "looking into it".', desiredResolution: 'A clear delivery date and a plan to expedite.', submissionDate: new Date(now.getTime() - 2 * 24 * 3600 * 1000) },
+    { id: 'comp-2', submittedBy: 'user-8', against: UserRole.PROCUREMENT_TEAM, type: ComplaintType.WORKFLOW_BLOCKAGES, priority: ComplaintPriority.HIGH, status: ComplaintStatus.UNDER_REVIEW, projectContext: 'Full Floor Fit-out (proj-104)', description: 'Materials for the west wing are delayed by 3 days, causing a halt in work. No clear ETA provided by procurement.', evidence: ['Material request ticket', 'Email chain'], resolutionAttempts: 'Called procurement lead twice, was told they are "looking into it".', desiredResolution: 'A clear delivery date and a plan to expedite.', submissionDate: new Date(now.getTime() - 2 * 24 * 3600 * 1000) },
 ];

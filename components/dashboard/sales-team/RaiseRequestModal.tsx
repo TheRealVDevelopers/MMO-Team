@@ -39,10 +39,10 @@ const REQUEST_TYPE_TO_ROLE: Partial<Record<ApprovalRequestType, UserRole>> = {
     [ApprovalRequestType.START_DRAWING]: UserRole.DRAWING_TEAM,
     [ApprovalRequestType.DESIGN_CHANGE]: UserRole.DRAWING_TEAM,
     [ApprovalRequestType.DRAWING_REVISIONS]: UserRole.DRAWING_TEAM,
-    [ApprovalRequestType.MATERIAL_CHANGE]: UserRole.SOURCING_TEAM,
+    [ApprovalRequestType.MATERIAL_CHANGE]: UserRole.QUOTATION_TEAM,
     [ApprovalRequestType.PAYMENT_QUERY]: UserRole.ACCOUNTS_TEAM,
-    [ApprovalRequestType.REQUEST_FOR_QUOTATION]: UserRole.QUOTATION_TEAM,
-    [ApprovalRequestType.NEGOTIATION]: UserRole.QUOTATION_TEAM,
+    [ApprovalRequestType.REQUEST_FOR_QUOTATION]: UserRole.PROCUREMENT_TEAM,
+    [ApprovalRequestType.NEGOTIATION]: UserRole.PROCUREMENT_TEAM,
     [ApprovalRequestType.MODIFICATION]: UserRole.EXECUTION_TEAM,
 };
 

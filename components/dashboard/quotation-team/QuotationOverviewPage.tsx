@@ -57,7 +57,7 @@ const QuotationOverviewPage: React.FC<{
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h2 className="text-2xl font-black text-text-primary tracking-tight">Quotation Dashboard</h2>
+                    <h2 className="text-2xl font-black text-text-primary tracking-tight">Procurement Dashboard</h2>
                     <p className="text-sm text-text-secondary">Manage and track your active pricing requests.</p>
                 </div>
                 <button

@@ -377,7 +377,7 @@ const BiddingManagementPage: React.FC<{ setCurrentPage: (page: string) => void }
 
         setRfqs(prev => [newRfq, ...prev]);
         setMaterialRequests(prev => prev.map(req =>
-            req.id === rfqData.sourcingRequestId
+            req.id === rfqData.procurementRequestId
                 ? { ...req, status: MaterialRequestStatus.BIDDING_OPEN }
                 : req
         ));
@@ -429,7 +429,7 @@ const BiddingManagementPage: React.FC<{ setCurrentPage: (page: string) => void }
                             <ArrowLeftIcon className="w-5 h-5" />
                             <span>Back</span>
                         </button>
-                        <h2 className="text-2xl font-serif font-bold text-text-primary uppercase tracking-tighter">Sourcing Command Center</h2>
+                        <h2 className="text-2xl font-serif font-bold text-text-primary uppercase tracking-tighter">Bidding Command Center</h2>
                     </div>
                     <button
                         onClick={() => setIsCreateModalOpen(true)}
@@ -491,7 +491,7 @@ const BiddingManagementPage: React.FC<{ setCurrentPage: (page: string) => void }
                 <SubmitQuoteModal
                     isOpen={!!submitBidRequestId}
                     onClose={() => setSubmitBidRequestId(null)}
-                    rfq={rfqs.find(r => r.sourcingRequestId === submitBidRequestId) || RFQS[0]}
+                    rfq={rfqs.find(r => r.procurementRequestId === submitBidRequestId) || RFQS[0]}
                 />
             )}
         </>

@@ -51,7 +51,7 @@ const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (p
         LeadPipelineStatus.WAITING_FOR_QUOTATION,
         LeadPipelineStatus.QUOTATION_SENT,
         LeadPipelineStatus.NEGOTIATION,
-        LeadPipelineStatus.IN_SOURCING,
+        LeadPipelineStatus.IN_PROCUREMENT,
         LeadPipelineStatus.IN_EXECUTION,
         LeadPipelineStatus.WON
       ];

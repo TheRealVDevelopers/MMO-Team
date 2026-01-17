@@ -102,8 +102,8 @@ Supports role-based access for:
    - Expense claims
    - Field reports
 
-7. **SOURCING_TEAM**
-   - Material sourcing
+7. **PROCUREMENT_TEAM**
+   - Material procurement
    - Vendor management
 
 8. **EXECUTION_TEAM**
@@ -242,7 +242,7 @@ Client creates workspace design (Office Dream Builder)
          ↓
 Internal team views project (MMO-Team)
          ↓
-Drawing team → Quotation team → Sourcing team → Execution team
+Drawing team → Quotation team → Execution team
          ↓
 Client receives updates in their workspace
 ```

@@ -29,7 +29,7 @@ const LeadStatusPill: React.FC<{ status: LeadPipelineStatus }> = ({ status }) =>
         [LeadPipelineStatus.WAITING_FOR_QUOTATION]: 'bg-teal-500/10 text-teal-500',
         [LeadPipelineStatus.QUOTATION_SENT]: 'bg-primary/10 text-primary',
         [LeadPipelineStatus.NEGOTIATION]: 'bg-amber-500/10 text-amber-500',
-        [LeadPipelineStatus.IN_SOURCING]: 'bg-purple/10 text-purple',
+        [LeadPipelineStatus.IN_PROCUREMENT]: 'bg-purple/10 text-purple',
         [LeadPipelineStatus.IN_EXECUTION]: 'bg-accent/10 text-accent',
         [LeadPipelineStatus.WON]: 'bg-green-500/10 text-green-500',
         [LeadPipelineStatus.LOST]: 'bg-text-secondary/10 text-text-secondary',

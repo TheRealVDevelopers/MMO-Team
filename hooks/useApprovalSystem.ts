@@ -389,8 +389,6 @@ export const approveRequest = async (
           updates.tasks.drawingRequests.push(`${assigneeName} - Revision Assigned ${new Date().toLocaleDateString()}`);
         } else if (data.requestType === ApprovalRequestType.REQUEST_FOR_QUOTATION || data.requestType === ApprovalRequestType.QUOTATION_TOKEN) {
           updates.status = LeadPipelineStatus.WAITING_FOR_QUOTATION;
-        } else if (data.requestType === ApprovalRequestType.SOURCING_TOKEN) {
-          updates.status = LeadPipelineStatus.IN_SOURCING;
         } else if (data.requestType === ApprovalRequestType.MODIFICATION) {
           updates.status = LeadPipelineStatus.IN_EXECUTION;
         } else if (data.requestType === ApprovalRequestType.NEGOTIATION) {
@@ -438,12 +436,10 @@ export const approveRequest = async (
           projectUpdates.status = ProjectStatus.DESIGN_IN_PROGRESS;
         } else if (data.requestType === ApprovalRequestType.DESIGN_CHANGE || data.requestType === ApprovalRequestType.DRAWING_REVISIONS) {
           projectUpdates.status = ProjectStatus.REVISIONS_IN_PROGRESS;
-        } else if (data.requestType === ApprovalRequestType.QUOTATION_TOKEN || data.requestType === ApprovalRequestType.REQUEST_FOR_QUOTATION) {
+        } else if (data.requestType === ApprovalRequestType.REQUEST_FOR_QUOTATION || data.requestType === ApprovalRequestType.QUOTATION_TOKEN) {
           projectUpdates.status = ProjectStatus.AWAITING_QUOTATION;
         } else if (data.requestType === ApprovalRequestType.RESCHEDULE_SITE_VISIT) {
           projectUpdates.status = ProjectStatus.SITE_VISIT_RESCHEDULED;
-        } else if (data.requestType === ApprovalRequestType.SOURCING_TOKEN) {
-          projectUpdates.status = ProjectStatus.SOURCING;
         } else if (data.requestType === ApprovalRequestType.NEGOTIATION) {
           projectUpdates.status = ProjectStatus.NEGOTIATING;
         } else if (data.requestType === ApprovalRequestType.QUOTATION_APPROVAL) {

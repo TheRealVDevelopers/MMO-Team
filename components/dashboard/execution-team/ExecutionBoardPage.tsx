@@ -6,7 +6,7 @@ import ProjectCard from './ProjectCard';
 import ProjectDetailPane from './ProjectDetailPane';
 
 const KANBAN_COLUMNS = {
-  'PLANNING': { title: 'Planning', statuses: [ProjectStatus.SOURCING] },
+  'PLANNING': { title: 'Planning', statuses: [ProjectStatus.PROCUREMENT] },
   'IN_PROGRESS': { title: 'In Progress', statuses: [ProjectStatus.IN_EXECUTION] },
   'CLIENT_FEEDBACK': { title: 'Awaiting Client Feedback', statuses: [ProjectStatus.PENDING_REVIEW] },
   'DONE': { title: 'Done', statuses: [ProjectStatus.COMPLETED] },

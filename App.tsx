@@ -69,12 +69,11 @@ const navConfig = {
     ]
   },
   [UserRole.QUOTATION_TEAM]: {
-    title: 'Quotation Hub',
+    title: 'Quotation',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
-      { id: 'negotiations', label: 'Quotations', icon: <ViewColumnsIcon className="w-6 h-6" /> },
-      { id: 'catalog', label: 'Items Catalog', icon: <TagIcon className="w-6 h-6" /> },
-      { id: 'templates', label: 'Templates', icon: <ListBulletIcon className="w-6 h-6" /> },
+      { id: 'quotations', label: 'Create Quotation', icon: <DocumentTextIcon className="w-6 h-6" /> },
+      { id: 'items-catalog', label: 'Items Catalog', icon: <TagIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
       { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
       { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
@@ -91,13 +90,13 @@ const navConfig = {
       { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
     ]
   },
-  [UserRole.SOURCING_TEAM]: {
-    title: 'Sourcing Hub',
+  [UserRole.PROCUREMENT_TEAM]: {
+    title: 'Procurement Hub',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
-      { id: 'bidding', label: 'Bidding', icon: <TagIcon className="w-6 h-6" /> },
-      { id: 'purchase-orders', label: 'Orders', icon: <DocumentTextIcon className="w-6 h-6" /> },
-      { id: 'vendors', label: 'Vendors', icon: <BuildingStorefrontIcon className="w-6 h-6" /> },
+      { id: 'negotiations', label: 'Procurement', icon: <ViewColumnsIcon className="w-6 h-6" /> },
+      { id: 'catalog', label: 'Items Catalog', icon: <TagIcon className="w-6 h-6" /> },
+      { id: 'templates', label: 'Templates', icon: <ListBulletIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
       { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
       { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },

@@ -20,7 +20,7 @@ const KpiCard: React.FC<{ title: string; value: string; subtext?: string }> = ({
     </Card>
 );
 
-const SourcingOverviewPage: React.FC = () => {
+const ProcurementOverviewPage: React.FC = () => {
     const { currentUser } = useAuth();
     if (!currentUser) return null;
 
@@ -29,7 +29,7 @@ const SourcingOverviewPage: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-text-primary">Sourcing Dashboard</h2>
+            <h2 className="text-2xl font-bold text-text-primary">Quotation Dashboard</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <KpiCard title="Requests in Queue" value={requestQueue.length.toString()} subtext={`${urgentRequests} urgent`} />
@@ -75,4 +75,4 @@ const SourcingOverviewPage: React.FC = () => {
     );
 };
 
-export default SourcingOverviewPage;
+export default ProcurementOverviewPage;

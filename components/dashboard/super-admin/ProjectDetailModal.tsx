@@ -128,7 +128,7 @@ const ProjectDetailModal: React.FC<{ project: Project; isOpen: boolean; onClose:
                         </div>
                     </div>
 
-                    {/* Sourcing Stream */}
+                    {/* Procurement Stream */}
                     <ContentCard className="!p-0 overflow-hidden shadow-sm">
                         <div className="p-6 border-b border-border/40 bg-subtle-background/30 flex items-center gap-3">
                             <BuildingStorefrontIcon className="w-5 h-5 text-primary" />

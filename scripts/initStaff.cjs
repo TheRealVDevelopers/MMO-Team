@@ -73,8 +73,8 @@ const STAFF_MEMBERS = [
     },
     {
         email: 'anna.p@makemyoffice.com',
-        name: 'Anna Sourcing',
-        role: 'Sourcing Team',
+        name: 'Anna Procurement',
+        role: 'Procurement Team',
         avatar: 'https://i.pravatar.cc/150?u=user-7',
         phone: '+91 98765 43216',
     },

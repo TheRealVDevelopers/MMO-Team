@@ -16,7 +16,7 @@
 │  • Submit inquiries              │    │  • Drawing Team                 │
 │  • Track projects                │    │  • Quotation Team               │
 │  • View quotes                   │    │  • Site Engineers               │
-│                                  │    │  • Sourcing Team                │
+│                                  │    │  • Procurement Team             │
 │                                  │    │  • Execution Team               │
 │                                  │    │  • Accounts Team                │
 └──────────────┬──────────────────┘    └──────────────┬──────────────────┘
@@ -196,7 +196,7 @@ DRAWING TEAM                 QUOTATION TEAM              SITE ENGINEER
     ┌──────────────────────────────┴────────────────────────────┐
     │                              │                            │
     ▼                              ▼                            ▼
-SOURCING TEAM               EXECUTION TEAM               ACCOUNTS TEAM
+PROCUREMENT TEAM            EXECUTION TEAM               ACCOUNTS TEAM
     │                              │                            │
     • Orders materials            • Manages workers           • Tracks payments
     • Vendor management           • Executes project          • Generates invoices

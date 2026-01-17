@@ -54,7 +54,7 @@ const MyPerformancePage: React.FC<{ setCurrentPage: (page: string) => void }> = 
                 <button onClick={() => setCurrentPage('overview')} className="flex items-center space-x-2 text-sm font-medium text-text-secondary hover:text-text-primary">
                     <ArrowLeftIcon className="w-5 h-5" /><span>Back</span>
                 </button>
-                <h2 className="text-2xl font-bold text-text-primary">Sourcing Performance</h2>
+                <h2 className="text-2xl font-bold text-text-primary">Procurement Performance</h2>
             </div>
 
             <Card className={`text-center p-4 rounded-lg ${overallStatus === 'green' ? 'bg-secondary/10' : overallStatus === 'yellow' ? 'bg-accent/10' : 'bg-error/10'}`}>

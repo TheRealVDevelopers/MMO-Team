@@ -27,14 +27,10 @@ const projectStatusConfig: Record<ProjectStatus, { color: string, name: string }
     [ProjectStatus.NEGOTIATING]: { color: '#eab308', name: 'Negotiating' },
     [ProjectStatus.APPROVED]: { color: '#22c55e', name: 'Approved' },
     [ProjectStatus.REJECTED]: { color: '#ef4444', name: 'Rejected' },
-    [ProjectStatus.SOURCING]: { color: '#14b8a6', name: 'Sourcing' },
+    [ProjectStatus.PROCUREMENT]: { color: '#14b8a6', name: 'Procurement' },
     [ProjectStatus.IN_EXECUTION]: { color: '#f59e0b', name: 'In Execution' },
-    [ProjectStatus.REVISIONS_IN_PROGRESS]: { color: '#6366f1', name: 'Revisions In Progress' },
-    [ProjectStatus.SITE_VISIT_RESCHEDULED]: { color: '#a855f7', name: 'Site Visit Rescheduled' },
-    [ProjectStatus.APPROVAL_REQUESTED]: { color: '#f97316', name: 'Approval Requested' },
     [ProjectStatus.COMPLETED]: { color: '#10b981', name: 'Completed' },
     [ProjectStatus.ON_HOLD]: { color: '#64748b', name: 'On Hold' },
-    [ProjectStatus.TERMINATED]: { color: '#ef4444', name: 'Terminated' },
 };
 
 const ProjectStatusDonutChart: React.FC = () => {

@@ -11,7 +11,7 @@ export enum LeadPipelineStatus {
   WAITING_FOR_QUOTATION = "Waiting for Quotation",
   QUOTATION_SENT = "Quotation Sent",
   NEGOTIATION = "Negotiation",
-  IN_SOURCING = "In Sourcing",
+  IN_PROCUREMENT = "In Procurement",
   IN_EXECUTION = "In Execution",
   WON = "Won",
   LOST = "Lost",
@@ -115,7 +115,7 @@ export enum UserRole {
   DRAWING_TEAM = "Drawing Team",
   QUOTATION_TEAM = "Quotation Team",
   SITE_ENGINEER = "Site Engineer",
-  SOURCING_TEAM = "Sourcing Team",
+  PROCUREMENT_TEAM = "Procurement Team",
   EXECUTION_TEAM = "Execution Team",
   ACCOUNTS_TEAM = "Accounts Team",
 }
@@ -180,7 +180,7 @@ export interface Lead {
     siteVisits?: string[];
     drawingRequests?: string[];
     quotationRequests?: string[];
-    sourcingRequests?: string[];
+    procurementRequests?: string[];
     executionRequests?: string[];
     accountsRequests?: string[];
   }
@@ -206,13 +206,12 @@ export enum ProjectStatus {
   NEGOTIATING = "Negotiating",
   APPROVED = "Approved",
   REJECTED = "Rejected",
-  SOURCING = "Sourcing",
+  PROCUREMENT = "Procurement",
   IN_EXECUTION = "In Execution",
   COMPLETED = "Completed",
   ON_HOLD = "On Hold",
   SITE_VISIT_RESCHEDULED = "Site Visit Rescheduled",
   APPROVAL_REQUESTED = "Approval Requested",
-  TERMINATED = "Terminated",
 }
 
 export enum PaymentStatus {
@@ -308,7 +307,7 @@ export enum ApprovalRequestType {
   SITE_VISIT_TOKEN = "Site Visit Token", // Can be deprecated in favor of SITE_VISIT
   DESIGN_TOKEN = "Design Token",
   QUOTATION_TOKEN = "Quotation Token",
-  SOURCING_TOKEN = "Sourcing Token",
+  PROCUREMENT_TOKEN = "Procurement Token",
   EXECUTION_TOKEN = "Execution Token",
   ACCOUNTS_TOKEN = "Accounts Token",
   QUOTATION_APPROVAL = "Quotation Approval",
@@ -552,7 +551,7 @@ export interface RFQ {
   rfqNumber: string; // RFQ-2024-001
   projectId: string;
   projectName: string;
-  sourcingRequestId?: string; // Link to internal PR
+  procurementRequestId?: string; // Link to internal PR
   items: RFQItem[];
   createdDate: Date;
   deadline: Date;
@@ -754,19 +753,19 @@ export interface DrawingRequest {
   notes?: string;
 }
 
-export enum SourcingRequestStatus {
+export enum ProcurementRequestStatus {
   REQUESTED = "Requested",
   IN_PROGRESS = "In Progress",
   COMPLETED = "Completed",
 }
 
-export interface SourcingRequest {
+export interface ProcurementRequest {
   id: string;
   leadId: string;
   projectName: string;
   requesterId: string;
   assigneeId: string;
-  status: SourcingRequestStatus;
+  status: ProcurementRequestStatus;
   requestDate: Date;
   requiredByDate?: Date;
   materials: string;
