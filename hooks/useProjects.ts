@@ -28,24 +28,23 @@ const fromFirestore = (docData: FirestoreProject, id: string): Project => {
     } as Project;
 };
 
-export const useProjects = (userId?: string) => {
+return { projects, loading, error };
+};
+
+export const useAssignedProjects = (userId: string) => {
     const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
     useEffect(() => {
-        setLoading(true);
-        setError(null);
+        if (!userId) {
+            setLoading(false);
+            return;
+        }
 
         const projectsCollection = collection(db, 'projects');
-        let q = query(projectsCollection, orderBy('startDate', 'desc'));
-
-        // If userId is provided, we might want to filter projects where this user is involved
-        // For simplicity in the drawing team board, we check assignedTeam.drawing
-        // Fix: Remove orderBy to avoid composite index requirement. Sort client-side.
-        if (userId) {
-            q = query(projectsCollection, where('assignedTeam.drawing', '==', userId), orderBy('startDate', 'desc'));
-        }
+        // Filter projects where userId is in the execution array
+        const q = query(projectsCollection, where('assignedTeam.execution', 'array-contains', userId));
 
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const projectsData: Project[] = [];
@@ -53,10 +52,11 @@ export const useProjects = (userId?: string) => {
                 projectsData.push(fromFirestore(doc.data() as FirestoreProject, doc.id));
             });
 
-            setProjects(projectsData);
+            // Client-side sort if needed since we can't use orderBy without index
+            setProjects(projectsData.sort((a, b) => b.startDate.getTime() - a.startDate.getTime()));
             setLoading(false);
         }, (err) => {
-            console.error("Error fetching projects:", err);
+            console.error("Error fetching assigned projects:", err);
             setError(err);
             setLoading(false);
         });
@@ -86,6 +86,73 @@ export const updateProject = async (projectId: string, updatedData: Partial<Proj
         }
     } catch (error) {
         console.error("Error updating project:", error);
+        throw error;
+    }
+};
+
+export const updateProjectStage = async (projectId: string, stageId: string, completed: boolean, userName: string) => {
+    try {
+        const projectRef = doc(db, 'projects', projectId);
+        const projectSnap = await getDoc(projectRef);
+        if (!projectSnap.exists()) return;
+
+        const projectData = projectSnap.data() as Project;
+        const updatedStages = (projectData.stages || []).map(s =>
+            s.id === stageId ? { ...s, status: completed ? 'Completed' : 'Pending', completedAt: completed ? new Date() : undefined } : s
+        );
+
+        await updateDoc(projectRef, {
+            stages: updatedStages,
+            updatedAt: serverTimestamp(),
+            history: [
+                ...(projectData.history || []),
+                {
+                    action: completed ? 'Stage Completed' : 'Stage Reset',
+                    user: userName,
+                    timestamp: new Date(),
+                    notes: `Stage: ${updatedStages.find(s => s.id === stageId)?.name}`
+                }
+            ]
+        });
+    } catch (error) {
+        console.error("Error updating project stage:", error);
+        throw error;
+    }
+};
+
+export const raiseProjectIssue = async (projectId: string, issue: any, userName: string) => {
+    try {
+        const projectRef = doc(db, 'projects', projectId);
+        const projectSnap = await getDoc(projectRef);
+        if (!projectSnap.exists()) return;
+
+        const projectData = projectSnap.data() as Project;
+        const newIssue = {
+            id: Date.now().toString(),
+            ...issue,
+            raisedBy: userName,
+            createdAt: new Date(),
+            status: 'Open'
+        };
+
+        await updateDoc(projectRef, {
+            issues: [...(projectData.issues || []), newIssue],
+            updatedAt: serverTimestamp()
+        });
+
+        // Notify Admin
+        await createNotification({
+            title: 'Critical Project Issue',
+            message: `Field Alert: ${userName} has raised an issue for project ${projectData.projectName}. Category: ${issue.category}`,
+            user_id: 'user-2', // Admin/Manager
+            entity_type: 'project',
+            entity_id: projectId,
+            type: 'error'
+        });
+
+        return newIssue;
+    } catch (error) {
+        console.error("Error raising project issue:", error);
         throw error;
     }
 };

@@ -266,7 +266,8 @@ export const approveRequest = async (
   reviewerName: string,
   assigneeId?: string,
   comments?: string,
-  deadline?: Date
+  deadline?: Date,
+  stages?: ExecutionStage[]
 ) => {
   try {
     const requestRef = doc(db, 'approvalRequests', requestId);
@@ -305,6 +306,7 @@ export const approveRequest = async (
       reviewerName: reviewerName,
       reviewerComments: comments || '',
       assigneeId: assigneeId || null,
+      stages: stages || data.stages || []
     });
 
     // 1. Notify Requester (Sales Member)
@@ -363,6 +365,7 @@ export const approveRequest = async (
       // If comments were edited/provided, use them. Otherwise fallback to original description.
       const taskDescription = comments || data.description;
 
+      // Primary task for the request
       await addTask({
         title: data.title,
         description: `Strategic Assignment for ${data.requestType}.\n\nInstructions: ${taskDescription}`,
@@ -381,6 +384,29 @@ export const approveRequest = async (
         contextType: contextType,
         requesterId: data.requesterId
       }, reviewerId);
+
+      // Automated Task Creation for Execution Stages
+      if (newStatus === ApprovalStatus.APPROVED && data.requestType === ApprovalRequestType.EXECUTION_TOKEN && stages) {
+        for (const stage of stages) {
+          await addTask({
+            title: `[Project Stage] ${stage.name} - ${data.title}`,
+            description: `Automated Execution Stage Task: ${stage.name}.\nProject: ${data.title}`,
+            userId: assigneeId,
+            status: 'Pending' as any,
+            priority: data.priority || 'High',
+            deadline: stage.deadline ? (stage.deadline instanceof Date ? stage.deadline.toISOString() : new Date(stage.deadline).toISOString()) : undefined,
+            date: stage.deadline ? (stage.deadline instanceof Date ? stage.deadline.toISOString().split('T')[0] : new Date(stage.deadline).toISOString().split('T')[0]) : new Date().toISOString().split('T')[0],
+            timeSpent: 0,
+            isPaused: false,
+            createdAt: new Date(),
+            createdBy: reviewerId,
+            createdByName: reviewerName,
+            contextId: data.contextId,
+            contextType: 'project',
+            requesterId: data.requesterId
+          }, reviewerId);
+        }
+      }
     }
 
     // 4. Update Lead/Project if contextId exists
@@ -542,7 +568,11 @@ export const approveRequest = async (
         }
 
         if (projectRef) {
-          await updateDoc(projectRef, projectUpdates);
+          const projectUpdatePayload = {
+            ...projectUpdates,
+            ...(data.requestType === ApprovalRequestType.EXECUTION_TOKEN && stages ? { stages: stages } : {})
+          };
+          await updateDoc(projectRef, projectUpdatePayload);
         }
 
         // Also log to global activity registry

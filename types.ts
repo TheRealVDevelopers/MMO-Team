@@ -231,6 +231,15 @@ export interface Issue {
   priority: 'High' | 'Medium' | 'Low';
   reportedBy: string;
   timestamp: Date;
+  notes?: string;
+  category?: 'Site Access' | 'Materials' | 'Labor' | 'Client' | 'Other';
+}
+
+export interface ExecutionIssue extends Issue {
+  resolvedAt?: Date;
+  resolvedBy?: string;
+  adminComments?: string;
+  salesComments?: string;
 }
 
 export interface ChecklistItem {
@@ -427,12 +436,13 @@ export interface Project {
   milestones: { name: string; completed: boolean }[];
   startDate: Date;
   endDate: Date;
-  issues?: Issue[];
   checklists?: {
     daily: ChecklistItem[];
     quality: ChecklistItem[];
   };
   communication?: CommunicationMessage[];
+  issues?: ExecutionIssue[];
+  stages?: ExecutionStage[];
   totalExpenses?: number;
   documents?: Document[];
   salespersonId?: string; // User ID of the salesperson who won the deal
@@ -440,7 +450,6 @@ export interface Project {
   is_demo?: boolean;
   items?: Item[];
   counterOffers?: CounterOffer[];
-  stages?: ExecutionStage[];
 }
 
 export enum SiteVisitStatus {
