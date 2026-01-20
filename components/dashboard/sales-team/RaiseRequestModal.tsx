@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 // Request Modal
 import { useAuth } from '../../../context/AuthContext';
-import { ApprovalRequestType, UserRole } from '../../../types';
+import { ApprovalRequestType, UserRole, ExecutionStage } from '../../../types';
 import { useApprovals } from '../../../hooks/useApprovalSystem';
 import { XMarkIcon } from '../../icons/IconComponents';
 import { PrimaryButton, SecondaryButton } from '../shared/DashboardUI';
@@ -28,6 +28,8 @@ const REQUEST_TYPES = [
     { label: 'Clarification', value: ApprovalRequestType.CLARIFICATION },
     { label: 'Modification', value: ApprovalRequestType.MODIFICATION },
     { label: 'Request for Quotation', value: ApprovalRequestType.REQUEST_FOR_QUOTATION },
+    { label: 'Execution Request', value: ApprovalRequestType.EXECUTION_TOKEN },
+    { label: 'Procurement Request', value: ApprovalRequestType.PROCUREMENT_TOKEN },
     { label: 'Negotiation', value: ApprovalRequestType.NEGOTIATION },
     { label: 'Other', value: ApprovalRequestType.OTHER },
 ];
@@ -44,6 +46,9 @@ const REQUEST_TYPE_TO_ROLE: Partial<Record<ApprovalRequestType, UserRole>> = {
     [ApprovalRequestType.REQUEST_FOR_QUOTATION]: UserRole.PROCUREMENT_TEAM,
     [ApprovalRequestType.NEGOTIATION]: UserRole.PROCUREMENT_TEAM,
     [ApprovalRequestType.MODIFICATION]: UserRole.EXECUTION_TEAM,
+    [ApprovalRequestType.EXECUTION_TOKEN]: UserRole.EXECUTION_TEAM,
+    [ApprovalRequestType.PROCUREMENT_TOKEN]: UserRole.PROCUREMENT_TEAM,
+    [ApprovalRequestType.OTHER]: UserRole.SUPER_ADMIN,
 };
 
 const URGENCY_LEVELS = ['Low', 'Medium', 'High'];
@@ -56,6 +61,7 @@ const RaiseRequestModal: React.FC<RaiseRequestModalProps> = ({ isOpen, onClose, 
     const [description, setDescription] = useState('');
     const [preferredDateTime, setPreferredDateTime] = useState('');
     const [urgency, setUrgency] = useState<'Low' | 'Medium' | 'High'>('Medium');
+    const [stages, setStages] = useState<ExecutionStage[]>([]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -74,7 +80,8 @@ const RaiseRequestModal: React.FC<RaiseRequestModalProps> = ({ isOpen, onClose, 
                 requesterName: currentUser.name,
                 requesterRole: currentUser.role,
                 // Map request type to the role that should handle it
-                targetRole: REQUEST_TYPE_TO_ROLE[requestType],
+                targetRole: REQUEST_TYPE_TO_ROLE[requestType] || UserRole.SUPER_ADMIN,
+                stages: requestType === ApprovalRequestType.EXECUTION_TOKEN ? stages : undefined,
             });
 
             onClose();
@@ -143,6 +150,66 @@ const RaiseRequestModal: React.FC<RaiseRequestModalProps> = ({ isOpen, onClose, 
                                 variant="compact"
                             />
                         </div>
+
+                        {/* Stage Builder for Execution Requests */}
+                        {requestType === ApprovalRequestType.EXECUTION_TOKEN && (
+                            <div className="space-y-3 bg-subtle-background/50 p-4 rounded-xl border border-border/50">
+                                <div className="flex justify-between items-center">
+                                    <label className="text-sm font-bold text-text-secondary">Execution Stages</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setStages(prev => [...prev, {
+                                                id: Date.now().toString(),
+                                                name: `Stage ${prev.length + 1}`,
+                                                deadline: null as any, // Placeholder
+                                                status: 'Pending'
+                                            }]);
+                                        }}
+                                        className="text-xs font-black uppercase tracking-wider text-primary hover:text-secondary"
+                                    >
+                                        + Add Stage
+                                    </button>
+                                </div>
+
+                                {stages.map((stage, idx) => (
+                                    <div key={stage.id} className="flex gap-2 items-start">
+                                        <div className="flex-1 space-y-2">
+                                            <input
+                                                type="text"
+                                                value={stage.name}
+                                                onChange={(e) => {
+                                                    const newStages = [...stages];
+                                                    newStages[idx].name = e.target.value;
+                                                    setStages(newStages);
+                                                }}
+                                                placeholder="Stage Name (e.g. Flooring)"
+                                                className="w-full rounded-lg border-border bg-surface text-xs py-1.5"
+                                            />
+                                            <input
+                                                type="date"
+                                                onChange={(e) => {
+                                                    const newStages = [...stages];
+                                                    newStages[idx].deadline = new Date(e.target.value);
+                                                    setStages(newStages);
+                                                }}
+                                                className="w-full rounded-lg border-border bg-surface text-xs py-1.5"
+                                            />
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setStages(stages.filter(s => s.id !== stage.id))}
+                                            className="p-1.5 text-text-tertiary hover:text-error"
+                                        >
+                                            <XMarkIcon className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ))}
+                                {stages.length === 0 && (
+                                    <p className="text-xs text-text-tertiary italic text-center py-2">No stages defined. Add at least one.</p>
+                                )}
+                            </div>
+                        )}
 
                         <div>
                             <label className="block text-sm font-bold text-text-secondary mb-1">Urgency</label>

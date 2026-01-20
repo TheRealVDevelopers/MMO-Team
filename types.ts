@@ -319,6 +319,19 @@ export enum ApprovalStatus {
   PENDING = "Pending",
   APPROVED = "Approved",
   REJECTED = "Rejected",
+  AWAITING_EXECUTION_ACCEPTANCE = "Awaiting Execution Acceptance",
+  NEGOTIATION = "Negotiation",
+}
+
+export interface ExecutionStage {
+  id: string;
+  name: string; // e.g. "Phase 1: Flooring"
+  description?: string;
+  deadline: Date;
+  status: 'Pending' | 'In Progress' | 'Completed';
+  completedAt?: Date;
+  completedBy?: string; // User ID
+  notes?: string;
 }
 
 export interface ApprovalRequest {
@@ -346,6 +359,15 @@ export interface ApprovalRequest {
   contextId?: string; // e.g., Lead ID or Project ID
   assigneeId?: string; // Populated by admin during approval
   is_demo?: boolean;
+
+  // Execution Workflow & Negotiation
+  stages?: ExecutionStage[];
+  history?: {
+    action: string;
+    user: string;
+    timestamp: Date;
+    notes?: string;
+  }[];
 }
 
 export type ExpenseCategory = 'Travel' | 'Site' | 'Office' | 'Client Meeting' | 'Other';
@@ -418,6 +440,7 @@ export interface Project {
   is_demo?: boolean;
   items?: Item[];
   counterOffers?: CounterOffer[];
+  stages?: ExecutionStage[];
 }
 
 export enum SiteVisitStatus {

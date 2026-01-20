@@ -16,7 +16,7 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { ApprovalRequest, ApprovalRequestType, ApprovalStatus, UserRole, LeadPipelineStatus, ActivityStatus, ProjectStatus } from '../types';
+import { ApprovalRequest, ApprovalRequestType, ApprovalStatus, UserRole, LeadPipelineStatus, ActivityStatus, ProjectStatus, ExecutionStage } from '../types';
 import { USERS, formatCurrencyINR } from '../constants';
 import { createNotification, logActivity } from '../services/liveDataService';
 
@@ -162,6 +162,62 @@ export const useMyApprovalRequests = (userId: string) => {
   return { myRequests, loading };
 };
 
+// Get approval requests assigned to specific user
+export const useAssignedApprovalRequests = (userId: string) => {
+  const [assignedRequests, setAssignedRequests] = useState<ApprovalRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+
+    const q = query(
+      collection(db, 'approvalRequests'),
+      where('assigneeId', '==', userId),
+      orderBy('requestedAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const approvalRequests: ApprovalRequest[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        approvalRequests.push({
+          id: doc.id,
+          requestType: data.requestType,
+          requesterId: data.requesterId,
+          requesterName: data.requesterName,
+          requesterRole: data.requesterRole,
+          title: data.title,
+          description: data.description,
+          startDate: data.startDate && (data.startDate as any).toDate ? (data.startDate as Timestamp).toDate() : undefined,
+          endDate: data.endDate && (data.endDate as any).toDate ? (data.endDate as Timestamp).toDate() : undefined,
+          duration: data.duration,
+          status: data.status,
+          requestedAt: data.requestedAt && (data.requestedAt as any).toDate ? (data.requestedAt as Timestamp).toDate() : new Date(),
+          reviewedAt: data.reviewedAt && (data.reviewedAt as any).toDate ? (data.reviewedAt as Timestamp).toDate() : undefined,
+          reviewedBy: data.reviewedBy,
+          reviewerName: data.reviewerName,
+          reviewerComments: data.reviewerComments,
+          attachments: data.attachments || [],
+          priority: data.priority || 'Medium',
+          contextId: data.contextId,
+          targetRole: data.targetRole,
+          assigneeId: data.assigneeId,
+          stages: data.stages || [], // Include stages
+        });
+      });
+      setAssignedRequests(approvalRequests);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [userId]);
+
+  return { assignedRequests, loading };
+};
+
 // Get pending approvals count (for notifications)
 export const usePendingApprovalsCount = () => {
   const [count, setCount] = useState(0);
@@ -224,9 +280,26 @@ export const approveRequest = async (
     const assigneeName = assignee ? assignee.name : 'Team Member';
     const assigneeRole = assignee ? assignee.role : 'Specialist';
 
+    // For Execution Requests, we don't mark as APPROVED yet, we go to AWAITING_EXECUTION_ACCEPTANCE
+    // This allows the "Negotiation" phase with the worker.
+    // UNLESS it's already in NEGOTIATION status and we are approving the changes, then we might accept it.
+    // But per requirements: "once the manager or the admin approve... complete request would go to the execution team member"
+
+    let newStatus = ApprovalStatus.APPROVED;
+    if (data.requestType === ApprovalRequestType.EXECUTION_TOKEN) {
+      // logic:
+      // PENDING -> AWAITING_EXECUTION_ACCEPTANCE (Admin approves)
+      // NEGOTIATION -> AWAITING_EXECUTION_ACCEPTANCE (Admin approves changes)
+      // AWAITING_EXECUTION_ACCEPTANCE -> APPROVED (Execution Team accepts)
+
+      if (data.status === ApprovalStatus.PENDING || data.status === 'Negotiation') {
+        newStatus = ApprovalStatus.AWAITING_EXECUTION_ACCEPTANCE;
+      }
+    }
+
     // update request status
     await updateDoc(requestRef, {
-      status: ApprovalStatus.APPROVED,
+      status: newStatus,
       reviewedAt: serverTimestamp(),
       reviewedBy: reviewerId,
       reviewerName: reviewerName,
@@ -389,10 +462,12 @@ export const approveRequest = async (
           updates.tasks.drawingRequests.push(`${assigneeName} - Revision Assigned ${new Date().toLocaleDateString()}`);
         } else if (data.requestType === ApprovalRequestType.REQUEST_FOR_QUOTATION || data.requestType === ApprovalRequestType.QUOTATION_TOKEN) {
           updates.status = LeadPipelineStatus.WAITING_FOR_QUOTATION;
-        } else if (data.requestType === ApprovalRequestType.MODIFICATION) {
+        } else if (data.requestType === ApprovalRequestType.MODIFICATION || data.requestType === ApprovalRequestType.EXECUTION_TOKEN) {
           updates.status = LeadPipelineStatus.IN_EXECUTION;
         } else if (data.requestType === ApprovalRequestType.NEGOTIATION) {
           updates.status = LeadPipelineStatus.NEGOTIATION;
+        } else if (data.requestType === ApprovalRequestType.PROCUREMENT_TOKEN) {
+          updates.status = LeadPipelineStatus.IN_PROCUREMENT;
         }
 
         await updateDoc(leadRef, updates);
@@ -442,6 +517,15 @@ export const approveRequest = async (
           projectUpdates.status = ProjectStatus.SITE_VISIT_RESCHEDULED;
         } else if (data.requestType === ApprovalRequestType.NEGOTIATION) {
           projectUpdates.status = ProjectStatus.NEGOTIATING;
+        } else if (data.requestType === ApprovalRequestType.EXECUTION_TOKEN) {
+          projectUpdates.status = ProjectStatus.IN_EXECUTION;
+          // If we have stages, we might want to save them to the project, but usually that happens on Worker Acceptance.
+          // For now, we only update status here if it's a direct approval (fallback).
+          // If it's AWAITING_EXECUTION_ACCEPTANCE, we might not update project status yet?
+          // Actually, let's keep it IN_EXECUTION to show movement, or creates a new status "Waiting for Worker"?
+          // Keeping IN_EXECUTION is fine for high level.
+        } else if (data.requestType === ApprovalRequestType.PROCUREMENT_TOKEN) {
+          projectUpdates.status = ProjectStatus.PROCUREMENT;
         } else if (data.requestType === ApprovalRequestType.QUOTATION_APPROVAL) {
           projectUpdates.status = ProjectStatus.QUOTATION_SENT;
           // Log specific activity for Sales Team notification
@@ -511,6 +595,47 @@ export const rejectRequest = async (
     });
   } catch (error) {
     console.error('Error rejecting request:', error);
+    throw error;
+  }
+};
+
+// Negotiate request (Execution Team proposes changes)
+export const negotiateRequest = async (
+  requestId: string,
+  reviewerId: string,
+  reviewerName: string,
+  stages: ExecutionStage[],
+  comments: string
+) => {
+  try {
+    const requestRef = doc(db, 'approvalRequests', requestId);
+
+    // Fetch request to get requesterId
+    const requestSnap = await getDoc(requestRef);
+    if (!requestSnap.exists()) return;
+    const data = requestSnap.data() as ApprovalRequest;
+
+    await updateDoc(requestRef, {
+      status: 'Negotiation', // Or ApprovalStatus.NEGOTIATION depending on enum match
+      reviewedAt: serverTimestamp(),
+      reviewedBy: reviewerId,
+      reviewerName: reviewerName,
+      reviewerComments: comments,
+      stages: stages // Update stages with proposed changes
+    });
+
+    // Notify Requester (Sales or Admin)
+    await createNotification({
+      title: 'Execution Protocol Negotiation',
+      message: `Strategic Alert: Execution Team has proposed changes to "${data.title}". Review needed. Notes: ${comments}`,
+      user_id: data.requesterId,
+      entity_type: 'system',
+      entity_id: requestId,
+      type: 'warning'
+    });
+
+  } catch (error) {
+    console.error('Error negotiating request:', error);
     throw error;
   }
 };

@@ -377,6 +377,20 @@ const ApprovalsPage: React.FC = () => {
                   <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-1">Subject Protocol</p>
                   <p className="text-lg font-bold text-text-primary mb-1">{selectedRequest.title}</p>
                   <p className="text-xs text-text-secondary font-medium italic">Requested by {selectedRequest.requesterName}</p>
+
+                  {selectedRequest.stages && selectedRequest.stages.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-border/40">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-2">Execution Stages</p>
+                      <div className="space-y-2">
+                        {selectedRequest.stages.map((stage, idx) => (
+                          <div key={idx} className="flex justify-between items-center bg-surface p-2 rounded-lg border border-border/50 text-xs">
+                            <span className="font-bold text-text-primary">{stage.name}</span>
+                            <span className="text-text-tertiary">{new Date(stage.deadline).toLocaleDateString()}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-3 mb-10">

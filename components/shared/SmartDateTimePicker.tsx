@@ -207,7 +207,7 @@ const SmartDateTimePicker: React.FC<SmartDateTimePickerProps> = ({
                         !value ? "text-text-tertiary" : "text-text-primary",
                         variant === 'compact' ? "text-[10px]" : "text-xs"
                     )}>
-                        {value ? format(parseISO(value), 'PPP p') : placeholder}
+                        {value && isValid(parseISO(value)) ? format(parseISO(value), 'PPP p') : placeholder}
                     </p>
                 </div>
             </div>

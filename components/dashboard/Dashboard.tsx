@@ -11,7 +11,7 @@ import DrawingTeamDashboard from './DrawingTeamDashboard';
 import QuotationTeamDashboard from './QuotationTeamDashboard';
 import SiteEngineerDashboard from './SiteEngineerDashboard';
 import ProcurementTeamDashboard from './SourcingTeamDashboard';
-import ExecutionTeamDashboard from './ExecutionTeamDashboard';
+import ExecutionTeamDashboard from './execution-team/ExecutionDashboard';
 import AccountsTeamDashboard from './AccountsTeamDashboard';
 import SuperAdminDashboard from './SuperAdminDashboard';
 import VendorDashboard from './vendor/VendorDashboard';
