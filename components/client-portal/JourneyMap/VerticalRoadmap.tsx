@@ -50,7 +50,7 @@ const VerticalRoadmap: React.FC<VerticalRoadmapProps> = ({
             </h3>
 
             {/* Vertical Timeline */}
-            <div className="relative">
+            <div className="relative px-2">
                 {stages.map((stage, index) => {
                     const status = getNodeStatus(stage, index);
                     const scene = getStageScene(stage.name);
@@ -58,12 +58,13 @@ const VerticalRoadmap: React.FC<VerticalRoadmapProps> = ({
                     const roleConfig = ROLE_CONFIGS[stage.responsibleRole];
 
                     return (
-                        <div key={stage.id} className="relative">
+                        <div key={stage.id} className="relative pb-12 last:pb-0">
                             {/* Connector Line */}
                             {index < stages.length - 1 && (
                                 <div className={`
-                                    absolute left-7 top-16 w-0.5 h-16
-                                    ${status === 'completed' ? 'bg-emerald-400' : 'bg-gray-200'}
+                                    absolute left-[2.25rem] top-[4rem] w-0.5 h-[calc(100%-2rem)]
+                                    ${status === 'completed' ? 'bg-emerald-400' : 'bg-gray-100'}
+                                    transition-colors duration-500
                                 `} />
                             )}
 
@@ -72,108 +73,116 @@ const VerticalRoadmap: React.FC<VerticalRoadmapProps> = ({
                                 onClick={() => isClickable && onStageClick(stage)}
                                 disabled={!isClickable}
                                 className={`
-                                    w-full flex items-center gap-4 p-4 rounded-xl mb-3
-                                    transition-all duration-200
+                                    w-full flex items-center gap-6 p-5 rounded-[1.5rem]
+                                    transition-all duration-300
                                     ${status === 'current'
-                                        ? 'bg-primary/5 border-2 border-primary shadow-sm'
+                                        ? 'bg-white border-2 border-primary shadow-xl shadow-primary/10'
                                         : status === 'completed'
-                                            ? 'bg-emerald-50 hover:bg-emerald-100'
+                                            ? 'bg-emerald-50/50 hover:bg-emerald-50 border border-transparent'
                                             : status === 'locked'
-                                                ? 'bg-gray-50 opacity-60 cursor-not-allowed'
-                                                : 'bg-gray-50 hover:bg-gray-100'
+                                                ? 'bg-gray-50/50 opacity-40 cursor-not-allowed border border-transparent'
+                                                : 'bg-gray-50/50 hover:bg-gray-50 border border-transparent'
                                     }
                                     ${isClickable ? 'cursor-pointer' : ''}
                                 `}
                             >
                                 {/* Stage Icon */}
                                 <div className={`
-                                    relative w-14 h-14 rounded-xl flex-shrink-0
+                                    relative w-16 h-16 rounded-2xl flex-shrink-0
                                     flex items-center justify-center
+                                    transition-all duration-500
                                     ${status === 'completed'
-                                        ? `bg-gradient-to-br ${scene.color}`
+                                        ? `bg-gradient-to-br ${scene.color} shadow-lg shadow-emerald-200`
                                         : status === 'current'
-                                            ? `bg-gradient-to-br ${scene.color} ring-4 ring-white shadow-lg`
-                                            : 'bg-gray-200'
+                                            ? `bg-gradient-to-br ${scene.color} ring-4 ring-primary/10 shadow-xl`
+                                            : 'bg-white border border-gray-100 shadow-sm'
                                     }
                                 `}>
                                     {status === 'locked' ? (
-                                        <LockClosedIcon className="w-5 h-5 text-gray-400" />
+                                        <LockClosedIcon className="w-6 h-6 text-gray-300" />
                                     ) : (
-                                        <span className="text-2xl">{scene.emoji}</span>
+                                        <span className="text-3xl">{scene.emoji}</span>
                                     )}
 
                                     {/* Status Badge */}
                                     {status === 'completed' && (
-                                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-white rounded-full shadow flex items-center justify-center">
-                                            <CheckCircleIcon className="w-4 h-4 text-emerald-500" />
+                                        <div className="absolute -top-2 -right-2 w-6 h-6 bg-white rounded-full shadow-md flex items-center justify-center">
+                                            <CheckCircleIcon className="w-5 h-5 text-emerald-500" />
                                         </div>
                                     )}
                                     {status === 'current' && (
-                                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-white rounded-full shadow flex items-center justify-center">
-                                            <div className="w-2.5 h-2.5 bg-primary rounded-full animate-pulse" />
+                                        <div className="absolute -top-2 -right-2 w-6 h-6 bg-white rounded-full shadow-md flex items-center justify-center">
+                                            <div className="w-3 h-3 bg-primary rounded-full animate-pulse" />
                                         </div>
                                     )}
                                 </div>
 
                                 {/* Stage Info */}
                                 <div className="flex-1 text-left min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <h4 className={`font-semibold ${status === 'completed' ? 'text-emerald-700'
-                                                : status === 'current' ? 'text-primary'
-                                                    : status === 'locked' ? 'text-gray-400'
-                                                        : 'text-gray-600'
+                                    <div className="flex items-center gap-3">
+                                        <h4 className={`text-lg font-bold tracking-tight ${status === 'completed' ? 'text-emerald-800'
+                                            : status === 'current' ? 'text-gray-900'
+                                                : status === 'locked' ? 'text-gray-400'
+                                                    : 'text-gray-700'
                                             }`}>
                                             {stage.name}
                                         </h4>
                                         {status === 'current' && (
-                                            <span className="px-2 py-0.5 bg-primary text-white text-[10px] font-bold rounded-full uppercase">
-                                                Now
+                                            <span className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-black rounded-md uppercase tracking-wider">
+                                                In Progress
                                             </span>
                                         )}
                                     </div>
 
                                     {/* Date info */}
-                                    <p className="text-xs text-gray-500 mt-0.5">
-                                        {status === 'completed' && stage.actualEndDate && (
-                                            <>Completed {new Date(stage.actualEndDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</>
-                                        )}
-                                        {status === 'current' && stage.expectedEndDate && (
-                                            <>Expected {new Date(stage.expectedEndDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</>
-                                        )}
-                                        {status === 'upcoming' && stage.expectedEndDate && (
-                                            <>Starts {new Date(stage.expectedEndDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</>
-                                        )}
-                                        {status === 'locked' && '🔒 Locked'}
-                                    </p>
-
-                                    {/* Assignee for current/completed */}
-                                    {(status === 'completed' || status === 'current') && stage.assigneeName && (
-                                        <p className="text-xs mt-1" style={{ color: roleConfig.color }}>
-                                            👤 {stage.assigneeName}
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <p className="text-xs font-medium text-gray-400">
+                                            {status === 'completed' && stage.actualEndDate && (
+                                                <>Finished on {new Date(stage.actualEndDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</>
+                                            )}
+                                            {status === 'current' && stage.expectedEndDate && (
+                                                <>Target: {new Date(stage.expectedEndDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</>
+                                            )}
+                                            {status === 'upcoming' && stage.expectedEndDate && (
+                                                <>Scheduled: {new Date(stage.expectedEndDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</>
+                                            )}
+                                            {status === 'locked' && 'Waiting for unlock'}
                                         </p>
-                                    )}
+                                    </div>
 
                                     {/* Progress for current */}
                                     {status === 'current' && stage.progressPercent !== undefined && (
-                                        <div className="mt-2">
-                                            <div className="flex items-center justify-between text-xs mb-1">
-                                                <span className="text-gray-500">Progress</span>
-                                                <span className="font-semibold text-primary">{stage.progressPercent}%</span>
+                                        <div className="mt-4 max-w-xs">
+                                            <div className="flex items-center justify-between text-[10px] font-bold text-primary uppercase tracking-[0.1em] mb-1.5">
+                                                <span>Completion Status</span>
+                                                <span>{stage.progressPercent}%</span>
                                             </div>
-                                            <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                            <div className="h-1.5 bg-primary/5 rounded-full overflow-hidden">
                                                 <div
-                                                    className="h-full bg-primary rounded-full"
+                                                    className="h-full bg-primary rounded-full transition-all duration-1000"
                                                     style={{ width: `${stage.progressPercent}%` }}
                                                 />
                                             </div>
+                                        </div>
+                                    )}
+
+                                    {/* Assignee for current/completed */}
+                                    {(status === 'completed' || status === 'current') && stage.assigneeName && (
+                                        <div className="flex items-center gap-2 mt-3">
+                                            <div className="w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-black text-white" style={{ backgroundColor: roleConfig.color }}>
+                                                {stage.assigneeName.charAt(0)}
+                                            </div>
+                                            <span className="text-xs font-semibold text-gray-500">
+                                                {stage.assigneeName}
+                                            </span>
                                         </div>
                                     )}
                                 </div>
 
                                 {/* Arrow for clickable */}
                                 {isClickable && (
-                                    <div className="text-gray-300">
-                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <div className="text-gray-300 flex-shrink-0">
+                                        <svg className="w-6 h-6 opacity-0 group-hover:opacity-100 transform translate-x-[-10px] group-hover:translate-x-0 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                         </svg>
                                     </div>
