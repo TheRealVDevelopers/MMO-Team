@@ -31,7 +31,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
   const [loginModalType, setLoginModalType] = useState<'staff' | 'vendor'>('staff');
   const [currentView, setCurrentView] = useState<'home' | 'services' | 'portfolio' | 'about' | 'contact' | 'start-project' | 'client-login' | 'client-dashboard'>('home');
   const [isScrolled, setIsScrolled] = useState(false);
-  const [clientProjectId, setClientProjectId] = useState<string>('');
+  const [clientEmail, setClientEmail] = useState<string>('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Scroll to top when view changes
@@ -65,13 +65,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
     setCurrentView(page as any);
   };
 
-  const handleClientLogin = (projectId: string) => {
-    setClientProjectId(projectId);
+  const handleClientLogin = (email: string) => {
+    setClientEmail(email);
     setCurrentView('client-dashboard');
   };
 
   const handleClientLogout = () => {
-    setClientProjectId('');
+    setClientEmail('');
     setCurrentView('home');
   };
 
@@ -83,7 +83,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
       case 'contact': return <ContactPage />;
       case 'start-project': return <StartProjectPage />;
       case 'client-login': return <ClientLoginPage onLoginSuccess={handleClientLogin} />;
-      case 'client-dashboard': return <ClientDashboardPage projectId={clientProjectId} onLogout={handleClientLogout} />;
+      case 'client-dashboard': return <ClientDashboardPage projectId={clientEmail} onLogout={handleClientLogout} />;
       default: return <HomePage onNavigate={handleNavigate} />;
     }
   };
@@ -136,13 +136,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                 className="flex items-center cursor-pointer group"
                 onClick={() => setCurrentView('home')}
               >
-                <div className="w-10 h-10 flex items-center justify-center font-serif font-bold text-xl bg-primary text-white transition-all duration-500 group-hover:bg-secondary group-hover:shadow-[0_0_20px_rgba(var(--color-primary),0.3)] rounded-lg">
-                  M
-                </div>
-                <div className="ml-3 flex flex-col">
-                  <span className="text-xl font-serif font-black tracking-tighter leading-none text-text-primary bg-clip-text text-transparent bg-gradient-to-r from-text-primary to-text-primary/70">MMO</span>
-                  <span className="text-[0.6rem] uppercase tracking-[0.4em] text-primary font-bold mt-1 opacity-80">Make My Office</span>
-                </div>
+                <img
+                  src="/mmo-logo.png"
+                  alt="Make My Office"
+                  className="h-10 w-auto object-contain transition-all duration-500 group-hover:opacity-80"
+                />
               </motion.div>
 
               {/* Navigation - Centered - Hidden on mobile */}
@@ -213,9 +211,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
             <div className="h-full flex flex-col overflow-hidden">
               {/* Menu Header */}
               <div className="flex items-center justify-between p-6 border-b border-border bg-gradient-to-r from-primary to-secondary">
-                <div>
-                  <h2 className="text-lg font-bold text-white uppercase tracking-widest">MMO</h2>
-                  <p className="text-xs text-white/70 font-light mt-0.5 tracking-wide">Workplace Solutions</p>
+                <div className="flex items-center">
+                  <img
+                    src="/mmo-logo.png"
+                    alt="Make My Office"
+                    className="h-8 w-auto object-contain brightness-0 invert"
+                  />
                 </div>
                 <button
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -331,8 +332,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
               {/* Brand Column */}
               <div className="space-y-6">
                 <div className="flex items-center">
-                  <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-serif font-bold text-lg">M</div>
-                  <span className="ml-3 text-2xl font-serif font-bold text-text-primary tracking-wide">MMO</span>
+                  <img
+                    src="/mmo-logo.png"
+                    alt="Make My Office"
+                    className="h-8 w-auto object-contain"
+                  />
                 </div>
                 <p className="text-sm font-light leading-relaxed text-text-secondary max-w-xs">
                   Bridging the gap between aesthetic vision and engineering precision. We create workspaces that define legacies and empower minds.

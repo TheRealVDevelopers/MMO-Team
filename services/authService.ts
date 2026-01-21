@@ -267,20 +267,20 @@ export const signInVendor = async (email: string, password: string): Promise<Ven
 // Client Authentication
 
 /**
- * Verify client project credentials
+ * Verify client credentials using email and password
  */
 export const verifyClientCredentials = async (
-    projectId: string,
+    email: string,
     password: string
 ): Promise<boolean> => {
-    // Simplified Auth for Development
-    if (projectId === 'a@mmo.com' && password === '123456') {
+    // Simplified Auth for Development - Default client credentials
+    if (email === 'client@makemyoffice.com' && password === '123456') {
         return true;
     }
 
     try {
         const projectsRef = collection(db, 'clientProjects');
-        const q = query(projectsRef, where('projectId', '==', projectId));
+        const q = query(projectsRef, where('clientEmail', '==', email));
         const snapshot = await getDocs(q);
 
         if (snapshot.empty) {

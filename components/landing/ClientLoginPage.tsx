@@ -52,11 +52,11 @@ const FadeInSection: React.FC<{ children: React.ReactNode; delay?: string; class
 };
 
 interface ClientLoginPageProps {
-    onLoginSuccess: (projectId: string) => void;
+    onLoginSuccess: (email: string) => void;
 }
 
 const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => {
-    const [projectId, setProjectId] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -67,21 +67,21 @@ const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => 
         setIsLoading(true);
 
         try {
-            // Validate project ID format (except for default credential)
-            const projectIdPattern = /^(OFF|HOM|COM|CUS)-\d{4}-\d{5}$/;
-            if (projectId !== 'a@mmo.com' && !projectIdPattern.test(projectId)) {
-                setError('Invalid Project ID format. Please check your credentials.');
+            // Validate email format
+            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailPattern.test(email)) {
+                setError('Invalid email format. Please enter a valid email address.');
                 setIsLoading(false);
                 return;
             }
 
             // Verify credentials with Firebase
-            const isValid = await verifyClientCredentials(projectId, password);
+            const isValid = await verifyClientCredentials(email, password);
 
             if (isValid) {
-                onLoginSuccess(projectId);
+                onLoginSuccess(email);
             } else {
-                setError('Invalid Project ID or Password. Please check your credentials.');
+                setError('Invalid email or password. Please check your credentials.');
             }
         } catch (error) {
             setError('Unable to verify credentials. Please try again later.');
@@ -103,9 +103,11 @@ const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => 
                     {/* Logo & Brand */}
                     <div className="text-center mb-12">
                         <div className="inline-flex items-center justify-center mb-6">
-                            <div className="w-20 h-20 bg-primary rounded-3xl flex items-center justify-center shadow-luxury transform hover:rotate-6 transition-transform duration-500">
-                                <span className="text-white font-serif font-bold text-4xl">K</span>
-                            </div>
+                            <img
+                                src="/mmo-logo.png"
+                                alt="Make My Office"
+                                className="h-16 w-auto object-contain"
+                            />
                         </div>
                         <h1 className="text-4xl md:text-5xl font-serif font-bold text-text-primary mb-3">View My Project</h1>
                         <p className="text-text-secondary font-light text-lg">Track your interior journey securely</p>
@@ -116,22 +118,22 @@ const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => 
                         <form onSubmit={handleLogin} className="space-y-6">
                             <div>
                                 <label className="block text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] mb-4">
-                                    Project ID
+                                    Email Address
                                 </label>
                                 <div className="relative group">
                                     <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-text-secondary/50 group-focus-within:text-primary transition-colors">
                                         <IdentificationIcon className="w-5 h-5" />
                                     </div>
                                     <input
-                                        type="text"
-                                        value={projectId}
-                                        onChange={(e) => setProjectId(e.target.value)}
-                                        placeholder="OFF-2025-00123"
-                                        className="w-full pl-14 pr-6 py-5 bg-background border-2 border-border rounded-2xl focus:border-primary outline-none transition-all text-text-primary font-mono text-lg placeholder:text-text-secondary/60"
+                                        type="email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        placeholder="client@makemyoffice.com"
+                                        className="w-full pl-14 pr-6 py-5 bg-background border-2 border-border rounded-2xl focus:border-primary outline-none transition-all text-text-primary text-lg placeholder:text-text-secondary/60"
                                         required
                                     />
                                 </div>
-                                <p className="text-[10px] uppercase tracking-widest text-text-secondary/40 mt-3 ml-1">Format: XXX-YYYY-NNNNN or Default ID</p>
+                                <p className="text-[10px] uppercase tracking-widest text-text-secondary/40 mt-3 ml-1">Enter your registered email address</p>
                             </div>
 
                             <div>
@@ -190,11 +192,11 @@ const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => 
                             <div className="space-y-4 text-sm text-text-secondary">
                                 <div className="flex items-start space-x-3">
                                     <CheckCircleIcon className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                                    <p className="font-light">Your Project ID was sent via email after project initiation</p>
+                                    <p className="font-light">Your login credentials were sent via email after project initiation</p>
                                 </div>
                                 <div className="flex items-start space-x-3">
                                     <CheckCircleIcon className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                                    <p className="font-light">Password is shared personally by your sales consultant</p>
+                                    <p className="font-light">Use the email address registered with your project</p>
                                 </div>
                                 <div className="flex items-start space-x-3">
                                     <CheckCircleIcon className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
