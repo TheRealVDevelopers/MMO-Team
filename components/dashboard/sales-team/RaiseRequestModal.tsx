@@ -81,7 +81,7 @@ const RaiseRequestModal: React.FC<RaiseRequestModalProps> = ({ isOpen, onClose, 
                 requesterRole: currentUser.role,
                 // Map request type to the role that should handle it
                 targetRole: REQUEST_TYPE_TO_ROLE[requestType] || UserRole.SUPER_ADMIN,
-                stages: requestType === ApprovalRequestType.EXECUTION_TOKEN ? stages : undefined,
+                ...(requestType === ApprovalRequestType.EXECUTION_TOKEN ? { stages } : {}),
             });
 
             onClose();

@@ -245,8 +245,13 @@ export const createApprovalRequest = async (
   requestData: Omit<ApprovalRequest, 'id' | 'requestedAt' | 'status'>
 ) => {
   try {
+    // Filter out undefined values to prevent Firebase errors
+    const cleanedData = Object.fromEntries(
+      Object.entries(requestData).filter(([_, v]) => v !== undefined)
+    );
+
     const docRef = await addDoc(collection(db, 'approvalRequests'), {
-      ...requestData,
+      ...cleanedData,
       status: ApprovalStatus.PENDING,
       requestedAt: serverTimestamp(),
       startDate: requestData.startDate ? Timestamp.fromDate(requestData.startDate) : null,

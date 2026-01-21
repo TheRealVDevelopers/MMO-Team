@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, onSnapshot, query, orderBy, Timestamp, doc, updateDoc, where } from 'firebase/firestore';
-import { Project, LeadHistory } from '../types';
+import { collection, onSnapshot, query, orderBy, Timestamp, doc, updateDoc, where, getDoc, serverTimestamp } from 'firebase/firestore';
+import { Project, LeadHistory, ExecutionStage } from '../types';
 import { createNotification } from '../services/liveDataService';
 
 type FirestoreProject = Omit<Project, 'startDate' | 'endDate' | 'documents' | 'history'> & {
@@ -28,7 +28,40 @@ const fromFirestore = (docData: FirestoreProject, id: string): Project => {
     } as Project;
 };
 
-return { projects, loading, error };
+export const useProjects = (userId?: string) => {
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<Error | null>(null);
+
+    useEffect(() => {
+        setLoading(true);
+        setError(null);
+
+        const projectsCollection = collection(db, 'projects');
+        let q = query(projectsCollection);
+
+        if (userId) {
+            q = query(projectsCollection, where('assignedTeam.drawing', '==', userId));
+        }
+
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const projectsData: Project[] = [];
+            querySnapshot.forEach((doc) => {
+                projectsData.push(fromFirestore(doc.data() as FirestoreProject, doc.id));
+            });
+
+            setProjects(projectsData.sort((a, b) => b.startDate.getTime() - a.startDate.getTime()));
+            setLoading(false);
+        }, (err) => {
+            console.error("Error fetching projects:", err);
+            setError(err);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [userId]);
+
+    return { projects, loading, error };
 };
 
 export const useAssignedProjects = (userId: string) => {
@@ -43,7 +76,6 @@ export const useAssignedProjects = (userId: string) => {
         }
 
         const projectsCollection = collection(db, 'projects');
-        // Filter projects where userId is in the execution array
         const q = query(projectsCollection, where('assignedTeam.execution', 'array-contains', userId));
 
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -52,7 +84,6 @@ export const useAssignedProjects = (userId: string) => {
                 projectsData.push(fromFirestore(doc.data() as FirestoreProject, doc.id));
             });
 
-            // Client-side sort if needed since we can't use orderBy without index
             setProjects(projectsData.sort((a, b) => b.startDate.getTime() - a.startDate.getTime()));
             setLoading(false);
         }, (err) => {
@@ -72,9 +103,7 @@ export const updateProject = async (projectId: string, updatedData: Partial<Proj
         const projectRef = doc(db, 'projects', projectId);
         await updateDoc(projectRef, updatedData);
 
-        // Trigger notification if status changed
         if (updatedData.status) {
-            // In a real app, we'd find stakeholders. For demo, notify manager.
             await createNotification({
                 title: 'Project Status Updated',
                 message: `Project "${projectId}" status changed to ${updatedData.status}.`,
@@ -140,7 +169,6 @@ export const raiseProjectIssue = async (projectId: string, issue: any, userName:
             updatedAt: serverTimestamp()
         });
 
-        // Notify Admin
         await createNotification({
             title: 'Critical Project Issue',
             message: `Field Alert: ${userName} has raised an issue for project ${projectData.projectName}. Category: ${issue.category}`,
