@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import Modal from '../shared/Modal';
 import { User, Vendor } from '../../types';
 import { signInStaff } from '../../services/authService';
@@ -70,48 +71,54 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
 
     return (
         <Modal isOpen={isOpen} onClose={handleClose} title="" size="3xl">
-            <div className="space-y-6 p-4">
+            <div className="space-y-8 p-6 relative overflow-hidden">
+                {/* Decorative Background Element */}
+                <div className="absolute -top-10 -left-10 w-40 h-40 bg-primary/5 rounded-full blur-2xl"></div>
+
                 {/* Header */}
-                <div className="text-center space-y-6 pb-8 border-b border-border">
+                <div className="text-center space-y-6 pb-10 border-b border-border relative z-10">
                     <div className="flex justify-center">
-                        <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center shadow-luxury-subtle transform hover:rotate-6 transition-transform duration-500">
+                        <motion.div
+                            whileHover={{ scale: 1.05, rotate: 5 }}
+                            className="w-24 h-24 bg-surface backdrop-blur-md border border-white/20 rounded-[2rem] flex items-center justify-center shadow-luxury"
+                        >
                             {loginType === 'staff' ? (
                                 <BuildingOfficeIcon className="w-12 h-12 text-primary" />
                             ) : (
                                 <BuildingStorefrontIcon className="w-12 h-12 text-secondary" />
                             )}
-                        </div>
+                        </motion.div>
                     </div>
                     <div>
-                        <h2 className="text-3xl font-serif font-bold text-text-primary mb-2">
+                        <h2 className="text-4xl font-serif font-bold text-text-primary mb-3">
                             {loginType === 'staff' ? 'Staff Gateway' : 'Vendor Portal'}
                         </h2>
-                        <p className="text-base text-text-secondary font-light">
-                            Authenticate to access your workspace
+                        <p className="text-lg text-text-secondary font-light max-w-sm mx-auto leading-relaxed">
+                            Authorized access to the MMO {loginType === 'staff' ? 'Internal' : 'Partner'} ecosystem
                         </p>
                     </div>
 
                     {/* Login Type Toggle */}
-                    <div className="flex justify-center gap-4">
+                    <div className="flex justify-center p-1.5 bg-background rounded-full max-w-xs mx-auto border border-border shadow-inner">
                         <button
                             type="button"
                             onClick={() => setLoginType('staff')}
-                            className={`px-6 py-2 rounded-full text-sm font-bold uppercase tracking-wider transition-all ${loginType === 'staff'
-                                ? 'bg-primary text-white shadow-lg'
-                                : 'bg-background border border-border text-text-secondary hover:bg-surface'
+                            className={`flex-1 px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${loginType === 'staff'
+                                ? 'bg-primary text-white shadow-luxury'
+                                : 'text-text-secondary hover:text-primary'
                                 }`}
                         >
-                            Staff Login
+                            Staff
                         </button>
                         <button
                             type="button"
                             onClick={() => setLoginType('vendor')}
-                            className={`px-6 py-2 rounded-full text-sm font-bold uppercase tracking-wider transition-all ${loginType === 'vendor'
-                                ? 'bg-secondary text-white shadow-lg'
-                                : 'bg-background border border-border text-text-secondary hover:bg-surface'
+                            className={`flex-1 px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${loginType === 'vendor'
+                                ? 'bg-secondary text-white shadow-luxury'
+                                : 'text-text-secondary hover:text-secondary'
                                 }`}
                         >
-                            Vendor Login
+                            Vendor
                         </button>
                     </div>
                 </div>

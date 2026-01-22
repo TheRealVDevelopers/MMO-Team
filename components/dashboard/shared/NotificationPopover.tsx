@@ -3,12 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BellIcon, CheckCircleIcon, InformationCircleIcon, ExclamationTriangleIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { cn } from './DashboardUI';
 import { useNotifications } from '../../../hooks/useNotifications';
+import { useNotificationRouter } from '../../../hooks/useNotificationRouter';
 import { useAuth } from '../../../context/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 
 const NotificationPopover: React.FC = () => {
     const { currentUser } = useAuth();
     const { notifications, loading, markAsRead, markAllAsRead } = useNotifications(currentUser?.id);
+    const { handleNotificationClick } = useNotificationRouter();
     const [isOpen, setIsOpen] = useState(false);
     const popoverRef = React.useRef<HTMLDivElement>(null);
 
@@ -97,7 +99,11 @@ const NotificationPopover: React.FC = () => {
                                             "p-4 border-b border-border/50 hover:bg-background/50 transition-colors flex gap-3 group relative cursor-pointer",
                                             !notification.is_read ? "bg-primary/5" : ""
                                         )}
-                                        onClick={() => markAsRead(notification.id)}
+                                        onClick={() => {
+                                            markAsRead(notification.id);
+                                            handleNotificationClick(notification);
+                                            setIsOpen(false); // Close popover after navigation
+                                        }}
                                     >
                                         <div className="mt-1 flex-shrink-0">
                                             {getIcon(notification.type)}

@@ -9,6 +9,7 @@ import LandingPage from './components/landing/LandingPage';
 import { useAuth } from './context/AuthContext';
 import { User, UserRole, Vendor } from './types';
 // Fix: Imported missing CalendarDaysIcon and BanknotesIcon components.
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   BuildingOfficeIcon, RectangleGroupIcon, UsersIcon, RectangleStackIcon, FunnelIcon, ChartPieIcon, ChatBubbleLeftRightIcon, ShieldExclamationIcon,
   ClockIcon, MapPinIcon, PaintBrushIcon, CalculatorIcon, TruckIcon, WrenchScrewdriverIcon, CreditCardIcon, ChartBarSquareIcon, CalendarDaysIcon, BanknotesIcon,
@@ -59,10 +60,10 @@ const navConfig = {
     ]
   },
   [UserRole.DRAWING_TEAM]: {
-    title: 'Design Hub',
+    title: 'Drawing & Site Engineering',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
-      { id: 'projects', label: 'Projects Board', icon: <ViewColumnsIcon className="w-6 h-6" /> },
+      { id: 'projects', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
       { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
       { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
@@ -80,11 +81,10 @@ const navConfig = {
     ]
   },
   [UserRole.SITE_ENGINEER]: {
-    title: 'Engineer Hub',
+    title: 'Drawing & Site Engineering',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
-      { id: 'schedule', label: "Today's Schedule", icon: <CalendarDaysIcon className="w-6 h-6" /> },
-      { id: 'expenses', label: 'Expense Claims', icon: <ReceiptPercentIcon className="w-6 h-6" /> },
+      { id: 'projects', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
       { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
       { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
@@ -94,9 +94,9 @@ const navConfig = {
     title: 'Procurement Hub',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
+      { id: 'audit', label: 'Audit Quotations', icon: <ShieldCheckIcon className="w-6 h-6" /> },
       { id: 'negotiations', label: 'Procurement', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       { id: 'catalog', label: 'Items Catalog', icon: <TagIcon className="w-6 h-6" /> },
-      { id: 'templates', label: 'Templates', icon: <ListBulletIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
       { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
       { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
@@ -127,9 +127,22 @@ const navConfig = {
 
 const AppContent: React.FC = () => {
   const { currentUser, setCurrentUser, currentVendor, setCurrentVendor, loading } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [currentPage, setCurrentPage] = useState('overview');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showApp, setIsShowApp] = useState(false);
+
+  // Sync URL with state
+  useEffect(() => {
+    const path = location.pathname.split('/')[1] || 'overview';
+
+    // Convert path to internal page ID if needed (e.g. leads -> leads)
+    // Most internal IDs match the path segments now
+    if (path && path !== currentPage && path !== 'dashboard') {
+      setCurrentPage(path);
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     // Seed demo data once on app start
@@ -139,6 +152,8 @@ const AppContent: React.FC = () => {
   const handleSetPage = (page: string) => {
     setCurrentPage(page);
     setIsSettingsOpen(false);
+    // Also update URL to keep in sync
+    navigate(`/${page}`);
   }
 
   const handleOpenSettings = () => {

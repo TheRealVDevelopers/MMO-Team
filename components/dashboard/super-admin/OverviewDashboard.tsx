@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     BanknotesIcon,
     PresentationChartLineIcon,
@@ -9,7 +9,7 @@ import {
     CreditCardIcon
 } from '@heroicons/react/24/outline';
 import { USERS, PROJECTS, PENDING_APPROVALS_COUNT, ACTIVITIES, formatLargeNumberINR, INVOICES } from '../../../constants';
-import { ActivityStatus, ProjectStatus, PaymentStatus } from '../../../types';
+import { ActivityStatus, ProjectStatus, PaymentStatus, Project } from '../../../types';
 import { ContentCard, StatCard, SectionHeader, staggerContainer, cn } from '../shared/DashboardUI';
 import { motion } from 'framer-motion';
 
@@ -20,6 +20,10 @@ import DashboardCalendar from './DashboardCalendar';
 import PerformanceFlagSummary from './PerformanceFlagSummary';
 import { usePerformanceMonitor } from '../../../hooks/usePerformanceMonitor';
 import FinanceOverview from './FinanceOverview';
+
+import RedFlagsHeader from '../admin/RedFlagsHeader';
+import ProjectDetailModal from '../admin/ProjectDetailModal';
+import FunnelDetailModal from '../admin/FunnelDetailModal';
 
 const AlertCard: React.FC<{ title: string; count: number; items: string[]; type?: 'error' | 'warning' | 'primary'; onClick?: () => void }> = ({ title, count, items, type = 'error', onClick }) => (
     <ContentCard
@@ -82,6 +86,15 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage })
     // Activate Background Performance Monitoring
     usePerformanceMonitor();
 
+    // Modal States
+    const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+    const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+
+    // Funnel/Lead Modal State
+    const [isFunnelModalOpen, setIsFunnelModalOpen] = useState(false);
+    const [funnelStage, setFunnelStage] = useState('All Active Opportunities');
+    const [funnelLeads, setFunnelLeads] = useState<Project[]>([]);
+
     // KPI Calculations
     const totalProjects = PROJECTS.length;
     const activeProjects = PROJECTS.filter(p => [ProjectStatus.IN_EXECUTION, ProjectStatus.PROCUREMENT, ProjectStatus.DESIGN_IN_PROGRESS].includes(p.status)).length;
@@ -99,6 +112,21 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage })
     // Alert Calculations
     const pendingApprovals = ACTIVITIES.filter(a => a.status === ActivityStatus.PENDING);
 
+    // Handlers
+    const handleProjectSelect = (project: Project) => {
+        setSelectedProject(project);
+        setIsProjectModalOpen(true);
+    };
+
+    const handleFunnelClick = () => {
+        // Filter leads (mocked here by taking 'NEW' or 'ASSIGNED' projects as leads)
+        // In real app, this would be leads from LEADS constant or API
+        const leads = PROJECTS.filter(p => p.status === ProjectStatus.AWAITING_DESIGN || p.status === ProjectStatus.PENDING_REVIEW);
+        setFunnelLeads(leads);
+        setFunnelStage("Active Pipeline");
+        setIsFunnelModalOpen(true);
+    };
+
     return (
         <motion.div
             variants={staggerContainer}
@@ -106,62 +134,69 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage })
             animate="animate"
             className="space-y-10"
         >
-            <SectionHeader
-                title="Executive Overview"
-                subtitle="Synergized command center for MMO project operations."
-                actions={
-                    <div className="flex items-center gap-2 bg-surface px-4 py-2 rounded-2xl border border-border shadow-sm">
-                        <CalendarIcon className="w-4 h-4 text-text-tertiary" />
-                        <span className="text-xs font-black uppercase tracking-[0.15em] text-text-secondary">January 2026</span>
-                    </div>
-                }
-            />
-
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                <StatCard
-                    title="Enterprise Projects"
-                    value={totalProjects}
-                    icon={<RectangleStackIcon className="w-6 h-6" />}
-                    trend={{ value: '8%', positive: true }}
-                    color="primary"
-                    className="cursor-pointer"
-                    onClick={() => setCurrentPage('projects')}
-                />
-                <StatCard
-                    title="Conversion Yield"
-                    value={`${conversionRate || 12.5}%`}
-                    icon={<PresentationChartLineIcon className="w-6 h-6" />}
-                    trend={{ value: '12%', positive: true }}
-                    color="secondary"
-                    className="cursor-pointer"
-                    onClick={() => setCurrentPage('leads')}
-                />
-                <StatCard
-                    title="Global Talent"
-                    value={teamMembers}
-                    icon={<UserGroupIcon className="w-6 h-6" />}
-                    trend={{ value: '2', positive: true }}
-                    color="accent"
-                    className="cursor-pointer"
-                    onClick={() => setCurrentPage('team')}
-                />
-                <StatCard
-                    title="Fiscal Velocity (YTD)"
-                    value={formatLargeNumberINR(totalRevenue)}
-                    icon={<BanknotesIcon className="w-6 h-6" />}
-                    trend={{ value: '18%', positive: true }}
-                    color="purple"
-                    className="cursor-pointer"
-                    onClick={() => setCurrentPage('finance')}
-                />
-            </div>
-
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                <div className="lg:col-span-2 space-y-10">
-                    <OngoingProjectsCard />
+                {/* Main Content Area */}
+                <div className="lg:col-span-2 space-y-8">
+                    <SectionHeader
+                        title="Executive Overview"
+                        subtitle="Synergized command center for MMO project operations."
+                        actions={
+                            <div className="flex items-center gap-2 bg-surface px-4 py-2 rounded-2xl border border-border shadow-sm">
+                                <CalendarIcon className="w-4 h-4 text-text-tertiary" />
+                                <span className="text-xs font-black uppercase tracking-[0.15em] text-text-secondary">January 2026</span>
+                            </div>
+                        }
+                    />
+
+                    {/* Critical Alerts Header */}
+                    <RedFlagsHeader />
+
+                    {/* Primary Calendar View - Moved to Top */}
                     <DashboardCalendar />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <StatCard
+                            title="Enterprise Projects"
+                            value={totalProjects}
+                            icon={<RectangleStackIcon className="w-6 h-6" />}
+                            trend={{ value: '8%', positive: true }}
+                            color="primary"
+                            className="cursor-pointer"
+                            onClick={() => setCurrentPage('projects')}
+                        />
+                        <StatCard
+                            title="Conversion Yield"
+                            value={`${conversionRate || 12.5}%`}
+                            icon={<PresentationChartLineIcon className="w-6 h-6" />}
+                            trend={{ value: '12%', positive: true }}
+                            color="secondary"
+                            className="cursor-pointer"
+                            onClick={handleFunnelClick}
+                        />
+                        <StatCard
+                            title="Global Talent"
+                            value={teamMembers}
+                            icon={<UserGroupIcon className="w-6 h-6" />}
+                            trend={{ value: '2', positive: true }}
+                            color="accent"
+                            className="cursor-pointer"
+                            onClick={() => setCurrentPage('team')}
+                        />
+                        <StatCard
+                            title="Fiscal Velocity (YTD)"
+                            value={formatLargeNumberINR(totalRevenue)}
+                            icon={<BanknotesIcon className="w-6 h-6" />}
+                            trend={{ value: '18%', positive: true }}
+                            color="purple"
+                            className="cursor-pointer"
+                            onClick={() => setCurrentPage('finance')}
+                        />
+                    </div>
+
+                    <OngoingProjectsCard onProjectSelect={handleProjectSelect} />
                 </div>
+
+                {/* Right Sidebar */}
                 <div className="lg:col-span-1 space-y-8">
                     <AttendanceStatsCard />
 
@@ -188,6 +223,21 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage })
                     />
                 </div>
             </div>
+
+            {/* Modals */}
+            <ProjectDetailModal
+                isOpen={isProjectModalOpen}
+                onClose={() => setIsProjectModalOpen(false)}
+                project={selectedProject}
+            />
+
+            <FunnelDetailModal
+                isOpen={isFunnelModalOpen}
+                onClose={() => setIsFunnelModalOpen(false)}
+                leadStage={funnelStage}
+                leads={funnelLeads}
+            />
+
         </motion.div>
     );
 };

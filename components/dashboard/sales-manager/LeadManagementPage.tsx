@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { USERS, formatDateTime, formatLargeNumberINR } from '../../../constants';
 import { Lead, LeadPipelineStatus, UserRole } from '../../../types';
+import { useSearchParams } from 'react-router-dom';
 import {
     FunnelIcon,
     BanknotesIcon,
@@ -62,6 +63,22 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leads }) => {
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
     const [filter, setFilter] = useState<{ status: LeadPipelineStatus | 'all', rep: string | 'all' }>({ status: 'all', rep: 'all' });
     const [searchTerm, setSearchTerm] = useState('');
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    // Handle deep linking from notifications
+    React.useEffect(() => {
+        const leadId = searchParams.get('openLead');
+        if (leadId && leads.length > 0) {
+            const lead = leads.find(l => l.id === leadId);
+            if (lead) {
+                setSelectedLead(lead);
+                // Clear param after opening
+                const newParams = new URLSearchParams(searchParams);
+                newParams.delete('openLead');
+                setSearchParams(newParams, { replace: true });
+            }
+        }
+    }, [searchParams, leads, setSearchParams]);
 
     const filteredLeads = useMemo(() => {
         const lowercasedSearchTerm = searchTerm.toLowerCase();

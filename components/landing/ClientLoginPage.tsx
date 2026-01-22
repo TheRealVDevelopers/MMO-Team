@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import {
     LockClosedIcon,
     IdentificationIcon,
@@ -98,24 +99,33 @@ const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => 
                 <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:4rem_4rem]"></div>
             </div>
 
-            <div className="w-full max-w-md relative z-10">
+            <div className="w-full lg:w-1/2 max-w-2xl relative z-10">
                 <FadeInSection>
                     {/* Logo & Brand */}
-                    <div className="text-center mb-12">
-                        <div className="inline-flex items-center justify-center mb-6">
+                    <div className="text-center mb-16 px-4">
+                        <motion.div
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="inline-flex items-center justify-center mb-8 p-4 bg-surface/50 backdrop-blur-md rounded-3xl border border-white/20 shadow-luxury-subtle"
+                        >
                             <img
                                 src="/mmo-logo.png"
                                 alt="Make My Office"
                                 className="h-16 w-auto object-contain"
                             />
-                        </div>
-                        <h1 className="text-4xl md:text-5xl font-serif font-bold text-text-primary mb-3">View My Project</h1>
-                        <p className="text-text-secondary font-light text-lg">Track your interior journey securely</p>
+                        </motion.div>
+                        <h1 className="text-5xl md:text-6xl font-serif font-bold text-text-primary mb-4 tracking-tight">View My Project</h1>
+                        <p className="text-text-secondary font-light text-xl tracking-[0.05em] opacity-80 max-w-lg mx-auto leading-relaxed">
+                            Experience your interior journey through our exclusive client portal
+                        </p>
                     </div>
 
                     {/* Login Card */}
-                    <div className="bg-surface border border-border rounded-[2.5rem] shadow-luxury p-8 md:p-12">
-                        <form onSubmit={handleLogin} className="space-y-6">
+                    <div className="bg-surface/80 backdrop-blur-2xl border border-white/20 rounded-[3rem] shadow-luxury p-10 md:p-16 relative overflow-hidden group">
+                        {/* Decorative Gradient Blob */}
+                        <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors duration-1000"></div>
+
+                        <form onSubmit={handleLogin} className="space-y-10 relative z-10">
                             <div>
                                 <label className="block text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] mb-4">
                                     Email Address

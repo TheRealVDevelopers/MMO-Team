@@ -106,6 +106,35 @@ export interface Reminder {
   completed: boolean;
 }
 
+// Smart Assignment System Types
+export interface LeadAssignment {
+  id: string;
+  leadId: string;
+  assignedTo: string; // User ID
+  assignedBy: string; // Manager ID
+  assignedAt: Date;
+  distributionMethod: 'manual' | 'auto' | 'import';
+  queuePosition?: number; // Position in the assignment queue
+}
+
+export interface ImportedLead {
+  clientName: string;
+  projectName: string;
+  clientEmail: string;
+  clientMobile: string;
+  value: number;
+  source: string;
+  priority: 'High' | 'Medium' | 'Low';
+}
+
+export interface TeamMemberSession {
+  userId: string;
+  userName: string;
+  loginTime: Date;
+  isActive: boolean;
+  role: UserRole;
+}
+
 export enum UserRole {
   SUPER_ADMIN = "Super Admin",
   MANAGER = "Manager",
@@ -138,6 +167,16 @@ export interface User {
   performanceFlag?: 'green' | 'yellow' | 'red';
   flagReason?: string;
   flagUpdatedAt?: Date;
+
+  // Real-Time Task Reflection
+  currentTaskDetails?: {
+    title: string;
+    type: 'Site Visit' | 'Meeting' | 'Desk Work' | 'Break' | 'Travel';
+    status: 'In Progress' | 'Paused' | 'Delayed';
+    location?: string;
+    startTime?: Date;
+    projectId?: string;
+  };
 }
 
 export interface Notification {
@@ -366,6 +405,7 @@ export interface ApprovalRequest {
   // New fields for Workflow Orchestration
   targetRole?: UserRole; // The role that needs to be assigned for this token
   contextId?: string; // e.g., Lead ID or Project ID
+  clientName?: string; // Client's name for display in lists
   assigneeId?: string; // Populated by admin during approval
   is_demo?: boolean;
 
@@ -450,6 +490,12 @@ export interface Project {
   is_demo?: boolean;
   items?: Item[];
   counterOffers?: CounterOffer[];
+  // Design & Site Engineering workflow fields
+  assignedEngineerId?: string; // Site engineer assigned to this project
+  drawingTeamMemberId?: string; // Drawing team member assigned
+  siteInspectionDate?: Date; // When site inspection was completed
+  drawingSubmittedAt?: Date; // When drawing was submitted
+  createdAt?: Date; // Project creation timestamp
 }
 
 export enum SiteVisitStatus {
@@ -518,35 +564,81 @@ export interface QuotationRequest {
   quotedAmount?: number;
 }
 
-// Fix: Add missing Item interface for QuotationDetailModal
-export interface Item {
-  id: string;
-  name: string;
-  category: string;
-  price: number;
-  imageUrl: string;
-}
-
-
-
 export enum MaterialRequestStatus {
   RFQ_PENDING = "RFQ Pending",
   BIDDING_OPEN = "Bidding Open",
   UNDER_EVALUATION = "Under Evaluation",
-  NEGOTIATION = "Negotiation",
-  PO_READY = "PO Ready",
   ORDER_PLACED = "Order Placed",
   DELIVERED = "Delivered",
+  NEGOTIATION = "Negotiation",
 }
 
 export interface MaterialRequest {
   id: string;
   projectId: string;
   projectName: string;
-  materials: { name: string, spec: string }[];
+  materials: { name: string; spec: string }[];
   requiredBy: Date;
   status: MaterialRequestStatus;
   priority: 'High' | 'Medium' | 'Low';
+}
+
+// Enhanced Item Interface for Catalog
+export interface Item {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  imageUrl: string;
+  description?: string;
+  unit?: string; // e.g., 'sqft', 'rft', 'pcs'
+  material?: string; // e.g., 'Plywood', 'MDF'
+  gstRate?: number; // e.g., 18 for 18%
+  warranty?: string;
+  hsnCode?: string;
+  specifications?: Record<string, string>;
+}
+
+export interface QuotationAuditLog {
+  id: string;
+  quotationId: string;
+  version: number;
+  action: 'Created' | 'Updated' | 'Discount Applied' | 'Submitted' | 'Approved' | 'Rejected';
+  performedBy: string; // User ID
+  timestamp: Date;
+  details: string;
+  previousValue?: any;
+  newValue?: any;
+}
+
+export interface QuotationVersion {
+  versionNumber: number;
+  items: Array<{ itemId: string; quantity: number; unitPrice: number; discount: number }>;
+  totalAmount: number;
+  discountAmount: number;
+  taxAmount: number;
+  finalAmount: number;
+  createdAt: Date;
+  createdBy: string;
+  notes?: string;
+}
+
+export interface Quotation {
+  id: string;
+  leadId: string;
+  projectId?: string;
+  versions: QuotationVersion[];
+  currentVersion: number;
+  status: 'Draft' | 'Pending Approval' | 'approved' | 'Rejected' | 'Sent';
+  approvalStatus?: {
+    requiresApproval: boolean; // True if discount > 5%
+    approvedBy?: string;
+    approvedAt?: Date;
+    triggerReason?: string; // e.g., "Discount exceeds 5% threshold"
+  };
+  auditLog: QuotationAuditLog[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Vendor {
@@ -783,6 +875,51 @@ export interface DrawingRequest {
   requestDate: Date;
   deadline?: Date;
   notes?: string;
+}
+
+// Unified Site Engineer Workflow Types
+export interface DrawingTask {
+  id: string;
+  leadId: string;
+  projectName: string;
+  clientName: string;
+  assignedTo: string; // Site Engineer ID
+  requestedBy: string; // Sales Member ID
+  status: 'Pending' | 'In Progress' | 'Completed';
+  taskType: 'Start Drawing' | 'Drawing Revisions';
+  deadline: Date;
+  createdAt: Date;
+  completedAt?: Date;
+  siteVisitId?: string;
+  priority: 'High' | 'Medium' | 'Low';
+  metadata?: {
+    siteAddress?: string;
+    siteType?: SiteType;
+    measurements?: string;
+    clientPreferences?: string;
+  };
+  files?: string[]; // URLs to drawing files
+}
+
+export interface BOQ {
+  id: string;
+  leadId: string;
+  projectName: string;
+  items: BOQItem[];
+  submittedBy: string;
+  submittedAt: Date;
+  status: 'Draft' | 'Submitted' | 'Approved';
+  totalCost?: number;
+  notes?: string;
+}
+
+export interface BOQItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unit: string;
+  estimatedCost?: number;
+  category?: string;
 }
 
 export enum ProcurementRequestStatus {

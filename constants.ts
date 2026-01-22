@@ -74,16 +74,118 @@ export const BANK_DETAILS = {
 const now = new Date();
 
 export const USERS: User[] = [
-    { id: 'user-1', name: 'Admin', role: UserRole.SUPER_ADMIN, avatar: 'https://i.pravatar.cc/150?u=user-1', currentTask: 'Reviewing Q3 performance reports.', lastUpdateTimestamp: new Date(now.getTime() - 15 * 60 * 1000), email: 'admin@makemyoffice.com', phone: '+91 98765 43210' },
-    { id: 'user-2', name: 'Sarah Manager', role: UserRole.SALES_GENERAL_MANAGER, avatar: 'https://i.pravatar.cc/150?u=user-2', currentTask: 'Finalizing sales strategy for new quarter.', lastUpdateTimestamp: new Date(now.getTime() - 30 * 60 * 1000), email: 'sarah.m@makemyoffice.com', phone: '+91 98765 43211' },
-    { id: 'user-3', name: 'John Sales', role: UserRole.SALES_TEAM_MEMBER, avatar: 'https://i.pravatar.cc/150?u=user-3', currentTask: 'Preparing proposal for Innovate Corp.', lastUpdateTimestamp: new Date(now.getTime() - 5 * 60 * 1000), region: 'North', email: 'sales@makemyoffice.com', phone: '+91 98765 43212' },
-    { id: 'user-4', name: 'Emily Designer', role: UserRole.DRAWING_TEAM, avatar: 'https://i.pravatar.cc/150?u=user-4', currentTask: 'Working on 3D renders for Pantry Renovation.', lastUpdateTimestamp: new Date(now.getTime() - 1 * 60 * 60 * 1000), email: 'emily.d@makemyoffice.com', phone: '+91 98765 43213' },
-    { id: 'user-5', name: 'Mike Quote', role: UserRole.QUOTATION_TEAM, avatar: 'https://i.pravatar.cc/150?u=user-5', currentTask: 'Revising quote for Art Studio Conversion.', lastUpdateTimestamp: new Date(now.getTime() - 2 * 60 * 60 * 1000), email: 'mike.q@makemyoffice.com', phone: '+91 98765 43214' },
-    { id: 'user-6', name: 'David Engineer', role: UserRole.SITE_ENGINEER, avatar: 'https://i.pravatar.cc/150?u=user-6', currentTask: 'On-site visit at Enterprise Suites.', lastUpdateTimestamp: new Date(now.getTime() - 45 * 60 * 1000), email: 'david.e@makemyoffice.com', phone: '+91 98765 43215' },
-    { id: 'user-7', name: 'Anna Procurement', role: UserRole.PROCUREMENT_TEAM, avatar: 'https://i.pravatar.cc/150?u=user-7', currentTask: 'Negotiating with furniture vendors.', lastUpdateTimestamp: new Date(now.getTime() - 2 * 60 * 60 * 1000), email: 'anna.p@makemyoffice.com', phone: '+91 98765 43216' },
-    { id: 'user-8', name: 'Chris Executor', role: UserRole.EXECUTION_TEAM, avatar: 'https://i.pravatar.cc/150?u=user-8', currentTask: 'Supervising electrical work at Enterprise Suites.', lastUpdateTimestamp: new Date(now.getTime() - 10 * 60 * 1000), email: 'chris.e@makemyoffice.com', phone: '+91 98765 43217' },
-    { id: 'user-9', name: 'Olivia Accounts', role: UserRole.ACCOUNTS_TEAM, avatar: 'https://i.pravatar.cc/150?u=user-9', currentTask: 'Processing invoices for completed projects.', lastUpdateTimestamp: new Date(now.getTime() - 3 * 60 * 60 * 1000), email: 'olivia.a@makemyoffice.com', phone: '+91 98765 43218' },
-    { id: 'user-10', name: 'Jane Doe', role: UserRole.SALES_TEAM_MEMBER, avatar: 'https://i.pravatar.cc/150?u=user-10', currentTask: 'Following up with Tech Solutions Ltd.', lastUpdateTimestamp: new Date(now.getTime() - 25 * 60 * 1000), region: 'South', email: 'jane.d@makemyoffice.com', phone: '+91 98765 43219' },
+    {
+        id: 'user-1',
+        name: 'Admin',
+        role: UserRole.SUPER_ADMIN,
+        avatar: 'https://i.pravatar.cc/150?u=user-1',
+        currentTask: 'Reviewing Q3 performance reports.',
+        lastUpdateTimestamp: new Date(now.getTime() - 15 * 60 * 1000),
+        email: 'admin@makemyoffice.com',
+        phone: '+91 98765 43210',
+        currentTaskDetails: { title: 'Strategy Review', type: 'Desk Work', status: 'In Progress', startTime: new Date(now.getTime() - 45 * 60 * 1000) }
+    },
+    {
+        id: 'user-2',
+        name: 'Sarah Manager',
+        role: UserRole.SALES_GENERAL_MANAGER,
+        avatar: 'https://i.pravatar.cc/150?u=user-2',
+        currentTask: 'Finalizing sales strategy for new quarter.',
+        lastUpdateTimestamp: new Date(now.getTime() - 30 * 60 * 1000),
+        email: 'sarah.m@makemyoffice.com',
+        phone: '+91 98765 43211',
+        currentTaskDetails: { title: 'Pipeline Review', type: 'Meeting', status: 'In Progress', startTime: new Date(now.getTime() - 30 * 60 * 1000), location: 'Conference Room A' }
+    },
+    {
+        id: 'user-3',
+        name: 'John Sales',
+        role: UserRole.SALES_TEAM_MEMBER,
+        avatar: 'https://i.pravatar.cc/150?u=user-3',
+        currentTask: 'Client meeting with Innovate Corp.',
+        lastUpdateTimestamp: new Date(now.getTime() - 5 * 60 * 1000),
+        region: 'North',
+        email: 'sales@makemyoffice.com',
+        phone: '+91 98765 43212',
+        currentTaskDetails: { title: 'Client Presentation', type: 'Meeting', status: 'In Progress', startTime: new Date(now.getTime() - 45 * 60 * 1000), location: 'Innovate Corp HQ, Gurgaon', projectId: 'lead-1' }
+    },
+    {
+        id: 'user-4',
+        name: 'Emily Designer',
+        role: UserRole.DRAWING_TEAM,
+        avatar: 'https://i.pravatar.cc/150?u=user-4',
+        currentTask: 'Working on 3D renders for Pantry Renovation.',
+        lastUpdateTimestamp: new Date(now.getTime() - 1 * 60 * 60 * 1000),
+        email: 'emily.d@makemyoffice.com',
+        phone: '+91 98765 43213',
+        currentTaskDetails: { title: '3D Rendering', type: 'Desk Work', status: 'In Progress', startTime: new Date(now.getTime() - 120 * 60 * 1000), projectId: 'proj-101' }
+    },
+    {
+        id: 'user-5',
+        name: 'Mike Quote',
+        role: UserRole.QUOTATION_TEAM,
+        avatar: 'https://i.pravatar.cc/150?u=user-5',
+        currentTask: 'Revising quote for Art Studio Conversion.',
+        lastUpdateTimestamp: new Date(now.getTime() - 2 * 60 * 60 * 1000),
+        email: 'mike.q@makemyoffice.com',
+        phone: '+91 98765 43214',
+        currentTaskDetails: { title: 'Quote Revision', type: 'Desk Work', status: 'Paused', startTime: new Date(now.getTime() - 180 * 60 * 1000), projectId: 'proj-103' }
+    },
+    {
+        id: 'user-6',
+        name: 'David Engineer',
+        role: UserRole.SITE_ENGINEER,
+        avatar: 'https://i.pravatar.cc/150?u=user-6',
+        currentTask: 'On-site visit at Enterprise Suites.',
+        lastUpdateTimestamp: new Date(now.getTime() - 45 * 60 * 1000),
+        email: 'david.e@makemyoffice.com',
+        phone: '+91 98765 43215',
+        currentTaskDetails: { title: 'Site Inspection', type: 'Site Visit', status: 'In Progress', startTime: new Date(now.getTime() - 60 * 60 * 1000), location: 'Enterprise Suites, Gurgaon', projectId: 'proj-104' }
+    },
+    {
+        id: 'user-7',
+        name: 'Anna Procurement',
+        role: UserRole.PROCUREMENT_TEAM,
+        avatar: 'https://i.pravatar.cc/150?u=user-7',
+        currentTask: 'Negotiating with furniture vendors.',
+        lastUpdateTimestamp: new Date(now.getTime() - 2 * 60 * 60 * 1000),
+        email: 'anna.p@makemyoffice.com',
+        phone: '+91 98765 43216',
+        currentTaskDetails: { title: 'Vendor Negotiation', type: 'Meeting', status: 'In Progress', startTime: new Date(now.getTime() - 30 * 60 * 1000) }
+    },
+    {
+        id: 'user-8',
+        name: 'Chris Executor',
+        role: UserRole.EXECUTION_TEAM,
+        avatar: 'https://i.pravatar.cc/150?u=user-8',
+        currentTask: 'Supervising electrical work at Enterprise Suites.',
+        lastUpdateTimestamp: new Date(now.getTime() - 10 * 60 * 1000),
+        email: 'chris.e@makemyoffice.com',
+        phone: '+91 98765 43217',
+        currentTaskDetails: { title: 'Site Supervision', type: 'Site Visit', status: 'In Progress', startTime: new Date(now.getTime() - 4 * 60 * 60 * 1000), location: 'Enterprise Suites, Gurgaon', projectId: 'proj-104' }
+    },
+    {
+        id: 'user-9',
+        name: 'Olivia Accounts',
+        role: UserRole.ACCOUNTS_TEAM,
+        avatar: 'https://i.pravatar.cc/150?u=user-9',
+        currentTask: 'Processing invoices for completed projects.',
+        lastUpdateTimestamp: new Date(now.getTime() - 3 * 60 * 60 * 1000),
+        email: 'olivia.a@makemyoffice.com',
+        phone: '+91 98765 43218',
+        currentTaskDetails: { title: 'Invoice Processing', type: 'Desk Work', status: 'In Progress', startTime: new Date(now.getTime() - 120 * 60 * 1000) }
+    },
+    {
+        id: 'user-10',
+        name: 'Jane Doe',
+        role: UserRole.SALES_TEAM_MEMBER,
+        avatar: 'https://i.pravatar.cc/150?u=user-10',
+        currentTask: 'Driving to Highrise Apartments.',
+        lastUpdateTimestamp: new Date(now.getTime() - 25 * 60 * 1000),
+        region: 'South',
+        email: 'jane.d@makemyoffice.com',
+        phone: '+91 98765 43219',
+        currentTaskDetails: { title: 'Traveling to Client', type: 'Travel', status: 'In Progress', startTime: new Date(now.getTime() - 20 * 60 * 1000), location: 'En route to Sector 42' }
+    },
 ];
 
 
@@ -551,12 +653,12 @@ export const ACCOUNTS_REQUESTS: AccountsRequest[] = [
 ];
 
 export const ITEMS: Item[] = [
-    { id: 'item-1', name: 'Executive Desk', category: 'Workstations', price: 45000, imageUrl: 'https://placehold.co/150/007bff/ffffff?text=Desk' },
-    { id: 'item-2', name: 'Ergonomic Chair', category: 'Chairs', price: 22000, imageUrl: 'https://placehold.co/150/28a745/ffffff?text=Chair' },
-    { id: 'item-3', name: 'Filing Cabinet', category: 'Storage', price: 18000, imageUrl: 'https://placehold.co/150/6c757d/ffffff?text=Cabinet' },
-    { id: 'item-4', name: 'LED Pendant Light', category: 'Lighting', price: 8500, imageUrl: 'https://placehold.co/150/ffc107/ffffff?text=Light' },
-    { id: 'item-5', name: 'Conference Table', category: 'Workstations', price: 85000, imageUrl: 'https://placehold.co/150/17a2b8/ffffff?text=Table' },
-    { id: 'item-6', name: 'Visitor Chair', category: 'Chairs', price: 9500, imageUrl: 'https://placehold.co/150/fd7e14/ffffff?text=Chair' },
+    { id: 'item-1', name: 'Executive Desk', category: 'Workstations', price: 45000, imageUrl: 'https://placehold.co/150/007bff/ffffff?text=Desk', unit: 'pcs', gstRate: 18 },
+    { id: 'item-2', name: 'Ergonomic Chair', category: 'Chairs', price: 22000, imageUrl: 'https://placehold.co/150/28a745/ffffff?text=Chair', unit: 'pcs', gstRate: 18 },
+    { id: 'item-3', name: 'Filing Cabinet', category: 'Storage', price: 18000, imageUrl: 'https://placehold.co/150/6c757d/ffffff?text=Cabinet', unit: 'pcs', gstRate: 18 },
+    { id: 'item-4', name: 'LED Pendant Light', category: 'Lighting', price: 8500, imageUrl: 'https://placehold.co/150/ffc107/ffffff?text=Light', unit: 'pcs', gstRate: 18 },
+    { id: 'item-5', name: 'Conference Table', category: 'Workstations', price: 85000, imageUrl: 'https://placehold.co/150/17a2b8/ffffff?text=Table', unit: 'pcs', gstRate: 18 },
+    { id: 'item-6', name: 'Visitor Chair', category: 'Chairs', price: 9500, imageUrl: 'https://placehold.co/150/fd7e14/ffffff?text=Chair', unit: 'pcs', gstRate: 18 },
 ];
 
 export const MATERIAL_REQUESTS: MaterialRequest[] = [

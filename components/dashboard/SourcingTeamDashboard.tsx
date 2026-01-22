@@ -7,6 +7,7 @@ import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
 import QuotationBuilderPage from './sourcing-team/QuotationBuilderPage';
 import SimpleItemsCatalog from './sourcing-team/SimpleItemsCatalog';
+import QuotationAuditPage from './sourcing-team/QuotationAuditPage';
 
 const ProcurementTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   switch (currentPage) {
@@ -18,6 +19,8 @@ const ProcurementTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: 
       return <QuotationBuilderPage />;
     case 'items-catalog':
       return <SimpleItemsCatalog />;
+    case 'audit':
+      return <QuotationAuditPage />;
     case 'performance':
       return <MyPerformancePage setCurrentPage={setCurrentPage} />;
     case 'communication':

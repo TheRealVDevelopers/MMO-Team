@@ -9,17 +9,17 @@ import ProgressBar from '../../shared/ProgressBar';
 
 const KpiCard: React.FC<{ title: string; value: string; }> = ({ title, value }) => (
     <Card>
-      <p className="text-sm font-medium text-text-secondary">{title}</p>
-      <p className="text-3xl font-bold text-text-primary tracking-tight">{value}</p>
+        <p className="text-sm font-medium text-text-secondary">{title}</p>
+        <p className="text-3xl font-bold text-text-primary tracking-tight">{value}</p>
     </Card>
 );
 
 interface AccountsOverviewPageProps {
-  setCurrentPage: (page: string) => void;
-  invoices: Invoice[];
-  projects: Project[];
-  expenses: Expense[];
-  vendorBills: VendorBill[];
+    setCurrentPage: (page: string) => void;
+    invoices: Invoice[];
+    projects: Project[];
+    expenses: Expense[];
+    vendorBills: VendorBill[];
 }
 
 const AccountsOverviewPage: React.FC<AccountsOverviewPageProps> = ({ setCurrentPage, invoices, projects, expenses, vendorBills }) => {
@@ -43,7 +43,7 @@ const AccountsOverviewPage: React.FC<AccountsOverviewPageProps> = ({ setCurrentP
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-6">
             <h2 className="text-2xl font-bold text-text-primary">Financial Overview</h2>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <KpiCard title="Revenue Received (YTD)" value={formatCurrencyINR(totalPaid)} />
                 <KpiCard title="Total Outstanding" value={formatCurrencyINR(outstanding)} />
@@ -88,10 +88,10 @@ const AccountsOverviewPage: React.FC<AccountsOverviewPageProps> = ({ setCurrentP
                 </div>
                 <div className="lg:col-span-1 space-y-6">
                     <Card>
-                        <h3 className="text-lg font-bold text-error flex items-center"><ExclamationTriangleIcon className="w-5 h-5 mr-2"/> Urgent Alerts</h3>
+                        <h3 className="text-lg font-bold text-error flex items-center"><ExclamationTriangleIcon className="w-5 h-5 mr-2" /> Urgent Alerts</h3>
                         <ul className="mt-4 space-y-3">
                             {overdueInvoices.length > 0 ? overdueInvoices.map(alert => (
-                                <li key={alert.id} className="text-sm cursor-pointer hover:bg-subtle-background p-1 rounded-md" onClick={() => setCurrentPage('invoices')}>
+                                <li key={alert.id} className="text-sm cursor-pointer hover:bg-subtle-background p-1 rounded-md" onClick={() => setCurrentPage('sales-invoices')}>
                                     <p className="font-medium text-text-primary">Invoice {alert.invoiceNumber} Overdue</p>
                                     <p className="text-xs text-text-secondary">{alert.clientName} - {formatCurrencyINR(alert.total - alert.paidAmount)}</p>
                                 </li>

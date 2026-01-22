@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { User, UserRole, LeadPipelineStatus, ActivityStatus } from '../../../types';
+import { User, UserRole, LeadPipelineStatus, ActivityStatus, ProjectStatus } from '../../../types';
 import { ACTIVITIES, LEADS, PROJECTS, ATTENDANCE_DATA, formatCurrencyINR, formatDateTime } from '../../../constants';
 import {
     PresentationChartBarIcon,
@@ -11,7 +11,8 @@ import {
     PhoneIcon,
     ArrowTrendingUpIcon,
     ClockIcon,
-    BriefcaseIcon
+    BriefcaseIcon,
+    MapPinIcon
 } from '@heroicons/react/24/outline';
 import AttendanceCalendar from './AttendanceCalendar';
 import { ContentCard, cn, staggerContainer } from '../shared/DashboardUI';
@@ -160,9 +161,41 @@ const TeamMemberDetailView: React.FC<{ user: User }> = ({ user }) => {
                                     <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
                                         <BriefcaseIcon className="w-32 h-32" />
                                     </div>
-                                    <p className="text-base font-serif italic text-text-primary leading-relaxed relative z-10">
-                                        "{user.currentTask}"
-                                    </p>
+                                    <div className="relative z-10 space-y-3">
+                                        {user.currentTaskDetails ? (
+                                            <>
+                                                <div className="flex items-center justify-between">
+                                                    <span className={cn(
+                                                        "px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest border",
+                                                        user.currentTaskDetails.type === 'Site Visit' ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
+                                                            user.currentTaskDetails.type === 'Meeting' ? "bg-purple-500/10 text-purple-600 border-purple-500/20" :
+                                                                user.currentTaskDetails.type === 'Travel' ? "bg-amber-500/10 text-amber-600 border-amber-500/20" :
+                                                                    "bg-primary/10 text-primary border-primary/20"
+                                                    )}>
+                                                        {user.currentTaskDetails.type}
+                                                    </span>
+                                                    <span className="text-[10px] font-bold text-text-tertiary">
+                                                        Started {formatDateTime(user.currentTaskDetails.startTime || new Date())}
+                                                    </span>
+                                                </div>
+
+                                                <h3 className="text-lg font-serif font-bold text-text-primary leading-tight">
+                                                    {user.currentTaskDetails.title}
+                                                </h3>
+
+                                                {user.currentTaskDetails.location && (
+                                                    <div className="flex items-start gap-2 text-text-secondary">
+                                                        <MapPinIcon className="w-4 h-4 mt-0.5 shrink-0 text-red-500" />
+                                                        <span className="text-sm font-medium">{user.currentTaskDetails.location}</span>
+                                                    </div>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <p className="text-base font-serif italic text-text-primary leading-relaxed">
+                                                "{user.currentTask}"
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
                             </section>
                         </motion.div>

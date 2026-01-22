@@ -1,11 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
 import Card from '../../shared/Card';
-import { PlusIcon, TrashIcon, CheckCircleIcon, CalculatorIcon, DocumentTextIcon } from '../../icons/IconComponents';
+import { PlusIcon, TrashIcon, CheckCircleIcon, CalculatorIcon, DocumentTextIcon, ExclamationTriangleIcon } from '../../icons/IconComponents';
 import { PrimaryButton, SecondaryButton } from '../shared/DashboardUI';
 import { useAuth } from '../../../context/AuthContext';
 import { useProjects } from '../../../hooks/useProjects';
-import { useApprovals } from '../../../hooks/useApprovalSystem';
+import { useApprovals, useMyApprovalRequests } from '../../../hooks/useApprovalSystem';
+import { useQuotationAudit } from '../../../hooks/useQuotationAudit';
+import { useCatalog } from '../../../hooks/useCatalog';
 import { Project, ProjectStatus, ApprovalRequestType, UserRole } from '../../../types';
 import { formatCurrencyINR } from '../../../constants';
 
@@ -17,11 +19,15 @@ interface CatalogItem {
     price: number;
     description?: string;
     warranty?: string;
+    unit?: string;
+    material?: string;
+    gstRate?: number;
 }
 
 // Interface for line items in the quotation
 interface QuoteLineItem extends CatalogItem {
     quantity: number;
+    discount: number; // Percentage
     total: number;
 }
 
@@ -29,15 +35,16 @@ const QuotationBuilderPage: React.FC = () => {
     const { currentUser } = useAuth();
     const { projects } = useProjects();
     const { submitRequest, loading: submitting } = useApprovals();
+    const { createVersion, checkApprovalNeeded } = useQuotationAudit(currentUser?.id || '', currentUser?.name || '');
 
-    // Fetch all requests to show history
-    const { requests: allRequests } = useApprovals();
+    // Fetch my requests to show history
+    const { myRequests: allRequests } = useMyApprovalRequests(currentUser?.id || '');
     // Filter for Quotation Approvals
     const quotationHistory = allRequests.filter(r => r.requestType === ApprovalRequestType.QUOTATION_APPROVAL);
 
     // State
     const [viewMode, setViewMode] = useState<'list' | 'select-project' | 'build'>('list');
-    const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
+    const { items: catalogItems, loading: catalogLoading } = useCatalog();
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
     const [quoteItems, setQuoteItems] = useState<QuoteLineItem[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,20 +53,9 @@ const QuotationBuilderPage: React.FC = () => {
     // Form inputs for adding line item
     const [selectedCatalogId, setSelectedCatalogId] = useState('');
     const [quantity, setQuantity] = useState(1);
+    const [discount, setDiscount] = useState(0);
 
-    // Load Catalog Items
-    useEffect(() => {
-        const loadCatalog = () => {
-            const saved = localStorage.getItem('mmo_simple_catalog');
-            if (saved) {
-                setCatalogItems(JSON.parse(saved));
-            }
-        };
-        loadCatalog();
-        // Listen for storage events in case catalog updates in another tab
-        window.addEventListener('storage', loadCatalog);
-        return () => window.removeEventListener('storage', loadCatalog);
-    }, []);
+
 
     // Filter projects that need quotation
     const activeProjects = projects.filter(p =>
@@ -83,10 +79,15 @@ const QuotationBuilderPage: React.FC = () => {
         const catalogItem = catalogItems.find(i => i.id === selectedCatalogId);
         if (!catalogItem) return;
 
+        const baseTotal = catalogItem.price * quantity;
+        const discountAmount = (baseTotal * discount) / 100;
+        const finalTotal = baseTotal - discountAmount;
+
         const newItem: QuoteLineItem = {
             ...catalogItem,
             quantity: quantity,
-            total: catalogItem.price * quantity
+            discount: discount,
+            total: finalTotal
         };
 
         setQuoteItems(prev => [...prev, newItem]);
@@ -94,6 +95,7 @@ const QuotationBuilderPage: React.FC = () => {
         // Reset inputs
         setSelectedCatalogId('');
         setQuantity(1);
+        setDiscount(0);
     };
 
     const handleRemoveItem = (index: number) => {
@@ -113,18 +115,39 @@ const QuotationBuilderPage: React.FC = () => {
         setIsSubmitting(true);
 
         try {
+            // Calculate totals for approval check
+            const totalValue = calculateGrandTotal();
+            const totalDiscount = quoteItems.reduce((sum, item) => sum + ((item.price * item.quantity) - item.total), 0);
+            const requiresManagerApproval = checkApprovalNeeded(totalValue + totalDiscount, totalDiscount);
+
+            // Create Version in Audit Log
+            await createVersion(
+                `new-${Date.now()}`, // Temporary ID for new quote
+                quoteItems.map(i => ({
+                    itemId: i.id,
+                    quantity: i.quantity,
+                    unitPrice: i.price,
+                    discount: i.discount
+                })),
+                `Initial draft for ${selectedProject.projectName}`
+            );
+
             // Create the description with line item details
             const lineItemsDescription = quoteItems.map(i =>
-                `- ${i.name} x ${i.quantity} (${formatCurrencyINR(i.price)}/unit) = ${formatCurrencyINR(i.total)}`
+                `- ${i.name} x ${i.quantity} (${formatCurrencyINR(i.price)}/unit) - ${i.discount}% OFF = ${formatCurrencyINR(i.total)}`
             ).join('\n');
 
-            const fullDescription = `Quotation for ${selectedProject.projectName}\n\nItems:\n${lineItemsDescription}\n\nTotal Value: ${formatCurrencyINR(calculateGrandTotal())}`;
+            let fullDescription = `Quotation for ${selectedProject.projectName}\n\nItems:\n${lineItemsDescription}\n\nTotal Value: ${formatCurrencyINR(totalValue)}`;
+
+            if (requiresManagerApproval) {
+                fullDescription += `\n\n⚠️ REQUIRES MANAGER APPROVAL: High Discount Applied (${((totalDiscount / (totalValue + totalDiscount)) * 100).toFixed(1)}%)`;
+            }
 
             await submitRequest({
                 requestType: ApprovalRequestType.QUOTATION_APPROVAL,
-                title: `Quotation for ${selectedProject.clientName} - ${selectedProject.projectName}`,
+                title: `${requiresManagerApproval ? '[APPROVAL NEEDED] ' : ''}Quotation for ${selectedProject.clientName} - ${selectedProject.projectName}`,
                 description: fullDescription,
-                priority: 'High',
+                priority: requiresManagerApproval ? 'High' : 'Medium',
                 contextId: selectedProject.id, // Link to project
                 requesterId: currentUser.id,
                 requesterName: currentUser.name,
@@ -196,7 +219,7 @@ const QuotationBuilderPage: React.FC = () => {
                                         </div>
                                     </div>
                                     <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${q.status === 'Approved' ? 'bg-success/10 text-success' :
-                                            q.status === 'Rejected' ? 'bg-error/10 text-error' : 'bg-warning/10 text-warning'
+                                        q.status === 'Rejected' ? 'bg-error/10 text-error' : 'bg-warning/10 text-warning'
                                         }`}>
                                         {q.status}
                                     </span>
@@ -304,15 +327,28 @@ const QuotationBuilderPage: React.FC = () => {
                         </p>
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Quantity</label>
-                        <input
-                            type="number"
-                            min="1"
-                            className="w-full rounded-lg border-border bg-subtle-background p-2"
-                            value={quantity}
-                            onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
-                        />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium mb-1">Quantity</label>
+                            <input
+                                type="number"
+                                min="1"
+                                className="w-full rounded-lg border-border bg-subtle-background p-2"
+                                value={quantity}
+                                onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-1">Discount (%)</label>
+                            <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                className="w-full rounded-lg border-border bg-subtle-background p-2"
+                                value={discount}
+                                onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                            />
+                        </div>
                     </div>
 
                     <PrimaryButton onClick={handleAddItem} disabled={!selectedCatalogId || quantity <= 0} className="w-full">
@@ -335,6 +371,7 @@ const QuotationBuilderPage: React.FC = () => {
                                         <th className="py-2">Item</th>
                                         <th className="py-2 text-right">Price</th>
                                         <th className="py-2 text-center">Qty</th>
+                                        <th className="py-2 text-right">Discount</th>
                                         <th className="py-2 text-right">Total</th>
                                         <th className="py-2 w-10"></th>
                                     </tr>
@@ -342,7 +379,7 @@ const QuotationBuilderPage: React.FC = () => {
                                 <tbody>
                                     {quoteItems.length === 0 && (
                                         <tr>
-                                            <td colSpan={5} className="py-8 text-center text-text-tertiary italic">
+                                            <td colSpan={6} className="py-8 text-center text-text-tertiary italic">
                                                 No items added yet.
                                             </td>
                                         </tr>
@@ -351,11 +388,26 @@ const QuotationBuilderPage: React.FC = () => {
                                         <tr key={index} className="border-b border-border/50 hover:bg-subtle-background/50">
                                             <td className="py-3">
                                                 <p className="font-bold text-text-primary">{item.name}</p>
-                                                <p className="text-xs text-text-secondary">{item.description}</p>
+                                                <div className="flex flex-wrap gap-2 text-xs text-text-secondary mt-1">
+                                                    {item.material && <span>{item.material}</span>}
+                                                    {item.unit && <span className="px-1.5 py-0.5 bg-background rounded border">{item.unit}</span>}
+                                                </div>
                                             </td>
                                             <td className="py-3 text-right tabular-nums">{formatCurrencyINR(item.price)}</td>
                                             <td className="py-3 text-center tabular-nums">{item.quantity}</td>
-                                            <td className="py-3 text-right font-bold tabular-nums text-primary">{formatCurrencyINR(item.total)}</td>
+                                            <td className="py-3 text-right tabular-nums">
+                                                {item.discount > 0 ? (
+                                                    <span className={item.discount > 5 ? 'text-error font-medium' : 'text-text-secondary'}>
+                                                        {item.discount}%
+                                                    </span>
+                                                ) : '-'}
+                                            </td>
+                                            <td className="py-3 text-right font-bold tabular-nums text-primary">
+                                                {formatCurrencyINR(item.total)}
+                                                {item.discount > 5 && (
+                                                    <ExclamationTriangleIcon className="w-4 h-4 text-error inline ml-1" />
+                                                )}
+                                            </td>
                                             <td className="py-3 text-right">
                                                 <button onClick={() => handleRemoveItem(index)} className="text-text-tertiary hover:text-error transition-colors">
                                                     <TrashIcon className="w-4 h-4" />
@@ -366,7 +418,7 @@ const QuotationBuilderPage: React.FC = () => {
                                 </tbody>
                                 <tfoot>
                                     <tr className="border-t-2 border-border">
-                                        <td colSpan={3} className="py-4 text-right font-bold text-text-primary">Grand Total</td>
+                                        <td colSpan={4} className="py-4 text-right font-bold text-text-primary">Grand Total</td>
                                         <td className="py-4 text-right font-black text-xl text-primary">{formatCurrencyINR(calculateGrandTotal())}</td>
                                         <td></td>
                                     </tr>

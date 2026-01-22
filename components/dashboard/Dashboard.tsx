@@ -15,6 +15,7 @@ import ExecutionTeamDashboard from './execution-team/ExecutionDashboard';
 import AccountsTeamDashboard from './AccountsTeamDashboard';
 import SuperAdminDashboard from './SuperAdminDashboard';
 import VendorDashboard from './vendor/VendorDashboard';
+import DesignAndSiteEngineeringDashboard from './DesignAndSiteEngineeringDashboard';
 
 const Dashboard: React.FC<{ currentPage: string; setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser, currentVendor } = useAuth();
@@ -47,11 +48,11 @@ const Dashboard: React.FC<{ currentPage: string; setCurrentPage: (page: string) 
       case UserRole.SALES_GENERAL_MANAGER:
         return <SalesGeneralManagerDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.DRAWING_TEAM:
-        return <DrawingTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
+        return <DesignAndSiteEngineeringDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.QUOTATION_TEAM:
         return <ProcurementTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.SITE_ENGINEER:
-        return <SiteEngineerDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
+        return <DesignAndSiteEngineeringDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.PROCUREMENT_TEAM:
         return <QuotationTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.EXECUTION_TEAM:

@@ -77,6 +77,7 @@ Key Points: ${formData.keyPoints}
 Priority: ${formData.priority}`,
                 priority: formData.priority,
                 contextId: selectedLead.id,
+                clientName: selectedLead.clientName,
                 targetRole: UserRole.SITE_ENGINEER,
                 startDate: new Date(formData.date),
             });

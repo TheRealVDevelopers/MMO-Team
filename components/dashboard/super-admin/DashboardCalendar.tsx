@@ -25,7 +25,7 @@ import {
 import { ContentCard, cn } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
 
-interface CalendarTask {
+export interface CalendarTask {
     id: string;
     title: string;
     completed: boolean;
@@ -44,10 +44,15 @@ const MOCK_TASKS: Record<string, CalendarTask[]> = {
     ]
 };
 
-const DashboardCalendar: React.FC = () => {
+interface DashboardCalendarProps {
+    initialTasks?: Record<string, CalendarTask[]>;
+    className?: string;
+}
+
+const DashboardCalendar: React.FC<DashboardCalendarProps> = ({ initialTasks, className }) => {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
-    const [tasks, setTasks] = useState<Record<string, CalendarTask[]>>(MOCK_TASKS);
+    const [tasks, setTasks] = useState<Record<string, CalendarTask[]>>(initialTasks || MOCK_TASKS);
     const [newTask, setNewTask] = useState('');
 
     const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
@@ -253,7 +258,7 @@ const DashboardCalendar: React.FC = () => {
     };
 
     return (
-        <ContentCard className="h-full min-h-[500px]">
+        <ContentCard className={cn("h-full min-h-[500px]", className)}>
             {renderHeader()}
             <div className="grid grid-cols-1 lg:grid-cols-2 h-[calc(100%-80px)]">
                 <div className="pr-2">

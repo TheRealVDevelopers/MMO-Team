@@ -61,7 +61,7 @@ export const useProjects = (userId?: string) => {
         return () => unsubscribe();
     }, [userId]);
 
-    return { projects, loading, error };
+    return { projects, loading, error, updateProject: (id: string, data: Partial<Project>) => updateProject(id, data) };
 };
 
 export const useAssignedProjects = (userId: string) => {

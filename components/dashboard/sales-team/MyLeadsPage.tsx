@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Lead, LeadPipelineStatus } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
+import { useSearchParams } from 'react-router-dom';
 import LeadDetailModal from '../../shared/LeadDetailModal';
 
 
@@ -75,6 +76,22 @@ const MyLeadsPage: React.FC<MyLeadsPageProps> = ({ leads, onUpdateLead, onAddNew
   const [showRaiseRequestModal, setShowRaiseRequestModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeStage, setActiveStage] = useState('All');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Handle deep linking from notifications
+  React.useEffect(() => {
+    const leadId = searchParams.get('openLead');
+    if (leadId && leads.length > 0) {
+      const lead = leads.find(l => l.id === leadId);
+      if (lead) {
+        setSelectedLead(lead);
+        // Clear param after opening
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete('openLead');
+        setSearchParams(newParams, { replace: true });
+      }
+    }
+  }, [searchParams, leads, setSearchParams]);
 
   // Filter leads based on search and stage
   const filteredLeads = useMemo(() => {
@@ -175,7 +192,7 @@ const MyLeadsPage: React.FC<MyLeadsPageProps> = ({ leads, onUpdateLead, onAddNew
                           </div>
                           <div>
                             <p className="text-sm font-bold text-text-primary mb-0.5">{lead.clientName}</p>
-                            <p className="text-[10px] text-text-secondary tracking-tight font-medium uppercase opacity-60">{lead.mobile || 'Confidential Contact'}</p>
+                            <p className="text-10px text-text-secondary tracking-tight font-medium uppercase opacity-60">{lead.clientMobile || 'Confidential Contact'}</p>
                           </div>
                         </div>
                       </td>
@@ -191,7 +208,11 @@ const MyLeadsPage: React.FC<MyLeadsPageProps> = ({ leads, onUpdateLead, onAddNew
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-2 text-[10px] font-bold text-text-tertiary uppercase tracking-tight">
                           <ArrowPathIcon className="w-3.5 h-3.5" />
-                          {formatDateTime(lead.lastContacted ? (typeof lead.lastContacted === 'string' ? new Date() : lead.lastContacted) : new Date())}
+                          {formatDateTime(
+                            lead.history.length > 0
+                              ? lead.history[lead.history.length - 1].timestamp
+                              : lead.inquiryDate
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-5 text-right">

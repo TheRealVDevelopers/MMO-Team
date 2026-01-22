@@ -1,6 +1,6 @@
-import React from 'react';
+import { useState, useMemo } from 'react';
 import { USERS, formatCurrencyINR } from '../../../constants';
-import { Lead, LeadPipelineStatus, UserRole } from '../../../types';
+import { Lead, LeadPipelineStatus, UserRole, TaskStatus } from '../../../types';
 import {
     UsersIcon,
     PresentationChartLineIcon,
@@ -12,11 +12,19 @@ import {
 } from '@heroicons/react/24/outline';
 import { StatCard, ContentCard, cn, staggerContainer } from '../shared/DashboardUI';
 import { motion } from 'framer-motion';
+import PipelineDetailModal from './PipelineDetailModal';
+import DashboardCalendar, { CalendarTask } from '../super-admin/DashboardCalendar';
+import { useTeamTasks } from '../../../hooks/useTeamTasks';
 
 const salesTeam = USERS.filter(u => u.role === UserRole.SALES_TEAM_MEMBER);
 const pipelineOrder = Object.values(LeadPipelineStatus);
 
 const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; leads: Lead[] }> = ({ setCurrentPage, leads }) => {
+    const { tasks: teamTasks, loading: tasksLoading } = useTeamTasks();
+    // --- STATE ---
+    const [selectedStage, setSelectedStage] = useState<string>('');
+    const [isPipelineModalOpen, setIsPipelineModalOpen] = useState(false);
+
     // --- LIVE DATA CALCULATIONS ---
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
@@ -38,6 +46,34 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; lead
         l.status === LeadPipelineStatus.NEW_NOT_CONTACTED &&
         (new Date().getTime() - l.inquiryDate.getTime()) > 24 * 60 * 60 * 1000
     );
+
+    // --- CALENDAR DATA PREP ---
+    const calendarTasks = useMemo(() => {
+        const salesUserIds = salesTeam.map(u => u.id);
+        const mappedTasks: Record<string, CalendarTask[]> = {};
+
+        teamTasks.filter(t => salesUserIds.includes(t.userId)).forEach(task => {
+            const dateStr = typeof task.date === 'string' ? task.date : new Date(task.date).toISOString().split('T')[0];
+            if (!mappedTasks[dateStr]) {
+                mappedTasks[dateStr] = [];
+            }
+            mappedTasks[dateStr].push({
+                id: task.id,
+                title: `${USERS.find(u => u.id === task.userId)?.name.split(' ')[0]}: ${task.title}`,
+                completed: task.status === TaskStatus.COMPLETED,
+                type: 'task',
+                time: 'All Day' // Mock time for now
+            });
+        });
+        return mappedTasks;
+    }, [teamTasks]);
+
+    const handleStageClick = (stage: string) => {
+        setSelectedStage(stage);
+        setIsPipelineModalOpen(true);
+    };
+
+    const getStageLeads = () => leads.filter(l => l.status === selectedStage);
 
     return (
         <motion.div
@@ -100,17 +136,21 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; lead
                             const count = pipelineCounts[status] || 0;
                             const percentage = leads.length > 0 ? (count / leads.length) * 100 : 0;
                             return (
-                                <div key={status} className="group cursor-pointer">
+                                <div
+                                    key={status}
+                                    onClick={() => handleStageClick(status)}
+                                    className="group cursor-pointer"
+                                >
                                     <div className="flex justify-between items-center mb-2">
                                         <span className="text-[10px] font-black uppercase tracking-widest text-text-secondary group-hover:text-primary transition-colors">{status}</span>
-                                        <span className="text-xs font-bold text-text-primary">{count}</span>
+                                        <span className="text-xs font-bold text-text-primary group-hover:scale-110 transition-transform">{count}</span>
                                     </div>
                                     <div className="w-full bg-subtle-background rounded-full h-1.5 overflow-hidden">
                                         <motion.div
                                             initial={{ width: 0 }}
                                             animate={{ width: `${percentage}%` }}
                                             transition={{ duration: 1, ease: "easeOut" }}
-                                            className="bg-primary h-full rounded-full"
+                                            className="bg-primary h-full rounded-full group-hover:bg-primary-hover transition-colors"
                                         />
                                     </div>
                                 </div>
@@ -173,6 +213,19 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; lead
                     </ContentCard>
                 </div>
             </div>
+
+            {/* Team Schedule / Calendar */}
+            <div className="grid grid-cols-1">
+                <DashboardCalendar initialTasks={calendarTasks} className="bg-surface shadow-none border border-border" />
+            </div>
+
+            {/* Pipeline Modal */}
+            <PipelineDetailModal
+                isOpen={isPipelineModalOpen}
+                onClose={() => setIsPipelineModalOpen(false)}
+                stage={selectedStage}
+                leads={getStageLeads()}
+            />
         </motion.div>
     );
 };

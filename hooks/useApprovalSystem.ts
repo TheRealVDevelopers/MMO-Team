@@ -93,6 +93,7 @@ export const useApprovalRequests = (filterStatus?: ApprovalStatus) => {
           attachments: data.attachments || [],
           priority: data.priority || 'Medium',
           contextId: data.contextId,
+          clientName: data.clientName,
           targetRole: data.targetRole,
           assigneeId: data.assigneeId,
         });
@@ -148,6 +149,7 @@ export const useMyApprovalRequests = (userId: string) => {
           attachments: data.attachments || [],
           priority: data.priority || 'Medium',
           contextId: data.contextId,
+          clientName: data.clientName,
           targetRole: data.targetRole,
           assigneeId: data.assigneeId,
         });
@@ -203,6 +205,7 @@ export const useAssignedApprovalRequests = (userId: string) => {
           attachments: data.attachments || [],
           priority: data.priority || 'Medium',
           contextId: data.contextId,
+          clientName: data.clientName,
           targetRole: data.targetRole,
           assigneeId: data.assigneeId,
           stages: data.stages || [], // Include stages

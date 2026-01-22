@@ -74,6 +74,7 @@ const RaiseRequestModal: React.FC<RaiseRequestModalProps> = ({ isOpen, onClose, 
                 description: description, // Keep description clean for pre-filling in approval
                 priority: urgency,
                 contextId: leadId || projectId,
+                clientName: clientName,
                 endDate: preferredDateTime ? new Date(preferredDateTime) : undefined,
                 // These are workflow fields we rely on
                 requesterId: currentUser.id,

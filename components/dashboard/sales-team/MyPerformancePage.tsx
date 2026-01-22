@@ -1,5 +1,4 @@
 import React, { useMemo } from 'react';
-import { LEADS } from '../../../constants';
 import { LeadPipelineStatus } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import {
@@ -69,13 +68,14 @@ const PerformanceMetric: React.FC<{
     );
 };
 
+import { useLeads } from '../../../hooks/useLeads';
+
 const MyPerformancePage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
     const { currentUser } = useAuth();
-    if (!currentUser) return null;
-
-    const myLeads = useMemo(() => LEADS.filter(l => l.assignedTo === currentUser.id), [currentUser.id]);
+    const { leads: myLeads, loading } = useLeads(currentUser?.id);
 
     const metrics = useMemo(() => {
+        if (loading) return null;
         const responseTime = 1.5;
         const clientSatisfaction = 4.7;
         const taskCompletion = 85;
@@ -96,6 +96,14 @@ const MyPerformancePage: React.FC<{ setCurrentPage: (page: string) => void }> = 
             revenueGenerated: { value: revenuePercentage, status: getStatus(revenuePercentage, 120, 80) },
         };
     }, [myLeads]);
+
+    if (loading || !metrics || !currentUser) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
 
     const overallScore =
         (metrics.responseTime.status === 'green' ? 100 : metrics.responseTime.status === 'yellow' ? 60 : 20) * 0.25 +

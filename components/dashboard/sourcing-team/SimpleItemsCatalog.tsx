@@ -4,6 +4,7 @@ import Card from '../../shared/Card';
 import { PlusIcon, TrashIcon, PencilSquareIcon } from '../../icons/IconComponents';
 import { PrimaryButton, SecondaryButton } from '../shared/DashboardUI';
 import { Item } from '../../../types';
+import { useCatalog } from '../../../hooks/useCatalog';
 
 // Extended Item interface for this component
 interface CatalogItem extends Item {
@@ -12,11 +13,7 @@ interface CatalogItem extends Item {
 }
 
 const SimpleItemsCatalog: React.FC = () => {
-    // Local state for items
-    const [items, setItems] = useState<CatalogItem[]>(() => {
-        const saved = localStorage.getItem('mmo_simple_catalog');
-        return saved ? JSON.parse(saved) : [];
-    });
+    const { items, loading, addItem, updateItem, removeItem } = useCatalog();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<CatalogItem | null>(null);
@@ -27,12 +24,12 @@ const SimpleItemsCatalog: React.FC = () => {
         category: 'General',
         price: 0,
         description: '',
-        warranty: ''
+        warranty: '',
+        gstRate: 18,
+        unit: 'pcs',
+        material: '',
+        imageUrl: ''
     });
-
-    useEffect(() => {
-        localStorage.setItem('mmo_simple_catalog', JSON.stringify(items));
-    }, [items]);
 
     const handleOpenModal = (item?: CatalogItem) => {
         if (item) {
@@ -40,36 +37,47 @@ const SimpleItemsCatalog: React.FC = () => {
             setFormData(item);
         } else {
             setEditingItem(null);
-            setFormData({ name: '', category: 'General', price: 0, description: '', warranty: '' });
+            setFormData({ name: '', category: 'General', price: 0, description: '', warranty: '', gstRate: 18, unit: 'pcs', material: '', imageUrl: '' });
         }
         setIsModalOpen(true);
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!formData.name || !formData.price) return;
 
-        if (editingItem) {
-            // Update
-            setItems(prev => prev.map(i => i.id === editingItem.id ? { ...i, ...formData } as CatalogItem : i));
-        } else {
-            // Create
-            const newItem: CatalogItem = {
-                id: Date.now().toString(),
-                name: formData.name,
-                category: formData.category || 'General',
-                price: Number(formData.price),
-                description: formData.description,
-                warranty: formData.warranty,
-                imageUrl: '' // Placeholder
-            };
-            setItems(prev => [newItem, ...prev]);
+        try {
+            if (editingItem) {
+                // Update
+                await updateItem(editingItem.id, formData);
+            } else {
+                // Create
+                await addItem({
+                    name: formData.name,
+                    category: formData.category || 'General',
+                    price: Number(formData.price),
+                    description: formData.description,
+                    warranty: formData.warranty,
+                    gstRate: formData.gstRate || 18,
+                    unit: formData.unit || 'pcs',
+                    material: formData.material,
+                    imageUrl: formData.imageUrl || ''
+                });
+            }
+            setIsModalOpen(false);
+        } catch (error) {
+            console.error("Failed to save item:", error);
+            alert("Error saving item to catalog.");
         }
-        setIsModalOpen(false);
     };
 
-    const handleDelete = (id: string) => {
+    const handleDelete = async (id: string) => {
         if (window.confirm('Are you sure you want to delete this item?')) {
-            setItems(prev => prev.filter(i => i.id !== id));
+            try {
+                await removeItem(id);
+            } catch (error) {
+                console.error("Failed to remove item:", error);
+                alert("Error removing item from catalog.");
+            }
         }
     };
 
@@ -114,8 +122,27 @@ const SimpleItemsCatalog: React.FC = () => {
 
                         <div className="space-y-2 text-sm text-text-secondary">
                             {item.description && <p className="line-clamp-2">{item.description}</p>}
+
+                            <div className="flex flex-wrap gap-2 mt-2">
+                                {item.gstRate !== undefined && (
+                                    <span className="text-[10px] font-medium px-2 py-0.5 bg-subtle-background rounded">
+                                        GST: {item.gstRate}%
+                                    </span>
+                                )}
+                                {item.unit && (
+                                    <span className="text-[10px] font-medium px-2 py-0.5 bg-subtle-background rounded">
+                                        Unit: {item.unit}
+                                    </span>
+                                )}
+                                {item.material && (
+                                    <span className="text-[10px] font-medium px-2 py-0.5 bg-subtle-background rounded">
+                                        {item.material}
+                                    </span>
+                                )}
+                            </div>
+
                             {item.warranty && (
-                                <p className="flex items-center text-xs font-medium text-success">
+                                <p className="flex items-center text-xs font-medium text-success mt-2">
                                     <span className="w-2 h-2 rounded-full bg-success mr-2"></span>
                                     Warranty: {item.warranty}
                                 </p>
@@ -166,6 +193,60 @@ const SimpleItemsCatalog: React.FC = () => {
                                         <option value="Civil">Civil</option>
                                     </select>
                                 </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">GST Rate (%)</label>
+                                    <select
+                                        className="w-full rounded-lg border-border bg-subtle-background p-2"
+                                        value={formData.gstRate || 18}
+                                        onChange={e => setFormData({ ...formData, gstRate: Number(e.target.value) })}
+                                    >
+                                        <option value={0}>0%</option>
+                                        <option value={5}>5%</option>
+                                        <option value={12}>12%</option>
+                                        <option value={18}>18%</option>
+                                        <option value={28}>28%</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Unit</label>
+                                    <select
+                                        className="w-full rounded-lg border-border bg-subtle-background p-2"
+                                        value={formData.unit || 'pcs'}
+                                        onChange={e => setFormData({ ...formData, unit: e.target.value })}
+                                    >
+                                        <option value="pcs">Pieces (pcs)</option>
+                                        <option value="sqft">Square Feet (sqft)</option>
+                                        <option value="rft">Running Feet (rft)</option>
+                                        <option value="kg">Kilograms (kg)</option>
+                                        <option value="set">Set</option>
+                                        <option value="lot">Lot</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Material</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. Stainless Steel, MDF, PVC"
+                                    className="w-full rounded-lg border-border bg-subtle-background p-2"
+                                    value={formData.material || ''}
+                                    onChange={e => setFormData({ ...formData, material: e.target.value })}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Image URL</label>
+                                <input
+                                    type="url"
+                                    placeholder="https://example.com/image.jpg"
+                                    className="w-full rounded-lg border-border bg-subtle-background p-2"
+                                    value={formData.imageUrl || ''}
+                                    onChange={e => setFormData({ ...formData, imageUrl: e.target.value })}
+                                />
                             </div>
 
                             <div>

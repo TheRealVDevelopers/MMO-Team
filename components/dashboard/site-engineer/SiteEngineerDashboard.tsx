@@ -1,47 +1,61 @@
 
-
 import React, { useState } from 'react';
-import SiteEngineerSidebar from './site-engineer/SiteEngineerSidebar';
-import EngineerOverviewPage from './site-engineer/EngineerOverviewPage';
-import { SiteVisit, ExpenseClaim, SiteReport } from '../../../types';
+import SiteEngineerSidebar from './SiteEngineerSidebar';
+import UnifiedOverviewPage from './UnifiedOverviewPage';
+import EngineerOverviewPage from './EngineerOverviewPage';
+import DrawingTasksPage from './DrawingTasksPage';
+import { SiteVisit, ExpenseClaim, SiteReport, DrawingTask } from '../../../types';
 import { SITE_VISITS, EXPENSE_CLAIMS } from '../../../constants';
 import { useAuth } from '../../../context/AuthContext';
-import ExpenseClaimsPage from './site-engineer/ExpenseClaimsPage';
-import SiteEngineerKPIPage from './site-engineer/SiteEngineerKPIPage';
-import VisitDetailModal from './site-engineer/VisitDetailModal';
+import ExpenseClaimsPage from './ExpenseClaimsPage';
+import SiteEngineerKPIPage from './SiteEngineerKPIPage';
+import VisitDetailModal from './VisitDetailModal';
 import MyDayPage from '../shared/MyDayPage';
 import CommunicationDashboard from '../../communication/CommunicationDashboard';
 import EscalateIssuePage from '../../escalation/EscalateIssuePage';
+import { useAutomatedTaskCreation } from '../../../hooks/useAutomatedTaskCreation';
 
 const SiteEngineerDashboard: React.FC = () => {
   const { currentUser } = useAuth();
-  const [currentPage, setCurrentPage] = useState('my-day');
+  const [currentPage, setCurrentPage] = useState('overview');
   const [selectedVisit, setSelectedVisit] = useState<SiteVisit | null>(null);
+  const [selectedDrawingTask, setSelectedDrawingTask] = useState<DrawingTask | null>(null);
+  const { handleSiteVisitCompletion } = useAutomatedTaskCreation();
 
-  const [siteVisits, setSiteVisits] = useState<SiteVisit[]>(() => 
+  const [siteVisits, setSiteVisits] = useState<SiteVisit[]>(() =>
     SITE_VISITS.filter(sv => sv.assigneeId === currentUser?.id)
   );
   const [expenseClaims, setExpenseClaims] = useState<ExpenseClaim[]>(() =>
     EXPENSE_CLAIMS.filter(ec => ec.engineerId === currentUser?.id)
   );
-  
+
+  // Mock drawing tasks - in real app, fetch from Firestore
+  const [drawingTasks, setDrawingTasks] = useState<DrawingTask[]>([]);
+
   const handleUpdateVisit = (updatedVisit: SiteVisit) => {
     setSiteVisits(prev => prev.map(v => v.id === updatedVisit.id ? updatedVisit : v));
-    // Keep modal open with updated data
-    if(selectedVisit) {
-        setSelectedVisit(updatedVisit);
+    if (selectedVisit) {
+      setSelectedVisit(updatedVisit);
     }
   };
-  
-  const handleSubmitReport = (report: SiteReport, newExpenseClaim?: Omit<ExpenseClaim, 'id'>) => {
+
+  const handleSubmitReport = async (report: SiteReport, newExpenseClaim?: Omit<ExpenseClaim, 'id'>) => {
     const updatedVisit = siteVisits.find(v => v.id === report.visitId);
-    if(updatedVisit) {
-        handleUpdateVisit({ ...updatedVisit, reportId: report.id });
+    if (updatedVisit && currentUser) {
+      // Update visit status
+      handleUpdateVisit({ ...updatedVisit, reportId: report.id, status: 'Report Submitted' as any });
+
+      // Automatically create drawing task
+      try {
+        await handleSiteVisitCompletion(updatedVisit, updatedVisit.leadId, currentUser.id);
+      } catch (error) {
+        console.error('Failed to create automated drawing task:', error);
+      }
     }
-    
+
     if (newExpenseClaim) {
-        const claim: ExpenseClaim = { ...newExpenseClaim, id: `ec-${Date.now()}`};
-        setExpenseClaims(prev => [claim, ...prev]);
+      const claim: ExpenseClaim = { ...newExpenseClaim, id: `ec-${Date.now()}` };
+      setExpenseClaims(prev => [claim, ...prev]);
     }
 
     setSelectedVisit(null);
@@ -50,16 +64,34 @@ const SiteEngineerDashboard: React.FC = () => {
 
   const renderPage = () => {
     switch (currentPage) {
+      case 'overview':
+        return (
+          <UnifiedOverviewPage
+            visits={siteVisits}
+            drawingTasks={drawingTasks}
+            onSelectVisit={setSelectedVisit}
+            onSelectDrawingTask={setSelectedDrawingTask}
+            setCurrentPage={setCurrentPage}
+          />
+        );
       case 'my-day':
         return <MyDayPage />;
       case 'performance':
         return <SiteEngineerKPIPage visits={siteVisits} setCurrentPage={setCurrentPage} />;
       case 'schedule':
-        return <EngineerOverviewPage 
-                    visits={siteVisits} 
-                    onSelectVisit={setSelectedVisit}
-                    setCurrentPage={setCurrentPage}
-                />;
+        return <EngineerOverviewPage
+          visits={siteVisits}
+          onSelectVisit={setSelectedVisit}
+          setCurrentPage={setCurrentPage}
+        />;
+      case 'drawings':
+        return (
+          <DrawingTasksPage
+            drawingTasks={drawingTasks}
+            onSelectTask={setSelectedDrawingTask}
+            setCurrentPage={setCurrentPage}
+          />
+        );
       case 'expenses':
         return <ExpenseClaimsPage claims={expenseClaims} setCurrentPage={setCurrentPage} />;
       case 'communication':
@@ -67,7 +99,15 @@ const SiteEngineerDashboard: React.FC = () => {
       case 'escalate-issue':
         return <EscalateIssuePage setCurrentPage={setCurrentPage} />;
       default:
-        return <MyDayPage />;
+        return (
+          <UnifiedOverviewPage
+            visits={siteVisits}
+            drawingTasks={drawingTasks}
+            onSelectVisit={setSelectedVisit}
+            onSelectDrawingTask={setSelectedDrawingTask}
+            setCurrentPage={setCurrentPage}
+          />
+        );
     }
   };
 

@@ -170,7 +170,7 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
                                     <PhoneIcon className="w-4 h-4" />
                                     Contact Number
                                 </div>
-                                <p className="text-sm font-bold text-text-primary">{lead.mobile || lead.clientMobile || 'N/A'}</p>
+                                <p className="text-sm font-bold text-text-primary">{lead.clientMobile || 'N/A'}</p>
                             </div>
                             <div className="bg-subtle-background p-3 rounded-xl">
                                 <div className="flex items-center gap-2 text-text-tertiary text-xs font-medium mb-1">

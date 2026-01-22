@@ -1,6 +1,6 @@
 import React from 'react';
 import { PROJECTS } from '../../../constants';
-import { ProjectStatus } from '../../../types';
+import { Project, ProjectStatus } from '../../../types';
 import { RocketLaunchIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { ContentCard, cn } from '../shared/DashboardUI';
 import { motion } from 'framer-motion';
@@ -14,7 +14,11 @@ const getPhase = (progress: number) => {
     return "Closure & Handover";
 };
 
-const OngoingProjectsCard: React.FC = () => {
+interface OngoingProjectsCardProps {
+    onProjectSelect?: (project: Project) => void;
+}
+
+const OngoingProjectsCard: React.FC<OngoingProjectsCardProps> = ({ onProjectSelect }) => {
     const ongoingProjects = PROJECTS.filter(p =>
         p.status === ProjectStatus.IN_EXECUTION ||
         p.status === ProjectStatus.PROCUREMENT ||
@@ -48,7 +52,11 @@ const OngoingProjectsCard: React.FC = () => {
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: idx * 0.1 }}
-                            className="group"
+                            className={cn(
+                                "group rounded-xl p-2 -mx-2 transition-colors",
+                                onProjectSelect ? "cursor-pointer hover:bg-subtle-background" : ""
+                            )}
+                            onClick={() => onProjectSelect?.(project)}
                         >
                             <div className="flex items-center justify-between mb-2">
                                 <div>

@@ -67,7 +67,11 @@ export const useMyDayTasks = (userId?: string) => {
         return () => unsubscribe();
     }, [userId]);
 
-    return { tasks, loading, error };
+    const addTaskWrapper = async (taskData: Omit<Task, 'id'>) => {
+        return addTask(taskData, userId || 'system');
+    };
+
+    return { tasks, loading, error, addTask: addTaskWrapper };
 };
 
 export const addTask = async (taskData: Omit<Task, 'id'>, createdBy: string) => {
