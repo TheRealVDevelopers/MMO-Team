@@ -15,6 +15,7 @@ import { motion } from 'framer-motion';
 import PipelineDetailModal from './PipelineDetailModal';
 import DashboardCalendar, { CalendarTask } from '../super-admin/DashboardCalendar';
 import { useTeamTasks } from '../../../hooks/useTeamTasks';
+import LeadDetailModal from '../../shared/LeadDetailModal';
 
 const salesTeam = USERS.filter(u => u.role === UserRole.SALES_TEAM_MEMBER);
 const pipelineOrder = Object.values(LeadPipelineStatus);
@@ -24,6 +25,8 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; lead
     // --- STATE ---
     const [selectedStage, setSelectedStage] = useState<string>('');
     const [isPipelineModalOpen, setIsPipelineModalOpen] = useState(false);
+    const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+    const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
 
     // --- LIVE DATA CALCULATIONS ---
     const startOfMonth = new Date();
@@ -71,6 +74,11 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; lead
     const handleStageClick = (stage: string) => {
         setSelectedStage(stage);
         setIsPipelineModalOpen(true);
+    };
+
+    const handleLeadClick = (lead: Lead) => {
+        setSelectedLead(lead);
+        setIsLeadModalOpen(true);
     };
 
     const getStageLeads = () => leads.filter(l => l.status === selectedStage);
@@ -225,6 +233,14 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; lead
                 onClose={() => setIsPipelineModalOpen(false)}
                 stage={selectedStage}
                 leads={getStageLeads()}
+                onLeadClick={handleLeadClick}
+            />
+
+            <LeadDetailModal
+                isOpen={isLeadModalOpen}
+                onClose={() => setIsLeadModalOpen(false)}
+                lead={selectedLead!}
+                onUpdate={() => { }} // Manage status updates if needed
             />
         </motion.div>
     );

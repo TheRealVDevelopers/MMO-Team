@@ -132,11 +132,11 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage })
             variants={staggerContainer}
             initial="initial"
             animate="animate"
-            className="space-y-10"
+            className="space-y-8"
         >
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                 {/* Main Content Area */}
-                <div className="lg:col-span-2 space-y-8">
+                <div className="lg:col-span-2 space-y-6">
                     <SectionHeader
                         title="Executive Overview"
                         subtitle="Synergized command center for MMO project operations."
@@ -153,7 +153,6 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage })
 
                     {/* Primary Calendar View - Moved to Top */}
                     <DashboardCalendar />
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <StatCard
                             title="Enterprise Projects"

@@ -94,7 +94,7 @@ const navConfig = {
     title: 'Procurement Hub',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
-      { id: 'audit', label: 'Audit Quotations', icon: <ShieldCheckIcon className="w-6 h-6" /> },
+      { id: 'audit', label: 'Audit Quotations', icon: <DocumentTextIcon className="w-6 h-6" /> },
       { id: 'negotiations', label: 'Procurement', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       { id: 'catalog', label: 'Items Catalog', icon: <TagIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
@@ -116,9 +116,9 @@ const navConfig = {
     title: 'Finance Hub',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
-      { id: 'invoices', label: 'Invoices', icon: <BanknotesIcon className="w-6 h-6" /> },
+      { id: 'sales-invoices', label: 'Sales Invoices (Out)', icon: <BanknotesIcon className="w-6 h-6" /> },
       { id: 'expenses', label: 'Expenses', icon: <ReceiptPercentIcon className="w-6 h-6" /> },
-      { id: 'payments', label: 'Payments', icon: <BuildingLibraryIcon className="w-6 h-6" /> },
+      { id: 'purchase-invoices', label: 'Purchase Invoices (In)', icon: <BuildingLibraryIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
       { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
     ]

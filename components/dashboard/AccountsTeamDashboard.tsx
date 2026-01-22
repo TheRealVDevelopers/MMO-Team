@@ -9,46 +9,82 @@ import ReportsPage from './accounts-team/ReportsPage';
 import MyDayPage from './shared/MyDayPage';
 import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
-import { INVOICES, EXPENSES, VENDOR_BILLS, PROJECTS } from '../../constants';
+import { useInvoices, addInvoice, updateInvoice } from '../../hooks/useInvoices';
+import { useExpenses, updateExpense } from '../../hooks/useExpenses';
+import { useVendorBills, updateVendorBill } from '../../hooks/useVendorBills';
+import { useProjects } from '../../hooks/useProjects';
 import { Invoice, Expense, VendorBill, Project } from '../../types';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '../../firebase';
 
 const AccountsTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
-  // Lift state up to manage data locally
-  const [invoices, setInvoices] = useState<Invoice[]>(INVOICES);
-  const [expenses, setExpenses] = useState<Expense[]>(EXPENSES);
-  const [vendorBills, setVendorBills] = useState<VendorBill[]>(VENDOR_BILLS);
-  const [projects] = useState<Project[]>(PROJECTS); // Projects are read-only for now
+  const { invoices, loading: invoicesLoading } = useInvoices();
+  const { expenses, loading: expensesLoading } = useExpenses();
+  const { vendorBills, loading: billsLoading } = useVendorBills();
+  const { projects, loading: projectsLoading } = useProjects();
 
-  const handleAddInvoice = (newInvoice: Omit<Invoice, 'id'>) => {
-    const fullInvoice: Invoice = {
-      ...newInvoice,
-      id: `inv-${Date.now()}`,
-      invoiceNumber: `INV-${new Date().getFullYear()}-${String(invoices.length + 1).padStart(3, '0')}`,
-    };
-    setInvoices(prev => [fullInvoice, ...prev].sort((a, b) => b.issueDate.getTime() - a.issueDate.getTime()));
+  const handleAddInvoice = async (newInvoice: Omit<Invoice, 'id'>) => {
+    try {
+      const invoiceNumber = `INV-${new Date().getFullYear()}-${String(invoices.length + 1).padStart(3, '0')}`;
+      await addInvoice({
+        ...newInvoice,
+        invoiceNumber,
+      });
+    } catch (error) {
+      console.error("Error adding invoice:", error);
+    }
   };
 
-  const handleUpdateInvoice = (updatedInvoice: Invoice) => {
-    setInvoices(prev => prev.map(inv => inv.id === updatedInvoice.id ? updatedInvoice : inv));
+  const handleUpdateInvoice = async (updatedInvoice: Invoice) => {
+    try {
+      const { id, ...data } = updatedInvoice;
+      await updateInvoice(id, data);
+    } catch (error) {
+      console.error("Error updating invoice:", error);
+    }
   };
 
-  const handleAddExpense = (newExpense: Omit<Expense, 'id'>) => {
-    const fullExpense: Expense = { ...newExpense, id: `exp-${Date.now()}` };
-    setExpenses(prev => [fullExpense, ...prev].sort((a, b) => b.date.getTime() - a.date.getTime()));
+  const handleAddExpense = async (newExpense: Omit<Expense, 'id'>) => {
+    try {
+      await addDoc(collection(db, 'expenses'), newExpense);
+    } catch (error) {
+      console.error("Error adding expense:", error);
+    }
   };
 
-  const handleUpdateExpense = (updatedExpense: Expense) => {
-    setExpenses(prev => prev.map(exp => exp.id === updatedExpense.id ? updatedExpense : exp));
+  const handleUpdateExpense = async (updatedExpense: Expense) => {
+    try {
+      const { id, ...data } = updatedExpense;
+      await updateExpense(id, data);
+    } catch (error) {
+      console.error("Error updating expense:", error);
+    }
   };
 
-  const handleAddVendorBill = (newBill: Omit<VendorBill, 'id'>) => {
-    const fullBill: VendorBill = { ...newBill, id: `vb-${Date.now()}` };
-    setVendorBills(prev => [fullBill, ...prev].sort((a, b) => b.dueDate.getTime() - a.dueDate.getTime()));
+  const handleAddVendorBill = async (newBill: Omit<VendorBill, 'id'>) => {
+    try {
+      await addDoc(collection(db, 'vendorBills'), newBill);
+    } catch (error) {
+      console.error("Error adding vendor bill:", error);
+    }
   };
 
-  const handleUpdateVendorBill = (updatedBill: VendorBill) => {
-    setVendorBills(prev => prev.map(bill => bill.id === updatedBill.id ? updatedBill : bill));
+  const handleUpdateVendorBill = async (updatedBill: VendorBill) => {
+    try {
+      const { id, ...data } = updatedBill;
+      await updateVendorBill(id, data);
+    } catch (error) {
+      console.error("Error updating vendor bill:", error);
+    }
   };
+
+  if (invoicesLoading || expensesLoading || billsLoading || projectsLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   switch (currentPage) {
     case 'my-day':

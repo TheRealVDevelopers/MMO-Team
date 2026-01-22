@@ -17,6 +17,8 @@ import {
 import AttendanceCalendar from './AttendanceCalendar';
 import { ContentCard, cn, staggerContainer } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTeamTasks } from '../../../hooks/useTeamTasks';
+import { TaskStatus } from '../../../types';
 
 const TabButton: React.FC<{
     icon: React.ElementType;
@@ -59,10 +61,23 @@ const UserMetric: React.FC<{ title: string; value: string | number; icon: React.
 
 const TeamMemberDetailView: React.FC<{ user: User }> = ({ user }) => {
     const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'attendance'>('overview');
+    const { tasks, loading } = useTeamTasks();
+
+    const userTasks = useMemo(() =>
+        tasks.filter(t => t.userId === user.id),
+        [tasks, user.id]);
 
     const userActivities = useMemo(() =>
-        ACTIVITIES.filter(a => a.userId === user.id).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()),
-        [user.id]);
+        [...userTasks].sort((a, b) => {
+            const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+            const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+            return dateB.getTime() - dateA.getTime();
+        }),
+        [userTasks]);
+
+    const currentActiveTask = useMemo(() =>
+        userTasks.find(t => t.status === TaskStatus.IN_PROGRESS) || userActivities[0],
+        [userTasks, userActivities]);
 
     const userKPIs = useMemo(() => {
         if (user.role === UserRole.SALES_TEAM_MEMBER) {
@@ -162,37 +177,35 @@ const TeamMemberDetailView: React.FC<{ user: User }> = ({ user }) => {
                                         <BriefcaseIcon className="w-32 h-32" />
                                     </div>
                                     <div className="relative z-10 space-y-3">
-                                        {user.currentTaskDetails ? (
+                                        {currentActiveTask ? (
                                             <>
                                                 <div className="flex items-center justify-between">
                                                     <span className={cn(
                                                         "px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest border",
-                                                        user.currentTaskDetails.type === 'Site Visit' ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
-                                                            user.currentTaskDetails.type === 'Meeting' ? "bg-purple-500/10 text-purple-600 border-purple-500/20" :
-                                                                user.currentTaskDetails.type === 'Travel' ? "bg-amber-500/10 text-amber-600 border-amber-500/20" :
-                                                                    "bg-primary/10 text-primary border-primary/20"
+                                                        currentActiveTask.status === TaskStatus.IN_PROGRESS ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
+                                                            currentActiveTask.status === TaskStatus.COMPLETED ? "bg-blue-500/10 text-blue-600 border-blue-500/20" :
+                                                                "bg-primary/10 text-primary border-primary/20"
                                                     )}>
-                                                        {user.currentTaskDetails.type}
+                                                        {currentActiveTask.status}
                                                     </span>
                                                     <span className="text-[10px] font-bold text-text-tertiary">
-                                                        Started {formatDateTime(user.currentTaskDetails.startTime || new Date())}
+                                                        {currentActiveTask.createdAt && `Created ${formatDateTime(currentActiveTask.createdAt instanceof Date ? currentActiveTask.createdAt : new Date(currentActiveTask.createdAt))}`}
                                                     </span>
                                                 </div>
 
                                                 <h3 className="text-lg font-serif font-bold text-text-primary leading-tight">
-                                                    {user.currentTaskDetails.title}
+                                                    {currentActiveTask.title}
                                                 </h3>
 
-                                                {user.currentTaskDetails.location && (
-                                                    <div className="flex items-start gap-2 text-text-secondary">
-                                                        <MapPinIcon className="w-4 h-4 mt-0.5 shrink-0 text-red-500" />
-                                                        <span className="text-sm font-medium">{user.currentTaskDetails.location}</span>
-                                                    </div>
+                                                {currentActiveTask.description && (
+                                                    <p className="text-sm text-text-secondary line-clamp-2">
+                                                        {currentActiveTask.description}
+                                                    </p>
                                                 )}
                                             </>
                                         ) : (
                                             <p className="text-base font-serif italic text-text-primary leading-relaxed">
-                                                "{user.currentTask}"
+                                                No active tasks found
                                             </p>
                                         )}
                                     </div>
@@ -211,24 +224,33 @@ const TeamMemberDetailView: React.FC<{ user: User }> = ({ user }) => {
                         >
                             <div className="space-y-4 relative">
                                 <div className="absolute left-[15px] top-2 bottom-2 w-px bg-border/40" />
-                                {userActivities.map((activity, idx) => (
-                                    <div key={activity.id} className="relative pl-10">
-                                        <div className={cn(
-                                            "absolute left-0 top-1.5 w-8 h-8 rounded-xl border-4 border-surface shadow-sm flex items-center justify-center",
-                                            activity.status === ActivityStatus.DONE ? "bg-secondary text-white" : "bg-accent/20 text-accent"
-                                        )}>
-                                            <CheckCircleIcon className="w-4 h-4" />
-                                        </div>
-                                        <div className="bg-subtle-background/40 p-4 rounded-2xl border border-border/20 group hover:border-primary/20 transition-all">
-                                            <div className="flex justify-between items-start gap-4">
-                                                <p className="text-sm font-semibold text-text-primary leading-snug">{activity.description}</p>
-                                                <span className="text-[10px] font-black uppercase tracking-tighter text-text-tertiary whitespace-nowrap">
-                                                    {formatDateTime(activity.timestamp)}
-                                                </span>
+                                {userActivities.length > 0 ? (
+                                    userActivities.map((activity, idx) => (
+                                        <div key={activity.id} className="relative pl-10">
+                                            <div className={cn(
+                                                "absolute left-0 top-1.5 w-8 h-8 rounded-xl border-4 border-surface shadow-sm flex items-center justify-center",
+                                                activity.status === TaskStatus.COMPLETED ? "bg-secondary text-white" : "bg-accent/20 text-accent"
+                                            )}>
+                                                <CheckCircleIcon className="w-4 h-4" />
+                                            </div>
+                                            <div className="bg-subtle-background/40 p-4 rounded-2xl border border-border/20 group hover:border-primary/20 transition-all">
+                                                <div className="flex justify-between items-start gap-4">
+                                                    <div>
+                                                        <p className="text-sm font-semibold text-text-primary leading-snug">{activity.title}</p>
+                                                        {activity.description && <p className="text-xs text-text-tertiary mt-1 line-clamp-1">{activity.description}</p>}
+                                                    </div>
+                                                    <span className="text-[10px] font-black uppercase tracking-tighter text-text-tertiary whitespace-nowrap">
+                                                        {activity.createdAt && formatDateTime(activity.createdAt instanceof Date ? activity.createdAt : new Date(activity.createdAt))}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
+                                    ))
+                                ) : (
+                                    <div className="text-center py-12 text-text-tertiary">
+                                        No historical tasks recorded.
                                     </div>
-                                ))}
+                                )}
                             </div>
                         </motion.div>
                     )}

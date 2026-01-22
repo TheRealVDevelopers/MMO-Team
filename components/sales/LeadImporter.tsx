@@ -4,6 +4,10 @@ import { ImportedLead } from '../../types';
 import { useSmartAssignment } from '../../hooks/useSmartAssignment';
 import { useAuth } from '../../context/AuthContext';
 import * as XLSX from 'xlsx';
+import * as pdfjs from 'pdfjs-dist';
+
+// Initialize PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface LeadImporterProps {
     isOpen: boolean;
@@ -23,6 +27,56 @@ const LeadImporter: React.FC<LeadImporterProps> = ({ isOpen, onClose, onImportCo
 
     if (!isOpen) return null;
 
+    const handlePdfParse = async (pdfFile: File) => {
+        try {
+            const arrayBuffer = await pdfFile.arrayBuffer();
+            const loadingTask = pdfjs.getDocument({ data: arrayBuffer });
+            const pdf = await loadingTask.promise;
+
+            let fullText = '';
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map((item: any) => item.str).join(' ');
+                fullText += pageText + '\n';
+            }
+
+            // Simple heuristic to extract leads from PDF text
+            const lines = fullText.split('\n').filter(line => line.trim().length > 0);
+            const leads: ImportedLead[] = [];
+
+            lines.forEach(line => {
+                const emailMatch = line.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+                const mobileMatch = line.match(/\d{10,}/);
+
+                if (emailMatch || mobileMatch) {
+                    const parts = line.split(/\s{2,}|\t/);
+                    if (parts.length >= 2) {
+                        leads.push({
+                            clientName: parts[0]?.trim() || 'Unknown Client',
+                            projectName: parts[1]?.trim() || 'Imported Project',
+                            clientEmail: emailMatch?.[0] || '',
+                            clientMobile: mobileMatch?.[0] || '',
+                            value: 0,
+                            source: 'PDF Import',
+                            priority: 'Medium'
+                        });
+                    }
+                }
+            });
+
+            if (leads.length === 0) {
+                setError('No leads could be clearly identified in the PDF. Please ensure the formatting is clean.');
+                return;
+            }
+
+            setParsedLeads(leads);
+        } catch (err) {
+            console.error('Error parsing PDF:', err);
+            setError('Failed to parse PDF file. Please ensure it is a valid document.');
+        }
+    };
+
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = e.target.files?.[0];
         if (!selectedFile) return;
@@ -34,8 +88,13 @@ const LeadImporter: React.FC<LeadImporterProps> = ({ isOpen, onClose, onImportCo
 
         const fileExtension = selectedFile.name.split('.').pop()?.toLowerCase();
 
-        if (!['xlsx', 'xls', 'csv'].includes(fileExtension || '')) {
-            setError('Please upload an Excel (.xlsx, .xls) or CSV file');
+        if (!['xlsx', 'xls', 'csv', 'pdf'].includes(fileExtension || '')) {
+            setError('Please upload an Excel (.xlsx, .xls), CSV, or PDF file');
+            return;
+        }
+
+        if (fileExtension === 'pdf') {
+            handlePdfParse(selectedFile);
             return;
         }
 
@@ -135,7 +194,7 @@ const LeadImporter: React.FC<LeadImporterProps> = ({ isOpen, onClose, onImportCo
                         <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-colors cursor-pointer">
                             <input
                                 type="file"
-                                accept=".xlsx,.xls,.csv"
+                                accept=".xlsx,.xls,.csv,.pdf"
                                 onChange={handleFileSelect}
                                 className="hidden"
                                 id="file-upload"
@@ -146,7 +205,7 @@ const LeadImporter: React.FC<LeadImporterProps> = ({ isOpen, onClose, onImportCo
                                     {file ? file.name : 'Click to upload or drag and drop'}
                                 </p>
                                 <p className="text-sm text-text-secondary mt-1">
-                                    Excel (.xlsx, .xls) or CSV files only
+                                    Excel (.xlsx, .xls), CSV, or PDF files
                                 </p>
                             </label>
                         </div>

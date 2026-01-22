@@ -8,17 +8,18 @@ interface PipelineDetailModalProps {
     onClose: () => void;
     stage: string;
     leads: Lead[];
+    onLeadClick: (lead: Lead) => void;
 }
 
-const PipelineDetailModal: React.FC<PipelineDetailModalProps> = ({ isOpen, onClose, stage, leads }) => {
+const PipelineDetailModal: React.FC<PipelineDetailModalProps> = ({ isOpen, onClose, stage, leads, onLeadClick }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] overflow-y-auto">
+        <div className="fixed inset-0 z-[1000] overflow-y-auto">
             <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-                <div className="fixed inset-0 z-[100] transition-opacity bg-gray-500 bg-opacity-75 backdrop-blur-sm" onClick={onClose}></div>
+                <div className="fixed inset-0 z-[1000] transition-opacity bg-gray-500 bg-opacity-75 backdrop-blur-sm" onClick={onClose}></div>
 
-                <div className="inline-block align-middle bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-4xl w-full relative z-[101] p-6">
+                <div className="inline-block align-middle bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-4xl w-full relative z-[1010] p-6">
                     <div className="flex justify-between items-start mb-6 border-b border-border pb-4">
                         <div>
                             <h3 className="text-2xl font-serif font-bold text-text-primary">
@@ -41,7 +42,11 @@ const PipelineDetailModal: React.FC<PipelineDetailModalProps> = ({ isOpen, onClo
                             </div>
                         ) : (
                             leads.map(lead => (
-                                <div key={lead.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-surface border border-border rounded-xl hover:border-primary/50 transition-colors group">
+                                <div
+                                    key={lead.id}
+                                    onClick={() => onLeadClick(lead)}
+                                    className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-surface border border-border rounded-xl hover:border-primary/50 transition-colors group cursor-pointer"
+                                >
                                     <div className="flex-1 min-w-0 mb-3 md:mb-0">
                                         <div className="flex items-center gap-2 mb-1">
                                             <h4 className="font-bold text-lg text-text-primary truncate">{lead.clientName}</h4>
@@ -69,9 +74,9 @@ const PipelineDetailModal: React.FC<PipelineDetailModalProps> = ({ isOpen, onClo
                                             <p className="text-lg font-serif font-black text-primary">{formatCurrencyINR(lead.value)}</p>
                                         </div>
 
-                                        <button className="p-2 rounded-lg bg-surface hover:bg-primary hover:text-white transition-colors border border-border hover:border-primary group-hover:translate-x-1 transition-transform">
+                                        <div className="p-2 rounded-lg bg-surface group-hover:bg-primary group-hover:text-white transition-colors border border-border group-hover:border-primary group-hover:translate-x-1 transition-all">
                                             <ChevronRightIcon className="w-5 h-5" />
-                                        </button>
+                                        </div>
                                     </div>
                                 </div>
                             ))
