@@ -123,6 +123,11 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; lead
                 />
             </div>
 
+            {/* Team Schedule / Calendar */}
+            <div className="grid grid-cols-1 mb-8">
+                <DashboardCalendar initialTasks={calendarTasks} className="bg-surface shadow-none border border-border" />
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Sales Pipeline Visualization */}
                 <ContentCard className="lg:col-span-2">
@@ -222,10 +227,6 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; lead
                 </div>
             </div>
 
-            {/* Team Schedule / Calendar */}
-            <div className="grid grid-cols-1">
-                <DashboardCalendar initialTasks={calendarTasks} className="bg-surface shadow-none border border-border" />
-            </div>
 
             {/* Pipeline Modal */}
             <PipelineDetailModal

@@ -72,7 +72,7 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
     'my-day': 'Personal Agenda',
     leads: 'My Registry',
     'my-requests': 'My Request History',
-    performance: 'Career Analytics',
+    // performance: 'Career Analytics',
     communication: 'Executive Chat',
     'escalate-issue': 'Priority Escalation',
   };
@@ -148,8 +148,8 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
         return <MyLeadsPage leads={leads} onUpdateLead={handleLeadUpdate} onAddNewLead={handleAddNewLead} />;
       case 'my-requests':
         return <MyRequestsPage />;
-      case 'performance':
-        return <MyPerformancePage setCurrentPage={setCurrentPage} />;
+      // case 'performance':
+      //   return <MyPerformancePage setCurrentPage={setCurrentPage} />;
       case 'communication':
         return <CommunicationDashboard />;
       case 'escalate-issue':

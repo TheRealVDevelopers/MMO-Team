@@ -32,6 +32,20 @@ export const useAutomatedTaskCreation = () => {
                 }]
             });
 
+            // Also update the project if it exists (for unified dashboard)
+            // Ideally we should check if a project document exists with this ID
+            try {
+                const projectRef = doc(db, 'projects', leadId);
+                await updateDoc(projectRef, {
+                    status: 'Waiting for Drawing', // Matches ProjectStatus
+                    deadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Update deadline for the drawing phase
+                    updatedAt: new Date()
+                });
+            } catch (e) {
+                // Ignore if project doc doesn't exist yet (might only be in leads)
+                console.log("Project document might not exist yet during automation update");
+            }
+
             // Create "Start Drawing" task for the same engineer
             // Since the work is done by the same person, assign to site engineer
             const drawingTask = {

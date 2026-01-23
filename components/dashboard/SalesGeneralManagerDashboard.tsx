@@ -34,7 +34,7 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
     leads: 'Lead Management',
     team: 'Team Analytics',
     reports: 'Business Reports',
-    performance: 'Personal Performance',
+    // performance: 'Personal Performance',
     communication: 'Team Chat',
     approvals: 'Request Inbox',
     'escalate-issue': 'Issue Escalation',

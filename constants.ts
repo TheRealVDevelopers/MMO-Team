@@ -56,7 +56,7 @@ export const numberToWordsINR = (num: number): string => {
 
 export const COMPANY_DETAILS = {
     name: 'Make My Office Pvt Ltd',
-    logo: 'https://placehold.co/150/3B82F6/FFFFFF?text=MMO',
+    logo: '/mmo-logo-full.png',
     address: '123 Business Avenue, Gurgaon, Haryana, 122001',
     gstin: '06AAPDE1234F1Z5',
     email: 'accounts@makemyoffice.com',

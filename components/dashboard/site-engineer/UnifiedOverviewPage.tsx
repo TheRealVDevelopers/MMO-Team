@@ -22,9 +22,19 @@ const UnifiedOverviewPage: React.FC<UnifiedOverviewPageProps> = ({
 }) => {
     const { currentUser } = useAuth();
 
-    const pendingVisits = visits.filter(v => v.status !== 'Report Submitted' && v.status !== 'Completed');
-    const pendingDrawings = drawingTasks.filter(d => d.status !== 'Completed');
-    const overdueDrawings = pendingDrawings.filter(d => new Date(d.deadline) < new Date());
+    // Derived lists based on status
+    const siteVisitProjects = visits.filter(v =>
+        v.status === 'Site Visit Scheduled' ||
+        v.status === 'Site Visit Rescheduled'
+    );
+
+    // For drawing tasks, we might need to filter from a combined list or rely on the passed drawingTasks which we derived in the parent
+    const drawingProjects = drawingTasks.filter(d =>
+        d.status === 'Pending' || // Mapped from 'Waiting for Drawing'
+        d.status === 'In Progress' // Mapped from 'Drawing In Progress'
+    );
+
+    const overdueDrawings = drawingProjects.filter(d => new Date(d.deadline) < new Date());
 
     const getDeadlineColor = (deadline: Date) => {
         const hoursLeft = (new Date(deadline).getTime() - Date.now()) / (1000 * 60 * 60);
@@ -49,7 +59,7 @@ const UnifiedOverviewPage: React.FC<UnifiedOverviewPageProps> = ({
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm text-text-secondary">Pending Visits</p>
-                            <p className="text-2xl font-bold text-text-primary">{pendingVisits.length}</p>
+                            <p className="text-2xl font-bold text-text-primary">{siteVisitProjects.length}</p>
                         </div>
                         <ClipboardList className="w-8 h-8 text-primary" />
                     </div>
@@ -58,7 +68,7 @@ const UnifiedOverviewPage: React.FC<UnifiedOverviewPageProps> = ({
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm text-text-secondary">Drawing Tasks</p>
-                            <p className="text-2xl font-bold text-text-primary">{pendingDrawings.length}</p>
+                            <p className="text-2xl font-bold text-text-primary">{drawingProjects.length}</p>
                         </div>
                         <Pencil className="w-8 h-8 text-primary" />
                     </div>
@@ -133,10 +143,10 @@ const UnifiedOverviewPage: React.FC<UnifiedOverviewPageProps> = ({
                         </button>
                     </div>
                     <div className="space-y-3">
-                        {pendingVisits.length === 0 ? (
+                        {siteVisitProjects.length === 0 ? (
                             <p className="text-sm text-text-secondary text-center py-8">No pending site visits</p>
                         ) : (
-                            pendingVisits.slice(0, 5).map(visit => (
+                            siteVisitProjects.slice(0, 5).map(visit => (
                                 <div
                                     key={visit.id}
                                     onClick={() => onSelectVisit(visit)}
@@ -150,9 +160,9 @@ const UnifiedOverviewPage: React.FC<UnifiedOverviewPageProps> = ({
                                         </div>
                                         <div className="text-right">
                                             <span className={`text-xs px-2 py-1 rounded ${visit.status === 'Scheduled' ? 'bg-primary-subtle text-primary' :
-                                                    visit.status === 'Traveling' ? 'bg-warning-subtle text-warning' :
-                                                        visit.status === 'On Site' ? 'bg-success-subtle text-success' :
-                                                            'bg-subtle-background text-text-secondary'
+                                                visit.status === 'Traveling' ? 'bg-warning-subtle text-warning' :
+                                                    visit.status === 'On Site' ? 'bg-success-subtle text-success' :
+                                                        'bg-subtle-background text-text-secondary'
                                                 }`}>
                                                 {visit.status}
                                             </span>
@@ -176,10 +186,10 @@ const UnifiedOverviewPage: React.FC<UnifiedOverviewPageProps> = ({
                         </button>
                     </div>
                     <div className="space-y-3">
-                        {pendingDrawings.length === 0 ? (
+                        {drawingProjects.length === 0 ? (
                             <p className="text-sm text-text-secondary text-center py-8">No pending drawing tasks</p>
                         ) : (
-                            pendingDrawings.slice(0, 5).map(task => (
+                            drawingProjects.slice(0, 5).map(task => (
                                 <div
                                     key={task.id}
                                     onClick={() => onSelectDrawingTask(task)}
@@ -191,14 +201,14 @@ const UnifiedOverviewPage: React.FC<UnifiedOverviewPageProps> = ({
                                             <p className="text-sm text-text-secondary">{task.clientName}</p>
                                             <div className="flex items-center gap-2 mt-2">
                                                 <span className={`text-xs px-2 py-1 rounded ${task.status === 'Pending' ? 'bg-warning-subtle text-warning' :
-                                                        task.status === 'In Progress' ? 'bg-primary-subtle text-primary' :
-                                                            'bg-success-subtle text-success'
+                                                    task.status === 'In Progress' ? 'bg-primary-subtle text-primary' :
+                                                        'bg-success-subtle text-success'
                                                     }`}>
                                                     {task.status}
                                                 </span>
                                                 <span className={`text-xs px-2 py-1 rounded ${task.priority === 'High' ? 'bg-error-subtle text-error' :
-                                                        task.priority === 'Medium' ? 'bg-warning-subtle text-warning' :
-                                                            'bg-subtle-background text-text-secondary'
+                                                    task.priority === 'Medium' ? 'bg-warning-subtle text-warning' :
+                                                        'bg-subtle-background text-text-secondary'
                                                     }`}>
                                                     {task.priority}
                                                 </span>

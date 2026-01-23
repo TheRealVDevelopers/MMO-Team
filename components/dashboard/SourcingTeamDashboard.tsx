@@ -21,8 +21,8 @@ const ProcurementTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: 
       return <SimpleItemsCatalog />;
     case 'audit':
       return <QuotationAuditPage />;
-    case 'performance':
-      return <MyPerformancePage setCurrentPage={setCurrentPage} />;
+    // case 'performance':
+    //   return <MyPerformancePage setCurrentPage={setCurrentPage} />;
     case 'communication':
       return <CommunicationDashboard />;
     case 'escalate-issue':

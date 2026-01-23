@@ -24,8 +24,8 @@ const DrawingTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (pag
         return <DrawingOverviewPage onProjectSelect={handleProjectSelect} />;
       case 'projects':
         return <ProjectsBoardPage onProjectSelect={handleProjectSelect} setCurrentPage={setCurrentPage} />;
-      case 'performance':
-        return <MyPerformancePage setCurrentPage={setCurrentPage} />;
+      // case 'performance':
+      //   return <MyPerformancePage setCurrentPage={setCurrentPage} />;
       case 'communication':
         return <CommunicationDashboard />;
       case 'escalate-issue':
@@ -37,14 +37,14 @@ const DrawingTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (pag
 
   return (
     <>
-        {renderPage()}
-        {selectedProject && (
-            <ProjectDetailModal 
-                project={selectedProject}
-                isOpen={!!selectedProject}
-                onClose={() => setSelectedProject(null)}
-            />
-        )}
+      {renderPage()}
+      {selectedProject && (
+        <ProjectDetailModal
+          project={selectedProject}
+          isOpen={!!selectedProject}
+          onClose={() => setSelectedProject(null)}
+        />
+      )}
     </>
   );
 };

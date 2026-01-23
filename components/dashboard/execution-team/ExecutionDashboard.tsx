@@ -109,7 +109,7 @@ const ExecutionDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
 
     // Shared navigation handling
     if (currentPage === 'my-day') return <MyDayPage />;
-    if (currentPage === 'performance') return <PerformancePage />;
+    // if (currentPage === 'performance') return <PerformancePage />;
     if (currentPage === 'communication') return <CommunicationDashboard />;
     if (currentPage === 'escalate-issue') return <EscalateIssuePage setCurrentPage={setCurrentPage} />;
 

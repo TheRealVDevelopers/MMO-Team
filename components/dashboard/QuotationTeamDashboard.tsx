@@ -266,8 +266,8 @@ const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (p
             onReset={handleResetData}
           />
         );
-      case 'performance':
-        return <MyPerformancePage setCurrentPage={setCurrentPage} />;
+      // case 'performance':
+      //   return <MyPerformancePage setCurrentPage={setCurrentPage} />;
       case 'catalog':
         return (
           <ItemsCatalogPage

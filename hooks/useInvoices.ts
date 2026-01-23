@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, onSnapshot, query, addDoc, updateDoc, doc, Timestamp, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, addDoc, updateDoc, doc, Timestamp, orderBy, where } from 'firebase/firestore';
 import { Invoice } from '../types';
 
 type FirestoreInvoice = Omit<Invoice, 'issueDate' | 'dueDate'> & {
@@ -17,7 +17,7 @@ const fromFirestore = (docData: FirestoreInvoice, id: string): Invoice => {
     };
 };
 
-export const useInvoices = () => {
+export const useInvoices = (projectId?: string) => {
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
@@ -25,7 +25,13 @@ export const useInvoices = () => {
     useEffect(() => {
         setLoading(true);
         setError(null);
-        const q = query(collection(db, 'invoices'), orderBy('issueDate', 'desc'));
+        let q = query(collection(db, 'invoices'), orderBy('issueDate', 'desc'));
+
+        if (projectId) {
+            // Note: This might require a composite index on firestore
+            q = query(collection(db, 'invoices'), where('projectId', '==', projectId), orderBy('issueDate', 'desc'));
+        }
+
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const data: Invoice[] = [];
             querySnapshot.forEach((doc) => {
@@ -39,7 +45,7 @@ export const useInvoices = () => {
             setLoading(false);
         });
         return () => unsubscribe();
-    }, []);
+    }, [projectId]);
 
     return { invoices, loading, error };
 };

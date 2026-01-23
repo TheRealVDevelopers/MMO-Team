@@ -6,7 +6,8 @@ import {
     ChatBubbleLeftRightIcon,
     CheckCircleIcon,
     ClockIcon,
-    ExclamationTriangleIcon
+    ExclamationTriangleIcon,
+    DocumentArrowDownIcon
 } from '@heroicons/react/24/outline';
 
 // Import client portal components
@@ -24,6 +25,9 @@ import {
     ClientProject,
     ProjectHealth
 } from '../client-portal/types';
+import { useInvoices } from '../../hooks/useInvoices';
+import { Invoice } from '../../types';
+import { formatCurrencyINR, formatDate } from '../../constants';
 
 interface ClientDashboardPageProps {
     projectId: string;
@@ -157,6 +161,7 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
     const [project] = useState<ClientProject>(() => createDemoProject(projectId));
     const [selectedStage, setSelectedStage] = useState<JourneyStage | null>(null);
     const [isSheetOpen, setIsSheetOpen] = useState(false);
+    const { invoices, loading: invoicesLoading } = useInvoices(projectId);
 
     const handleStageClick = (stage: JourneyStage) => {
         setSelectedStage(stage);
@@ -286,6 +291,50 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
                             totalPaid={project.totalPaid}
                             totalBudget={project.totalBudget}
                         />
+
+                        {/* Invoices Widget */}
+                        <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-8">
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-lg font-bold text-gray-900">Billing & Invoices</h3>
+                                <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-3 py-1 rounded-full">{invoices.length} Invoices</span>
+                            </div>
+
+                            {invoicesLoading ? (
+                                <p className="text-sm text-gray-500">Loading invoices...</p>
+                            ) : invoices.length === 0 ? (
+                                <div className="text-center py-6 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                                    <p className="text-sm text-gray-400">No invoices generated yet.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {invoices.map((invoice) => (
+                                        <div key={invoice.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:border-primary/20 transition-all group">
+                                            <div>
+                                                <p className="text-sm font-bold text-gray-900 mb-0.5">{invoice.invoiceNumber}</p>
+                                                <p className="text-xs text-gray-500">{formatDate(invoice.issueDate)}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-sm font-bold text-gray-900">{formatCurrencyINR(invoice.total)}</p>
+                                                <div className="flex items-center justify-end gap-2 mt-1">
+                                                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${invoice.status === 'Paid' ? 'bg-emerald-100 text-emerald-700' :
+                                                            invoice.status === 'Overdue' ? 'bg-red-100 text-red-700' :
+                                                                'bg-amber-100 text-amber-700'
+                                                        }`}>
+                                                        {invoice.status}
+                                                    </span>
+                                                    {/* Download Button Placeholder - In real app, this would link to PDF */}
+                                                    {invoice.attachments && invoice.attachments.length > 0 && (
+                                                        <a href={invoice.attachments[0].url || '#'} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-secondary" title="Download Invoice">
+                                                            <DocumentArrowDownIcon className="w-4 h-4" />
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
 
                         {/* Support & Contact */}
                         <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-8">

@@ -44,6 +44,7 @@ const SourcingTeamSidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPa
         { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
         { id: 'audit', label: 'Audit Procurement', icon: <RectangleGroupIcon className="w-6 h-6" /> },
         { id: 'bidding', label: 'Bidding', icon: <TagIcon className="w-6 h-6" /> },
+        { id: 'items-catalog', label: 'Items Catalog', icon: <BuildingStorefrontIcon className="w-6 h-6" /> },
         { id: 'vendors', label: 'Vendors', icon: <BuildingStorefrontIcon className="w-6 h-6" /> },
         { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
         { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },

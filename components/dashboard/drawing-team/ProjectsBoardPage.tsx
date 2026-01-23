@@ -4,12 +4,12 @@ import { useAuth } from '../../../context/AuthContext';
 import { useProjects } from '../../../hooks/useProjects';
 import { ClockIcon, FireIcon, PaperClipIcon, ArrowLeftIcon, EllipsisVerticalIcon } from '../../icons/IconComponents';
 
-const KANBAN_COLUMNS: { id: string, title: string, statuses: ProjectStatus[] }[] = [
-    { id: 'todo', title: 'To Do', statuses: [ProjectStatus.AWAITING_DESIGN] },
-    { id: 'in-design', title: 'In Design', statuses: [ProjectStatus.DESIGN_IN_PROGRESS] },
-    { id: 'review', title: 'Under Review', statuses: [ProjectStatus.PENDING_REVIEW] },
-    { id: 'revisions', title: 'Revisions', statuses: [ProjectStatus.REVISIONS_REQUESTED] },
-    { id: 'completed', title: 'Completed', statuses: [ProjectStatus.COMPLETED] },
+const KANBAN_COLUMNS: { id: string, title: string, statuses: any[] }[] = [
+    { id: 'site-visit', title: 'Site Inspection', statuses: ['Site Visit Scheduled', 'Site Visit Rescheduled'] },
+    { id: 'ready-for-drawing', title: 'Ready for Drawing', statuses: ['Waiting for Drawing'] },
+    { id: 'in-design', title: 'In Design', statuses: ['Drawing In Progress', ProjectStatus.DESIGN_IN_PROGRESS] },
+    { id: 'review', title: 'Under Review', statuses: ['Drawing Revisions', ProjectStatus.PENDING_REVIEW, ProjectStatus.REVISIONS_REQUESTED] },
+    { id: 'completed', title: 'Completed', statuses: [ProjectStatus.COMPLETED, 'Completed'] },
 ];
 
 const ProjectCard: React.FC<{ project: Project; onSelect: () => void; }> = ({ project, onSelect }) => {
