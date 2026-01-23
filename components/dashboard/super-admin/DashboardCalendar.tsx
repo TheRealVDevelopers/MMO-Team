@@ -258,9 +258,9 @@ const DashboardCalendar: React.FC<DashboardCalendarProps> = ({ initialTasks, cla
     };
 
     return (
-        <ContentCard className={cn("h-full", className)}>
+        <ContentCard className={cn(className)}>
             {renderHeader()}
-            <div className="grid grid-cols-1 lg:grid-cols-2 h-[calc(100%-60px)] gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div className="pr-1">
                     {renderCalendar()}
                 </div>

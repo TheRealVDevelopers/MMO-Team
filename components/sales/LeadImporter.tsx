@@ -5,6 +5,7 @@ import { useSmartAssignment } from '../../hooks/useSmartAssignment';
 import { useAuth } from '../../context/AuthContext';
 import * as XLSX from 'xlsx';
 import * as pdfjs from 'pdfjs-dist';
+import Modal from '../shared/Modal';
 
 // Initialize PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -171,145 +172,135 @@ const LeadImporter: React.FC<LeadImporterProps> = ({ isOpen, onClose, onImportCo
     const distributionSummary = parsedLeads.length > 0 ? getDistributionSummary(parsedLeads.length) : null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onClick={handleClose}>
-            <div className="bg-surface border border-border rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-border">
-                    <div>
-                        <h2 className="text-xl font-bold text-text-primary">Import Leads</h2>
-                        <p className="text-sm text-text-secondary mt-1">Upload Excel or CSV file to import leads</p>
+        <Modal
+            isOpen={isOpen}
+            onClose={handleClose}
+            title="Import Leads"
+            size="2xl"
+        >
+            <div className="space-y-6">
+                <div>
+                    <p className="text-sm text-text-secondary mb-4">Upload Excel or CSV file to import leads</p>
+
+                    {/* File Upload */}
+                    <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-colors cursor-pointer relative">
+                        <input
+                            type="file"
+                            accept=".xlsx,.xls,.csv,.pdf"
+                            onChange={handleFileSelect}
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                            id="file-upload"
+                        />
+                        <Upload className="w-12 h-12 mx-auto text-text-secondary mb-3" />
+                        <p className="text-text-primary font-medium">
+                            {file ? file.name : 'Click to upload or drag and drop'}
+                        </p>
+                        <p className="text-sm text-text-secondary mt-1">
+                            Excel (.xlsx, .xls), CSV, or PDF files
+                        </p>
                     </div>
-                    <button onClick={handleClose} className="text-text-secondary hover:text-text-primary transition-colors">
-                        <X className="w-5 h-5" />
-                    </button>
                 </div>
 
-                {/* Content */}
-                <div className="p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-200px)]">
-                    {/* File Upload */}
-                    <div>
-                        <label className="block text-sm font-medium text-text-primary mb-2">
-                            Select File
-                        </label>
-                        <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-colors cursor-pointer">
-                            <input
-                                type="file"
-                                accept=".xlsx,.xls,.csv,.pdf"
-                                onChange={handleFileSelect}
-                                className="hidden"
-                                id="file-upload"
-                            />
-                            <label htmlFor="file-upload" className="cursor-pointer">
-                                <Upload className="w-12 h-12 mx-auto text-text-secondary mb-3" />
-                                <p className="text-text-primary font-medium">
-                                    {file ? file.name : 'Click to upload or drag and drop'}
-                                </p>
-                                <p className="text-sm text-text-secondary mt-1">
-                                    Excel (.xlsx, .xls), CSV, or PDF files
-                                </p>
-                            </label>
-                        </div>
+                {/* File Format Guide */}
+                <div className="bg-subtle-background border border-border rounded-lg p-4">
+                    <h3 className="font-medium text-text-primary mb-2 flex items-center">
+                        <FileText className="w-4 h-4 mr-2" />
+                        Expected File Format
+                    </h3>
+                    <p className="text-sm text-text-secondary mb-2">
+                        Your file should have the following columns:
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div className="text-text-secondary">• Client Name</div>
+                        <div className="text-text-secondary">• Project Name</div>
+                        <div className="text-text-secondary">• Email</div>
+                        <div className="text-text-secondary">• Mobile</div>
+                        <div className="text-text-secondary">• Value (Budget)</div>
+                        <div className="text-text-secondary">• Source</div>
+                        <div className="text-text-secondary">• Priority (High/Medium/Low)</div>
                     </div>
+                </div>
 
-                    {/* File Format Guide */}
+                {/* Parsed Leads Preview */}
+                {parsedLeads.length > 0 && (
                     <div className="bg-subtle-background border border-border rounded-lg p-4">
-                        <h3 className="font-medium text-text-primary mb-2 flex items-center">
-                            <FileText className="w-4 h-4 mr-2" />
-                            Expected File Format
+                        <h3 className="font-medium text-text-primary mb-3">
+                            Found {parsedLeads.length} Lead{parsedLeads.length !== 1 ? 's' : ''}
                         </h3>
-                        <p className="text-sm text-text-secondary mb-2">
-                            Your file should have the following columns:
-                        </p>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                            <div className="text-text-secondary">• Client Name</div>
-                            <div className="text-text-secondary">• Project Name</div>
-                            <div className="text-text-secondary">• Email</div>
-                            <div className="text-text-secondary">• Mobile</div>
-                            <div className="text-text-secondary">• Value (Budget)</div>
-                            <div className="text-text-secondary">• Source</div>
-                            <div className="text-text-secondary">• Priority (High/Medium/Low)</div>
-                        </div>
-                    </div>
-
-                    {/* Parsed Leads Preview */}
-                    {parsedLeads.length > 0 && (
-                        <div className="bg-subtle-background border border-border rounded-lg p-4">
-                            <h3 className="font-medium text-text-primary mb-3">
-                                Found {parsedLeads.length} Lead{parsedLeads.length !== 1 ? 's' : ''}
-                            </h3>
-                            <div className="space-y-2 max-h-40 overflow-y-auto">
-                                {parsedLeads.map((lead, index) => (
-                                    <div key={index} className="text-sm p-2 bg-surface rounded border border-border">
+                        <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
+                            {parsedLeads.map((lead, index) => (
+                                <div key={index} className="text-sm p-2 bg-surface rounded border border-border flex justify-between">
+                                    <span>
                                         <span className="font-medium text-text-primary">{lead.clientName}</span>
                                         <span className="text-text-secondary"> - {lead.projectName}</span>
-                                        <span className="text-xs text-text-secondary ml-2">₹{lead.value.toLocaleString()}</span>
-                                    </div>
-                                ))}
-                            </div>
+                                    </span>
+                                    <span className="text-xs font-bold text-primary">₹{lead.value.toLocaleString()}</span>
+                                </div>
+                            ))}
                         </div>
-                    )}
+                    </div>
+                )}
 
-                    {/* Distribution Summary */}
-                    {distributionSummary && distributionSummary.totalMembers > 0 && (
-                        <div className="bg-subtle-background border border-border rounded-lg p-4">
-                            <h3 className="font-medium text-text-primary mb-3">Smart Distribution Preview</h3>
-                            <p className="text-sm text-text-secondary mb-3">
-                                Leads will be distributed among {distributionSummary.totalMembers} active team member{distributionSummary.totalMembers !== 1 ? 's' : ''}:
+                {/* Distribution Summary */}
+                {distributionSummary && distributionSummary.totalMembers > 0 && (
+                    <div className="bg-subtle-background border border-border rounded-lg p-4">
+                        <h3 className="font-medium text-text-primary mb-3">Smart Distribution Preview</h3>
+                        <p className="text-sm text-text-secondary mb-3">
+                            Leads will be distributed among {distributionSummary.totalMembers} active team member{distributionSummary.totalMembers !== 1 ? 's' : ''}:
+                        </p>
+                        <div className="space-y-2">
+                            {distributionSummary.assignments.map((assignment, index) => (
+                                <div key={index} className="flex justify-between items-center text-sm p-2 bg-surface rounded">
+                                    <div>
+                                        <span className="font-medium text-text-primary">{assignment.userName}</span>
+                                        <span className="text-xs text-text-secondary ml-2">(Login #{assignment.loginPosition})</span>
+                                    </div>
+                                    <span className="font-semibold text-primary">{assignment.assignedCount} lead{assignment.assignedCount !== 1 ? 's' : ''}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* No Active Members Warning */}
+                {parsedLeads.length > 0 && sessions.length === 0 && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start">
+                        <AlertCircle className="w-5 h-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
+                        <div>
+                            <h4 className="font-medium text-red-800">No Active Team Members</h4>
+                            <p className="text-sm text-red-700 mt-1">
+                                There are no sales team members currently logged in. Leads cannot be auto-assigned.
                             </p>
-                            <div className="space-y-2">
-                                {distributionSummary.assignments.map((assignment, index) => (
-                                    <div key={index} className="flex justify-between items-center text-sm p-2 bg-surface rounded">
-                                        <div>
-                                            <span className="font-medium text-text-primary">{assignment.userName}</span>
-                                            <span className="text-xs text-text-secondary ml-2">(Login #{assignment.loginPosition})</span>
-                                        </div>
-                                        <span className="font-semibold text-primary">{assignment.assignedCount} lead{assignment.assignedCount !== 1 ? 's' : ''}</span>
-                                    </div>
-                                ))}
-                            </div>
                         </div>
-                    )}
+                    </div>
+                )}
 
-                    {/* No Active Members Warning */}
-                    {parsedLeads.length > 0 && sessions.length === 0 && (
-                        <div className="bg-error-subtle-background border border-error rounded-lg p-4 flex items-start">
-                            <AlertCircle className="w-5 h-5 text-error mr-3 flex-shrink-0 mt-0.5" />
-                            <div>
-                                <h4 className="font-medium text-error">No Active Team Members</h4>
-                                <p className="text-sm text-error-subtle-text mt-1">
-                                    There are no sales team members currently logged in. Leads cannot be auto-assigned.
-                                </p>
-                            </div>
+                {/* Error Message */}
+                {error && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start">
+                        <AlertCircle className="w-5 h-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
+                        <p className="text-sm text-red-700">{error}</p>
+                    </div>
+                )}
+
+                {/* Success Message */}
+                {success && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start">
+                        <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
+                        <div>
+                            <h4 className="font-medium text-green-800">Import Successful!</h4>
+                            <p className="text-sm text-green-700 mt-1">
+                                {parsedLeads.length} leads have been imported and assigned to team members.
+                            </p>
                         </div>
-                    )}
+                    </div>
+                )}
 
-                    {/* Error Message */}
-                    {error && (
-                        <div className="bg-error-subtle-background border border-error rounded-lg p-4 flex items-start">
-                            <AlertCircle className="w-5 h-5 text-error mr-3 flex-shrink-0 mt-0.5" />
-                            <p className="text-sm text-error">{error}</p>
-                        </div>
-                    )}
-
-                    {/* Success Message */}
-                    {success && (
-                        <div className="bg-success-subtle-background border border-success rounded-lg p-4 flex items-start">
-                            <CheckCircle className="w-5 h-5 text-success mr-3 flex-shrink-0 mt-0.5" />
-                            <div>
-                                <h4 className="font-medium text-success">Import Successful!</h4>
-                                <p className="text-sm text-success-subtle-text mt-1">
-                                    {parsedLeads.length} leads have been imported and assigned to team members.
-                                </p>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Footer */}
-                <div className="flex justify-end space-x-3 p-6 border-t border-border">
+                {/* Action Buttons */}
+                <div className="flex justify-end gap-3 pt-6 border-t border-border mt-6">
                     <button
                         onClick={handleClose}
-                        className="px-4 py-2 border border-border rounded-md text-text-primary hover:bg-subtle-background transition-colors"
+                        className="px-6 py-2 border border-border rounded-xl text-text-secondary font-bold hover:bg-subtle-background transition-colors"
                         disabled={importing}
                     >
                         Cancel
@@ -317,20 +308,20 @@ const LeadImporter: React.FC<LeadImporterProps> = ({ isOpen, onClose, onImportCo
                     <button
                         onClick={handleImport}
                         disabled={parsedLeads.length === 0 || importing || sessions.length === 0}
-                        className="px-4 py-2 bg-primary text-white rounded-md hover:bg-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                        className="px-6 py-2 bg-primary text-white rounded-xl font-bold hover:bg-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center shadow-lg shadow-primary/20"
                     >
                         {importing ? (
                             <>
                                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                                Importing...
+                                Importing Assets...
                             </>
                         ) : (
-                            <>Import {parsedLeads.length} Lead{parsedLeads.length !== 1 ? 's' : ''}</>
+                            <>Initialize {parsedLeads.length} Lead{parsedLeads.length !== 1 ? 's' : ''}</>
                         )}
                     </button>
                 </div>
             </div>
-        </div>
+        </Modal>
     );
 };
 

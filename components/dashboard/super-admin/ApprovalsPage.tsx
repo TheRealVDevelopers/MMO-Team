@@ -13,17 +13,22 @@ import {
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../../context/AuthContext';
 import { useApprovalRequests, approveRequest, rejectRequest, getApprovalStats } from '../../../hooks/useApprovalSystem';
+import { addTask } from '../../../hooks/useMyDayTasks';
 import { ApprovalRequest, ApprovalStatus, ApprovalRequestType, UserRole } from '../../../types';
 import { formatDateTime, USERS } from '../../../constants';
-import { ContentCard, StatCard, SectionHeader, cn, staggerContainer } from '../shared/DashboardUI';
+import { ContentCard, StatCard, SectionHeader, cn, staggerContainer, PrimaryButton } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import Modal from '../../shared/Modal';
 import SmartDateTimePicker from '../../shared/SmartDateTimePicker';
+import DirectAssignTaskModal from './DirectAssignTaskModal';
 
 const ApprovalsPage: React.FC = () => {
   const { currentUser } = useAuth();
   const [filterStatus, setFilterStatus] = useState<ApprovalStatus | 'All'>('All');
   const [selectedRequest, setSelectedRequest] = useState<ApprovalRequest | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [isDirectAssignModalOpen, setIsDirectAssignModalOpen] = useState(false);
   const [reviewAction, setReviewAction] = useState<'approve' | 'reject'>('approve');
   const [reviewComments, setReviewComments] = useState('');
   const [assigneeId, setAssigneeId] = useState('');
@@ -136,6 +141,11 @@ const ApprovalsPage: React.FC = () => {
     }
   };
 
+  const handleDirectAssign = async (taskData: any) => {
+    if (!currentUser) return;
+    await addTask(taskData, currentUser.id);
+  };
+
   const getRequestTypeIcon = (type: ApprovalRequestType) => {
     switch (type) {
       case ApprovalRequestType.LEAVE:
@@ -188,6 +198,13 @@ const ApprovalsPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
+          <PrimaryButton
+            onClick={() => setIsDirectAssignModalOpen(true)}
+            icon={<BoltIcon className="w-4 h-4" />}
+            className="rounded-2xl"
+          >
+            Assign Task
+          </PrimaryButton>
           <div className="flex bg-surface border border-border/60 p-1 rounded-2xl shadow-sm">
             {(['All', ApprovalStatus.PENDING, ApprovalStatus.APPROVED, ApprovalStatus.REJECTED] as const).map((status) => (
               <button
@@ -341,151 +358,143 @@ const ApprovalsPage: React.FC = () => {
       </div>
 
       {/* Review Modal */}
-      <AnimatePresence>
-        {showReviewModal && selectedRequest && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-background/80 backdrop-blur-md"
-              onClick={() => setShowReviewModal(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-lg bg-surface border border-border rounded-[2.5rem] shadow-2xl overflow-hidden"
-            >
-              <div className="p-10">
-                <div className="flex items-center gap-4 mb-8">
-                  <div className={cn(
-                    "w-12 h-12 rounded-2xl flex items-center justify-center",
-                    reviewAction === 'approve' ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-600"
-                  )}>
-                    {reviewAction === 'approve' ? <ShieldCheckIcon className="w-6 h-6" /> : <XCircleIcon className="w-6 h-6" />}
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-serif font-black text-text-primary tracking-tight">
-                      {reviewAction === 'approve' ? 'Execution Approval' : 'Authorization Denial'}
-                    </h3>
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-text-tertiary">Final Override Confirmation</p>
-                  </div>
-                </div>
+      <Modal
+        isOpen={showReviewModal && !!selectedRequest}
+        onClose={() => setShowReviewModal(false)}
+        title={reviewAction === 'approve' ? 'Execution Approval' : 'Authorization Denial'}
+        size="lg"
+      >
+        <div className="flex items-center gap-4 mb-8">
+          <div className={cn(
+            "w-12 h-12 rounded-2xl flex items-center justify-center",
+            reviewAction === 'approve' ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-600"
+          )}>
+            {reviewAction === 'approve' ? <ShieldCheckIcon className="w-6 h-6" /> : <XCircleIcon className="w-6 h-6" />}
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-text-tertiary">Final Override Confirmation</p>
+          </div>
+        </div>
 
-                <div className="mb-8 p-6 bg-subtle-background/50 rounded-3xl border border-border/40">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-1">Subject Protocol</p>
-                  <p className="text-lg font-bold text-text-primary mb-1">{selectedRequest.title}</p>
-                  <p className="text-xs text-text-secondary font-medium italic">Requested by {selectedRequest.requesterName}</p>
+        {selectedRequest && (
+          <>
+            <div className="mb-8 p-6 bg-subtle-background/50 rounded-3xl border border-border/40">
+              <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-1">Subject Protocol</p>
+              <p className="text-lg font-bold text-text-primary mb-1">{selectedRequest.title}</p>
+              <p className="text-xs text-text-secondary font-medium italic">Requested by {selectedRequest.requesterName}</p>
 
-                  {selectedRequest.stages && selectedRequest.stages.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-border/40">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-2">Execution Stages</p>
-                      <div className="space-y-2">
-                        {selectedRequest.stages.map((stage, idx) => (
-                          <div key={idx} className="flex justify-between items-center bg-surface p-2 rounded-lg border border-border/50 text-xs">
-                            <span className="font-bold text-text-primary">{stage.name}</span>
-                            <span className="text-text-tertiary">{new Date(stage.deadline).toLocaleDateString()}</span>
-                          </div>
-                        ))}
+              {selectedRequest.stages && selectedRequest.stages.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-border/40">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-2">Execution Stages</p>
+                  <div className="space-y-2">
+                    {selectedRequest.stages.map((stage, idx) => (
+                      <div key={idx} className="flex justify-between items-center bg-surface p-2 rounded-lg border border-border/50 text-xs">
+                        <span className="font-bold text-text-primary">{stage.name}</span>
+                        <span className="text-text-tertiary">{new Date(stage.deadline).toLocaleDateString()}</span>
                       </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-3 mb-10">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-tertiary px-1">
-                    Strategic Feedback {reviewAction === 'reject' && <span className="text-error">*</span>}
-                  </label>
-                  <textarea
-                    value={reviewComments}
-                    onChange={(e) => setReviewComments(e.target.value)}
-                    rows={reviewAction === 'approve' && derivedTargetRole ? 2 : 4}
-                    className="w-full p-6 border border-border rounded-3xl bg-subtle-background/30 focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium placeholder:text-text-tertiary/50"
-                    placeholder={reviewAction === 'approve' ? 'Internal notes & instructions for the worker...' : 'Required justification for protocol denial...'}
-                  />
-                </div>
-
-                {reviewAction === 'approve' && (
-                  <div className="mb-10">
-                    <SmartDateTimePicker
-                      label="Deadline"
-                      value={deadline}
-                      onChange={setDeadline}
-                      required
-                    />
+                    ))}
                   </div>
-                )}
+                </div>
+              )}
+            </div>
 
-                {reviewAction === 'approve' && (
-                  <div className="mb-10 space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-tertiary px-1">
-                      Personnel Assignment <span className="text-secondary">*</span>
-                    </label>
-                    <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                      {personnel.map(user => (
-                        <button
-                          key={user.id}
-                          type="button"
-                          onClick={() => setAssigneeId(user.id)}
-                          className={cn(
-                            "flex items-center gap-3 p-3 rounded-2xl border transition-all",
-                            assigneeId === user.id
-                              ? "bg-secondary text-white border-secondary shadow-lg shadow-secondary/10"
-                              : "bg-subtle-background/30 border-border hover:bg-subtle-background/50"
+            <div className="space-y-3 mb-10">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-tertiary px-1">
+                Strategic Feedback {reviewAction === 'reject' && <span className="text-error">*</span>}
+              </label>
+              <textarea
+                value={reviewComments}
+                onChange={(e) => setReviewComments(e.target.value)}
+                rows={reviewAction === 'approve' && derivedTargetRole ? 2 : 4}
+                className="w-full p-6 border border-border rounded-3xl bg-subtle-background/30 focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium placeholder:text-text-tertiary/50"
+                placeholder={reviewAction === 'approve' ? 'Internal notes & instructions for the worker...' : 'Required justification for protocol denial...'}
+              />
+            </div>
+
+            {reviewAction === 'approve' && (
+              <div className="mb-10">
+                <SmartDateTimePicker
+                  label="Deadline"
+                  value={deadline}
+                  onChange={setDeadline}
+                  required
+                />
+              </div>
+            )}
+
+            {reviewAction === 'approve' && (
+              <div className="mb-10 space-y-3">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-tertiary px-1">
+                  Personnel Assignment <span className="text-secondary">*</span>
+                </label>
+                <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                  {personnel.map(user => (
+                    <button
+                      key={user.id}
+                      type="button"
+                      onClick={() => setAssigneeId(user.id)}
+                      className={cn(
+                        "flex items-center gap-3 p-3 rounded-2xl border transition-all",
+                        assigneeId === user.id
+                          ? "bg-secondary text-white border-secondary shadow-lg shadow-secondary/10"
+                          : "bg-subtle-background/30 border-border hover:bg-subtle-background/50"
+                      )}
+                    >
+                      <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full border border-white/20" />
+                      <div className="text-left flex-1">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-black uppercase tracking-tight">{user.name}</p>
+                          {user.role === derivedTargetRole && (
+                            <span className={cn(
+                              "text-[8px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider border",
+                              assigneeId === user.id
+                                ? "bg-white/20 border-white/30 text-white"
+                                : "bg-secondary/10 border-secondary/20 text-secondary"
+                            )}>
+                              Spec
+                            </span>
                           )}
-                        >
-                          <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full border border-white/20" />
-                          <div className="text-left flex-1">
-                            <div className="flex items-center justify-between">
-                              <p className="text-xs font-black uppercase tracking-tight">{user.name}</p>
-                              {user.role === derivedTargetRole && (
-                                <span className={cn(
-                                  "text-[8px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider border",
-                                  assigneeId === user.id
-                                    ? "bg-white/20 border-white/30 text-white"
-                                    : "bg-secondary/10 border-secondary/20 text-secondary"
-                                )}>
-                                  Spec
-                                </span>
-                              )}
-                            </div>
-                            <p className={cn("text-[10px] uppercase font-bold opacity-60", assigneeId === user.id ? "text-white" : "text-text-tertiary")}>
-                              {user.role}
-                            </p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    onClick={() => setShowReviewModal(false)}
-                    className="p-5 rounded-2xl border border-border text-[10px] font-black uppercase tracking-widest hover:bg-subtle-background transition-all"
-                    disabled={processing}
-                  >
-                    Abort
-                  </button>
-                  <button
-                    onClick={handleSubmitReview}
-                    disabled={processing || (reviewAction === 'reject' && !reviewComments.trim()) || (reviewAction === 'approve' && (!deadline || !assigneeId))}
-                    className={cn(
-                      "p-5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl disabled:opacity-50",
-                      reviewAction === 'approve'
-                        ? "bg-primary text-white hover:bg-secondary shadow-primary/20"
-                        : "bg-error text-white hover:bg-red-600 shadow-error/20"
-                    )}
-                  >
-                    {processing ? 'Processing...' : reviewAction === 'approve' ? 'Confirm Authorize' : 'Confirm Deny'}
-                  </button>
+                        </div>
+                        <p className={cn("text-[10px] uppercase font-bold opacity-60", assigneeId === user.id ? "text-white" : "text-text-tertiary")}>
+                          {user.role}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
                 </div>
               </div>
-            </motion.div>
-          </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                onClick={() => setShowReviewModal(false)}
+                className="p-5 rounded-2xl border border-border text-[10px] font-black uppercase tracking-widest hover:bg-subtle-background transition-all"
+                disabled={processing}
+              >
+                Abort
+              </button>
+              <button
+                onClick={handleSubmitReview}
+                disabled={processing || (reviewAction === 'reject' && !reviewComments.trim()) || (reviewAction === 'approve' && (!deadline || !assigneeId))}
+                className={cn(
+                  "p-5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl disabled:opacity-50",
+                  reviewAction === 'approve'
+                    ? "bg-primary text-white hover:bg-secondary shadow-primary/20"
+                    : "bg-error text-white hover:bg-red-600 shadow-error/20"
+                )}
+              >
+                {processing ? 'Processing...' : reviewAction === 'approve' ? 'Confirm Authorize' : 'Confirm Deny'}
+              </button>
+            </div>
+          </>
         )}
-      </AnimatePresence>
+      </Modal>
+
+      <DirectAssignTaskModal
+        isOpen={isDirectAssignModalOpen}
+        onClose={() => setIsDirectAssignModalOpen(false)}
+        onAssign={handleDirectAssign}
+      />
     </motion.div>
   );
 };

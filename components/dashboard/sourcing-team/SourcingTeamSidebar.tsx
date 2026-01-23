@@ -42,6 +42,7 @@ const NavItem: React.FC<{
 const SourcingTeamSidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage }) => {
     const navItems = [
         { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
+        { id: 'audit', label: 'Audit Procurement', icon: <RectangleGroupIcon className="w-6 h-6" /> },
         { id: 'bidding', label: 'Bidding', icon: <TagIcon className="w-6 h-6" /> },
         { id: 'vendors', label: 'Vendors', icon: <BuildingStorefrontIcon className="w-6 h-6" /> },
         { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
@@ -55,7 +56,7 @@ const SourcingTeamSidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPa
                 <div className="flex items-center pl-2.5 mb-5 h-16 -mt-4">
                     <BuildingOfficeIcon className="h-8 w-8 text-primary" />
                     <h1 className="ml-3 text-xl font-bold text-text-primary tracking-tight">
-                        Quotation Hub
+                        Sourcing Hub
                     </h1>
                 </div>
                 <ul className="space-y-2">

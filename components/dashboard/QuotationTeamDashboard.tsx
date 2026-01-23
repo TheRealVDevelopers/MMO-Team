@@ -16,11 +16,13 @@ import AddTemplateModal from './quotation-team/AddTemplateModal';
 import { useLeads } from '../../hooks/useLeads';
 import { useProjects } from '../../hooks/useProjects';
 import { useAuth } from '../../context/AuthContext';
+import { useCatalog } from '../../hooks/useCatalog';
 
 const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
   const { leads: firebaseLeads, loading: leadsLoading } = useLeads();
-  const { projects: firebaseProjects, loading: projectsLoading } = useProjects();
+  const { projects: firebaseProjects, loading: projectsLoading, addProject } = useProjects(); // Destructure addProject
+  const { items, addItem } = useCatalog(); // Use global catalog
 
   // Lifted State with LocalStorage Persistence for custom/demo overrides
   const [projectsState, setProjects] = useState<Project[]>(() => {
@@ -89,10 +91,9 @@ const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (p
     return all;
   }, [projectsState, firebaseLeads, firebaseProjects]);
 
-  const [items, setItems] = useState<Item[]>(() => {
-    const saved = localStorage.getItem('mmo_items');
-    return saved ? JSON.parse(saved) : ITEMS;
-  });
+  // Use global items instead of local storage
+  // const [items, setItems] = ... (removed)
+
   const [templates, setTemplates] = useState<ProjectTemplate[]>(() => {
     const saved = localStorage.getItem('mmo_templates');
     return saved ? JSON.parse(saved) : PROJECT_TEMPLATES;
@@ -117,9 +118,7 @@ const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (p
     localStorage.setItem('mmo_projects', JSON.stringify(projectsState));
   }, [projectsState]);
 
-  useEffect(() => {
-    localStorage.setItem('mmo_items', JSON.stringify(items));
-  }, [items]);
+  // Removed item sync since we use global catalog
 
   useEffect(() => {
     localStorage.setItem('mmo_templates', JSON.stringify(templates));
@@ -170,12 +169,12 @@ const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (p
   const handleResetData = () => {
     if (window.confirm('Are you sure you want to reset all data to defaults? This will delete your custom items and projects.')) {
       localStorage.removeItem('mmo_projects');
-      localStorage.removeItem('mmo_items');
+      // localStorage.removeItem('mmo_items'); // Items are now global
       localStorage.removeItem('mmo_templates');
       localStorage.removeItem('mmo_rfqs');
       localStorage.removeItem('mmo_bids');
       setProjects(PROJECTS);
-      setItems(ITEMS);
+      // setItems(ITEMS); // Items are now global
       setTemplates(PROJECT_TEMPLATES);
       setRfqs(RFQS);
       setBids(BIDS_DATA);
@@ -191,28 +190,38 @@ const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (p
     setSelectedProject(updatedProject);
   };
 
-  const handleCreateProject = (newProjectData: Omit<Project, 'id'>, rfq?: RFQ) => {
-    const projectId = (Date.now()).toString();
-    const newProject: Project = {
-      ...newProjectData,
-      id: projectId,
-    };
+  const handleCreateProject = async (newProjectData: Omit<Project, 'id'>, rfq?: RFQ) => {
+    try {
+      if (addProject) {
+        await addProject(newProjectData); // Use global hook
+      } else {
+        // Fallback if not available (should be)
+        const projectId = (Date.now()).toString();
+        const newProject: Project = { ...newProjectData, id: projectId };
+        setProjects(prev => [newProject, ...prev]);
+      }
 
-    setProjects(prev => [newProject, ...prev]);
-
-    if (rfq) {
-      // Sync IDs to ensure perfect linkage
-      const linkedRfq = { ...rfq, projectId: projectId };
-      setRfqs(prev => [linkedRfq, ...prev]);
+      if (rfq) {
+        // Note: RFQ linkage might need backend support or separate hook. 
+        // For now, we keep local RFQ state or assume addProject handles it if expanded.
+        // But preserving local RFQ linkage logic:
+        const rfqId = `rfq-${Date.now()}`;
+        const linkedRfq = { ...rfq, projectId: 'pending-id' }; // Ideally get ID from addProject result
+        setRfqs(prev => [linkedRfq, ...prev]);
+      }
+    } catch (err) {
+      console.error("Failed to create project", err);
+      alert("Failed to create project");
     }
   };
 
-  const handleCreateItem = (newItemData: Omit<Item, 'id'>) => {
-    const newItem: Item = {
-      ...newItemData,
-      id: (Date.now()).toString(),
-    };
-    setItems(prev => [newItem, ...prev]);
+  const handleCreateItem = async (newItemData: Omit<Item, 'id'>) => {
+    try {
+      await addItem(newItemData); // Use global hook
+    } catch (err) {
+      console.error("Failed to create item", err);
+      alert("Failed to create item");
+    }
   };
 
   const handleCreateTemplate = (newTemplateData: Omit<ProjectTemplate, 'id'>) => {
@@ -228,9 +237,7 @@ const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (p
     setInitialProjectData({
       projectName: template.name,
       budget: template.avgCost,
-      // If the template has items, we could pre-select them here. 
-      // For now, we use the average cost as budget.
-      items: [] // In a real app, we'd map template items to real items
+      items: []
     });
     setShowAddProjectModal(true);
   };

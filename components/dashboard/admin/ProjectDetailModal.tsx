@@ -10,16 +10,22 @@ interface ProjectDetailModalProps {
     project: Project | null;
 }
 
-const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ isOpen, onClose, project }) => {
-    if (!isOpen || !project) return null;
+import Modal from '../../shared/Modal';
 
+interface ProjectDetailModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    project: Project | null;
+}
+
+const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ isOpen, onClose, project }) => {
     // Helper to get user name
     const getUserName = (id?: string) => USERS.find(u => u.id === id)?.name || 'Unassigned';
 
     // Helper to process assigned team for display
     const getAssignedTeamList = () => {
         const team: { role: string; name: string; id: string }[] = [];
-        if (project.assignedTeam) {
+        if (project?.assignedTeam) {
             if (project.assignedTeam.drawing) team.push({ role: 'Drawing', name: getUserName(project.assignedTeam.drawing), id: project.assignedTeam.drawing });
             if (project.assignedTeam.quotation) team.push({ role: 'Quotation', name: getUserName(project.assignedTeam.quotation), id: project.assignedTeam.quotation });
             if (project.assignedTeam.site_engineer) team.push({ role: 'Site Engineer', name: getUserName(project.assignedTeam.site_engineer), id: project.assignedTeam.site_engineer });
@@ -31,24 +37,16 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ isOpen, onClose
     const teamMembers = getAssignedTeamList();
 
     return (
-        <div className="fixed inset-0 z-[1000] overflow-y-auto">
-            <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-                <div className="fixed inset-0 z-[1000] transition-opacity bg-gray-500 bg-opacity-75 backdrop-blur-sm" onClick={onClose}></div>
-
-                <div className="inline-block align-middle bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-4xl w-full relative z-[1010] p-6">
-                    <div className="flex justify-between items-start mb-6 border-b border-border pb-4">
-                        <div>
-                            <h3 className="text-2xl font-serif font-bold text-text-primary">
-                                {project.projectName}
-                            </h3>
-                            <p className="text-text-secondary mt-1">{project.clientName}</p>
-                        </div>
-                        <button
-                            onClick={onClose}
-                            className="p-2 rounded-full hover:bg-subtle-background transition-colors"
-                        >
-                            <XMarkIcon className="w-6 h-6 text-text-tertiary" />
-                        </button>
+        <Modal
+            isOpen={isOpen && !!project}
+            onClose={onClose}
+            title={project?.projectName || 'Project Details'}
+            size="4xl"
+        >
+            {project && (
+                <>
+                    <div className="mb-6">
+                        <p className="text-text-secondary mt-1">{project.clientName}</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -104,7 +102,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ isOpen, onClose
                             </div>
                         </div>
 
-                        {/* Column 3: Timeline & Milestones (Mocked for now) */}
+                        {/* Column 3: Timeline & Milestones */}
                         <div>
                             <h4 className="text-sm font-black uppercase tracking-widest text-text-tertiary mb-4">Project Timeline</h4>
                             <div className="relative border-l-2 border-border pl-4 space-y-6">
@@ -139,9 +137,9 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ isOpen, onClose
                             Close Details
                         </button>
                     </div>
-                </div>
-            </div>
-        </div>
+                </>
+            )}
+        </Modal>
     );
 };
 

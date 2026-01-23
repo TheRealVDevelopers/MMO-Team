@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, onSnapshot, query, orderBy, Timestamp, doc, updateDoc, where, getDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, Timestamp, doc, updateDoc, where, getDoc, serverTimestamp, addDoc } from 'firebase/firestore';
 import { Project, LeadHistory, ExecutionStage } from '../types';
 import { createNotification } from '../services/liveDataService';
 
@@ -15,15 +15,15 @@ const fromFirestore = (docData: FirestoreProject, id: string): Project => {
     return {
         ...docData,
         id,
-        startDate: docData.startDate.toDate(),
-        endDate: docData.endDate.toDate(),
+        startDate: docData.startDate?.toDate() || new Date(),
+        endDate: docData.endDate?.toDate() || new Date(),
         documents: docData.documents?.map(doc => ({
             ...doc,
-            uploaded: doc.uploaded.toDate(),
+            uploaded: doc.uploaded?.toDate() || new Date(),
         })) || [],
         history: docData.history?.map(h => ({
             ...h,
-            timestamp: h.timestamp.toDate(),
+            timestamp: h.timestamp?.toDate() || new Date(),
         })) || [],
     } as Project;
 };
@@ -61,7 +61,31 @@ export const useProjects = (userId?: string) => {
         return () => unsubscribe();
     }, [userId]);
 
-    return { projects, loading, error, updateProject: (id: string, data: Partial<Project>) => updateProject(id, data) };
+    const updateProject = async (id: string, data: Partial<Project>) => {
+        try {
+            const docRef = doc(db, 'projects', id);
+            await updateDoc(docRef, data);
+        } catch (err) {
+            console.error("Error updating project:", err);
+            throw err;
+        }
+    };
+
+    const addProject = async (projectData: Omit<Project, 'id'>) => {
+        try {
+            const docRef = await addDoc(collection(db, 'projects'), {
+                ...projectData,
+                startDate: Timestamp.fromDate(projectData.startDate),
+                endDate: Timestamp.fromDate(projectData.endDate),
+            });
+            return docRef.id;
+        } catch (err) {
+            console.error("Error adding project:", err);
+            throw err;
+        }
+    };
+
+    return { projects, loading, error, updateProject, addProject };
 };
 
 export const useAssignedProjects = (userId: string) => {

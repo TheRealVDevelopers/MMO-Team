@@ -11,6 +11,7 @@ import {
 } from '@heroicons/react/24/outline';
 import RoleAvatar from '../RoleAvatars/RoleAvatar';
 import { ClientRequest, RequestType, RequestStatus, RequestMessage, ResponsibleRole } from '../types';
+import Modal from '../../shared/Modal';
 
 interface ClientRequestSystemProps {
     requests: ClientRequest[];
@@ -198,135 +199,119 @@ const ClientRequestSystem: React.FC<ClientRequestSystemProps> = ({
             </div>
 
             {/* New Request Modal */}
-            {isNewRequestOpen && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-                        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
-                            <h3 className="text-xl font-bold text-gray-900">New Request</h3>
-                            <button onClick={() => setIsNewRequestOpen(false)} className="p-2 rounded-xl hover:bg-gray-100">
-                                <XMarkIcon className="w-5 h-5 text-gray-500" />
-                            </button>
-                        </div>
-
-                        <div className="p-6 space-y-4">
-                            {/* Request Type */}
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                                    Type
-                                </label>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {(Object.keys(requestTypeConfig) as RequestType[]).map((type) => {
-                                        const conf = requestTypeConfig[type];
-                                        return (
-                                            <button
-                                                key={type}
-                                                onClick={() => setNewRequestForm({ ...newRequestForm, type })}
-                                                className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all ${newRequestForm.type === type
-                                                        ? 'border-primary bg-primary/5'
-                                                        : 'border-gray-200 hover:border-gray-300'
-                                                    }`}
-                                            >
-                                                <div className={`w-6 h-6 ${conf.color} text-white rounded flex items-center justify-center`}>
-                                                    {conf.icon}
-                                                </div>
-                                                <span className="text-sm font-medium text-gray-700">{conf.label}</span>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* Title */}
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                                    Subject
-                                </label>
-                                <input
-                                    type="text"
-                                    value={newRequestForm.title}
-                                    onChange={(e) => setNewRequestForm({ ...newRequestForm, title: e.target.value })}
-                                    placeholder="Brief summary of your request"
-                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary outline-none"
-                                />
-                            </div>
-
-                            {/* Description */}
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                                    Details
-                                </label>
-                                <textarea
-                                    rows={4}
-                                    value={newRequestForm.description}
-                                    onChange={(e) => setNewRequestForm({ ...newRequestForm, description: e.target.value })}
-                                    placeholder="Describe your request in detail..."
-                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary outline-none resize-none"
-                                />
-                            </div>
-
-                            {/* Priority */}
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                                    Priority
-                                </label>
-                                <div className="flex gap-2">
-                                    {(['low', 'medium', 'high'] as const).map((p) => (
-                                        <button
-                                            key={p}
-                                            onClick={() => setNewRequestForm({ ...newRequestForm, priority: p })}
-                                            className={`flex-1 py-2 px-4 rounded-xl border-2 text-sm font-medium capitalize transition-all ${newRequestForm.priority === p
-                                                    ? 'border-primary bg-primary/5 text-primary'
-                                                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                                                }`}
-                                        >
-                                            {p}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Submit */}
-                            <button
-                                onClick={handleSubmitRequest}
-                                disabled={!newRequestForm.title || !newRequestForm.description}
-                                className="w-full py-4 bg-primary text-white font-bold text-sm uppercase tracking-wider rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                Submit Request
-                            </button>
+            <Modal
+                isOpen={isNewRequestOpen}
+                onClose={() => setIsNewRequestOpen(false)}
+                title="New Request"
+                size="md"
+            >
+                <div className="space-y-4">
+                    {/* Request Type */}
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                            Type
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                            {(Object.keys(requestTypeConfig) as RequestType[]).map((type) => {
+                                const conf = requestTypeConfig[type];
+                                return (
+                                    <button
+                                        key={type}
+                                        onClick={() => setNewRequestForm({ ...newRequestForm, type })}
+                                        className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all ${newRequestForm.type === type
+                                            ? 'border-primary bg-primary/5'
+                                            : 'border-gray-200 hover:border-gray-300'
+                                            }`}
+                                    >
+                                        <div className={`w-6 h-6 ${conf.color} text-white rounded flex items-center justify-center`}>
+                                            {conf.icon}
+                                        </div>
+                                        <span className="text-sm font-medium text-gray-700">{conf.label}</span>
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
+
+                    {/* Title */}
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                            Subject
+                        </label>
+                        <input
+                            type="text"
+                            value={newRequestForm.title}
+                            onChange={(e) => setNewRequestForm({ ...newRequestForm, title: e.target.value })}
+                            placeholder="Brief summary of your request"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary outline-none"
+                        />
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                            Details
+                        </label>
+                        <textarea
+                            rows={4}
+                            value={newRequestForm.description}
+                            onChange={(e) => setNewRequestForm({ ...newRequestForm, description: e.target.value })}
+                            placeholder="Describe your request in detail..."
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary outline-none resize-none"
+                        />
+                    </div>
+
+                    {/* Priority */}
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                            Priority
+                        </label>
+                        <div className="flex gap-2">
+                            {(['low', 'medium', 'high'] as const).map((p) => (
+                                <button
+                                    key={p}
+                                    onClick={() => setNewRequestForm({ ...newRequestForm, priority: p })}
+                                    className={`flex-1 py-2 px-4 rounded-xl border-2 text-sm font-medium capitalize transition-all ${newRequestForm.priority === p
+                                        ? 'border-primary bg-primary/5 text-primary'
+                                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                                        }`}
+                                >
+                                    {p}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Submit */}
+                    <button
+                        onClick={handleSubmitRequest}
+                        disabled={!newRequestForm.title || !newRequestForm.description}
+                        className="w-full py-4 bg-primary text-white font-bold text-sm uppercase tracking-wider rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Submit Request
+                    </button>
                 </div>
-            )}
+            </Modal>
 
             {/* Request Detail Modal */}
-            {selectedRequest && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden">
-                        {/* Header */}
-                        <div className="px-6 py-5 border-b border-gray-100 flex items-start justify-between">
-                            <div className="flex items-start gap-3">
-                                <div className={`w-10 h-10 ${requestTypeConfig[selectedRequest.type].color} text-white rounded-xl flex items-center justify-center`}>
-                                    {requestTypeConfig[selectedRequest.type].icon}
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-gray-900">{selectedRequest.title}</h3>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <span className={`px-2 py-0.5 ${statusConfig[selectedRequest.status].bgColor} ${statusConfig[selectedRequest.status].color} text-xs font-medium rounded-full`}>
-                                            {statusConfig[selectedRequest.status].label}
-                                        </span>
-                                        <span className="text-xs text-gray-500">
-                                            {new Date(selectedRequest.createdAt).toLocaleDateString()}
-                                        </span>
-                                    </div>
-                                </div>
+            <Modal
+                isOpen={!!selectedRequest}
+                onClose={() => setSelectedRequest(null)}
+                title={selectedRequest?.title || 'Request Details'}
+                size="lg"
+            >
+                {selectedRequest && (
+                    <div className="flex flex-col h-full">
+                        {/* Summary Block */}
+                        <div className="mb-6 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                            <div className="flex items-center gap-2 mb-2">
+                                <span className={`px-2 py-0.5 ${statusConfig[selectedRequest.status].bgColor} ${statusConfig[selectedRequest.status].color} text-xs font-medium rounded-full`}>
+                                    {statusConfig[selectedRequest.status].label}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                    {new Date(selectedRequest.createdAt).toLocaleDateString()}
+                                </span>
                             </div>
-                            <button onClick={() => setSelectedRequest(null)} className="p-2 rounded-xl hover:bg-gray-100">
-                                <XMarkIcon className="w-5 h-5 text-gray-500" />
-                            </button>
-                        </div>
-
-                        {/* Description */}
-                        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
                             <p className="text-sm text-gray-700">{selectedRequest.description}</p>
                             {selectedRequest.owner && (
                                 <div className="flex items-center gap-2 mt-3">
@@ -337,19 +322,19 @@ const ClientRequestSystem: React.FC<ClientRequestSystemProps> = ({
                         </div>
 
                         {/* Conversation */}
-                        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                        <div className="flex-1 overflow-y-auto space-y-3 mb-4 max-h-[400px]">
                             {selectedRequest.conversation.map((msg) => (
                                 <div
                                     key={msg.id}
                                     className={`flex ${msg.sender === 'client' ? 'justify-end' : 'justify-start'}`}
                                 >
-                                    <div className={`max-w-[80%] ${msg.sender === 'client'
-                                            ? 'bg-primary text-white'
-                                            : 'bg-gray-100 text-gray-800'
-                                        } rounded-2xl px-4 py-3`}>
-                                        <p className="text-xs font-medium opacity-70 mb-1">{msg.senderName}</p>
-                                        <p className="text-sm">{msg.message}</p>
-                                        <p className="text-xs opacity-60 mt-2">
+                                    <div className={`max-w-[85%] ${msg.sender === 'client'
+                                        ? 'bg-primary text-white'
+                                        : 'bg-gray-100 text-gray-800'
+                                        } rounded-2xl px-4 py-3 shadow-sm`}>
+                                        <p className="text-[10px] font-bold opacity-70 mb-1 uppercase tracking-wider">{msg.senderName}</p>
+                                        <p className="text-sm leading-relaxed">{msg.message}</p>
+                                        <p className="text-[10px] opacity-60 mt-2 text-right">
                                             {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </p>
                                     </div>
@@ -359,7 +344,7 @@ const ClientRequestSystem: React.FC<ClientRequestSystemProps> = ({
 
                         {/* Message Input */}
                         {selectedRequest.status !== 'resolved' && (
-                            <div className="p-4 border-t border-gray-100">
+                            <div className="pt-4 border-t border-gray-100">
                                 <div className="flex gap-2">
                                     <input
                                         type="text"
@@ -367,11 +352,11 @@ const ClientRequestSystem: React.FC<ClientRequestSystemProps> = ({
                                         onChange={(e) => setNewMessage(e.target.value)}
                                         onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                                         placeholder="Type a message..."
-                                        className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-primary outline-none text-sm"
+                                        className="flex-1 px-4 py-3 bg-gray-50 border-gray-200 rounded-xl focus:border-primary outline-none text-sm transition-all"
                                     />
                                     <button
                                         onClick={handleSendMessage}
-                                        className="p-2 bg-primary text-white rounded-xl hover:bg-primary/90 transition-colors"
+                                        className="p-3 bg-primary text-white rounded-xl hover:bg-secondary transition-all shadow-lg shadow-primary/20"
                                     >
                                         <PaperAirplaneIcon className="w-5 h-5" />
                                     </button>
@@ -379,8 +364,8 @@ const ClientRequestSystem: React.FC<ClientRequestSystemProps> = ({
                             </div>
                         )}
                     </div>
-                </div>
-            )}
+                )}
+            </Modal>
         </div>
     );
 };

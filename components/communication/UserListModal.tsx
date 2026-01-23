@@ -9,7 +9,16 @@ interface UserListModalProps {
     currentUserId?: string;
 }
 
-const UserListModal: React.FC<UserListModalProps> = ({ onClose, onSelectUser, currentUserId }) => {
+import Modal from '../shared/Modal';
+
+interface UserListModalProps {
+    isOpen: boolean; // Added isOpen prop
+    onClose: () => void;
+    onSelectUser: (user: User) => void;
+    currentUserId?: string;
+}
+
+const UserListModal: React.FC<UserListModalProps> = ({ isOpen, onClose, onSelectUser, currentUserId }) => {
     const { users, loading } = useUsers();
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -19,16 +28,14 @@ const UserListModal: React.FC<UserListModalProps> = ({ onClose, onSelectUser, cu
     );
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-surface border border-border rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[80vh] animate-in fade-in zoom-in-95 duration-200">
-                <div className="p-4 border-b border-border flex justify-between items-center">
-                    <h3 className="text-lg font-bold text-text-primary">New Message</h3>
-                    <button onClick={onClose} className="p-2 hover:bg-subtle-background rounded-full transition-colors">
-                        <XMarkIcon className="w-5 h-5 text-text-secondary" />
-                    </button>
-                </div>
-
-                <div className="p-4 border-b border-border">
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title="New Message"
+            size="md"
+        >
+            <div className="flex flex-col max-h-[70vh]">
+                <div className="mb-4">
                     <div className="relative">
                         <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary" />
                         <input
@@ -42,14 +49,14 @@ const UserListModal: React.FC<UserListModalProps> = ({ onClose, onSelectUser, cu
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-2 scrollbar-thin">
+                <div className="flex-1 overflow-y-auto p-1 custom-scrollbar">
                     {loading ? (
                         <div className="flex justify-center p-8">
                             <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                         </div>
                     ) : filteredUsers.length === 0 ? (
-                        <div className="p-8 text-center text-text-tertiary">
-                            <p>No users found</p>
+                        <div className="text-center p-8 text-text-tertiary italic">
+                            No users found matching "{searchTerm}"
                         </div>
                     ) : (
                         <div className="space-y-1">
@@ -62,7 +69,7 @@ const UserListModal: React.FC<UserListModalProps> = ({ onClose, onSelectUser, cu
                                     <img
                                         src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`}
                                         alt={user.name}
-                                        className="w-10 h-10 rounded-full object-cover"
+                                        className="w-10 h-10 rounded-full object-cover border border-border"
                                     />
                                     <div>
                                         <p className="font-bold text-text-primary text-sm group-hover:text-primary transition-colors">{user.name}</p>
@@ -74,7 +81,7 @@ const UserListModal: React.FC<UserListModalProps> = ({ onClose, onSelectUser, cu
                     )}
                 </div>
             </div>
-        </div>
+        </Modal>
     );
 };
 

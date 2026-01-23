@@ -30,7 +30,8 @@ const parseQuotationItems = (description: string): QuotationItem[] => {
 
     lines.forEach(line => {
         // Match pattern: "- Item Name x Qty (₹Price/unit) - Discount% OFF = ₹Total"
-        const match = line.match(/^- (.+) x (\d+) \(₹([\d,]+)\/unit\) - (\d+(?:\.\d+)?)% OFF = ₹([\d,]+)/);
+        // Improved regex to handle potential spaces from Intl.NumberFormat and builder formatting
+        const match = line.match(/^- (.+) x (\d+) \(₹\s*([\d,]+)\/unit\) - (\d+(?:\.\d+)?)% OFF\s*=\s*₹\s*([\d,]+)/);
         if (match) {
             items.push({
                 name: match[1],
@@ -95,7 +96,7 @@ const QuotationAuditPage: React.FC = () => {
         try {
             // Create new description with updated prices
             const lineItemsDescription = editedItems.map(i =>
-                `- ${i.name} x ${i.quantity} (₹${i.unitPrice.toLocaleString()}/unit) - ${i.discount}% OFF = ₹${i.total.toLocaleString()}`
+                `- ${i.name} x ${i.quantity} (${formatCurrencyINR(i.unitPrice)}/unit) - ${i.discount}% OFF = ${formatCurrencyINR(i.total)}`
             ).join('\n');
 
             const newDescription = `AUDITED QUOTATION\n\nOriginal: ${selectedQuotation.title}\n\nItems:\n${lineItemsDescription}\n\nTotal: ${formatCurrencyINR(calculateTotal())}\n\nAudited by: ${currentUser.name}`;

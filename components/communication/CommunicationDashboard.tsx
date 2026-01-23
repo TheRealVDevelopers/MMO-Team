@@ -95,21 +95,19 @@ const CommunicationDashboard: React.FC = () => {
             )}
 
             {/* Modals */}
-            {showUserList && (
-                <UserListModal
-                    onClose={() => setShowUserList(false)}
-                    onSelectUser={handleCreateDM}
-                    currentUserId={currentUser.id}
-                />
-            )}
+            <UserListModal
+                isOpen={showUserList}
+                onClose={() => setShowUserList(false)}
+                onSelectUser={handleCreateDM}
+                currentUserId={currentUser.id}
+            />
 
-            {showCreateGroup && (
-                <CreateGroupModal
-                    onClose={() => setShowCreateGroup(false)}
-                    onCreateGroup={handleCreateGroup}
-                    currentUserId={currentUser.id}
-                />
-            )}
+            <CreateGroupModal
+                isOpen={showCreateGroup}
+                onClose={() => setShowCreateGroup(false)}
+                onCreateGroup={handleCreateGroup}
+                currentUserId={currentUser.id}
+            />
         </ContentCard>
     );
 };

@@ -50,11 +50,11 @@ const Dashboard: React.FC<{ currentPage: string; setCurrentPage: (page: string) 
       case UserRole.DRAWING_TEAM:
         return <DesignAndSiteEngineeringDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.QUOTATION_TEAM:
-        return <ProcurementTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
+        return <QuotationTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.SITE_ENGINEER:
         return <DesignAndSiteEngineeringDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.PROCUREMENT_TEAM:
-        return <QuotationTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
+        return <ProcurementTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.EXECUTION_TEAM:
         return <ExecutionTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.ACCOUNTS_TEAM:

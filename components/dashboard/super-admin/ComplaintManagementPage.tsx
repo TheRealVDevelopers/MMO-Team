@@ -11,6 +11,8 @@ import {
 } from '@heroicons/react/24/outline';
 import { ContentCard, SectionHeader, cn } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
+import Modal from '../../shared/Modal';
+import { ComplaintPriority, ComplaintType } from '../../../types';
 
 const ComplaintManagementPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
     const [complaints, setComplaints] = useState<Complaint[]>(COMPLAINTS);
@@ -32,11 +34,11 @@ const ComplaintManagementPage: React.FC<{ setCurrentPage: (page: string) => void
             against: newComplaint.against,
             description: newComplaint.description,
             status: ComplaintStatus.SUBMITTED,
-            priority: 'High', // Default
-            submissionDate: new Date().toISOString(),
+            priority: ComplaintPriority.HIGH,
+            submissionDate: new Date(),
             // Mocking other required fields
-            type: 'Internal',
-            evidence: 'N/A',
+            type: ComplaintType.QUALITY_ISSUES,
+            evidence: [],
             projectContext: 'General',
             resolutionAttempts: 'None',
             desiredResolution: 'Review'
@@ -128,78 +130,71 @@ const ComplaintManagementPage: React.FC<{ setCurrentPage: (page: string) => void
             </div>
 
             {/* Simple Add Modal */}
-            <AnimatePresence>
-                {isAddModalOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="bg-surface w-full max-w-md rounded-3xl p-6 shadow-2xl border border-border"
+            <Modal
+                isOpen={isAddModalOpen}
+                onClose={() => setIsAddModalOpen(false)}
+                title="Log New Complaint"
+                size="md"
+            >
+                <form onSubmit={handleAddComplaint} className="space-y-4">
+                    <div>
+                        <label className="block text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-1.5 ml-1">Complainant Asset</label>
+                        <select
+                            required
+                            value={newComplaint.submittedBy}
+                            onChange={e => setNewComplaint({ ...newComplaint, submittedBy: e.target.value })}
+                            className="w-full bg-subtle-background/50 border border-border rounded-xl focus:border-primary focus:ring-4 focus:ring-primary/10 text-sm p-3 outline-none transition-all"
                         >
-                            <h3 className="text-xl font-bold text-text-primary mb-6">Log New Complaint</h3>
-                            <form onSubmit={handleAddComplaint} className="space-y-4">
-                                <div>
-                                    <label className="block text-xs font-bold text-text-secondary mb-1.5 ml-1">Who is complaining?</label>
-                                    <select
-                                        required
-                                        value={newComplaint.submittedBy}
-                                        onChange={e => setNewComplaint({ ...newComplaint, submittedBy: e.target.value })}
-                                        className="w-full bg-subtle-background border-transparent rounded-xl focus:border-primary focus:ring-primary text-sm p-3"
-                                    >
-                                        <option value="">Select Staff Member</option>
-                                        {USERS.map(user => (
-                                            <option key={user.id} value={user.id}>{user.name} ({user.role})</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs font-bold text-text-secondary mb-1.5 ml-1">About whom?</label>
-                                    <select
-                                        required
-                                        value={newComplaint.against}
-                                        onChange={e => setNewComplaint({ ...newComplaint, against: e.target.value })}
-                                        className="w-full bg-subtle-background border-transparent rounded-xl focus:border-primary focus:ring-primary text-sm p-3"
-                                    >
-                                        <option value="">Select Target Staff</option>
-                                        {USERS.map(user => (
-                                            <option key={user.id} value={user.name}>{user.name} ({user.role})</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs font-bold text-text-secondary mb-1.5 ml-1">What happened?</label>
-                                    <textarea
-                                        required
-                                        value={newComplaint.description}
-                                        onChange={e => setNewComplaint({ ...newComplaint, description: e.target.value })}
-                                        className="w-full bg-subtle-background border-transparent rounded-xl focus:border-primary focus:ring-primary text-sm p-3 min-h-[100px]"
-                                        placeholder="Describe the issue briefly..."
-                                    />
-                                </div>
-
-                                <div className="flex justify-end gap-3 pt-4">
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsAddModalOpen(false)}
-                                        className="px-4 py-2 text-text-secondary hover:bg-subtle-background rounded-xl text-xs font-bold"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="px-6 py-2 bg-error text-white rounded-xl text-xs font-bold hover:bg-error/90 shadow-lg shadow-error/20"
-                                    >
-                                        Submit Report
-                                    </button>
-                                </div>
-                            </form>
-                        </motion.div>
+                            <option value="">Select Staff Member</option>
+                            {USERS.map(user => (
+                                <option key={user.id} value={user.id}>{user.name} ({user.role})</option>
+                            ))}
+                        </select>
                     </div>
-                )}
-            </AnimatePresence>
+
+                    <div>
+                        <label className="block text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-1.5 ml-1">Target Asset</label>
+                        <select
+                            required
+                            value={newComplaint.against}
+                            onChange={e => setNewComplaint({ ...newComplaint, against: e.target.value })}
+                            className="w-full bg-subtle-background/50 border border-border rounded-xl focus:border-primary focus:ring-4 focus:ring-primary/10 text-sm p-3 outline-none transition-all"
+                        >
+                            <option value="">Select Target Staff</option>
+                            {USERS.map(user => (
+                                <option key={user.id} value={user.name}>{user.name} ({user.role})</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-1.5 ml-1">Incident Report</label>
+                        <textarea
+                            required
+                            value={newComplaint.description}
+                            onChange={e => setNewComplaint({ ...newComplaint, description: e.target.value })}
+                            className="w-full bg-subtle-background/50 border border-border rounded-xl focus:border-primary focus:ring-4 focus:ring-primary/10 text-sm p-3 min-h-[120px] outline-none transition-all"
+                            placeholder="Provide detailed incident parameters..."
+                        />
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-6 border-t border-border mt-4">
+                        <button
+                            type="button"
+                            onClick={() => setIsAddModalOpen(false)}
+                            className="px-6 py-2 text-text-secondary hover:bg-subtle-background rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors"
+                        >
+                            Retract
+                        </button>
+                        <button
+                            type="submit"
+                            className="px-8 py-2 bg-error text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 shadow-xl shadow-error/20 transition-all"
+                        >
+                            Initialize Report
+                        </button>
+                    </div>
+                </form>
+            </Modal>
         </ContentCard>
     );
 };
