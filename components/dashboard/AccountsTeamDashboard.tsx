@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import AccountsOverviewPage from './accounts-team/AccountsOverviewPage';
 import SalesInvoicesPage from './accounts-team/SalesInvoicesPage';
@@ -9,6 +8,7 @@ import ReportsPage from './accounts-team/ReportsPage';
 import MyDayPage from './shared/MyDayPage';
 import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
+import PaymentVerificationInbox from './accounts-team/PaymentVerificationInbox';
 import { useInvoices, addInvoice, updateInvoice } from '../../hooks/useInvoices';
 import { useExpenses, updateExpense } from '../../hooks/useExpenses';
 import { useVendorBills, updateVendorBill } from '../../hooks/useVendorBills';
@@ -16,12 +16,28 @@ import { useProjects } from '../../hooks/useProjects';
 import { Invoice, Expense, VendorBill, Project } from '../../types';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
+// Mock data import
+import { PAYMENT_VERIFICATION_REQUESTS } from '../../constants';
 
 const AccountsTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { invoices, loading: invoicesLoading } = useInvoices();
   const { expenses, loading: expensesLoading } = useExpenses();
   const { vendorBills, loading: billsLoading } = useVendorBills();
   const { projects, loading: projectsLoading } = useProjects();
+
+  // Local state for payment requests (demo only)
+  const [paymentRequests, setPaymentRequests] = useState(PAYMENT_VERIFICATION_REQUESTS);
+
+  const handleVerifyPayment = (requestId: string) => {
+    // In real app: Call API to verify payment and trigger Project Creation flow
+    setPaymentRequests(prev => prev.filter(r => r.id !== requestId));
+    // Provide notification?
+    alert('Payment confirmed! Admin has been notified to create project.');
+  };
+
+  const handleRejectPayment = (requestId: string) => {
+    setPaymentRequests(prev => prev.filter(r => r.id !== requestId));
+  };
 
   const handleAddInvoice = async (newInvoice: Omit<Invoice, 'id'>) => {
     try {
@@ -122,6 +138,21 @@ const AccountsTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (pa
         onAddVendorBill={handleAddVendorBill}
         onUpdateVendorBill={handleUpdateVendorBill}
       />;
+
+    // New Case for Payment Verifications
+    case 'verification-requests':
+    case 'approvals': // Using 'approvals' as the general inbox for now
+      return (
+        <div className="max-w-4xl mx-auto p-6">
+          <h2 className="text-2xl font-bold mb-6">Payment Verifications</h2>
+          <PaymentVerificationInbox
+            requests={paymentRequests}
+            onVerify={handleVerifyPayment}
+            onReject={handleRejectPayment}
+          />
+        </div>
+      );
+
     case 'reports':
       return <ReportsPage setCurrentPage={setCurrentPage} />;
     case 'communication':

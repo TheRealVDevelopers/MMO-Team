@@ -17,6 +17,10 @@ import TodaysWork from '../client-portal/TodaysWork';
 import LiveActivityFeed from '../client-portal/ActivityFeed/LiveActivityFeed';
 import PaymentWidget from '../client-portal/PaymentMilestones/PaymentWidget';
 import QuickChat from '../client-portal/QuickChat';
+import RECCEDrawingViewer from '../client-portal/RECCEDrawingViewer';
+import PayAdvanceSection from '../client-portal/PayAdvanceSection';
+import DocumentsArchive from '../client-portal/DocumentsArchive';
+
 import {
     JourneyStage,
     ActivityItem,
@@ -157,11 +161,30 @@ const createDemoProject = (projectId: string): ClientProject => {
     };
 };
 
+// Mock Data for new features
+const MOCK_RECCE = {
+    url: '#',
+    name: 'Site_Measurement_vFinal.pdf',
+    uploadedAt: new Date(),
+    deadline: new Date(Date.now() + 48 * 60 * 60 * 1000),
+    status: 'Pending' as const
+};
+
+const MOCK_DOCS = [
+    { id: 'd1', name: 'Initial_Consultation_Notes.pdf', category: 'Report' as const, date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), size: '1.2 MB', url: '#' },
+    { id: 'd2', name: 'Material_Selection_Catalog.pdf', category: 'Other' as const, date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000), size: '4.5 MB', url: '#' },
+    { id: 'd3', name: 'Service_Agreement_Signed.pdf', category: 'Contract' as const, date: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000), size: '850 KB', url: '#' },
+];
+
 const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, onLogout }) => {
     const [project] = useState<ClientProject>(() => createDemoProject(projectId));
     const [selectedStage, setSelectedStage] = useState<JourneyStage | null>(null);
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const { invoices, loading: invoicesLoading } = useInvoices(projectId);
+
+    // New State for Phase 5
+    const [recceStatus, setRecceStatus] = useState<'Pending' | 'Approved' | 'Revision Requested'>('Pending');
+    const [showPayModal, setShowPayModal] = useState(false);
 
     const handleStageClick = (stage: JourneyStage) => {
         setSelectedStage(stage);
@@ -171,6 +194,9 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
     const currentStage = project.stages.find(s => s.id === project.currentStageId)!;
     const paidMilestoneCount = project.paymentMilestones.filter(m => m.isPaid).length;
     const unlockedUntilStage = paidMilestoneCount > 0 ? project.paymentMilestones[paidMilestoneCount - 1].unlocksStage + 1 : 2;
+
+    // Find next unpaid milestone
+    const nextUnpaidMilestone = project.paymentMilestones.find(m => !m.isPaid);
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -260,8 +286,28 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
             {/* ============================================ */}
             <main className="max-w-6xl mx-auto px-4 py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* LEFT COLUMN: Roadmap (Vertical Layout Focus) */}
+                    {/* LEFT COLUMN: Roadmap & Actionables */}
                     <div className="lg:col-span-2 space-y-8">
+
+                        {/* Phase 5: RECCE Drawing Approval (Conditional) */}
+                        {recceStatus !== 'Approved' && (
+                            <div className="animate-fade-in-up">
+                                <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                    <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                                    Action Required
+                                </h2>
+                                <RECCEDrawingViewer
+                                    drawingUrl={MOCK_RECCE.url}
+                                    drawingName={MOCK_RECCE.name}
+                                    uploadedAt={MOCK_RECCE.uploadedAt}
+                                    deadline={MOCK_RECCE.deadline}
+                                    status={recceStatus}
+                                    onApprove={() => setRecceStatus('Approved')}
+                                    onRequestRevision={() => setRecceStatus('Revision Requested')}
+                                />
+                            </div>
+                        )}
+
                         <div>
                             <div className="flex items-center gap-3 mb-6">
                                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
@@ -285,7 +331,18 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
                             <TodaysWork currentStage={currentStage} />
                         </div>
 
-                        {/* Payment Progress */}
+                        {/* Phase 5: Pay Advance Call to Action */}
+                        {nextUnpaidMilestone && (
+                            <PayAdvanceSection
+                                amount={nextUnpaidMilestone.amount}
+                                milestoneName={nextUnpaidMilestone.stageName}
+                                dueDate={nextUnpaidMilestone.dueDate}
+                                isOverdue={nextUnpaidMilestone.dueDate ? new Date() > nextUnpaidMilestone.dueDate : false}
+                                onPayNow={() => alert('Redirecting to Payment Gateway...')}
+                            />
+                        )}
+
+                        {/* Payment Progress Legacy Widget (Optional, maybe keep below) */}
                         <PaymentWidget
                             milestones={project.paymentMilestones}
                             totalPaid={project.totalPaid}
@@ -317,8 +374,8 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
                                                 <p className="text-sm font-bold text-gray-900">{formatCurrencyINR(invoice.total)}</p>
                                                 <div className="flex items-center justify-end gap-2 mt-1">
                                                     <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${invoice.status === 'Paid' ? 'bg-emerald-100 text-emerald-700' :
-                                                            invoice.status === 'Overdue' ? 'bg-red-100 text-red-700' :
-                                                                'bg-amber-100 text-amber-700'
+                                                        invoice.status === 'Overdue' ? 'bg-red-100 text-red-700' :
+                                                            'bg-amber-100 text-amber-700'
                                                         }`}>
                                                         {invoice.status}
                                                     </span>
@@ -335,6 +392,9 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
                                 </div>
                             )}
                         </div>
+
+                        {/* Phase 5: Documents Archive */}
+                        <DocumentsArchive documents={MOCK_DOCS} />
 
                         {/* Support & Contact */}
                         <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-8">

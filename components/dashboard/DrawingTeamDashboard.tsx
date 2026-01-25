@@ -24,8 +24,9 @@ const DrawingTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (pag
         return <DrawingOverviewPage onProjectSelect={handleProjectSelect} />;
       case 'projects':
         return <ProjectsBoardPage onProjectSelect={handleProjectSelect} setCurrentPage={setCurrentPage} />;
-      // case 'performance':
-      //   return <MyPerformancePage setCurrentPage={setCurrentPage} />;
+      case 'recces':
+        // Placeholder for a dedicated RECCE management page if needed
+        return <DrawingOverviewPage onProjectSelect={handleProjectSelect} />;
       case 'communication':
         return <CommunicationDashboard />;
       case 'escalate-issue':
@@ -43,6 +44,9 @@ const DrawingTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (pag
           project={selectedProject}
           isOpen={!!selectedProject}
           onClose={() => setSelectedProject(null)}
+          // Pass new callbacks to modal for RECCE/BOQ triggers
+          onUploadRecce={() => console.log('Upload RECCE triggered')}
+          onCreateBOQ={() => console.log('Create BOQ triggered')}
         />
       )}
     </>

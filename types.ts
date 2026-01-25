@@ -350,6 +350,7 @@ export enum ApprovalRequestType {
   CLARIFICATION = "Clarification",
   MODIFICATION = "Modification",
   REQUEST_FOR_QUOTATION = "Request for Quotation",
+  EXECUTION_PLAN = "Execution Plan",
 
   // Legacy/Tokens (Keep for compatibility if needed, or consolidate)
   SITE_VISIT_TOKEN = "Site Visit Token", // Can be deprecated in favor of SITE_VISIT
@@ -496,6 +497,104 @@ export interface Project {
   siteInspectionDate?: Date; // When site inspection was completed
   drawingSubmittedAt?: Date; // When drawing was submitted
   createdAt?: Date; // Project creation timestamp
+
+  // NEW FIELDS FOR REFACTOR
+  organizationId?: string; // Link to Organization
+  projectHeadId?: string; // Explicit Project Head
+  paymentTerms?: PaymentTerm[];
+  convertedFromLeadId?: string;
+  conversionDate?: Date;
+  ganttData?: GanttTask[];
+  lifecycleStatus?: ProjectLifecycleStatus;
+  jms?: JMS;
+}
+
+// NEW: Organization interface
+export interface Organization {
+  id: string;
+  name: string;
+  contactPerson: string;
+  contactEmail: string;
+  contactPhone: string;
+  address: string;
+  gstin?: string;
+  projects: string[]; // Project IDs
+  createdAt: Date;
+  createdBy: string; // Admin/GM who created
+  is_demo?: boolean;
+}
+
+// NEW: Payment Terms
+export interface PaymentTerm {
+  id: string;
+  milestone: string;
+  percentage: number;
+  amount?: number;
+  dueDate?: Date;
+  status: 'Pending' | 'Paid' | 'Overdue';
+  paidAt?: Date;
+}
+
+// NEW: Gantt Task
+export interface GanttTask {
+  id: string;
+  name: string;
+  start: Date;
+  end: Date;
+  progress: number; // 0-100
+  dependencies?: string[]; // Task IDs
+  assignedTo?: string; // User ID or Role
+  resources?: GanttResource[];
+  status: 'Pending' | 'In Progress' | 'Completed' | 'Delayed';
+  parentId?: string; // For nested tasks
+  type: 'project' | 'task' | 'milestone';
+  hideChildren?: boolean;
+  displayOrder?: number;
+  notes?: string;
+}
+
+// NEW: Gantt Resource (materials/items needed)
+export interface GanttResource {
+  id: string;
+  name: string; // e.g., "Sand", "Lights", "Wiring"
+  quantity: number;
+  unit: string;
+  requiredDate: Date;
+  deliveredDate?: Date;
+  status: 'Not Ordered' | 'Ordered' | 'Delivered';
+}
+
+// NEW: JMS (Joint Measurement Sheet)
+export interface JMSItem {
+  id: string;
+  description: string;
+  quotedQuantity: number;
+  deliveredQuantity: number;
+  unit: string;
+  verified: boolean;
+  verifiedBy?: 'client' | 'project_manager' | 'both';
+  notes?: string;
+}
+
+export interface JMS {
+  id: string;
+  projectId: string;
+  items: JMSItem[];
+  clientSignature?: string;
+  pmSignature?: string;
+  completedAt?: Date;
+  status: 'Draft' | 'Pending Client' | 'Pending PM' | 'Completed';
+}
+
+// NEW: Project Lifecycle Status
+export enum ProjectLifecycleStatus {
+  LEAD = "Lead",
+  ADVANCE_PENDING = "Advance Pending",
+  ADVANCE_PAID = "Advance Paid",
+  PROJECT_CREATED = "Project Created",
+  IN_EXECUTION = "In Execution",
+  COMPLETED = "Completed",
+  ON_HOLD = "On Hold",
 }
 
 export enum SiteVisitStatus {
@@ -618,6 +717,7 @@ export interface QuotationVersion {
   discountAmount: number;
   taxAmount: number;
   finalAmount: number;
+  ratio?: number; // New field for Phase 4
   createdAt: Date;
   createdBy: string;
   notes?: string;
@@ -901,6 +1001,25 @@ export interface DrawingTask {
   files?: string[]; // URLs to drawing files
 }
 
+// NEW: RECCE Drawing type
+export interface RECCEDrawing {
+  id: string;
+  leadId: string;
+  fileUrl: string; // PDF URL
+  fileName: string;
+  submittedBy: string;
+  submittedAt: Date;
+  deadline: Date;
+  siteVisitCompletedAt: Date;
+  status: 'Pending' | 'Submitted' | 'Approved' | 'Revision Requested';
+  clientApproval?: {
+    approved: boolean;
+    approvedAt?: Date;
+    comments?: string;
+  };
+  boqId?: string;
+}
+
 export interface BOQ {
   id: string;
   leadId: string;
@@ -911,6 +1030,7 @@ export interface BOQ {
   status: 'Draft' | 'Submitted' | 'Approved';
   totalCost?: number;
   notes?: string;
+  drawingId?: string; // Link to drawing
 }
 
 export interface BOQItem {
@@ -920,6 +1040,8 @@ export interface BOQItem {
   unit: string;
   estimatedCost?: number;
   category?: string;
+  isTemplateItem?: boolean; // Flag to identify standard items
+  specifications?: string;
 }
 
 export enum ProcurementRequestStatus {

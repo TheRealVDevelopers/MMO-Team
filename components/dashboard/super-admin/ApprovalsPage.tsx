@@ -169,6 +169,8 @@ const ApprovalsPage: React.FC = () => {
       case ApprovalRequestType.REQUEST_FOR_QUOTATION:
       case ApprovalRequestType.QUOTATION_TOKEN:
         return <DocumentTextIcon className="w-5 h-5" />;
+      case ApprovalRequestType.EXECUTION_PLAN:
+        return <CalendarDaysIcon className="w-5 h-5" />;
       default:
         return <DocumentTextIcon className="w-5 h-5" />;
     }

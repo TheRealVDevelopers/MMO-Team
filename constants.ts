@@ -3,7 +3,91 @@
 
 
 
-import { User, Lead, UserRole, Project, ProjectStatus, Vendor, Invoice, PaymentStatus, LeadPipelineStatus, Activity, ActivityStatus, SiteVisit, SiteVisitStatus, MaterialRequest, MaterialRequestStatus, Issue, ChecklistItem, CommunicationMessage, Expense, VendorBill, Attendance, AttendanceStatus, Document, QuotationRequest, QuotationRequestStatus, DrawingRequest, DrawingRequestStatus, ProcurementRequest, ProcurementRequestStatus, ExecutionRequest, ExecutionRequestStatus, AccountsRequest, AccountsRequestStatus, Item, ProjectTemplate, ExpenseClaim, ExpenseClaimStatus, Task, TaskStatus, ChatChannel, ChatMessage, Complaint, ComplaintType, ComplaintPriority, ComplaintStatus, SiteReport, RFQ, RFQStatus, Bid, BidStatus, PurchaseOrder, POStatus } from './types';
+import { User, Lead, UserRole, Project, ProjectStatus, Vendor, Invoice, PaymentStatus, LeadPipelineStatus, Activity, ActivityStatus, SiteVisit, SiteVisitStatus, MaterialRequest, MaterialRequestStatus, Issue, ChecklistItem, CommunicationMessage, Expense, VendorBill, Attendance, AttendanceStatus, Document, QuotationRequest, QuotationRequestStatus, DrawingRequest, DrawingRequestStatus, ProcurementRequest, ProcurementRequestStatus, ExecutionRequest, ExecutionRequestStatus, AccountsRequest, AccountsRequestStatus, Item, ProjectTemplate, ExpenseClaim, ExpenseClaimStatus, Task, TaskStatus, ChatChannel, ChatMessage, Complaint, ComplaintType, ComplaintPriority, ComplaintStatus, SiteReport, RFQ, RFQStatus, Bid, BidStatus, PurchaseOrder, POStatus, Organization, GanttTask, JMS } from './types';
+
+// New Organization Mock Data
+export const ORGANIZATIONS: Organization[] = [
+    {
+        id: 'org-1',
+        name: 'Innovate Corp',
+        contactPerson: 'Amit Desai',
+        contactEmail: 'amit@innovatecorp.com',
+        contactPhone: '+91 9988776650',
+        address: '555 Innovation Dr, Bangalore',
+        gstin: '29AAAAA0000A1Z5',
+        projects: ['proj-108', 'proj-1'],
+        createdAt: new Date('2024-01-15'),
+        createdBy: 'user-1'
+    },
+    {
+        id: 'org-2',
+        name: 'Finance Partners',
+        contactPerson: 'Rajesh Gupta',
+        contactEmail: 'rajesh@financepartners.com',
+        contactPhone: '+91 9820198201',
+        address: '444 Money Street, Mumbai',
+        gstin: '27BBBBB0000B1Z5',
+        projects: ['proj-107'],
+        createdAt: new Date('2024-02-10'),
+        createdBy: 'user-2'
+    }
+];
+
+// Mock Gantt Data
+export const MOCK_GANTT_DATA: GanttTask[] = [
+    {
+        id: 'task-1',
+        name: 'Project Kickoff',
+        start: new Date('2024-06-01'),
+        end: new Date('2024-06-02'),
+        progress: 100,
+        status: 'Completed',
+        type: 'milestone',
+        displayOrder: 1
+    },
+    {
+        id: 'task-2',
+        name: 'Demolition & Site Clear',
+        start: new Date('2024-06-03'),
+        end: new Date('2024-06-10'),
+        progress: 100,
+        status: 'Completed',
+        type: 'task',
+        displayOrder: 2,
+        assignedTo: 'user-8',
+        dependencies: ['task-1']
+    },
+    {
+        id: 'task-3',
+        name: 'Civil Works',
+        start: new Date('2024-06-11'),
+        end: new Date('2024-07-05'),
+        progress: 60,
+        status: 'In Progress',
+        type: 'task',
+        displayOrder: 3,
+        assignedTo: 'user-8',
+        dependencies: ['task-2'],
+        resources: [
+            { id: 'res-1', name: 'Cement', quantity: 50, unit: 'bags', requiredDate: new Date('2024-06-11'), status: 'Delivered' },
+            { id: 'res-2', name: 'Sand', quantity: 200, unit: 'cft', requiredDate: new Date('2024-06-12'), status: 'Delivered' }
+        ]
+    },
+];
+
+// Mock JMS Data
+export const MOCK_JMS: JMS = {
+    id: 'jms-1',
+    projectId: 'proj-108',
+    items: [
+        { id: 'jms-i1', description: '2x2 Vitrified Tiles', quotedQuantity: 2000, deliveredQuantity: 2000, unit: 'sqft', verified: true, verifiedBy: 'both' },
+        { id: 'jms-i2', description: 'Gypsum Board Ceiling', quotedQuantity: 1500, deliveredQuantity: 1450, unit: 'sqft', verified: true, verifiedBy: 'both', notes: 'Actual measurement slightly less' },
+    ],
+    status: 'Completed',
+    completedAt: new Date(),
+    clientSignature: 'Amit Desai',
+    pmSignature: 'Chris Executor'
+};
 
 export const formatCurrencyINR = (value: number) =>
     new Intl.NumberFormat('en-IN', {
@@ -714,6 +798,35 @@ const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
         ATTENDANCE_DATA[userId].push({ date, status });
     }
 });
+
+export interface PaymentVerificationRequest {
+    id: string;
+    leadId: string;
+    clientName: string;
+    amount: number;
+    paymentMode: string;
+    transactionId: string;
+    paymentDate: Date;
+    notes?: string;
+    status: 'Pending' | 'Verified' | 'Rejected';
+    requestedBy: string;
+    requestedAt: Date;
+}
+
+export const PAYMENT_VERIFICATION_REQUESTS: PaymentVerificationRequest[] = [
+    {
+        id: 'pvr-1',
+        leadId: 'lead-6',
+        clientName: 'Finance Partners',
+        amount: 2500000,
+        paymentMode: 'Net Banking',
+        transactionId: 'IBKL92837465',
+        paymentDate: new Date(new Date().getTime() - 2 * 60 * 60 * 1000),
+        status: 'Pending',
+        requestedBy: 'Jane Doe',
+        requestedAt: new Date(new Date().getTime() - 1 * 60 * 60 * 1000)
+    }
+];
 
 export const CHAT_CHANNELS: Omit<ChatChannel, 'lastMessage'>[] = [
     {

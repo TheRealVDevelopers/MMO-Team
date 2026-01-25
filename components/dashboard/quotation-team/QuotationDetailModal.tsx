@@ -40,12 +40,16 @@ const QuotationDetailModal: React.FC<{
 
     const [laborCost, setLaborCost] = useState(project.budget * 0.25);
     const [margin, setMargin] = useState(20);
+    const [ratio, setRatio] = useState(1.0); // New for Phase 4
     const [counterOfferAmount, setCounterOfferAmount] = useState('');
     const [counterOfferNotes, setCounterOfferNotes] = useState('');
 
 
     const materialCost = useMemo(() => selectedItems.reduce((sum, item) => sum + item.price, 0), [selectedItems]);
-    const calculatedQuote = useMemo(() => (materialCost + laborCost) / (1 - (margin / 100)), [materialCost, laborCost, margin]);
+    const calculatedQuote = useMemo(() => {
+        const base = (materialCost + laborCost) / (1 - (margin / 100));
+        return base * ratio;
+    }, [materialCost, laborCost, margin, ratio]);
 
     const handleStatusChange = (newStatus: ProjectStatus) => {
         onUpdate({ ...project, status: newStatus, budget: calculatedQuote, items: selectedItems });
@@ -518,6 +522,22 @@ const QuotationDetailModal: React.FC<{
                                                     onChange={e => setMargin(Number(e.target.value))}
                                                     className="w-full h-2 bg-primary/20 rounded-lg appearance-none cursor-pointer accent-primary"
                                                 />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-black uppercase text-text-tertiary mb-2 flex justify-between">
+                                                    Quote Ratio
+                                                    <span className="text-secondary font-black">{ratio.toFixed(2)}x</span>
+                                                </label>
+                                                <input
+                                                    type="range"
+                                                    min="0.5"
+                                                    max="2.0"
+                                                    step="0.05"
+                                                    value={ratio}
+                                                    onChange={e => setRatio(Number(e.target.value))}
+                                                    className="w-full h-2 bg-secondary/20 rounded-lg appearance-none cursor-pointer accent-secondary"
+                                                />
+                                                <p className="text-[8px] text-text-tertiary mt-2">Adjusts total quote by a multiplier for risk/premium factors.</p>
                                             </div>
                                         </div>
                                     </div>

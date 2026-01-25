@@ -1,14 +1,15 @@
-
 import React, { useState } from 'react';
 import Modal from '../../shared/Modal';
 import { Project, Document } from '../../../types';
 import { USERS } from '../../../constants';
 import ProgressBar from '../../shared/ProgressBar';
-import { 
-    ClockIcon, FireIcon, PaperClipIcon, PlusIcon, UsersIcon, MapPinIcon, 
-    PhoneIcon, ListBulletIcon, CheckCircleIcon, ArrowUturnLeftIcon, 
-    BuildingOfficeIcon, PaintBrushIcon 
+import {
+    ClockIcon, FireIcon, PaperClipIcon, PlusIcon, UsersIcon, MapPinIcon,
+    PhoneIcon, ListBulletIcon, CheckCircleIcon, ArrowUturnLeftIcon,
+    BuildingOfficeIcon, PaintBrushIcon, DocumentTextIcon, CalculatorIcon
 } from '../../icons/IconComponents';
+import RECCEDrawingUpload from './RECCEDrawingUpload';
+import BOQBuilder from './BOQBuilder';
 
 const TabButton: React.FC<{ label: string; isActive: boolean; onClick: () => void; }> = ({ label, isActive, onClick }) => (
     <button onClick={onClick} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors duration-150 ${isActive ? 'border-primary text-primary' : 'border-transparent text-text-secondary hover:text-text-primary hover:border-border'}`}>
@@ -24,12 +25,12 @@ const InfoCard: React.FC<{ title: string; icon: React.ReactNode; children: React
 );
 
 const Checklist: React.FC<{ title: string; items: string[] }> = ({ title, items }) => (
-     <div>
+    <div>
         <h4 className="font-bold text-text-primary mb-2 text-sm">{title}</h4>
         <ul className="space-y-2">
             {items.map((item, index) => (
                 <li key={item} className="flex items-center p-2 bg-subtle-background rounded-md">
-                    <input id={`check-${title}-${index}`} type="checkbox" className="h-4 w-4 text-primary focus:ring-primary border-border bg-transparent rounded" /> 
+                    <input id={`check-${title}-${index}`} type="checkbox" className="h-4 w-4 text-primary focus:ring-primary border-border bg-transparent rounded" />
                     <label htmlFor={`check-${title}-${index}`} className="ml-3 text-sm text-text-primary">{item}</label>
                 </li>
             ))}
@@ -61,7 +62,7 @@ const BriefTab: React.FC<{ project: Project }> = ({ project }) => {
                 <p><strong>Sales Contact:</strong> {salesperson?.name || 'N/A'}</p>
             </InfoCard>
             <div className="lg:col-span-3">
-                 <Checklist title="Design Requirement Checklist" items={["Open-plan for 50 staff", "2 private meeting rooms", "Modern industrial style", "Include biophilic elements"]} />
+                <Checklist title="Design Requirement Checklist" items={["Open-plan for 50 staff", "2 private meeting rooms", "Modern industrial style", "Include biophilic elements"]} />
             </div>
         </div>
     );
@@ -88,24 +89,24 @@ const WorkspaceTab: React.FC<{ project: Project }> = ({ project }) => {
                     ))}
                 </ul>
                 <div className="mt-4">
-                     <button className="w-full text-sm font-medium bg-secondary text-white py-2 rounded-md hover:opacity-90">Mark Current Phase Complete</button>
+                    <button className="w-full text-sm font-medium bg-secondary text-white py-2 rounded-md hover:opacity-90">Mark Current Phase Complete</button>
                 </div>
             </div>
-             <div>
+            <div>
                 <h4 className="font-bold text-text-primary mb-2 text-sm">File Management</h4>
                 <div className="p-3 bg-subtle-background rounded-lg space-y-2">
                     {project.documents?.map(doc => (
-                         <div key={doc.id} className="flex items-center justify-between p-2 bg-surface rounded-md border border-border">
+                        <div key={doc.id} className="flex items-center justify-between p-2 bg-surface rounded-md border border-border">
                             <div>
                                 <a href={doc.url} className="text-xs font-semibold text-primary hover:underline">{doc.name}</a>
                                 <p className="text-xs text-text-secondary">Size: {doc.size}</p>
                             </div>
                             <span className="text-xs text-text-secondary">v1.0</span>
-                         </div>
+                        </div>
                     ))}
                 </div>
                 <button className="mt-2 w-full text-sm font-medium bg-primary/20 text-primary py-2 rounded-md hover:bg-primary/30">
-                    <PlusIcon className="w-4 h-4 inline mr-1"/> Upload New Version
+                    <PlusIcon className="w-4 h-4 inline mr-1" /> Upload New Version
                 </button>
             </div>
         </div>
@@ -135,43 +136,71 @@ const CollaborationTab: React.FC<{ project: Project }> = ({ project }) => {
 };
 
 
-const ProjectDetailModal: React.FC<{ project: Project; isOpen: boolean; onClose: () => void }> = ({ project, isOpen, onClose }) => {
-  const [activeTab, setActiveTab] = useState('brief');
+const ProjectDetailModal: React.FC<{ project: Project; isOpen: boolean; onClose: () => void; onUploadRecce?: () => void; onCreateBOQ?: () => void; }> = ({ project, isOpen, onClose }) => {
+    const [activeTab, setActiveTab] = useState('brief');
 
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Project Workspace" size="4xl">
-        <div className="space-y-4">
-            {/* Header */}
-            <div>
-                 <h3 className="text-lg font-bold text-text-primary">{project.projectName}</h3>
-                 <div className="flex items-center space-x-4 text-sm text-text-secondary mt-1">
-                    <div className="flex items-center"><BuildingOfficeIcon className="w-4 h-4 mr-1"/> {project.clientName}</div>
-                    {project.priority === 'High' && <div className="flex items-center text-error"><FireIcon className="w-4 h-4 mr-1"/> High Priority</div>}
-                    <div className="flex items-center"><ClockIcon className="w-4 h-4 mr-1"/> Deadline: {project.deadline}</div>
-                 </div>
-                 <div className="mt-2">
-                    <ProgressBar progress={project.progress} />
-                 </div>
-            </div>
-            
-            {/* Tabs */}
-            <div className="border-b border-border">
-                <nav className="-mb-px flex space-x-4">
-                    <TabButton label="Project Brief" isActive={activeTab === 'brief'} onClick={() => setActiveTab('brief')} />
-                    <TabButton label="Design Workspace" isActive={activeTab === 'workspace'} onClick={() => setActiveTab('workspace')} />
-                    <TabButton label="Collaboration" isActive={activeTab === 'collaboration'} onClick={() => setActiveTab('collaboration')} />
-                </nav>
-            </div>
+    // Mock handlers
+    const handleRecceUpload = (url: string, name: string) => {
+        console.log('RECCE Uploaded:', url, name);
+        alert('RECCE Drawing Uploaded Successfully!');
+    };
 
-            {/* Tab Content */}
-            <div className="pt-4">
-                {activeTab === 'brief' && <BriefTab project={project} />}
-                {activeTab === 'workspace' && <WorkspaceTab project={project} />}
-                {activeTab === 'collaboration' && <CollaborationTab project={project} />}
+    const handleBOQSubmit = (items: any[], total: number) => {
+        console.log('BOQ Submitted:', items, total);
+        alert('BOQ Created Successfully!');
+        setActiveTab('brief'); // Go back to brief after submission
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Project Workspace" size="4xl">
+            <div className="space-y-4">
+                {/* Header */}
+                <div>
+                    <h3 className="text-lg font-bold text-text-primary">{project.projectName}</h3>
+                    <div className="flex items-center space-x-4 text-sm text-text-secondary mt-1">
+                        <div className="flex items-center"><BuildingOfficeIcon className="w-4 h-4 mr-1" /> {project.clientName}</div>
+                        {project.priority === 'High' && <div className="flex items-center text-error"><FireIcon className="w-4 h-4 mr-1" /> High Priority</div>}
+                        <div className="flex items-center"><ClockIcon className="w-4 h-4 mr-1" /> Deadline: {project.deadline}</div>
+                    </div>
+                    <div className="mt-2">
+                        <ProgressBar progress={project.progress} />
+                    </div>
+                </div>
+
+                {/* Tabs */}
+                <div className="border-b border-border">
+                    <nav className="-mb-px flex space-x-4 overflow-x-auto">
+                        <TabButton label="Project Brief" isActive={activeTab === 'brief'} onClick={() => setActiveTab('brief')} />
+                        <TabButton label="Design Workspace" isActive={activeTab === 'workspace'} onClick={() => setActiveTab('workspace')} />
+                        <TabButton label="RECCE Drawing" isActive={activeTab === 'recce'} onClick={() => setActiveTab('recce')} />
+                        <TabButton label="BOQ Builder" isActive={activeTab === 'boq'} onClick={() => setActiveTab('boq')} />
+                        <TabButton label="Collaboration" isActive={activeTab === 'collaboration'} onClick={() => setActiveTab('collaboration')} />
+                    </nav>
+                </div>
+
+                {/* Tab Content */}
+                <div className="pt-4 min-h-[400px]">
+                    {activeTab === 'brief' && <BriefTab project={project} />}
+                    {activeTab === 'workspace' && <WorkspaceTab project={project} />}
+                    {activeTab === 'recce' && (
+                        <RECCEDrawingUpload
+                            leadId={project.id}
+                            siteVisitCompletedAt={new Date()} // Mocking this for now, should come from project.siteVisitDate
+                            onUploadComplete={handleRecceUpload}
+                        />
+                    )}
+                    {activeTab === 'boq' && (
+                        <BOQBuilder
+                            projectName={project.projectName}
+                            onSubmit={handleBOQSubmit}
+                            onCancel={() => setActiveTab('brief')}
+                        />
+                    )}
+                    {activeTab === 'collaboration' && <CollaborationTab project={project} />}
+                </div>
             </div>
-        </div>
-    </Modal>
-  );
+        </Modal>
+    );
 };
 
 export default ProjectDetailModal;
