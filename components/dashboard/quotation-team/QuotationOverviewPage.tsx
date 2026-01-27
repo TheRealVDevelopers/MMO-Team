@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Project, ProjectStatus } from '../../../types';
+import { Project, ProjectStatus, UserRole } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { PlusIcon, ClockIcon } from '../../icons/IconComponents';
 import { formatCurrencyINR, formatDate } from '../../../constants';
@@ -15,8 +15,13 @@ const QuotationOverviewPage: React.FC<{
 
     if (!currentUser) return null;
 
-    // Filter projects assigned to this quotation member
-    const myProjects = projects.filter(p => p.assignedTeam.quotation === currentUser.id);
+    // Filter projects based on role and assignment
+    const isManager = [UserRole.SUPER_ADMIN, UserRole.SALES_GENERAL_MANAGER, UserRole.MANAGER].includes(currentUser.role);
+    const myProjects = projects.filter(p =>
+        p.assignedTeam?.quotation === currentUser.id || // Assigned to me
+        isManager || // I am a manager (see all)
+        (!p.assignedTeam?.quotation && currentUser.role === UserRole.QUOTATION_TEAM) // Unassigned (Quotation team can see to pick up)
+    );
 
     // Live Quotations: On Queue, Preparation, Sent, Negotiation, Approval Requested
     const liveProjects = myProjects.filter(p =>
@@ -57,7 +62,7 @@ const QuotationOverviewPage: React.FC<{
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h2 className="text-2xl font-black text-text-primary tracking-tight">Procurement Dashboard</h2>
+                    <h2 className="text-2xl font-black text-text-primary tracking-tight">Quotation Dashboard</h2>
                     <p className="text-sm text-text-secondary">Manage and track your active pricing requests.</p>
                 </div>
                 <button

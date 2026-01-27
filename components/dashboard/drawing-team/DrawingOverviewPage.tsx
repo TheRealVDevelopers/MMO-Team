@@ -46,6 +46,9 @@ const DrawingOverviewPage: React.FC<{ onProjectSelect: (project: Project) => voi
     }).length;
 
     const designQueue = myProjects.filter(p => [
+        ProjectStatus.SITE_VISIT_PENDING, // New
+        ProjectStatus.DRAWING_PENDING,    // New
+        ProjectStatus.BOQ_PENDING,        // New
         ProjectStatus.AWAITING_DESIGN,
         ProjectStatus.DESIGN_IN_PROGRESS,
         ProjectStatus.PENDING_REVIEW,

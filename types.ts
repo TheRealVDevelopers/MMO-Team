@@ -235,6 +235,9 @@ export interface Lead {
 }
 
 export enum ProjectStatus {
+  SITE_VISIT_PENDING = "Site Visit Pending", // New - Stage 1
+  DRAWING_PENDING = "Drawing Pending",     // New - Stage 2
+  BOQ_PENDING = "BOQ Pending",             // New - Stage 3
   AWAITING_DESIGN = "Awaiting Design",
   DESIGN_IN_PROGRESS = "Design In Progress",
   REVISIONS_IN_PROGRESS = "Revisions In Progress",
@@ -494,8 +497,11 @@ export interface Project {
   // Design & Site Engineering workflow fields
   assignedEngineerId?: string; // Site engineer assigned to this project
   drawingTeamMemberId?: string; // Drawing team member assigned
+  quotationRatio?: string;
   siteInspectionDate?: Date; // When site inspection was completed
+  drawingDeadline?: Date; // 24h after site visit
   drawingSubmittedAt?: Date; // When drawing was submitted
+  drawingRedFlagged?: boolean; // If deadline missed
   createdAt?: Date; // Project creation timestamp
 
   // NEW FIELDS FOR REFACTOR
@@ -606,6 +612,36 @@ export enum SiteVisitStatus {
 }
 
 export type SiteType = 'Apartment' | 'Office' | 'School' | 'Hospital' | 'Other';
+
+export interface DailyUpdate {
+  id: string;
+  projectId: string;
+  date: string;
+  workDescription: string;
+  weather?: string;
+  manpowerCount: number;
+  photos: string[];
+  issuesRaised?: string[];
+  createdBy: string;
+  createdAt: Date;
+}
+
+export interface MaterialRequest {
+  id: string;
+  projectId: string;
+  projectName?: string; // For display
+  itemId: string;
+  itemName: string;
+  quantityRequested: number;
+  unit: string;
+  requiredDate: string;
+  status: MaterialRequestStatus;
+  requestedBy: string;
+  createdAt: Date;
+  notes?: string;
+  materials?: { name: string; spec: string }[]; // Added for compatibility with mock data
+  priority?: 'High' | 'Medium' | 'Low'; // Added for compatibility with mock data
+}
 
 export interface SiteVisit {
   id: string;
@@ -1036,32 +1072,11 @@ export interface BOQItem {
   specifications?: string;
 }
 
-export interface DailyUpdate {
-  id: string;
-  projectId: string;
-  date: string;
-  workDescription: string;
-  weather?: string;
-  manpowerCount: number;
-  photos: string[]; // URLs
-  issuesRaised?: string[];
-  createdBy: string;
-  createdAt: Date;
-}
+// Duplicate DailyUpdate removed
 
-export interface MaterialRequest {
-  id: string;
-  projectId: string;
-  itemId: string;
-  itemName: string;
-  quantityRequested: number;
-  unit: string;
-  requiredDate: string;
-  status: 'Requested' | 'Approved' | 'Ordered' | 'Delivered' | 'Rejected';
-  requestedBy: string;
-  createdAt: Date;
-  notes?: string;
-}
+
+// Duplicate MaterialRequest removed
+
 
 export enum DesignSiteProjectStatus {
   PENDING = "Pending",
@@ -1321,4 +1336,30 @@ export interface Complaint {
   resolutionAttempts: string;
   desiredResolution: string;
   submissionDate: Date;
+}
+
+export interface CompanyInfo {
+  name: string;
+  address: string;
+  gstin: string;
+  contactPhone: string;
+  contactEmail: string;
+  website?: string;
+  logoUrl?: string;
+}
+
+export interface PaymentRequest {
+  id: string;
+  projectId: string; // or leadId
+  clientId: string;
+  clientName: string;
+  amount: number;
+  paymentMethod: 'UTR' | 'Screenshot' | 'Other';
+  utrNumber?: string;
+  screenshotUrl?: string;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  submittedAt: Date;
+  reviewedAt?: Date;
+  reviewedBy?: string; // Accounts Team Member ID
+  notes?: string;
 }

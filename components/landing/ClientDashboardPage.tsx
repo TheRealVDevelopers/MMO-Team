@@ -30,8 +30,21 @@ import {
     ProjectHealth
 } from '../client-portal/types';
 import { useInvoices } from '../../hooks/useInvoices';
-import { Invoice } from '../../types';
+import { Invoice, CompanyInfo } from '../../types';
 import { formatCurrencyINR, formatDate } from '../../constants';
+// Import Payment Submission Modal
+import PaymentSubmissionModal from '../client-portal/PaymentSubmissionModal';
+
+// Mock Company Info
+const MOCK_COMPANY_INFO: CompanyInfo = {
+    name: 'Make My Office',
+    address: '123, 100ft Road, Indiranagar, Bangalore - 560038',
+    gstin: '29ABCDE1234F1Z5',
+    contactPhone: '+91 98765 43210',
+    contactEmail: 'support@makemyoffice.com',
+    website: 'www.makemyoffice.com',
+    logoUrl: '/mmo-logo.png' // Utilizing existing logo path
+};
 
 interface ClientDashboardPageProps {
     projectId: string;
@@ -185,10 +198,25 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
     // New State for Phase 5
     const [recceStatus, setRecceStatus] = useState<'Pending' | 'Approved' | 'Revision Requested'>('Pending');
     const [showPayModal, setShowPayModal] = useState(false);
+    const [selectedPaymentMilestone, setSelectedPaymentMilestone] = useState<{ amount: number; name: string } | null>(null);
 
     const handleStageClick = (stage: JourneyStage) => {
         setSelectedStage(stage);
         setIsSheetOpen(true);
+    };
+
+    const handlePaymentSubmit = (data: { method: 'UTR' | 'Screenshot'; value: string; amount: number }) => {
+        console.log('Payment Submitted:', data);
+        // Here you would call an API/Firestore to save the PaymentRequest
+        // const paymentRequest: PaymentRequest = { ... };
+
+        alert('Payment Details Submitted! Accounts team will verify shortly.');
+        setShowPayModal(false);
+    };
+
+    const handlePayClick = (amount: number, name: string) => {
+        setSelectedPaymentMilestone({ amount, name });
+        setShowPayModal(true);
     };
 
     const currentStage = project.stages.find(s => s.id === project.currentStageId)!;
@@ -204,13 +232,27 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
             {/* ============================================ */}
             {/* HEADER - Simple */}
             {/* ============================================ */}
-            <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
-                <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-                    <img src="/mmo-logo.png" alt="Make My Office" className="h-8" />
-                    <button onClick={onLogout} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700">
-                        <ArrowRightOnRectangleIcon className="w-5 h-5" />
-                        <span className="hidden sm:inline">Logout</span>
-                    </button>
+            <header className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
+                <div className="max-w-6xl mx-auto px-4 py-3">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                            <img src={MOCK_COMPANY_INFO.logoUrl} alt={MOCK_COMPANY_INFO.name} className="h-10 w-auto" />
+                            <div className="hidden md:block border-l border-gray-200 pl-3">
+                                <h1 className="text-lg font-bold text-gray-900 leading-tight">{MOCK_COMPANY_INFO.name}</h1>
+                                <p className="text-xs text-gray-500">GSTIN: {MOCK_COMPANY_INFO.gstin}</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="text-right hidden sm:block">
+                                <p className="text-sm font-bold text-gray-800">{MOCK_COMPANY_INFO.contactPhone}</p>
+                                <p className="text-xs text-gray-500">{MOCK_COMPANY_INFO.contactEmail}</p>
+                            </div>
+                            <button onClick={onLogout} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
+                                <ArrowRightOnRectangleIcon className="w-4 h-4" />
+                                <span className="hidden sm:inline">Logout</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </header>
 
@@ -338,7 +380,7 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
                                 milestoneName={nextUnpaidMilestone.stageName}
                                 dueDate={nextUnpaidMilestone.dueDate}
                                 isOverdue={nextUnpaidMilestone.dueDate ? new Date() > nextUnpaidMilestone.dueDate : false}
-                                onPayNow={() => alert('Redirecting to Payment Gateway...')}
+                                onPayNow={() => handlePayClick(nextUnpaidMilestone.amount, nextUnpaidMilestone.stageName)}
                             />
                         )}
 
@@ -435,6 +477,15 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
                 isOpen={isSheetOpen}
                 onClose={() => setIsSheetOpen(false)}
             />
+            {selectedPaymentMilestone && (
+                <PaymentSubmissionModal
+                    isOpen={showPayModal}
+                    onClose={() => setShowPayModal(false)}
+                    onSubmit={handlePaymentSubmit}
+                    amount={selectedPaymentMilestone.amount}
+                    milestoneName={selectedPaymentMilestone.name}
+                />
+            )}
         </div>
     );
 };

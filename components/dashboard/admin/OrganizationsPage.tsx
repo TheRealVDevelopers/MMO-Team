@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { PlusIcon, BuildingOfficeIcon, MagnifyingGlassIcon, UserIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import { ORGANIZATIONS } from '../../../constants';
-import { Organization } from '../../../types';
+import { Organization, ProjectStatus, Project, ExecutionStage, PaymentTerm } from '../../../types';
+import { useProjects } from '../../../hooks/useProjects';
 import CreateOrganizationModal from './CreateOrganizationModal';
 import CreateProjectWizard from './CreateProjectWizard';
 
@@ -10,8 +11,10 @@ interface OrganizationsPageProps {
     setCurrentPage: (page: string) => void;
 }
 
+import { useOrganizations } from '../../../hooks/useOrganizations';
+
 const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage }) => {
-    const [organizations, setOrganizations] = useState<Organization[]>(ORGANIZATIONS);
+    // const [organizations, setOrganizations] = useState<Organization[]>(ORGANIZATIONS); // Removed local state for orgs
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isProjectWizardOpen, setIsProjectWizardOpen] = useState(false);
     const [selectedOrgId, setSelectedOrgId] = useState<string>('');
@@ -20,34 +23,108 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
     const [isProjectsModalOpen, setIsProjectsModalOpen] = useState(false);
     const [selectedOrgProjects, setSelectedOrgProjects] = useState<any[]>([]);
 
-    const handleCreateOrganization = (orgData: Omit<Organization, 'id' | 'createdAt' | 'createdBy' | 'projects'>) => {
-        const newOrg: Organization = {
-            ...orgData,
-            id: `org-${Date.now()}`,
-            projects: [],
-            createdAt: new Date(),
-            createdBy: 'user-1', // Mock user
-            is_demo: true
-        };
-        setOrganizations([newOrg, ...organizations]);
+    const { addProject } = useProjects();
+    const { organizations: realOrgs, addOrganization, updateOrganization } = useOrganizations(); // Use the hook
+
+    // Merge mock organizations with real Firestore organizations
+    const organizations = [...realOrgs, ...ORGANIZATIONS]; // Real ones first so new adds show up top
+
+    const handleCreateOrganization = async (orgData: Omit<Organization, 'id' | 'createdAt' | 'createdBy' | 'projects'>) => {
+        try {
+            await addOrganization({
+                ...orgData,
+                projects: [],
+                createdAt: new Date(),
+                createdBy: 'current-user-id', // TODO: Use real user ID
+                is_demo: false
+            });
+            // No need to manually update state, the hook will do it via snapshot listener
+        } catch (error) {
+            console.error("Failed to add organization", error);
+            alert("Failed to add organization.");
+        }
+        setIsCreateModalOpen(false);
     };
 
-    const handleCreateProject = (projectData: any) => {
+    const handleCreateProject = async (projectData: any) => {
         console.log('Creating project:', projectData);
-        // Here we would actually create the project and update the organization's project list
-        alert('Project created successfully! (Mock)');
 
-        // Mock update just to show interaction
-        const updatedOrgs = organizations.map(org => {
-            if (org.id === projectData.organizationId) {
-                return {
-                    ...org,
-                    projects: [...org.projects, 'proj-new'] // adding dummy ID
-                };
+        try {
+            // Map Wizard Data to Project Interface
+            const newProject: Omit<Project, 'id'> = {
+                clientName: projectData.clientName,
+                projectName: projectData.projectName,
+                status: ProjectStatus.SITE_VISIT_PENDING, // Updated initial status
+                priority: 'Medium', // Default
+                budget: Number(projectData.budget) || 0,
+                advancePaid: Number(projectData.advanceAmount) || 0,
+                clientAddress: projectData.location,
+                clientContact: { name: projectData.clientName, phone: '' }, // Placeholder
+                progress: 0,
+                assignedTeam: {
+                    execution: projectData.projectHeadId ? [projectData.projectHeadId] : [],
+                    site_engineer: projectData.siteEngineerId,
+                    drawing: projectData.designerId,
+                },
+                // Populate root-level assignment fields for dashboard filtering
+                assignedEngineerId: projectData.siteEngineerId,
+                drawingTeamMemberId: projectData.designerId,
+
+                milestones: [],
+                startDate: projectData.startDate ? new Date(projectData.startDate) : new Date(),
+                endDate: projectData.deadline ? new Date(projectData.deadline) : new Date(),
+                salespersonId: projectData.salesPersonId,
+                organizationId: projectData.organizationId,
+                is_demo: false,
+
+                // Map Timeline to Stages
+                stages: projectData.timeline?.map((t: any, idx: number) => ({
+                    id: `stage-${Date.now()}-${idx}`,
+                    name: t.phase,
+                    deadline: t.date ? new Date(t.date) : new Date(),
+                    status: 'Pending',
+                } as ExecutionStage)) || [],
+
+                // Map Payment Terms
+                paymentTerms: projectData.paymentTerms?.map((t: any, idx: number) => ({
+                    id: `pay-${Date.now()}-${idx}`,
+                    milestone: t.milestone,
+                    percentage: t.percentage,
+                    amount: t.amount,
+                    dueDate: t.dueDate ? new Date(t.dueDate) : undefined,
+                    status: 'Pending'
+                } as PaymentTerm)) || [],
+
+                checklists: { daily: [], quality: [] },
+                history: [{
+                    action: 'Project Created',
+                    user: 'Admin', // Should be current user name
+                    timestamp: new Date(),
+                    notes: 'Project initialized via Admin Wizard'
+                }]
+            };
+
+            const projectId = await addProject(newProject);
+
+            // Link project to Organization
+            if (projectData.organizationId) {
+                const org = organizations.find(o => o.id === projectData.organizationId);
+                // Only update if it's a real Firestore organization (not mock)
+                // We can assume real orgs don't have IDs starting with 'org-' unless we migrated data.
+                // But for now, let's try to update. If it fails (because it's mock), we catch error.
+                if (org && !org.is_demo) {
+                    await updateOrganization(org.id, {
+                        projects: [...(org.projects || []), projectId]
+                    });
+                }
             }
-            return org;
-        });
-        setOrganizations(updatedOrgs);
+
+            alert('Project created successfully in Firestore!');
+
+        } catch (error) {
+            console.error("Failed to create project:", error);
+            alert('Failed to create project. See console.');
+        }
     };
 
     const handleViewProjects = (org: Organization) => {

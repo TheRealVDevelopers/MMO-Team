@@ -246,6 +246,7 @@ const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (p
     switch (currentPage) {
       case 'my-day':
         return <MyDayPage />;
+      case 'quotations':
       case 'overview':
         // Pass dynamic projects and handler
         return (

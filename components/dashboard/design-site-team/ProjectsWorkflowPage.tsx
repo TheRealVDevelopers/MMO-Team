@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Project, LeadPipelineStatus, Task, TaskStatus } from '../../../types';
+import { Project, LeadPipelineStatus, Task, TaskStatus, ProjectStatus } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { useMyDayTasks } from '../../../hooks/useMyDayTasks';
 import Card from '../../shared/Card';
@@ -16,6 +16,7 @@ import {
     PlayIcon
 } from '@heroicons/react/24/outline';
 import { formatDateTime, USERS } from '../../../constants';
+import BOQSubmissionModal from '../drawing-team/BOQSubmissionModal';
 
 // Animation variant
 const fadeInUp: Variants = {
@@ -138,13 +139,25 @@ const ProjectCard: React.FC<{
                             </PrimaryButton>
                         )}
                         {stage === 'drawing' && (
-                            <PrimaryButton
-                                onClick={() => onAction(project, 'submit-drawing')}
-                                className="text-xs px-3 py-1.5"
-                            >
-                                <PlayIcon className="w-4 h-4 mr-1" />
-                                Submit Drawing
-                            </PrimaryButton>
+                            <div className="flex flex-col gap-2">
+                                <PrimaryButton
+                                    onClick={() => onAction(project, 'submit-drawing')}
+                                    className="text-xs px-3 py-1.5"
+                                >
+                                    <PlayIcon className="w-4 h-4 mr-1" />
+                                    Submit Drawing
+                                </PrimaryButton>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onAction(project, 'submit-boq');
+                                    }}
+                                    className="text-xs px-3 py-1.5 font-bold text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 transition-all flex items-center justify-center"
+                                >
+                                    <ClipboardDocumentListIcon className="w-4 h-4 mr-1" />
+                                    Submit BOQ
+                                </button>
+                            </div>
                         )}
                         <ChevronRightIcon className="w-5 h-5 text-text-tertiary group-hover:text-primary transition-all group-hover:translate-x-1" />
                     </div>
@@ -163,6 +176,8 @@ const ProjectsWorkflowPage: React.FC<ProjectsWorkflowPageProps> = ({
     const { currentUser } = useAuth();
     const { addTask } = useMyDayTasks(currentUser?.id || '');
     const [activeStage, setActiveStage] = useState<string | null>(null);
+    const [isBOQModalOpen, setIsBOQModalOpen] = useState(false);
+    const [selectedProjectForBOQ, setSelectedProjectForBOQ] = useState<Project | null>(null);
 
     // Group projects by stage
     const projectsByStage = useMemo(() => {
@@ -207,10 +222,60 @@ const ProjectsWorkflowPage: React.FC<ProjectsWorkflowPageProps> = ({
                 createdAt: new Date(),
             });
         } else if (action === 'submit-drawing') {
-            // Mark drawing as submitted
-            await onUpdateProject(project.id, {
+            // Mock file upload interaction as requested by user
+            const mockFile = window.prompt("Enter drawing filename/details to upload (e.g. 'FloorPlan_v1.pdf'):");
+
+            if (mockFile) {
+                // Do NOT mark as submitted/completed yet.
+                // Open BOQ Modal for the final step.
+                setSelectedProjectForBOQ(project);
+                setIsBOQModalOpen(true);
+            }
+        } else if (action === 'submit-boq') {
+            setSelectedProjectForBOQ(project);
+            setIsBOQModalOpen(true);
+        }
+    };
+
+    const handleBOQSubmit = async (items: any[]) => {
+        if (!selectedProjectForBOQ) return;
+
+        try {
+            console.log("Submitting BOQ for project:", selectedProjectForBOQ.projectName, items);
+
+            // Mark drawing as submitted AND project as completed
+            await onUpdateProject(selectedProjectForBOQ.id, {
                 drawingSubmittedAt: new Date(),
+                items: items, // Save the submitted BOQ items to the project
+                status: ProjectStatus.AWAITING_QUOTATION // Transition to Quotation Phase
             });
+
+            // Create Task for Quotation Team if assigned
+            const quotationUserId = selectedProjectForBOQ.assignedTeam?.quotation;
+            if (quotationUserId) {
+                await addTask({
+                    title: `Create Quotation - ${selectedProjectForBOQ.projectName}`,
+                    description: `BOQ has been submitted. Please prepare the commercial quotation.`,
+                    status: TaskStatus.PENDING,
+                    priority: 'High',
+                    date: new Date().toISOString().split('T')[0],
+                    userId: quotationUserId, // Assign to Quotation Team Member
+                    contextId: selectedProjectForBOQ.id,
+                    contextType: 'project',
+                    deadline: new Date(new Date().setDate(new Date().getDate() + 2)).toISOString(), // 2 days deadline
+                    timeSpent: 0,
+                    isPaused: false,
+                    createdAt: new Date(),
+                });
+            }
+
+            alert("BOQ Submitted and Project Phase Completed!");
+            setIsBOQModalOpen(false);
+            setSelectedProjectForBOQ(null);
+
+        } catch (error) {
+            console.error("Failed to submit BOQ", error);
+            alert("Failed to submit BOQ");
         }
     };
 
@@ -269,27 +334,33 @@ const ProjectsWorkflowPage: React.FC<ProjectsWorkflowPageProps> = ({
                         </div>
 
                         <div className="space-y-4 max-h-[500px] overflow-y-auto">
-                            <AnimatePresence>
-                                {projectsByStage[stage.id].length === 0 ? (
-                                    <div className="text-center py-8 text-text-tertiary">
-                                        <ClipboardDocumentListIcon className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                                        <p className="text-sm">No projects in this stage</p>
-                                    </div>
-                                ) : (
-                                    projectsByStage[stage.id].map(project => (
-                                        <ProjectCard
-                                            key={project.id}
-                                            project={project}
-                                            stage={stage.id}
-                                            onAction={handleProjectAction}
-                                        />
-                                    ))
-                                )}
-                            </AnimatePresence>
+                            {/* Simplified rendering to avoid visibility issues */}
+                            {projectsByStage[stage.id].length === 0 ? (
+                                <div className="text-center py-8 text-text-tertiary">
+                                    <ClipboardDocumentListIcon className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                                    <p className="text-sm">No projects in this stage</p>
+                                </div>
+                            ) : (
+                                projectsByStage[stage.id].map(project => (
+                                    <ProjectCard
+                                        key={project.id}
+                                        project={project}
+                                        stage={stage.id}
+                                        onAction={handleProjectAction}
+                                    />
+                                ))
+                            )}
                         </div>
                     </ContentCard>
                 ))}
             </div>
+            {/* BOQ Modal */}
+            <BOQSubmissionModal
+                isOpen={isBOQModalOpen}
+                onClose={() => setIsBOQModalOpen(false)}
+                onSubmit={handleBOQSubmit}
+                projectName={selectedProjectForBOQ?.projectName}
+            />
         </motion.div>
     );
 };

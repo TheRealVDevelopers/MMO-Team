@@ -4,6 +4,8 @@ import { MagnifyingGlassIcon, CalendarIcon, UserIcon, MapPinIcon, ChevronRightIc
 import { PROJECTS } from '../../../constants'; // Using mock PROJECTS for now
 import { Project, ProjectStatus } from '../../../types';
 
+import { useProjects } from '../../../hooks/useProjects';
+
 interface ExecutionProjectsPageProps {
     onProjectSelect: (projectId: string) => void;
 }
@@ -13,11 +15,18 @@ const ExecutionProjectsPage: React.FC<ExecutionProjectsPageProps> = ({ onProject
     const [groupBy, setGroupBy] = useState<'none' | 'status'>('none');
     const [searchQuery, setSearchQuery] = useState('');
 
-    // Filter projects relevant to execution team (mock logic: assigned to execution team or in execution status)
-    const relevantProjects = PROJECTS.filter(p =>
+    // Fetch real projects from Firestore
+    const { projects: realProjects, loading } = useProjects();
+
+    // Combine mock and real projects
+    // Note: In a real migration, we would remove PROJECTS constant usage
+    const allProjects = [...PROJECTS, ...realProjects];
+
+    // Filter projects relevant to execution team
+    const relevantProjects = allProjects.filter(p =>
         p.status === ProjectStatus.IN_EXECUTION ||
         p.status === ProjectStatus.APPROVED ||
-        p.assignedTeam.execution // Check if execution team is assigned
+        p.assignedTeam?.execution?.length > 0 // Robust check
     );
 
     const filteredProjects = relevantProjects.filter(p => {

@@ -10,7 +10,7 @@ export const useUsers = () => {
 
     useEffect(() => {
         setLoading(true);
-        const usersRef = collection(db, 'users');
+        const usersRef = collection(db, 'staffUsers');
         // Order by name for better UI
         const q = query(usersRef, orderBy('name', 'asc'));
 

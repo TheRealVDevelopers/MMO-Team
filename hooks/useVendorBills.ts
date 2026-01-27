@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, onSnapshot, query, updateDoc, doc, Timestamp, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, updateDoc, doc, Timestamp, orderBy, addDoc } from 'firebase/firestore';
 import { VendorBill } from '../types';
 
 type FirestoreVendorBill = Omit<VendorBill, 'issueDate' | 'dueDate'> & {
@@ -42,7 +42,25 @@ export const useVendorBills = () => {
     return { vendorBills, loading, error };
 };
 
+export const addVendorBill = async (billData: Omit<VendorBill, 'id'>) => {
+    try {
+        await addDoc(collection(db, 'vendorBills'), {
+            ...billData,
+            issueDate: Timestamp.fromDate(billData.issueDate),
+            dueDate: Timestamp.fromDate(billData.dueDate)
+        });
+    } catch (error) {
+        console.error("Error adding vendor bill:", error);
+        throw error;
+    }
+};
+
 export const updateVendorBill = async (billId: string, updatedData: Partial<VendorBill>) => {
-    const billRef = doc(db, 'vendorBills', billId);
-    await updateDoc(billRef, updatedData);
+    try {
+        const billRef = doc(db, 'vendorBills', billId);
+        await updateDoc(billRef, updatedData);
+    } catch (error) {
+        console.error("Error updating vendor bill:", error);
+        throw error;
+    }
 };

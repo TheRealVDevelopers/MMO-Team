@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import Modal from '../../shared/Modal';
-import { Project, ProjectStatus, Item, RFQ, Bid, ApprovalRequestType } from '../../../types';
+import { Project, ProjectStatus, Item, RFQ, Bid, ApprovalRequestType, UserRole } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { useApprovals } from '../../../hooks/useApprovalSystem';
 import { formatCurrencyINR, VENDORS } from '../../../constants';
@@ -40,7 +40,7 @@ const QuotationDetailModal: React.FC<{
 
     const [laborCost, setLaborCost] = useState(project.budget * 0.25);
     const [margin, setMargin] = useState(20);
-    const [ratio, setRatio] = useState(1.0); // New for Phase 4
+    const [ratio, setRatio] = useState(project.quotationRatio || ''); // Initialize from project (String)
     const [counterOfferAmount, setCounterOfferAmount] = useState('');
     const [counterOfferNotes, setCounterOfferNotes] = useState('');
 
@@ -48,11 +48,11 @@ const QuotationDetailModal: React.FC<{
     const materialCost = useMemo(() => selectedItems.reduce((sum, item) => sum + item.price, 0), [selectedItems]);
     const calculatedQuote = useMemo(() => {
         const base = (materialCost + laborCost) / (1 - (margin / 100));
-        return base * ratio;
-    }, [materialCost, laborCost, margin, ratio]);
+        return base; // Removed ratio multiplier
+    }, [materialCost, laborCost, margin]); // Removed ratio dependency
 
     const handleStatusChange = (newStatus: ProjectStatus) => {
-        onUpdate({ ...project, status: newStatus, budget: calculatedQuote, items: selectedItems });
+        onUpdate({ ...project, status: newStatus, budget: calculatedQuote, items: selectedItems, quotationRatio: ratio });
         onClose();
     };
 
@@ -497,50 +497,19 @@ const QuotationDetailModal: React.FC<{
                                         </div>
                                     </div>
 
-                                    <div className="space-y-6 bg-subtle-background/50 p-6 rounded-2xl border border-border/50">
-                                        <h4 className="text-[10px] font-black uppercase text-text-secondary tracking-widest">Pricing Logic</h4>
-                                        <div className="space-y-5">
-                                            <div>
-                                                <label className="block text-[10px] font-black uppercase text-text-tertiary mb-2 text-right">Labor Costs (INR)</label>
-                                                <input
-                                                    type="number"
-                                                    value={laborCost}
-                                                    onChange={e => setLaborCost(Number(e.target.value))}
-                                                    className="w-full p-3 bg-white border border-border rounded-xl text-right font-black text-primary"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-[10px] font-black uppercase text-text-tertiary mb-2 flex justify-between">
-                                                    Target Margin
-                                                    <span className="text-primary font-black">{margin}%</span>
-                                                </label>
-                                                <input
-                                                    type="range"
-                                                    min="5"
-                                                    max="60"
-                                                    value={margin}
-                                                    onChange={e => setMargin(Number(e.target.value))}
-                                                    className="w-full h-2 bg-primary/20 rounded-lg appearance-none cursor-pointer accent-primary"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-[10px] font-black uppercase text-text-tertiary mb-2 flex justify-between">
-                                                    Quote Ratio
-                                                    <span className="text-secondary font-black">{ratio.toFixed(2)}x</span>
-                                                </label>
-                                                <input
-                                                    type="range"
-                                                    min="0.5"
-                                                    max="2.0"
-                                                    step="0.05"
-                                                    value={ratio}
-                                                    onChange={e => setRatio(Number(e.target.value))}
-                                                    className="w-full h-2 bg-secondary/20 rounded-lg appearance-none cursor-pointer accent-secondary"
-                                                />
-                                                <p className="text-[8px] text-text-tertiary mt-2">Adjusts total quote by a multiplier for risk/premium factors.</p>
-                                            </div>
+                                    {currentUser && [UserRole.SUPER_ADMIN, UserRole.SALES_GENERAL_MANAGER, UserRole.MANAGER, UserRole.QUOTATION_TEAM].includes(currentUser.role) && (
+                                        <div className="space-y-4 bg-yellow-50/50 p-4 rounded-xl border border-yellow-100">
+                                            <label className="block text-[10px] font-black uppercase text-secondary mb-1">Internal Ratio (Note)</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Enter Ratio (e.g. 1:2)"
+                                                value={ratio}
+                                                onChange={e => setRatio(e.target.value)}
+                                                className="w-full p-2 bg-white border border-yellow-200 rounded-lg text-sm font-bold text-secondary focus:border-secondary outline-none"
+                                            />
+                                            <p className="text-[8px] text-text-tertiary">Visible only to Admin & Quotation Team</p>
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
                             )}
                         </div>

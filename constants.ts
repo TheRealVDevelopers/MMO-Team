@@ -3,7 +3,7 @@
 
 
 
-import { User, Lead, UserRole, Project, ProjectStatus, Vendor, Invoice, PaymentStatus, LeadPipelineStatus, Activity, ActivityStatus, SiteVisit, SiteVisitStatus, MaterialRequest, MaterialRequestStatus, Issue, ChecklistItem, CommunicationMessage, Expense, VendorBill, Attendance, AttendanceStatus, Document, QuotationRequest, QuotationRequestStatus, DrawingRequest, DrawingRequestStatus, ProcurementRequest, ProcurementRequestStatus, ExecutionRequest, ExecutionRequestStatus, AccountsRequest, AccountsRequestStatus, Item, ProjectTemplate, ExpenseClaim, ExpenseClaimStatus, Task, TaskStatus, ChatChannel, ChatMessage, Complaint, ComplaintType, ComplaintPriority, ComplaintStatus, SiteReport, RFQ, RFQStatus, Bid, BidStatus, PurchaseOrder, POStatus, Organization, GanttTask, JMS } from './types';
+import { User, Lead, UserRole, Project, ProjectStatus, Vendor, Invoice, PaymentStatus, LeadPipelineStatus, Activity, ActivityStatus, SiteVisit, SiteVisitStatus, MaterialRequest, MaterialRequestStatus, Issue, ChecklistItem, CommunicationMessage, Expense, VendorBill, Attendance, AttendanceStatus, Document, QuotationRequest, QuotationRequestStatus, DrawingRequest, DrawingRequestStatus, ProcurementRequest, ProcurementRequestStatus, ExecutionRequest, ExecutionRequestStatus, AccountsRequest, AccountsRequestStatus, Item, ProjectTemplate, ExpenseClaim, ExpenseClaimStatus, Task, TaskStatus, ChatChannel, ChatMessage, Complaint, ComplaintType, ComplaintPriority, ComplaintStatus, SiteReport, RFQ, RFQStatus, Bid, BidStatus, PurchaseOrder, POStatus, Organization, GanttTask, JMS, PaymentRequest } from './types';
 
 // New Organization Mock Data
 export const ORGANIZATIONS: Organization[] = [
@@ -746,12 +746,12 @@ export const ITEMS: Item[] = [
 ];
 
 export const MATERIAL_REQUESTS: MaterialRequest[] = [
-    { id: 'mr-1', projectId: 'proj-106', projectName: 'Reception Area Redesign', materials: [{ name: 'Reception Desk', spec: 'Custom Oak, 8ft' }, { name: 'Visitor Chairs', spec: 'Leather, Set of 6' }], requiredBy: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000), status: MaterialRequestStatus.RFQ_PENDING, priority: 'High' },
-    { id: 'mr-2', projectId: 'proj-104', projectName: 'Full Floor Fit-out', materials: [{ name: 'LED Downlights', spec: '4-inch, Warm White, 100 units' }], requiredBy: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000), status: MaterialRequestStatus.BIDDING_OPEN, priority: 'Medium' },
-    { id: 'mr-3', projectId: 'proj-108', projectName: 'HQ Remodel', materials: [{ name: 'Wall Paint', spec: 'Azure Blue, 20 gallons' }, { name: 'Acoustic Panels', spec: '2x4ft, 50 units' }], requiredBy: new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000), status: MaterialRequestStatus.UNDER_EVALUATION, priority: 'Medium' },
-    { id: 'mr-4', projectId: 'proj-101', projectName: 'Pantry Renovation', materials: [{ name: 'Quartz Countertop', spec: 'Calacatta Gold, 40 sqft' }], requiredBy: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000), status: MaterialRequestStatus.NEGOTIATION, priority: 'High' },
-    { id: 'mr-5', projectId: 'proj-109', projectName: 'Co-working Space', materials: [{ name: 'Modular Desks', spec: 'Set of 20' }], requiredBy: new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000), status: MaterialRequestStatus.ORDER_PLACED, priority: 'Low' },
-    { id: 'mr-6', projectId: 'proj-105', projectName: 'Conference Room AV', materials: [{ name: 'HDMI Cables', spec: '25ft, 2 pack' }], requiredBy: new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000), status: MaterialRequestStatus.DELIVERED, priority: 'Low' },
+    { id: 'mr-1', projectId: 'proj-106', projectName: 'Reception Area Redesign', materials: [{ name: 'Reception Desk', spec: 'Custom Oak, 8ft' }, { name: 'Visitor Chairs', spec: 'Leather, Set of 6' }], requiredDate: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString(), status: MaterialRequestStatus.RFQ_PENDING, priority: 'High', itemName: 'Multiple Items', itemId: 'multi', quantityRequested: 1, unit: 'lot', requestedBy: 'user-8', createdAt: new Date() },
+    { id: 'mr-2', projectId: 'proj-104', projectName: 'Full Floor Fit-out', materials: [{ name: 'LED Downlights', spec: '4-inch, Warm White, 100 units' }], requiredDate: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(), status: MaterialRequestStatus.BIDDING_OPEN, priority: 'Medium', itemName: 'Multiple Items', itemId: 'multi', quantityRequested: 1, unit: 'lot', requestedBy: 'user-8', createdAt: new Date() },
+    { id: 'mr-3', projectId: 'proj-108', projectName: 'HQ Remodel', materials: [{ name: 'Wall Paint', spec: 'Azure Blue, 20 gallons' }, { name: 'Acoustic Panels', spec: '2x4ft, 50 units' }], requiredDate: new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000).toISOString(), status: MaterialRequestStatus.UNDER_EVALUATION, priority: 'Medium', itemName: 'Multiple Items', itemId: 'multi', quantityRequested: 1, unit: 'lot', requestedBy: 'user-8', createdAt: new Date() },
+    { id: 'mr-4', projectId: 'proj-101', projectName: 'Pantry Renovation', materials: [{ name: 'Quartz Countertop', spec: 'Calacatta Gold, 40 sqft' }], requiredDate: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString(), status: MaterialRequestStatus.NEGOTIATION, priority: 'High', itemName: 'Multiple Items', itemId: 'multi', quantityRequested: 1, unit: 'lot', requestedBy: 'user-8', createdAt: new Date() },
+    { id: 'mr-5', projectId: 'proj-109', projectName: 'Co-working Space', materials: [{ name: 'Modular Desks', spec: 'Set of 20' }], requiredDate: new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString(), status: MaterialRequestStatus.ORDER_PLACED, priority: 'Low', itemName: 'Multiple Items', itemId: 'multi', quantityRequested: 1, unit: 'lot', requestedBy: 'user-8', createdAt: new Date() },
+    { id: 'mr-6', projectId: 'proj-105', projectName: 'Conference Room AV', materials: [{ name: 'HDMI Cables', spec: '25ft, 2 pack' }], requiredDate: new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000).toISOString(), status: MaterialRequestStatus.DELIVERED, priority: 'Low', itemName: 'Multiple Items', itemId: 'multi', quantityRequested: 1, unit: 'lot', requestedBy: 'user-8', createdAt: new Date() },
 ];
 
 export const PROJECT_TEMPLATES: ProjectTemplate[] = [
@@ -799,32 +799,18 @@ const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
     }
 });
 
-export interface PaymentVerificationRequest {
-    id: string;
-    leadId: string;
-    clientName: string;
-    amount: number;
-    paymentMode: string;
-    transactionId: string;
-    paymentDate: Date;
-    notes?: string;
-    status: 'Pending' | 'Verified' | 'Rejected';
-    requestedBy: string;
-    requestedAt: Date;
-}
-
-export const PAYMENT_VERIFICATION_REQUESTS: PaymentVerificationRequest[] = [
+// Consolidated PaymentRequest is imported from types.ts
+export const PAYMENT_VERIFICATION_REQUESTS: PaymentRequest[] = [
     {
         id: 'pvr-1',
-        leadId: 'lead-6',
+        projectId: 'lead-6', // leadId or projectId
+        clientId: 'client-6',
         clientName: 'Finance Partners',
         amount: 2500000,
-        paymentMode: 'Net Banking',
-        transactionId: 'IBKL92837465',
-        paymentDate: new Date(new Date().getTime() - 2 * 60 * 60 * 1000),
+        paymentMethod: 'Other', // Matching PaymentRequest.paymentMethod type
+        utrNumber: 'IBKL92837465',
         status: 'Pending',
-        requestedBy: 'Jane Doe',
-        requestedAt: new Date(new Date().getTime() - 1 * 60 * 60 * 1000)
+        submittedAt: new Date(new Date().getTime() - 1 * 60 * 60 * 1000)
     }
 ];
 

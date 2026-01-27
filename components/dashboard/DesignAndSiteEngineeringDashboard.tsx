@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DrawingTask, SiteVisit, Project, LeadPipelineStatus, DesignSiteProjectStatus } from '../../types';
+import { DrawingTask, SiteVisit, Project, LeadPipelineStatus, DesignSiteProjectStatus, UserRole } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useProjects } from '../../hooks/useProjects';
 import { useAutomatedTaskCreation } from '../../hooks/useAutomatedTaskCreation';
@@ -16,7 +16,11 @@ const DesignAndSiteEngineeringDashboard: React.FC<{ currentPage: string, setCurr
     // Filter projects assigned to this team member or all if manager
     const myProjects = projects.filter(p =>
         p.assignedEngineerId === currentUser?.id ||
-        p.drawingTeamMemberId === currentUser?.id
+        p.drawingTeamMemberId === currentUser?.id ||
+        p.assignedTeam?.execution?.includes(currentUser?.id || '') ||
+        p.assignedTeam?.site_engineer === currentUser?.id ||
+        p.assignedTeam?.drawing === currentUser?.id ||
+        ['Super Admin', 'Admin', 'admin', 'Manager', 'manager', UserRole.SUPER_ADMIN, UserRole.SALES_GENERAL_MANAGER].includes(currentUser?.role || '')
     );
 
     const renderPage = () => {

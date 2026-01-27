@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, onSnapshot, query, updateDoc, doc, Timestamp, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, updateDoc, doc, Timestamp, orderBy, addDoc } from 'firebase/firestore';
 import { Expense } from '../types';
 
 type FirestoreExpense = Omit<Expense, 'date'> & {
@@ -40,7 +40,28 @@ export const useExpenses = () => {
     return { expenses, loading, error };
 };
 
+
+
+// ... (existing code)
+
+export const addExpense = async (expenseData: Omit<Expense, 'id'>) => {
+    try {
+        await addDoc(collection(db, 'expenses'), {
+            ...expenseData,
+            date: Timestamp.fromDate(expenseData.date)
+        });
+    } catch (error) {
+        console.error("Error adding expense:", error);
+        throw error;
+    }
+};
+
 export const updateExpense = async (expenseId: string, updatedData: Partial<Expense>) => {
-    const expenseRef = doc(db, 'expenses', expenseId);
-    await updateDoc(expenseRef, updatedData);
+    try {
+        const expenseRef = doc(db, 'expenses', expenseId);
+        await updateDoc(expenseRef, updatedData);
+    } catch (error) {
+        console.error("Error updating expense:", error);
+        throw error;
+    }
 };

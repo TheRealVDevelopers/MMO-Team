@@ -4,6 +4,7 @@ import { Project, ProjectStatus } from '../../../types';
 import { PlusIcon } from '../../icons/IconComponents';
 import ProjectCard from './ProjectCard';
 import ProjectDetailPane from './ProjectDetailPane';
+import { useProjects } from '../../../hooks/useProjects';
 
 const KANBAN_COLUMNS = {
   'PLANNING': { title: 'Planning', statuses: [ProjectStatus.PROCUREMENT] },
@@ -12,15 +13,21 @@ const KANBAN_COLUMNS = {
   'DONE': { title: 'Done', statuses: [ProjectStatus.COMPLETED] },
 };
 
+// ...
+
 const ExecutionBoardPage: React.FC = () => {
+  const { projects: realProjects } = useProjects();
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
+  const allProjects = useMemo(() => [...PROJECTS, ...realProjects], [realProjects]);
+
   const executionProjects = useMemo(() =>
-    PROJECTS.filter(p =>
-      p.assignedTeam.execution?.includes('user-8') && // Simulating assignment to current user
+    allProjects.filter(p =>
+      // In a real app, strict user checking would be here.
+      // p.assignedTeam.execution?.includes(currentUser.id) && 
       Object.values(KANBAN_COLUMNS).flatMap(c => c.statuses).includes(p.status)
     ),
-    []);
+    [allProjects]);
 
   // Set initial selected project
   React.useEffect(() => {

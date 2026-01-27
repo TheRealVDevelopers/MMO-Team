@@ -10,11 +10,10 @@ import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
 import PaymentVerificationInbox from './accounts-team/PaymentVerificationInbox';
 import { useInvoices, addInvoice, updateInvoice } from '../../hooks/useInvoices';
-import { useExpenses, updateExpense } from '../../hooks/useExpenses';
-import { useVendorBills, updateVendorBill } from '../../hooks/useVendorBills';
+import { useExpenses, updateExpense, addExpense } from '../../hooks/useExpenses';
+import { useVendorBills, updateVendorBill, addVendorBill } from '../../hooks/useVendorBills';
 import { useProjects } from '../../hooks/useProjects';
 import { Invoice, Expense, VendorBill, Project } from '../../types';
-import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 // Mock data import
 import { PAYMENT_VERIFICATION_REQUESTS } from '../../constants';
@@ -62,7 +61,7 @@ const AccountsTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (pa
 
   const handleAddExpense = async (newExpense: Omit<Expense, 'id'>) => {
     try {
-      await addDoc(collection(db, 'expenses'), newExpense);
+      await addExpense(newExpense);
     } catch (error) {
       console.error("Error adding expense:", error);
     }
@@ -79,7 +78,7 @@ const AccountsTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (pa
 
   const handleAddVendorBill = async (newBill: Omit<VendorBill, 'id'>) => {
     try {
-      await addDoc(collection(db, 'vendorBills'), newBill);
+      await addVendorBill(newBill);
     } catch (error) {
       console.error("Error adding vendor bill:", error);
     }

@@ -4,9 +4,12 @@ import { collection, onSnapshot, query, orderBy, Timestamp, doc, updateDoc, wher
 import { Project, LeadHistory, ExecutionStage } from '../types';
 import { createNotification } from '../services/liveDataService';
 
-type FirestoreProject = Omit<Project, 'startDate' | 'endDate' | 'documents' | 'history'> & {
+type FirestoreProject = Omit<Project, 'startDate' | 'endDate' | 'documents' | 'history' | 'siteInspectionDate' | 'drawingDeadline' | 'drawingSubmittedAt'> & {
     startDate: Timestamp;
     endDate: Timestamp;
+    siteInspectionDate?: Timestamp;
+    drawingDeadline?: Timestamp;
+    drawingSubmittedAt?: Timestamp;
     documents?: (Omit<Project['documents'][0], 'uploaded'> & { uploaded: Timestamp })[];
     history?: (Omit<LeadHistory, 'timestamp'> & { timestamp: Timestamp })[];
 };
@@ -17,6 +20,9 @@ const fromFirestore = (docData: FirestoreProject, id: string): Project => {
         id,
         startDate: docData.startDate?.toDate() || new Date(),
         endDate: docData.endDate?.toDate() || new Date(),
+        siteInspectionDate: docData.siteInspectionDate?.toDate(),
+        drawingDeadline: docData.drawingDeadline?.toDate(),
+        drawingSubmittedAt: docData.drawingSubmittedAt?.toDate(),
         documents: docData.documents?.map(doc => ({
             ...doc,
             uploaded: doc.uploaded?.toDate() || new Date(),

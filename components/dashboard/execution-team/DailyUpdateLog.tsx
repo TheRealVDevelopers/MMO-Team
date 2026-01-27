@@ -1,30 +1,16 @@
 import React, { useState } from 'react';
 import { DailyUpdate } from '../../../types';
-import { CameraIcon, CloudArrowUpIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { CameraIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
 import { USERS } from '../../../constants';
 
 interface DailyUpdateLogProps {
     projectId: string;
+    updates: DailyUpdate[];
+    onAddUpdate: (update: DailyUpdate) => void;
 }
 
-// Mock Data
-const MOCK_UPDATES: DailyUpdate[] = [
-    {
-        id: 'du-1',
-        projectId: 'p-1',
-        date: new Date().toISOString(),
-        workDescription: 'Completed false ceiling framing in Living Room. Started electrical conduit laying in Master Bedroom.',
-        weather: 'Sunny',
-        manpowerCount: 8,
-        photos: [],
-        createdBy: 'u-5', // David Engineer
-        createdAt: new Date()
-    }
-];
-
-const DailyUpdateLog: React.FC<DailyUpdateLogProps> = ({ projectId }) => {
-    const [updates, setUpdates] = useState<DailyUpdate[]>(MOCK_UPDATES);
+const DailyUpdateLog: React.FC<DailyUpdateLogProps> = ({ projectId, updates, onAddUpdate }) => {
     const [isFormOpen, setIsFormOpen] = useState(false);
 
     // Form State
@@ -45,7 +31,7 @@ const DailyUpdateLog: React.FC<DailyUpdateLogProps> = ({ projectId }) => {
             createdBy: 'u-5', // Mock current user
             createdAt: new Date()
         };
-        setUpdates([newUpdate, ...updates]);
+        onAddUpdate(newUpdate);
         setIsFormOpen(false);
         setWorkDesc('');
         setManpower(0);

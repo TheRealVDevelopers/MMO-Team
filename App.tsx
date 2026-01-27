@@ -17,6 +17,7 @@ import {
 } from './components/icons/IconComponents';
 import { USERS } from './constants';
 import { seedDemoData } from './services/liveDataService';
+import { migrateUsersToFirestore } from './services/migrationService';
 
 const navConfig = {
   [UserRole.SUPER_ADMIN]: {
@@ -149,6 +150,7 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     // Seed demo data once on app start
     seedDemoData().catch(console.error);
+    migrateUsersToFirestore().catch(console.error);
   }, []);
 
   const handleSetPage = (page: string) => {

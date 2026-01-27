@@ -6,6 +6,8 @@ import { USERS } from '../../../constants';
 
 interface MaterialTrackerProps {
     projectId: string;
+    requests: MaterialRequest[];
+    onAddRequest: (request: MaterialRequest) => void;
 }
 
 // Mock BOQ Items that site engineer can request
@@ -16,24 +18,7 @@ const BOQ_ITEMS = [
     { id: 'item-4', name: 'Plywood 18mm', unit: 'sheets', remaining: 25 },
 ];
 
-const MOCK_REQUESTS: MaterialRequest[] = [
-    {
-        id: 'mr-1',
-        projectId: 'p-1',
-        itemId: 'item-2',
-        itemName: 'Cement Bags (Ultratech)',
-        quantityRequested: 20,
-        unit: 'bags',
-        requiredDate: new Date(Date.now() + 86400000 * 2).toISOString(),
-        status: 'Ordered',
-        requestedBy: 'u-5',
-        createdAt: new Date(),
-        notes: 'Urgent for flooring work'
-    }
-];
-
-const MaterialTracker: React.FC<MaterialTrackerProps> = ({ projectId }) => {
-    const [requests, setRequests] = useState<MaterialRequest[]>(MOCK_REQUESTS);
+const MaterialTracker: React.FC<MaterialTrackerProps> = ({ projectId, requests, onAddRequest }) => {
     const [isFormOpen, setIsFormOpen] = useState(false);
 
     // Form State
@@ -61,7 +46,7 @@ const MaterialTracker: React.FC<MaterialTrackerProps> = ({ projectId }) => {
             notes
         };
 
-        setRequests([newRequest, ...requests]);
+        onAddRequest(newRequest);
         setIsFormOpen(false);
         setQuantity(0);
         setNotes('');

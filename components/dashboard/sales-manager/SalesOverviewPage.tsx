@@ -15,6 +15,7 @@ import { motion } from 'framer-motion';
 import PipelineDetailModal from './PipelineDetailModal';
 import DashboardCalendar, { CalendarTask } from '../super-admin/DashboardCalendar';
 import { useTeamTasks } from '../../../hooks/useTeamTasks';
+import { updateLead } from '../../../hooks/useLeads';
 import LeadDetailModal from '../../shared/LeadDetailModal';
 
 const salesTeam = USERS.filter(u => u.role === UserRole.SALES_TEAM_MEMBER);
@@ -241,7 +242,9 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; lead
                 isOpen={isLeadModalOpen}
                 onClose={() => setIsLeadModalOpen(false)}
                 lead={selectedLead!}
-                onUpdate={() => { }} // Manage status updates if needed
+                onUpdate={async (updatedLead) => {
+                    await updateLead(updatedLead.id, updatedLead);
+                }}
             />
         </motion.div>
     );
