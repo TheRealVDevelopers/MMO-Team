@@ -672,15 +672,7 @@ export enum MaterialRequestStatus {
   NEGOTIATION = "Negotiation",
 }
 
-export interface MaterialRequest {
-  id: string;
-  projectId: string;
-  projectName: string;
-  materials: { name: string; spec: string }[];
-  requiredBy: Date;
-  status: MaterialRequestStatus;
-  priority: 'High' | 'Medium' | 'Low';
-}
+
 
 // Enhanced Item Interface for Catalog
 export interface Item {
@@ -1042,6 +1034,41 @@ export interface BOQItem {
   category?: string;
   isTemplateItem?: boolean; // Flag to identify standard items
   specifications?: string;
+}
+
+export interface DailyUpdate {
+  id: string;
+  projectId: string;
+  date: string;
+  workDescription: string;
+  weather?: string;
+  manpowerCount: number;
+  photos: string[]; // URLs
+  issuesRaised?: string[];
+  createdBy: string;
+  createdAt: Date;
+}
+
+export interface MaterialRequest {
+  id: string;
+  projectId: string;
+  itemId: string;
+  itemName: string;
+  quantityRequested: number;
+  unit: string;
+  requiredDate: string;
+  status: 'Requested' | 'Approved' | 'Ordered' | 'Delivered' | 'Rejected';
+  requestedBy: string;
+  createdAt: Date;
+  notes?: string;
+}
+
+export enum DesignSiteProjectStatus {
+  PENDING = "Pending",
+  IN_PROGRESS = "In Progress",
+  COMPLETED = "Completed",
+  ON_HOLD = "On Hold",
+  CANCELLED = "Cancelled",
 }
 
 export enum ProcurementRequestStatus {

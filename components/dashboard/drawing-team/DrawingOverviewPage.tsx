@@ -1,10 +1,13 @@
-
 import React from 'react';
 import Card from '../../shared/Card';
 import { PROJECTS, USERS } from '../../../constants';
 import { Project, ProjectStatus } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
-import { FireIcon, ClockIcon, ChartBarSquareIcon, PaintBrushIcon } from '../../icons/IconComponents';
+import { useTeamTasks } from '../../../hooks/useTeamTasks'; // Or useMyDayTasks, but assuming we want to see what is assigned
+import {
+    FireIcon, ClockIcon, ChartBarSquareIcon, PaintBrushIcon,
+    ClipboardDocumentCheckIcon, ArrowUpRightIcon
+} from '../../icons/IconComponents';
 
 const KpiCard: React.FC<{ title: string; value: string | number; icon: React.ReactNode }> = ({ title, value, icon }) => (
     <Card className="flex-1">
@@ -20,10 +23,17 @@ const KpiCard: React.FC<{ title: string; value: string | number; icon: React.Rea
 
 const DrawingOverviewPage: React.FC<{ onProjectSelect: (project: Project) => void }> = ({ onProjectSelect }) => {
     const { currentUser } = useAuth();
+    // In a real app, useMyDayTasks would be better, but useTeamTasks allows filtering if needed. 
+    // Assuming useTeamTasks returns all tasks, we filter by assignee.
+    const { tasks: allTasks } = useTeamTasks();
+
     if (!currentUser) return null;
 
     const myProjects = PROJECTS.filter(p => p.assignedTeam.drawing === currentUser.id);
-    
+
+    // Filter tasks assigned to me (Direct Assignments)
+    const myTasks = allTasks.filter(t => t.userId === currentUser.id && t.status !== 'Completed');
+
     // KPIs
     const projectsThisMonth = myProjects.filter(p => new Date(p.startDate).getMonth() === new Date().getMonth()).length;
     const onTimeDelivery = "92%"; // Mock data
@@ -36,13 +46,13 @@ const DrawingOverviewPage: React.FC<{ onProjectSelect: (project: Project) => voi
     }).length;
 
     const designQueue = myProjects.filter(p => [
-        ProjectStatus.AWAITING_DESIGN, 
-        ProjectStatus.DESIGN_IN_PROGRESS, 
-        ProjectStatus.PENDING_REVIEW, 
+        ProjectStatus.AWAITING_DESIGN,
+        ProjectStatus.DESIGN_IN_PROGRESS,
+        ProjectStatus.PENDING_REVIEW,
         ProjectStatus.REVISIONS_REQUESTED
-    ].includes(p.status)).sort((a,b) => (a.priority === 'High' ? -1 : 1) - (b.priority === 'High' ? -1 : 1));
+    ].includes(p.status)).sort((a, b) => (a.priority === 'High' ? -1 : 1) - (b.priority === 'High' ? -1 : 1));
 
-    const priorityTasks = myProjects.filter(p => p.priority === 'High' || p.status === ProjectStatus.REVISIONS_REQUESTED).slice(0,3);
+    const priorityTasks = myProjects.filter(p => p.priority === 'High' || p.status === ProjectStatus.REVISIONS_REQUESTED).slice(0, 3);
 
     return (
         <div className="space-y-6">
@@ -51,14 +61,56 @@ const DrawingOverviewPage: React.FC<{ onProjectSelect: (project: Project) => voi
             {/* KPIs */}
             <div className="flex flex-col md:flex-row gap-4">
                 <KpiCard title="Projects This Month" value={projectsThisMonth} icon={<PaintBrushIcon />} />
-                <KpiCard title="On-Time Delivery" value={onTimeDelivery} icon={<ClockIcon className="w-6 h-6"/>} />
+                <KpiCard title="On-Time Delivery" value={onTimeDelivery} icon={<ClockIcon className="w-6 h-6" />} />
                 <KpiCard title="Avg. Design Time" value={avgDesignTimeString} icon={<ChartBarSquareIcon />} />
-                <KpiCard title="Due This Week" value={dueThisWeek} icon={<FireIcon className="w-6 h-6"/>} />
+                <KpiCard title="Due This Week" value={dueThisWeek} icon={<FireIcon className="w-6 h-6" />} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Design Queue */}
-                <div className="lg:col-span-2">
+                {/* Design Queue & Tasks */}
+                <div className="lg:col-span-2 space-y-6">
+                    {/* Direct Assignments (New Task Section) */}
+                    <Card>
+                        <h3 className="text-lg font-bold flex items-center gap-2">
+                            <ClipboardDocumentCheckIcon className="w-5 h-5 text-primary" />
+                            Assigned Missions
+                        </h3>
+                        {myTasks.length > 0 ? (
+                            <div className="mt-4 grid gap-4">
+                                {myTasks.map(task => (
+                                    <div key={task.id} className="flex items-center justify-between p-4 bg-subtle-background rounded-xl border border-border/50 hover:border-primary/30 transition-all">
+                                        <div className="flex items-start gap-3">
+                                            <div className="p-2 bg-white rounded-lg shadow-sm">
+                                                <FireIcon className={`w-5 h-5 ${task.priority === 'High' ? 'text-error' : 'text-primary'}`} />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-text-primary text-sm">{task.title}</h4>
+                                                <p className="text-xs text-text-secondary mt-0.5 line-clamp-1">{task.description}</p>
+                                                <div className="flex gap-2 mt-2">
+                                                    <span className="text-[10px] bg-white px-2 py-0.5 rounded border border-border text-text-secondary">
+                                                        Due: {task.deadline ? new Date(task.deadline).toLocaleDateString() : 'N/A'}
+                                                    </span>
+                                                    {task.priority === 'High' && (
+                                                        <span className="text-[10px] bg-error/10 text-error px-2 py-0.5 rounded font-bold uppercase">
+                                                            High Priority
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button className="p-2 hover:bg-white rounded-full transition-colors">
+                                            <ArrowUpRightIcon className="w-4 h-4 text-text-secondary" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="py-8 text-center text-text-tertiary text-sm italic">
+                                No direct missions assigned. Standby for directives.
+                            </div>
+                        )}
+                    </Card>
+
                     <Card className="h-full">
                         <h3 className="text-lg font-bold">My Design Queue</h3>
                         <div className="mt-4 -mx-6 -mb-6 overflow-x-auto">
@@ -78,7 +130,7 @@ const DrawingOverviewPage: React.FC<{ onProjectSelect: (project: Project) => voi
                                             <tr key={project.id} onClick={() => onProjectSelect(project)} className="cursor-pointer hover:bg-subtle-background">
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="flex items-center">
-                                                        {project.priority === 'High' && <FireIcon className="w-5 h-5 text-error mr-2 flex-shrink-0" title="High Priority"/>}
+                                                        {project.priority === 'High' && <FireIcon className="w-5 h-5 text-error mr-2 flex-shrink-0" />}
                                                         <div>
                                                             <div className="text-sm font-medium text-text-primary">{project.projectName}</div>
                                                             <div className="text-xs text-text-secondary">{project.clientName}</div>

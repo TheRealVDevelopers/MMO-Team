@@ -18,14 +18,31 @@ interface SuperAdminDashboardProps {
 }
 
 const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ currentPage, setCurrentPage }) => {
+    const [selectedMemberId, setSelectedMemberId] = React.useState<string | undefined>(undefined);
+
+    const handleNavigateToMember = (userId: string) => {
+        setSelectedMemberId(userId);
+        setCurrentPage('team');
+    };
+
     switch (currentPage) {
         case 'overview':
-            return <OverviewDashboard setCurrentPage={setCurrentPage} />;
+            return (
+                <OverviewDashboard
+                    setCurrentPage={setCurrentPage}
+                    onNavigateToMember={handleNavigateToMember}
+                />
+            );
         case 'team':
-            return <TeamManagementPage setCurrentPage={setCurrentPage} />;
+            return (
+                <TeamManagementPage
+                    setCurrentPage={setCurrentPage}
+                    initialMemberId={selectedMemberId}
+                />
+            );
         case 'projects':
             return <ProjectTrackingPage setCurrentPage={setCurrentPage} />;
-        case 'leads':
+            // ... keep existing cases ...
             return <LeadsManagementPage setCurrentPage={setCurrentPage} />;
         case 'communication':
             return <CommunicationDashboard />;

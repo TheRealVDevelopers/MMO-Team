@@ -115,7 +115,7 @@ const RECCEDrawingUpload: React.FC<RECCEDrawingUploadProps> = ({ leadId, siteVis
                     </div>
                     <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
                         <div
-                            className="bg-blue-600 h-2 rounded-full transition-all duration-200"
+                            className="bg-primary h-2 rounded-full transition-all duration-200"
                             style={{ width: `${uploadProgress}%` }}
                         />
                     </div>
@@ -126,7 +126,7 @@ const RECCEDrawingUpload: React.FC<RECCEDrawingUploadProps> = ({ leadId, siteVis
                 <div className="mt-6 flex justify-end">
                     <button
                         onClick={handleUpload}
-                        className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20"
+                        className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-secondary transition-colors shadow-lg shadow-primary/20"
                     >
                         Submit Drawing
                     </button>

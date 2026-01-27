@@ -22,7 +22,13 @@ export const useTeamTasks = (role?: UserRole) => {
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const tasksData: Task[] = [];
             snapshot.forEach((doc) => {
-                tasksData.push({ id: doc.id, ...doc.data() } as Task);
+                const task = { id: doc.id, ...doc.data() } as Task;
+
+                // User Requirement: "If any of the team member adds a task by themselves, that should be reflected to them only. That should not be reflected to the general manager or the admin"
+                // Filtering out self-assigned tasks from the team view
+                if (task.userId !== task.createdBy) {
+                    tasksData.push(task);
+                }
             });
             setTasks(tasksData);
             setLoading(false);

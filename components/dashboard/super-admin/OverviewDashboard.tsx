@@ -80,9 +80,10 @@ const AlertCard: React.FC<{ title: string; count: number; items: string[]; type?
 
 interface OverviewDashboardProps {
     setCurrentPage: (page: string) => void;
+    onNavigateToMember?: (userId: string) => void;
 }
 
-const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage }) => {
+const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage, onNavigateToMember }) => {
     // Activate Background Performance Monitoring
     usePerformanceMonitor();
 
@@ -137,6 +138,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage })
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                 {/* Main Content Area */}
                 <div className="lg:col-span-2 space-y-6">
+                    {/* ... existing content ... */}
                     <SectionHeader
                         title="Executive Overview"
                         subtitle="Synergized command center for MMO project operations."
@@ -154,6 +156,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage })
                     {/* Primary Calendar View - Moved to Top */}
                     <DashboardCalendar />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {/* ... existing stats cards ... */}
                         <StatCard
                             title="Enterprise Projects"
                             value={totalProjects}
@@ -197,7 +200,9 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage })
 
                 {/* Right Sidebar */}
                 <div className="lg:col-span-1 space-y-8">
-                    <AttendanceStatsCard />
+                    <AttendanceStatsCard onViewMember={onNavigateToMember} />
+
+                    {/* ... existing sidebar content ... */}
 
                     {/* Performance Flag System */}
                     <div className="space-y-4">

@@ -14,7 +14,7 @@ import TeamMemberDetailView from './TeamMemberDetailView';
 import { ContentCard, cn, staggerContainer } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const TeamManagementPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
+const TeamManagementPage: React.FC<{ setCurrentPage: (page: string) => void; initialMemberId?: string }> = ({ setCurrentPage, initialMemberId }) => {
     const { staff, loading } = useStaffPerformance();
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
@@ -22,10 +22,21 @@ const TeamManagementPage: React.FC<{ setCurrentPage: (page: string) => void }> =
 
     // Initial Selection Effect
     React.useEffect(() => {
-        if (!selectedUser && staff.length > 0) {
-            setSelectedUser(staff[0]);
+        if (!loading && staff.length > 0) {
+            if (initialMemberId) {
+                const targetUser = staff.find(u => u.id === initialMemberId);
+                if (targetUser) {
+                    setSelectedUser(targetUser);
+                    return;
+                }
+            }
+
+            // Fallback to first user only if no user is currently selected (e.g. first load)
+            if (!selectedUser) {
+                setSelectedUser(staff[0]);
+            }
         }
-    }, [staff, selectedUser]);
+    }, [staff, loading, initialMemberId]); // Don't include selectedUser to allow changing selection manually without reset
 
     const filteredUsers = useMemo(() => {
         return staff.filter(user =>

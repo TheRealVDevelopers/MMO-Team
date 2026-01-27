@@ -10,12 +10,15 @@ import {
     ClipboardDocumentCheckIcon,
     ChartBarIcon,
     CalendarIcon,
-    ShieldExclamationIcon
+    ShieldExclamationIcon,
+    ShoppingCartIcon
 } from '@heroicons/react/24/outline';
 import { Project, ProjectStatus } from '../../../types';
 import { formatCurrencyINR, formatDate, MOCK_GANTT_DATA } from '../../../constants';
 import GanttChart from './GanttChart';
 import JMSForm from './JMSForm';
+import DailyUpdateLog from './DailyUpdateLog';
+import MaterialTracker from './MaterialTracker';
 
 // Mock Items for JMS (In real app, fetch from BOQ/Quotation)
 const MOCK_ITEMS = [
@@ -29,7 +32,7 @@ interface ExecutionProjectDetailProps {
     onBack: () => void;
 }
 
-type Tab = 'overview' | 'timeline' | 'updates' | 'issues' | 'completion';
+type Tab = 'overview' | 'timeline' | 'updates' | 'materials' | 'issues' | 'completion';
 
 const ExecutionProjectDetail: React.FC<ExecutionProjectDetailProps> = ({ project, onBack }) => {
     const [activeTab, setActiveTab] = useState<Tab>('timeline');
@@ -39,6 +42,7 @@ const ExecutionProjectDetail: React.FC<ExecutionProjectDetailProps> = ({ project
         { id: 'timeline', label: 'Timeline & Plan', icon: CalendarIcon },
         { id: 'overview', label: 'Overview', icon: ChartBarIcon },
         { id: 'updates', label: 'Daily Updates', icon: ClipboardDocumentCheckIcon },
+        { id: 'materials', label: 'Materials', icon: ShoppingCartIcon },
         { id: 'issues', label: 'Issues & Risks', icon: ShieldExclamationIcon },
         { id: 'completion', label: 'Completion & Handover', icon: DocumentChartBarIcon },
     ];
@@ -136,9 +140,10 @@ const ExecutionProjectDetail: React.FC<ExecutionProjectDetailProps> = ({ project
 
                 {/* Other tabs placeholders */}
                 {activeTab === 'updates' && (
-                    <div className="flex items-center justify-center h-full text-gray-500">
-                        Daily Update Form coming soon...
-                    </div>
+                    <DailyUpdateLog projectId={project.id} />
+                )}
+                {activeTab === 'materials' && (
+                    <MaterialTracker projectId={project.id} />
                 )}
                 {activeTab === 'issues' && (
                     <div className="flex items-center justify-center h-full text-gray-500">

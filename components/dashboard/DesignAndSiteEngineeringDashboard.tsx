@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DrawingTask, SiteVisit, Project, LeadPipelineStatus } from '../../types';
+import { DrawingTask, SiteVisit, Project, LeadPipelineStatus, DesignSiteProjectStatus } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useProjects } from '../../hooks/useProjects';
 import { useAutomatedTaskCreation } from '../../hooks/useAutomatedTaskCreation';
@@ -8,13 +8,6 @@ import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
 import ProjectsWorkflowPage from './design-site-team/ProjectsWorkflowPage';
 import MyPerformancePage from './drawing-team/MyPerformancePage';
-
-// Status for design/site projects
-export enum DesignSiteProjectStatus {
-    WAITING_FOR_SITE_INSPECTION = 'Waiting for Site Inspection',
-    WAITING_FOR_DRAWING = 'Waiting for Drawing',
-    COMPLETED = 'Completed'
-}
 
 const DesignAndSiteEngineeringDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
     const { currentUser } = useAuth();
@@ -45,6 +38,16 @@ const DesignAndSiteEngineeringDashboard: React.FC<{ currentPage: string, setCurr
                 return <CommunicationDashboard />;
             case 'escalate-issue':
                 return <EscalateIssuePage setCurrentPage={setCurrentPage} />;
+            case 'create-quotation': // FIXED: Added routing for Create Quotation
+                return (
+                    <ProjectsWorkflowPage
+                        projects={myProjects}
+                        loading={loading}
+                        onUpdateProject={updateProject}
+                        setCurrentPage={setCurrentPage}
+                    // Optionally pass a prop to auto-open quotation modal if supported
+                    />
+                );
             default:
                 return <MyDayPage />;
         }

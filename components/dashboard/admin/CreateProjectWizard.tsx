@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { XMarkIcon, ChevronRightIcon, ChevronLeftIcon, CheckIcon, BuildingOfficeIcon, UserIcon, CalendarIcon, CurrencyRupeeIcon } from '@heroicons/react/24/outline';
-import { ORGANIZATIONS, PROJECT_TEMPLATES, USERS } from '../../../constants';
-import { UserRole } from '../../../types';
+import { PROJECT_TEMPLATES, USERS } from '../../../constants';
+import { UserRole, Organization } from '../../../types';
 
 interface CreateProjectWizardProps {
     isOpen: boolean;
     onClose: () => void;
     onSubmit: (projectData: any) => void;
     preselectedOrgId?: string;
+    organizations: Organization[]; // NEW PROP
 }
 
 const STEPS = [
@@ -17,7 +18,7 @@ const STEPS = [
     { number: 3, title: 'Timeline & Budget' }
 ];
 
-const CreateProjectWizard: React.FC<CreateProjectWizardProps> = ({ isOpen, onClose, onSubmit, preselectedOrgId }) => {
+const CreateProjectWizard: React.FC<CreateProjectWizardProps> = ({ isOpen, onClose, onSubmit, preselectedOrgId, organizations }) => {
     const [currentStep, setCurrentStep] = useState(1);
     const [formData, setFormData] = useState({
         organizationId: preselectedOrgId || '',
@@ -38,7 +39,7 @@ const CreateProjectWizard: React.FC<CreateProjectWizardProps> = ({ isOpen, onClo
     });
 
     const handleOrgChange = (orgId: string) => {
-        const org = ORGANIZATIONS.find(o => o.id === orgId);
+        const org = organizations.find(o => o.id === orgId);
         setFormData({
             ...formData,
             organizationId: orgId,
@@ -95,7 +96,7 @@ const CreateProjectWizard: React.FC<CreateProjectWizardProps> = ({ isOpen, onClo
                             {/* Progress Bar */}
                             <div className="w-full bg-gray-100 dark:bg-gray-700 h-1">
                                 <motion.div
-                                    className="h-full bg-blue-600"
+                                    className="h-full bg-primary" // Changed from bg-blue-600
                                     initial={{ width: '33%' }}
                                     animate={{ width: `${(currentStep / 3) * 100}%` }}
                                     transition={{ duration: 0.3 }}
@@ -122,7 +123,7 @@ const CreateProjectWizard: React.FC<CreateProjectWizardProps> = ({ isOpen, onClo
                                                         className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-700 dark:text-white"
                                                     >
                                                         <option value="">Select Organization</option>
-                                                        {ORGANIZATIONS.map(org => (
+                                                        {organizations.map(org => (
                                                             <option key={org.id} value={org.id}>{org.name}</option>
                                                         ))}
                                                     </select>
@@ -141,15 +142,28 @@ const CreateProjectWizard: React.FC<CreateProjectWizardProps> = ({ isOpen, onClo
 
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project Type</label>
-                                                    <select
-                                                        value={formData.projectType}
-                                                        onChange={(e) => setFormData({ ...formData, projectType: e.target.value })}
-                                                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-700 dark:text-white"
-                                                    >
-                                                        <option value="Office">Corporate Office</option>
-                                                        <option value="Residential">Residential</option>
-                                                        <option value="Commercial">Commercial/Retail</option>
-                                                    </select>
+                                                    <div className="flex gap-2">
+                                                        <select
+                                                            value={formData.projectType}
+                                                            onChange={(e) => setFormData({ ...formData, projectType: e.target.value })}
+                                                            className="flex-1 p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-700 dark:text-white"
+                                                        >
+                                                            <option value="Office">Corporate Office</option>
+                                                            <option value="Residential">Residential</option>
+                                                            <option value="Commercial">Commercial/Retail</option>
+                                                            <option value="Hospitality">Hospitality</option>
+                                                            <option value="Educational">Educational</option>
+                                                            <option value="Other">Other (Custom)</option>
+                                                        </select>
+                                                        {formData.projectType === 'Other' && (
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Type..."
+                                                                className="flex-1 p-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-700 dark:text-white"
+                                                                onChange={(e) => setFormData({ ...formData, projectType: e.target.value })} // In real app, manage separate state for custom input then merge
+                                                            />
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </motion.div>
@@ -247,25 +261,54 @@ const CreateProjectWizard: React.FC<CreateProjectWizardProps> = ({ isOpen, onClo
                                             </div>
 
                                             <div>
-                                                <h3 className="font-medium text-gray-900 dark:text-white mb-3">Payment Terms</h3>
+                                                <div className="flex justify-between items-center mb-3">
+                                                    <h3 className="font-medium text-gray-900 dark:text-white">Payment Terms</h3>
+                                                    <button
+                                                        onClick={() => setFormData({
+                                                            ...formData,
+                                                            paymentTerms: [...formData.paymentTerms, { milestone: 'New Stage', percentage: 0, amount: 0 }]
+                                                        })}
+                                                        className="text-xs font-bold text-primary hover:text-primary/80"
+                                                    >
+                                                        + Add Stage
+                                                    </button>
+                                                </div>
                                                 <div className="space-y-3">
                                                     {formData.paymentTerms.map((term, idx) => (
                                                         <div key={idx} className="flex gap-4 items-center">
                                                             <input
                                                                 type="text"
                                                                 value={term.milestone}
-                                                                readOnly
+                                                                onChange={(e) => {
+                                                                    const newTerms = [...formData.paymentTerms];
+                                                                    newTerms[idx].milestone = e.target.value;
+                                                                    setFormData({ ...formData, paymentTerms: newTerms });
+                                                                }}
                                                                 className="flex-1 p-2 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm"
                                                             />
                                                             <div className="w-24 relative">
                                                                 <input
                                                                     type="number"
                                                                     value={term.percentage}
-                                                                    readOnly
+                                                                    onChange={(e) => {
+                                                                        const newTerms = [...formData.paymentTerms];
+                                                                        newTerms[idx].percentage = Number(e.target.value);
+                                                                        setFormData({ ...formData, paymentTerms: newTerms });
+                                                                    }}
                                                                     className="w-full p-2 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm"
                                                                 />
                                                                 <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-xs">%</span>
                                                             </div>
+                                                            <button
+                                                                onClick={() => {
+                                                                    const newTerms = [...formData.paymentTerms];
+                                                                    newTerms.splice(idx, 1);
+                                                                    setFormData({ ...formData, paymentTerms: newTerms });
+                                                                }}
+                                                                className="text-gray-400 hover:text-red-500"
+                                                            >
+                                                                <XMarkIcon className="w-4 h-4" />
+                                                            </button>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -281,8 +324,8 @@ const CreateProjectWizard: React.FC<CreateProjectWizardProps> = ({ isOpen, onClo
                                     onClick={handleBack}
                                     disabled={currentStep === 1}
                                     className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${currentStep === 1
-                                            ? 'text-gray-400 cursor-not-allowed'
-                                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                        ? 'text-gray-400 cursor-not-allowed'
+                                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                                         }`}
                                 >
                                     <ChevronLeftIcon className="w-5 h-5" /> Back

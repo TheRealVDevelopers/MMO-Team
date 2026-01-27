@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { USERS } from '../../../constants';
+import { USERS, PROJECTS } from '../../../constants';
 import { UserRole, TaskStatus } from '../../../types';
 import { cn } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -27,6 +27,8 @@ const DirectAssignTaskModal: React.FC<DirectAssignTaskModalProps> = ({ isOpen, o
     const [assigneeId, setAssigneeId] = useState('');
     const [priority, setPriority] = useState<'High' | 'Medium' | 'Low'>('Medium');
     const [deadline, setDeadline] = useState('');
+    const [contextType, setContextType] = useState<'project' | 'lead'>('project');
+    const [contextId, setContextId] = useState('');
     const [processing, setProcessing] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -46,6 +48,8 @@ const DirectAssignTaskModal: React.FC<DirectAssignTaskModalProps> = ({ isOpen, o
                 timeSpent: 0,
                 isPaused: false,
                 createdAt: new Date(),
+                contextId, // Add Context
+                contextType, // Add Context Type
             };
             await onAssign(taskData);
             resetForm();
@@ -84,20 +88,95 @@ const DirectAssignTaskModal: React.FC<DirectAssignTaskModalProps> = ({ isOpen, o
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-4">
-                    {/* Task Title */}
+                    {/* Mission Type Dropdown */}
                     <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary px-1 flex items-center gap-2">
                             <BoltIcon className="w-3 h-3 text-primary" />
-                            Mission Objective
+                            Mission Type
                         </label>
-                        <input
-                            type="text"
-                            value={title}
+                        <select
+                            value={title} // Using title as the value for simplicity, or we can separate missionType
                             onChange={(e) => setTitle(e.target.value)}
-                            placeholder="e.g., Immediate Site Inspection - Sector 7"
-                            className="w-full bg-subtle-background/30 border border-border rounded-2xl px-5 py-4 text-sm font-medium focus:ring-4 focus:ring-primary/10 transition-all outline-none"
-                            required
-                        />
+                            className="w-full bg-subtle-background/30 border border-border rounded-2xl px-5 py-4 text-sm font-medium focus:ring-4 focus:ring-primary/10 transition-all outline-none appearance-none"
+                        >
+                            <option value="">Select Directive...</option>
+                            <option value="Site Inspection">Site Inspection</option>
+                            <option value="Start Drawing">Start Drawing</option>
+                            <option value="Make Quotation">Make Quotation</option>
+                            <option value="Material Verification">Material Verification</option>
+                            <option value="Client Meeting">Client Meeting</option>
+                            <option value="Custom">Custom Objective</option>
+                        </select>
+                    </div>
+
+                    {/* Task Title (Custom) */}
+                    {title === 'Custom' || !['Site Inspection', 'Start Drawing', 'Make Quotation', 'Material Verification', 'Client Meeting'].includes(title) ? (
+                        <div className="space-y-2">
+                            <input
+                                type="text"
+                                value={title === 'Custom' ? '' : title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                placeholder="Enter custom objective..."
+                                className="w-full bg-subtle-background/30 border border-border rounded-2xl px-5 py-4 text-sm font-medium focus:ring-4 focus:ring-primary/10 transition-all outline-none"
+                                required
+                            />
+                        </div>
+                    ) : null}
+
+                    {/* Context Selection (Project vs Lead) */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary px-1">
+                                Target Scope
+                            </label>
+                            <div className="flex bg-subtle-background/50 p-1 rounded-2xl border border-border/40">
+                                <button
+                                    type="button"
+                                    onClick={() => setContextType('project')}
+                                    className={cn(
+                                        "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-tighter transition-all",
+                                        contextType === 'project'
+                                            ? "bg-primary text-white shadow-lg shadow-primary/20"
+                                            : "text-text-tertiary hover:text-text-primary"
+                                    )}
+                                >
+                                    Project
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setContextType('lead')}
+                                    className={cn(
+                                        "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-tighter transition-all",
+                                        contextType === 'lead'
+                                            ? "bg-accent text-white shadow-lg shadow-accent/20"
+                                            : "text-text-tertiary hover:text-text-primary"
+                                    )}
+                                >
+                                    Sales Lead
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary px-1">
+                                Select Target
+                            </label>
+                            <select
+                                value={contextId}
+                                onChange={(e) => setContextId(e.target.value)}
+                                className="w-full bg-subtle-background/30 border border-border rounded-2xl px-5 py-3 text-sm font-medium focus:ring-4 focus:ring-primary/10 transition-all outline-none"
+                            >
+                                <option value="">Select Target...</option>
+                                {contextType === 'project'
+                                    ? PROJECTS.filter(p => p.status === 'In Execution' || p.status === 'Procurement').map(p => (
+                                        <option key={p.id} value={p.id}>{p.projectName}</option>
+                                    ))
+                                    : PROJECTS.filter(p => p.status === 'Awaiting Design' || p.status === 'Pending Review' || p.status === 'New').map(p => ( // Using Projects as Leads for mock
+                                        <option key={p.id} value={p.id}>{p.clientName} ({p.projectName || 'New Enquiry'})</option>
+                                    ))
+                                }
+                            </select>
+                        </div>
                     </div>
 
                     {/* Description */}
