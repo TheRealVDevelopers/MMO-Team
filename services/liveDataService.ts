@@ -20,6 +20,10 @@ import {
 import { Notification, Activity } from '../types';
 
 export const seedDemoData = async () => {
+    if (!db) {
+        console.log("Skipping demo data seeding because Firebase is not initialized (demo mode).");
+        return;
+    }
     console.log("Starting demo data seeding...");
 
     // Seed Leads
@@ -121,6 +125,7 @@ export const seedDemoData = async () => {
 
 export const createNotification = async (notification: Omit<Notification, 'id' | 'created_at' | 'is_read' | 'is_demo'>) => {
     try {
+        if (!db) return;
         const notificationsRef = collection(db, 'notifications');
         await addDoc(notificationsRef, {
             ...notification,
@@ -135,6 +140,7 @@ export const createNotification = async (notification: Omit<Notification, 'id' |
 
 export const logActivity = async (activity: Omit<Activity, 'id' | 'timestamp'>) => {
     try {
+        if (!db) return;
         const activitiesRef = collection(db, 'activities');
         await addDoc(activitiesRef, {
             ...activity,

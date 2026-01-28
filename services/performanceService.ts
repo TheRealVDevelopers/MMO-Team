@@ -87,6 +87,10 @@ export const calculateUserPerformance = (tasks: Task[]): {
  */
 export const updateUserPerformanceFlag = async (userId: string) => {
     try {
+        if (!db) {
+            console.log("Skipping updateUserPerformanceFlag because db is null (demo mode).");
+            return { flag: 'green', reason: 'Demo Mode: All systems online' };
+        }
         // 1. Fetch all tasks for this user
         const tasksRef = collection(db, 'myDayTasks');
         const q = query(tasksRef, where('userId', '==', userId));
@@ -138,6 +142,10 @@ export const updateUserPerformanceFlag = async (userId: string) => {
  */
 const notifyManagersOfEscalation = async (userName: string, reason: string, userId: string) => {
     try {
+        if (!db) {
+            console.log("Skipping notifyManagersOfEscalation because db is null (demo mode).");
+            return;
+        }
         const usersRef = collection(db, 'users');
         const q = query(usersRef, where('role', 'in', [UserRole.MANAGER, UserRole.SUPER_ADMIN]));
         const snapshot = await getDocs(q);
@@ -165,6 +173,10 @@ const notifyManagersOfEscalation = async (userName: string, reason: string, user
  */
 export const updateAllUsersPerformance = async () => {
     try {
+        if (!db) {
+            console.log("Skipping updateAllUsersPerformance because db is null (demo mode).");
+            return;
+        }
         const usersRef = collection(db, 'users');
         const snapshot = await getDocs(usersRef);
 

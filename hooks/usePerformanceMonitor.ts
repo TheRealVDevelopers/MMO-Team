@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { updateAllUsersPerformance } from '../services/performanceService';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
+import { db } from '../firebase';
 
 /**
  * Background monitor that recalculates all user performance flags every minute.
@@ -11,7 +12,7 @@ export const usePerformanceMonitor = () => {
     const { currentUser } = useAuth();
 
     useEffect(() => {
-        if (!currentUser) return;
+        if (!currentUser || !db) return;
 
         // Only Super Admin and Manager roles trigger the global background monitoring
         if (currentUser.role !== UserRole.SUPER_ADMIN && currentUser.role !== UserRole.MANAGER) {

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { User, UserRole } from '../types';
+import { USERS } from '../constants';
 
 /**
  * Hook to fetch all staff members and their performance metrics
@@ -11,6 +12,11 @@ export const useStaffPerformance = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        if (!db) {
+            setStaff(USERS.filter(u => u.role !== UserRole.SUPER_ADMIN));
+            setLoading(false);
+            return;
+        }
         const usersRef = collection(db, 'users');
         // Fetch all users (you can filter by role if needed, but for now we fetch all)
         const q = query(usersRef);

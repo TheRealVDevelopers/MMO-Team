@@ -9,6 +9,10 @@ export const useTeamTasks = (role?: UserRole) => {
     const [error, setError] = useState<Error | null>(null);
 
     useEffect(() => {
+        if (!db) {
+            setLoading(false);
+            return;
+        }
         const tasksRef = collection(db, 'myDayTasks');
         let q = query(tasksRef, orderBy('created_at', 'desc'));
 
