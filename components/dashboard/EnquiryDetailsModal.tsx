@@ -11,7 +11,6 @@ import {
 import { USERS } from '../../constants';
 import { assignEnquiry, convertEnquiryToLead, markEnquiryAsViewed } from '../../hooks/useEnquiries';
 import { generateRandomPassword } from '../../services/liveDataService';
-import { useToast } from '../shared/toast/ToastProvider';
 
 interface EnquiryDetailsModalProps {
     isOpen: boolean;
@@ -26,7 +25,6 @@ const EnquiryDetailsModal: React.FC<EnquiryDetailsModalProps> = ({
     enquiry,
     currentUserId
 }) => {
-    const toast = useToast();
     const [selectedSalesUser, setSelectedSalesUser] = useState('');
     const [clientPassword, setClientPassword] = useState(generateRandomPassword());
     const [isAssigning, setIsAssigning] = useState(false);
@@ -48,7 +46,7 @@ const EnquiryDetailsModal: React.FC<EnquiryDetailsModalProps> = ({
 
     const handleAssign = async () => {
         if (!selectedSalesUser) {
-            toast.error('Please select a sales team member.');
+            alert('Please select a sales team member');
             return;
         }
 
@@ -73,7 +71,7 @@ const EnquiryDetailsModal: React.FC<EnquiryDetailsModalProps> = ({
             }, 2000);
         } catch (error) {
             console.error('Error assigning enquiry:', error);
-            toast.error('Failed to assign enquiry. Please try again.');
+            alert('Failed to assign enquiry. Please try again.');
         } finally {
             setIsAssigning(false);
         }
@@ -81,7 +79,7 @@ const EnquiryDetailsModal: React.FC<EnquiryDetailsModalProps> = ({
 
     const handleConvertToLead = async () => {
         if (enquiry.status !== EnquiryStatus.ASSIGNED) {
-            toast.error('Assign the enquiry to a sales member before converting to a lead.');
+            alert('Please assign the enquiry to a sales member before converting to lead');
             return;
         }
 
@@ -120,7 +118,7 @@ const EnquiryDetailsModal: React.FC<EnquiryDetailsModalProps> = ({
             }, 2000);
         } catch (error) {
             console.error('Error converting to lead:', error);
-            toast.error('Failed to convert to lead. Please try again.');
+            alert('Failed to convert to lead. Please try again.');
         } finally {
             setIsConverting(false);
         }

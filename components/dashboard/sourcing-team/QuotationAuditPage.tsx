@@ -14,7 +14,6 @@ import { useApprovalRequests, useApprovals } from '../../../hooks/useApprovalSys
 import { ApprovalRequest, ApprovalRequestType, ApprovalStatus, UserRole } from '../../../types';
 import { formatCurrencyINR, formatDateTime, USERS } from '../../../constants';
 import { useAuth } from '../../../context/AuthContext';
-import { useToast } from '../../shared/toast/ToastProvider';
 
 interface QuotationItem {
     name: string;
@@ -49,7 +48,6 @@ const parseQuotationItems = (description: string): QuotationItem[] => {
 
 const QuotationAuditPage: React.FC = () => {
     const { currentUser } = useAuth();
-    const toast = useToast();
     const { requests: approvalRequests, loading } = useApprovalRequests(); // Get all requests
     const { submitRequest } = useApprovals();
 
@@ -118,12 +116,12 @@ const QuotationAuditPage: React.FC = () => {
                 endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
             });
 
-            toast.success('Quotation submitted to Admin for final approval.');
+            alert('Quotation submitted to Admin for final approval!');
             setSelectedQuotation(null);
             setEditMode(false);
         } catch (error) {
             console.error('Error submitting to admin:', error);
-            toast.error('Failed to submit quotation.');
+            alert('Failed to submit quotation.');
         } finally {
             setSubmitting(false);
         }

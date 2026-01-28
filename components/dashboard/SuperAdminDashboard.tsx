@@ -42,7 +42,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ currentPage, 
             );
         case 'projects':
             return <ProjectTrackingPage setCurrentPage={setCurrentPage} />;
-        case 'leads':
+            // ... keep existing cases ...
             return <LeadsManagementPage setCurrentPage={setCurrentPage} />;
         case 'communication':
             return <CommunicationDashboard />;

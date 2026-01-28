@@ -10,7 +10,6 @@ import {
 } from '../../icons/IconComponents';
 import RECCEDrawingUpload from './RECCEDrawingUpload';
 import BOQBuilder from './BOQBuilder';
-import { useToast } from '../../shared/toast/ToastProvider';
 
 const TabButton: React.FC<{ label: string; isActive: boolean; onClick: () => void; }> = ({ label, isActive, onClick }) => (
     <button onClick={onClick} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors duration-150 ${isActive ? 'border-primary text-primary' : 'border-transparent text-text-secondary hover:text-text-primary hover:border-border'}`}>
@@ -139,17 +138,16 @@ const CollaborationTab: React.FC<{ project: Project }> = ({ project }) => {
 
 const ProjectDetailModal: React.FC<{ project: Project; isOpen: boolean; onClose: () => void; onUploadRecce?: () => void; onCreateBOQ?: () => void; }> = ({ project, isOpen, onClose }) => {
     const [activeTab, setActiveTab] = useState('brief');
-    const toast = useToast();
 
     // Mock handlers
     const handleRecceUpload = (url: string, name: string) => {
         console.log('RECCE Uploaded:', url, name);
-        toast.success('RECCE drawing uploaded.');
+        alert('RECCE Drawing Uploaded Successfully!');
     };
 
     const handleBOQSubmit = (items: any[], total: number) => {
         console.log('BOQ Submitted:', items, total);
-        toast.success('BOQ created.');
+        alert('BOQ Created Successfully!');
         setActiveTab('brief'); // Go back to brief after submission
     };
 

@@ -5,7 +5,6 @@ import { UserRole, Lead, User } from '../../../types';
 import { MagnifyingGlassIcon, UserCircleIcon } from '../../icons/IconComponents';
 import { useSmartAssignment } from '../../../hooks/useSmartAssignment';
 import { SparklesIcon } from '@heroicons/react/24/outline'; // Importing direct to ensure availability
-import { useToast } from '../../shared/toast/ToastProvider';
 
 const salesTeam = USERS.filter(u => u.role === UserRole.SALES_TEAM_MEMBER);
 
@@ -17,7 +16,6 @@ interface AssignLeadModalProps {
 }
 
 const AssignLeadModal: React.FC<AssignLeadModalProps> = ({ isOpen, onClose, leads, onAssignLead }) => {
-  const toast = useToast();
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [selectedRepId, setSelectedRepId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -43,7 +41,7 @@ const AssignLeadModal: React.FC<AssignLeadModalProps> = ({ isOpen, onClose, lead
     } else {
       // Fallback if no active sessions, maybe alert or just do nothing for now (or notify user)
       // For better UX, we could select random or just keep null
-      toast.warning('No active team members available for auto-assignment.');
+      alert("No active team members detected for auto-assignment.");
     }
   };
 

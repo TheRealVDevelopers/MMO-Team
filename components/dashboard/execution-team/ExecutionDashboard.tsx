@@ -6,7 +6,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import MyDayPage from '../shared/MyDayPage';
 import CommunicationDashboard from '../../communication/CommunicationDashboard';
 import EscalateIssuePage from '../../escalation/EscalateIssuePage';
-import { useProjects } from '../../../hooks/useProjects';
 
 interface ExecutionDashboardProps {
     currentPage: string;
@@ -16,7 +15,6 @@ interface ExecutionDashboardProps {
 // This component manages the view state for the Execution Team Dashboard
 const ExecutionDashboard: React.FC<ExecutionDashboardProps> = ({ currentPage, setCurrentPage }) => {
     const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-    const { projects: realProjects } = useProjects();
 
     const handleProjectSelect = (projectId: string) => {
         setSelectedProjectId(projectId);
@@ -26,11 +24,7 @@ const ExecutionDashboard: React.FC<ExecutionDashboardProps> = ({ currentPage, se
         setSelectedProjectId(null);
     };
 
-    // IMPORTANT: the list view shows both mock + Firestore projects; detail must resolve from the same combined set.
-    const selectedProject = React.useMemo(() => {
-        if (!selectedProjectId) return null;
-        return [...PROJECTS, ...realProjects].find(p => p.id === selectedProjectId) || null;
-    }, [selectedProjectId, realProjects]);
+    const selectedProject = selectedProjectId ? PROJECTS.find(p => p.id === selectedProjectId) : null;
 
     const renderContent = () => {
         switch (currentPage) {

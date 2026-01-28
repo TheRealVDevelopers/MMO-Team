@@ -5,7 +5,6 @@ import { UserRole, Lead } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { BanknotesIcon, BuildingOfficeIcon, TagIcon, UserCircleIcon, CheckCircleIcon, CalendarDaysIcon, PencilSquareIcon } from '../../icons/IconComponents';
 import SmartDateTimePicker from '../../shared/SmartDateTimePicker';
-import { useToast } from '../../shared/toast/ToastProvider';
 
 const salesTeam = USERS.filter(u => u.role === UserRole.SALES_TEAM_MEMBER);
 
@@ -31,7 +30,6 @@ const initialFormData = {
 
 const AddNewLeadModal: React.FC<AddNewLeadModalProps> = ({ isOpen, onClose, onAddLead }) => {
     const { currentUser } = useAuth();
-    const toast = useToast();
     const [formData, setFormData] = useState({
         clientName: '',
         clientEmail: '',
@@ -67,7 +65,7 @@ const AddNewLeadModal: React.FC<AddNewLeadModalProps> = ({ isOpen, onClose, onAd
 
         // Strict Validation
         if (!clientName || !clientEmail || !clientMobile || !projectName || !value || !assignedTo) {
-            toast.error('Please fill all required fields.');
+            alert('Please fill all required fields: Name, Email, Mobile, Project, Value, Assigned To.');
             return;
         }
 

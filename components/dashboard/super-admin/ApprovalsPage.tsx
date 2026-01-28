@@ -22,11 +22,9 @@ import { useNavigate } from 'react-router-dom';
 import Modal from '../../shared/Modal';
 import SmartDateTimePicker from '../../shared/SmartDateTimePicker';
 import DirectAssignTaskModal from './DirectAssignTaskModal';
-import { useToast } from '../../shared/toast/ToastProvider';
 
 const ApprovalsPage: React.FC = () => {
   const { currentUser } = useAuth();
-  const toast = useToast();
   const [filterStatus, setFilterStatus] = useState<ApprovalStatus | 'All'>('All');
   const [selectedRequest, setSelectedRequest] = useState<ApprovalRequest | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -108,7 +106,7 @@ const ApprovalsPage: React.FC = () => {
     if (!selectedRequest || !currentUser) return;
 
     if (reviewAction === 'reject' && !reviewComments.trim()) {
-      toast.error('A rejection reason is required.');
+      alert('Strategic Protocol: A rejection reason is mandatory.');
       return;
     }
 
@@ -137,7 +135,7 @@ const ApprovalsPage: React.FC = () => {
       setReviewComments('');
     } catch (error) {
       console.error('Error reviewing request:', error);
-      toast.error('Failed to process request. Please try again.');
+      alert('Connectivity Failure: Failed to process authorization protocol.');
     } finally {
       setProcessing(false);
     }

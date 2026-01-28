@@ -1,29 +1,21 @@
 
-import React, { Suspense } from 'react';
+import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types';
 
-// Dashboards (lazy-loaded to reduce initial bundle size)
-const SalesTeamDashboard = React.lazy(() => import('./SalesTeamDashboard'));
-const PlaceholderDashboard = React.lazy(() => import('./PlaceholderDashboard'));
-const SalesGeneralManagerDashboard = React.lazy(() => import('./SalesGeneralManagerDashboard'));
-const DrawingTeamDashboard = React.lazy(() => import('./DrawingTeamDashboard'));
-const QuotationTeamDashboard = React.lazy(() => import('./QuotationTeamDashboard'));
-const ProcurementTeamDashboard = React.lazy(() => import('./SourcingTeamDashboard'));
-const ExecutionTeamDashboard = React.lazy(() => import('./execution-team/ExecutionDashboard'));
-const AccountsTeamDashboard = React.lazy(() => import('./AccountsTeamDashboard'));
-const SuperAdminDashboard = React.lazy(() => import('./SuperAdminDashboard'));
-const VendorDashboard = React.lazy(() => import('./vendor/VendorDashboard'));
-const DesignAndSiteEngineeringDashboard = React.lazy(() => import('./DesignAndSiteEngineeringDashboard'));
-
-const DashboardLoading: React.FC = () => (
-  <div className="min-h-[50vh] flex items-center justify-center">
-    <div className="flex items-center gap-3 text-text-secondary">
-      <div className="w-6 h-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-      <span className="text-sm font-medium">Loading dashboard...</span>
-    </div>
-  </div>
-);
+// Dashboards
+import SalesTeamDashboard from './SalesTeamDashboard';
+import PlaceholderDashboard from './PlaceholderDashboard';
+import SalesGeneralManagerDashboard from './SalesGeneralManagerDashboard';
+import DrawingTeamDashboard from './DrawingTeamDashboard';
+import QuotationTeamDashboard from './QuotationTeamDashboard';
+import SiteEngineerDashboard from './SiteEngineerDashboard';
+import ProcurementTeamDashboard from './SourcingTeamDashboard';
+import ExecutionTeamDashboard from './execution-team/ExecutionDashboard';
+import AccountsTeamDashboard from './AccountsTeamDashboard';
+import SuperAdminDashboard from './SuperAdminDashboard';
+import VendorDashboard from './vendor/VendorDashboard';
+import DesignAndSiteEngineeringDashboard from './DesignAndSiteEngineeringDashboard';
 
 const Dashboard: React.FC<{ currentPage: string; setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser, currentVendor } = useAuth();
@@ -56,8 +48,7 @@ const Dashboard: React.FC<{ currentPage: string; setCurrentPage: (page: string) 
       case UserRole.SALES_GENERAL_MANAGER:
         return <SalesGeneralManagerDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.DRAWING_TEAM:
-        // Use the dedicated Drawing Team dashboard so the Projects Board (Site Visit -> Drawing -> BOQ) workflow is available.
-        return <DrawingTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
+        return <DesignAndSiteEngineeringDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.QUOTATION_TEAM:
         return <QuotationTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.SITE_ENGINEER:
@@ -73,11 +64,7 @@ const Dashboard: React.FC<{ currentPage: string; setCurrentPage: (page: string) 
     }
   };
 
-  return (
-    <Suspense fallback={<DashboardLoading />}>
-      {renderDashboardContent()}
-    </Suspense>
-  );
+  return renderDashboardContent();
 };
 
 export default Dashboard;

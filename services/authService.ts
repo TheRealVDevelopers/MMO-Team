@@ -22,11 +22,16 @@ import { auth, db, logAgent } from '../firebase';
 import { User, UserRole, Vendor } from '../types';
 import { USERS, VENDORS } from '../constants';
 
+<<<<<<< HEAD
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
 const AGENT_LOG_ENABLED = !!import.meta.env.VITE_AGENT_LOG_URL;
 
 // Default password for all staff accounts created via initialization script
+=======
+// Default password for all new staff accounts
+>>>>>>> parent of eab59cb (Resolve merge conflict in AccountsTeamDashboard, unify handleVerifyPayment logic, and use toast notifications)
 export const DEFAULT_STAFF_PASSWORD = '123456';
+export const DEFAULT_CLIENT_PASSWORD = '123456';
 
 // Convert Firebase User + Firestore data to our User type
 export const convertToAppUser = async (firebaseUser: FirebaseUser): Promise<User | null> => {
@@ -60,14 +65,11 @@ export const convertToAppUser = async (firebaseUser: FirebaseUser): Promise<User
  * Sign in staff member with email and password
  */
 export const signInStaff = async (email: string, password: string): Promise<User | null> => {
-    // Demo-only simplified login (never enabled in production).
-    if (DEMO_MODE) {
-        const mockUser = USERS.find(u => u.email === email);
-        if (mockUser && password === '123456') {
-            return { ...mockUser, lastUpdateTimestamp: new Date() };
-        }
-    }
+    // Simplified Auth for Development
+    // Check if the email exists in our USERS constant for mock login
+    const mockUser = USERS.find(u => u.email === email);
 
+<<<<<<< HEAD
         logAgent({
         location: 'authService.ts:61',
         message: 'Attempting staff sign-in',
@@ -94,10 +96,19 @@ export const signInStaff = async (email: string, password: string): Promise<User
             hypothesisId: 'B',
         });
         throw new Error('Firebase Auth is not initialized. Check your Firebase configuration.');
+=======
+    if (mockUser && password === '123456') {
+        console.log(`Simplified staff login for ${mockUser.name} (${mockUser.role})`);
+        return {
+            ...mockUser,
+            lastUpdateTimestamp: new Date(),
+        };
+>>>>>>> parent of eab59cb (Resolve merge conflict in AccountsTeamDashboard, unify handleVerifyPayment logic, and use toast notifications)
     }
 
     try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
+<<<<<<< HEAD
         logAgent({
             location: 'authService.ts:75',
             message: 'Sign-in successful',
@@ -118,20 +129,11 @@ export const signInStaff = async (email: string, password: string): Promise<User
             runId: 'run1',
             hypothesisId: 'D',
         });
+=======
+        return await convertToAppUser(userCredential.user);
+    } catch (error: any) {
+>>>>>>> parent of eab59cb (Resolve merge conflict in AccountsTeamDashboard, unify handleVerifyPayment logic, and use toast notifications)
         console.error('Staff sign-in error:', error);
-        
-        // Provide helpful error message for invalid credentials
-        if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') {
-            throw new Error(
-                `Invalid credentials. The user "${email}" may not exist in Firebase Auth.\n\n` +
-                `To create staff accounts (from Node using Firebase Admin), run:\n` +
-                `  npm run seed:staff\n\n` +
-                `Before running, set FIREBASE_SERVICE_ACCOUNT_PATH (or GOOGLE_APPLICATION_CREDENTIALS)\n` +
-                `to a Firebase service account JSON key file.\n\n` +
-                `Or enable demo mode by setting VITE_DEMO_MODE=true in .env`
-            );
-        }
-        
         throw new Error(error.message || 'Failed to sign in');
     }
 };
@@ -140,15 +142,6 @@ export const signInStaff = async (email: string, password: string): Promise<User
  * Sign out current staff member
  */
 export const signOutStaff = async (): Promise<void> => {
-    if (DEMO_MODE) {
-        // In demo mode, logout is handled by AuthContext
-        return;
-    }
-
-    if (!auth) {
-        throw new Error('Firebase Auth is not initialized. Check your Firebase configuration.');
-    }
-
     try {
         await signOut(auth);
     } catch (error) {
@@ -168,14 +161,6 @@ export const createStaffAccount = async (
     phone: string,
     region?: string
 ): Promise<string> => {
-    if (DEMO_MODE) {
-        throw new Error('Cannot create staff accounts in demo mode. Disable demo mode to use Firebase.');
-    }
-
-    if (!auth || !db) {
-        throw new Error('Firebase is not initialized. Check your Firebase configuration and ensure VITE_DEMO_MODE=false.');
-    }
-
     try {
         // Create Firebase Auth account
         const userCredential = await createUserWithEmailAndPassword(
@@ -212,14 +197,6 @@ export const changeStaffPassword = async (
     currentPassword: string,
     newPassword: string
 ): Promise<void> => {
-    if (DEMO_MODE) {
-        throw new Error('Password changes are not supported in demo mode.');
-    }
-
-    if (!auth || !db) {
-        throw new Error('Firebase is not initialized. Check your Firebase configuration.');
-    }
-
     try {
         const user = auth.currentUser;
         if (!user || !user.email) {
@@ -333,14 +310,16 @@ export const getAllStaff = async (): Promise<User[]> => {
  * Sign in vendor with email and password
  */
 export const signInVendor = async (email: string, password: string): Promise<Vendor | null> => {
-    // Demo-only simplified vendor login.
-    if (DEMO_MODE) {
-        const mockVendor = VENDORS.find(v => v.email === email);
-        if (mockVendor && password === '123456') return mockVendor;
-        return null;
+    // Simplified Auth for Vendor Portal
+    // Check if the email exists in our VENDORS constant
+    const mockVendor = VENDORS.find(v => v.email === email);
+
+    if (mockVendor && password === '123456') {
+        console.log(`Simplified vendor login for ${mockVendor.name}`);
+        return mockVendor;
     }
 
-    // Production TODO: implement vendor auth via Firebase Auth + Firestore 'vendors' collection.
+    // In a real app, this would query a 'vendors' collection in Firestore
     return null;
 };
 
@@ -353,11 +332,9 @@ export const verifyClientCredentials = async (
     email: string,
     password: string
 ): Promise<boolean> => {
-    // Demo-only default client credentials.
-    if (DEMO_MODE && email === 'client@makemyoffice.com' && password === '123456') return true;
-
-    if (!db) {
-        throw new Error('Firebase is not initialized. Check your Firebase configuration.');
+    // Simplified Auth for Development - Default client credentials
+    if (email === 'client@makemyoffice.com' && password === '123456') {
+        return true;
     }
 
     try {
@@ -418,12 +395,6 @@ export const changeClientPassword = async (
  * Monitor authentication state
  */
 export const onAuthStateChange = (callback: (user: User | null) => void) => {
-    if (DEMO_MODE || !auth) {
-        // In demo mode or if auth is not initialized, return a no-op unsubscribe function
-        // AuthContext handles demo mode separately
-        return () => {};
-    }
-
     return auth.onAuthStateChanged(async (firebaseUser) => {
         if (firebaseUser) {
             const appUser = await convertToAppUser(firebaseUser);

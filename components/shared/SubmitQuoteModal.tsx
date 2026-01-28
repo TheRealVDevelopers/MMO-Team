@@ -3,7 +3,6 @@ import { RFQ, BidStatus, Bid, Vendor } from '../../types';
 import { formatCurrencyINR, VENDORS } from '../../constants';
 import { CheckCircleIcon } from '@heroicons/react/24/outline';
 import Modal from './Modal';
-import { useToast } from './toast/ToastProvider';
 
 interface SubmitQuoteModalProps {
     isOpen: boolean;
@@ -14,7 +13,6 @@ interface SubmitQuoteModalProps {
 }
 
 const SubmitQuoteModal: React.FC<SubmitQuoteModalProps> = ({ isOpen, onClose, rfq, currentVendor, onSuccess }) => {
-    const toast = useToast();
     const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(currentVendor || null);
     const [quoteMode, setQuoteMode] = useState<'itemized' | 'lumpsum'>('itemized');
     const [lumpsumAmount, setLumpsumAmount] = useState<number>(0);
@@ -71,7 +69,7 @@ const SubmitQuoteModal: React.FC<SubmitQuoteModalProps> = ({ isOpen, onClose, rf
         e.preventDefault();
 
         if (!selectedVendor) {
-            toast.error('Please select a vendor.');
+            alert('Please select a vendor.');
             return;
         }
 

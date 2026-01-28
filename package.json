@@ -6,8 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview",
-    "seed:staff": "tsx scripts/initializeStaffUsers.ts"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@google/genai": "^0.14.0",
@@ -18,9 +17,7 @@
     "@types/react-router-dom": "^5.3.3",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
-    "dotenv": "^17.2.3",
     "firebase": "^12.6.0",
-    "firebase-admin": "^13.6.0",
     "framer-motion": "^12.23.26",
     "lucide-react": "^0.562.0",
     "pdfjs-dist": "^5.4.530",
@@ -36,7 +33,6 @@
     "@vitejs/plugin-react": "^5.0.0",
     "tailwindcss": "^4.1.18",
     "ts-node": "^10.9.2",
-    "tsx": "^4.21.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }

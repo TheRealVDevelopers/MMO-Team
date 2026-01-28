@@ -8,7 +8,6 @@ import {
 } from '@heroicons/react/24/outline';
 import { useCurrentTimeStatus, clockIn, clockOut, startBreak, endBreak } from '../../hooks/useTimeTracking';
 import { TimeTrackingStatus } from '../../types';
-import { useToast } from '../shared/toast/ToastProvider';
 
 interface ClockInOutWidgetProps {
   userId: string;
@@ -16,7 +15,6 @@ interface ClockInOutWidgetProps {
 }
 
 const ClockInOutWidget: React.FC<ClockInOutWidgetProps> = ({ userId, userName }) => {
-  const toast = useToast();
   const { status, loading } = useCurrentTimeStatus(userId);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [duration, setDuration] = useState('00:00:00');
@@ -69,7 +67,7 @@ const ClockInOutWidget: React.FC<ClockInOutWidgetProps> = ({ userId, userName })
     try {
       await clockIn(userId, userName);
     } catch (error: any) {
-      toast.error(error.message || 'Failed to clock in');
+      alert(error.message || 'Failed to clock in');
     } finally {
       setActionLoading(false);
     }
@@ -85,7 +83,7 @@ const ClockInOutWidget: React.FC<ClockInOutWidgetProps> = ({ userId, userName })
     try {
       await clockOut(status.currentEntryId);
     } catch (error: any) {
-      toast.error(error.message || 'Failed to clock out');
+      alert(error.message || 'Failed to clock out');
     } finally {
       setActionLoading(false);
     }
@@ -98,7 +96,7 @@ const ClockInOutWidget: React.FC<ClockInOutWidgetProps> = ({ userId, userName })
     try {
       await startBreak(status.currentEntryId);
     } catch (error: any) {
-      toast.error(error.message || 'Failed to start break');
+      alert(error.message || 'Failed to start break');
     } finally {
       setActionLoading(false);
     }
@@ -111,7 +109,7 @@ const ClockInOutWidget: React.FC<ClockInOutWidgetProps> = ({ userId, userName })
     try {
       await endBreak(status.currentEntryId);
     } catch (error: any) {
-      toast.error(error.message || 'Failed to end break');
+      alert(error.message || 'Failed to end break');
     } finally {
       setActionLoading(false);
     }

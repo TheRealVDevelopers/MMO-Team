@@ -1,11 +1,9 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { Project, ProjectStatus } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { useProjects } from '../../../hooks/useProjects';
 import { ClockIcon, FireIcon, PaperClipIcon, ArrowLeftIcon, EllipsisVerticalIcon, CheckCircleIcon, ArrowUpIcon, DocumentTextIcon, ExclamationTriangleIcon } from '../../icons/IconComponents';
 import BOQSubmissionModal from './BOQSubmissionModal';
-import { useToast } from '../../shared/toast/ToastProvider';
-import { uploadToStorage } from '../../../services/storageService';
 
 const KANBAN_COLUMNS: { id: string, title: string, statuses: any[] }[] = [
     { id: 'site-audit', title: 'Site Inspection', statuses: [ProjectStatus.SITE_VISIT_PENDING, 'Site Visit Scheduled'] },
@@ -95,9 +93,6 @@ const ProjectCard: React.FC<{ project: Project; onSelect: () => void; onAction: 
 const ProjectsBoardPage: React.FC<{ onProjectSelect: (project: Project) => void; setCurrentPage: (page: string) => void; }> = ({ onProjectSelect, setCurrentPage }) => {
     const { currentUser } = useAuth();
     const { projects, loading, updateProject } = useProjects(currentUser?.id);
-    const toast = useToast();
-    const drawingInputRef = useRef<HTMLInputElement>(null);
-    const [uploadTargetProject, setUploadTargetProject] = useState<Project | null>(null);
 
     // BOQ Modal State
     const [isBOQModalOpen, setIsBOQModalOpen] = useState(false);
@@ -128,52 +123,25 @@ const ProjectsBoardPage: React.FC<{ onProjectSelect: (project: Project) => void;
                         drawingDeadline: deadline,
                         drawingRedFlagged: false
                     });
-                    toast.success('Moved to Drawing stage.');
                 }
             } else if (action === 'upload_drawing') {
-                setUploadTargetProject(project);
-                drawingInputRef.current?.click();
+                // Mock file upload interaction
+                const mockFile = window.prompt("Enter filename to simulate upload (e.g. 'FloorPlan_v1.pdf'):");
+                if (mockFile) {
+                    await updateProject(project.id, {
+                        status: ProjectStatus.BOQ_PENDING,
+                        drawingSubmittedAt: new Date(),
+                        drawingRedFlagged: false
+                    });
+                    alert("Drawing uploaded! Project moved to BOQ Pending.");
+                }
             } else if (action === 'submit_boq') {
                 setSelectedProjectForBOQ(project);
                 setIsBOQModalOpen(true);
             }
         } catch (error) {
             console.error("Action failed:", error);
-            toast.error('Failed to update project. Please try again.');
-        }
-    };
-
-    const handleDrawingFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file || !uploadTargetProject) return;
-        // Reset input so selecting same file twice still triggers change.
-        e.target.value = '';
-
-        if (file.type !== 'application/pdf') {
-            toast.error('Please select a PDF drawing.');
-            return;
-        }
-
-        try {
-            toast.info('Uploading drawing...');
-            const safeName = file.name.replace(/[^\w.\-() ]+/g, '_');
-            const storagePath = `projects/${uploadTargetProject.id}/drawings/${Date.now()}-${safeName}`;
-            const result = await uploadToStorage({ path: storagePath, file });
-
-            await updateProject(uploadTargetProject.id, {
-                status: ProjectStatus.BOQ_PENDING,
-                drawingSubmittedAt: new Date(),
-                drawingRedFlagged: false,
-                drawing2DUrl: result.url,
-                drawing2DName: result.name,
-            });
-
-            toast.success('Drawing uploaded. Moved to BOQ Pending.');
-        } catch (err) {
-            console.error('Drawing upload failed:', err);
-            toast.error('Upload failed. Please try again.');
-        } finally {
-            setUploadTargetProject(null);
+            alert("Failed to update project status.");
         }
     };
 
@@ -189,22 +157,14 @@ const ProjectsBoardPage: React.FC<{ onProjectSelect: (project: Project) => void;
 
             setIsBOQModalOpen(false);
             setSelectedProjectForBOQ(null);
-            toast.success('BOQ submitted. Project marked as Completed.');
+            alert("BOQ Submitted! Project marked as Completed.");
         } catch (error) {
             console.error("BOQ Submit Error:", error);
-            toast.error('Failed to submit BOQ. Please try again.');
         }
     };
 
     return (
         <div className="space-y-6 h-full flex flex-col">
-            <input
-                ref={drawingInputRef}
-                type="file"
-                accept="application/pdf"
-                className="hidden"
-                onChange={handleDrawingFileSelected}
-            />
             <div className="flex items-center gap-4">
                 <button
                     onClick={() => setCurrentPage('overview')}

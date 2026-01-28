@@ -6,7 +6,6 @@ import { Organization, ProjectStatus, Project, ExecutionStage, PaymentTerm } fro
 import { useProjects } from '../../../hooks/useProjects';
 import CreateOrganizationModal from './CreateOrganizationModal';
 import CreateProjectWizard from './CreateProjectWizard';
-import { useToast } from '../../shared/toast/ToastProvider';
 
 interface OrganizationsPageProps {
     setCurrentPage: (page: string) => void;
@@ -15,7 +14,6 @@ interface OrganizationsPageProps {
 import { useOrganizations } from '../../../hooks/useOrganizations';
 
 const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage }) => {
-    const toast = useToast();
     // const [organizations, setOrganizations] = useState<Organization[]>(ORGANIZATIONS); // Removed local state for orgs
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isProjectWizardOpen, setIsProjectWizardOpen] = useState(false);
@@ -43,7 +41,7 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
             // No need to manually update state, the hook will do it via snapshot listener
         } catch (error) {
             console.error("Failed to add organization", error);
-            toast.error('Failed to add organization.');
+            alert("Failed to add organization.");
         }
         setIsCreateModalOpen(false);
     };
@@ -121,11 +119,11 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                 }
             }
 
-            toast.success('Project created successfully.');
+            alert('Project created successfully in Firestore!');
 
         } catch (error) {
             console.error("Failed to create project:", error);
-            toast.error('Failed to create project.');
+            alert('Failed to create project. See console.');
         }
     };
 

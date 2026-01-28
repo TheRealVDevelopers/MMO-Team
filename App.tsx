@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
-import { ToastProvider } from './components/shared/toast/ToastProvider';
 import Dashboard from './components/dashboard/Dashboard';
 import SettingsPage from './components/settings/SettingsPage';
 import InternalLayout from './components/dashboard/shared/InternalLayout';
@@ -19,8 +18,6 @@ import {
 import { USERS } from './constants';
 import { seedDemoData } from './services/liveDataService';
 import { migrateUsersToFirestore } from './services/migrationService';
-
-const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
 
 const navConfig = {
   [UserRole.SUPER_ADMIN]: {
@@ -151,10 +148,9 @@ const AppContent: React.FC = () => {
   }, [location.pathname]);
 
   useEffect(() => {
-    // Production safety: never seed/migrate automatically unless explicitly in demo mode.
-    if (!DEMO_MODE) return;
-    seedDemoData().catch(() => void 0);
-    migrateUsersToFirestore().catch(() => void 0);
+    // Seed demo data once on app start
+    seedDemoData().catch(console.error);
+    migrateUsersToFirestore().catch(console.error);
   }, []);
 
   const handleSetPage = (page: string) => {
@@ -244,9 +240,7 @@ const App: React.FC = () => {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <ToastProvider>
-          <AppContent />
-        </ToastProvider>
+        <AppContent />
       </ThemeProvider>
     </AuthProvider>
   );

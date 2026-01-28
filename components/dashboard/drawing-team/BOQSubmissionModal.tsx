@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { useCatalog } from '../../../hooks/useCatalog';
 import { PrimaryButton, SecondaryButton } from '../shared/DashboardUI';
-import { useToast } from '../../shared/toast/ToastProvider';
 
 interface BOQItem {
     id: string; // Temporary ID for list management
@@ -22,7 +21,6 @@ interface BOQSubmissionModalProps {
 }
 
 const BOQSubmissionModal: React.FC<BOQSubmissionModalProps> = ({ isOpen, onClose, onSubmit, loading, projectName }) => {
-    const toast = useToast();
     const { items: catalogItems, addItem } = useCatalog();
     const [boqItems, setBoqItems] = useState<BOQItem[]>([
         { id: '1', item: '', quantity: '', unit: 'pcs', description: '' }
@@ -105,7 +103,7 @@ const BOQSubmissionModal: React.FC<BOQSubmissionModalProps> = ({ isOpen, onClose
 
         } catch (error) {
             console.error("Error in BOQ submission:", error);
-            toast.error('Failed to submit BOQ. Please try again.');
+            alert("Failed to submit BOQ. Please try again.");
         } finally {
             setIsSubmitting(false);
         }

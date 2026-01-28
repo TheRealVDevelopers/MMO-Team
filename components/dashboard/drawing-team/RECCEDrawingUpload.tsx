@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { CloudArrowUpIcon, DocumentTextIcon, XMarkIcon, ClockIcon } from '@heroicons/react/24/outline';
 import { format, addHours, differenceInHours } from 'date-fns';
-import { useToast } from '../../shared/toast/ToastProvider';
-import { uploadToStorage } from '../../../services/storageService';
 
 interface RECCEDrawingUploadProps {
     leadId: string;
@@ -12,7 +10,6 @@ interface RECCEDrawingUploadProps {
 }
 
 const RECCEDrawingUpload: React.FC<RECCEDrawingUploadProps> = ({ leadId, siteVisitCompletedAt, onUploadComplete }) => {
-    const toast = useToast();
     const [file, setFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
@@ -34,32 +31,25 @@ const RECCEDrawingUpload: React.FC<RECCEDrawingUploadProps> = ({ leadId, siteVis
         if (selectedFile && selectedFile.type === 'application/pdf') {
             setFile(selectedFile);
         } else {
-            toast.error('Please select a valid PDF file.');
+            alert('Please upload a valid PDF file.');
         }
     };
 
-    const handleUpload = async () => {
+    const handleUpload = () => {
         if (!file) return;
         setIsUploading(true);
-        setUploadProgress(0);
 
-        try {
-            const safeName = file.name.replace(/[^\w.\-() ]+/g, '_');
-            const storagePath = `projects/${leadId}/recce/${Date.now()}-${safeName}`;
-            const result = await uploadToStorage({
-                path: storagePath,
-                file,
-                onProgress: setUploadProgress,
-            });
-            toast.success('RECCE drawing uploaded.');
-            onUploadComplete(result.url, result.name);
-            setFile(null);
-        } catch (err) {
-            console.error('RECCE upload failed:', err);
-            toast.error('Upload failed. Please try again.');
-        } finally {
-            setIsUploading(false);
-        }
+        // Simulate upload
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += 10;
+            setUploadProgress(progress);
+            if (progress >= 100) {
+                clearInterval(interval);
+                setIsUploading(false);
+                onUploadComplete(URL.createObjectURL(file), file.name); // Mock URL
+            }
+        }, 200);
     };
 
     return (
@@ -80,7 +70,7 @@ const RECCEDrawingUpload: React.FC<RECCEDrawingUploadProps> = ({ leadId, siteVis
             </div>
 
             {!file ? (
-                <div className="relative border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
+                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
                     <CloudArrowUpIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                     <p className="text-sm text-gray-600 dark:text-gray-300 font-medium mb-1">
                         Click or drag PDF here to upload

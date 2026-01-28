@@ -5,8 +5,6 @@ import { onAuthStateChange, convertToAppUser } from '../services/authService';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase';
 
-const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
-
 interface AuthContextType {
   currentUser: User | null;
   setCurrentUser: (user: User | null) => void;
@@ -21,28 +19,31 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    // Demo-only: allow restoring mock user from localStorage.
-    if (DEMO_MODE) {
-      const savedUser = localStorage.getItem('mmo-current-user');
-      if (savedUser) {
-        try {
-          return JSON.parse(savedUser);
-        } catch {
-          localStorage.removeItem('mmo-current-user');
-        }
+    // Check localStorage for persisted user on initial load
+    const savedUser = localStorage.getItem('mmo-current-user');
+    if (savedUser) {
+      try {
+        const parsed = JSON.parse(savedUser);
+        console.log('Restored user from localStorage:', parsed.name);
+        return parsed;
+      } catch (e) {
+        console.error('Failed to parse saved user:', e);
+        localStorage.removeItem('mmo-current-user');
       }
     }
     return null;
   });
   const [currentVendor, setCurrentVendor] = useState<Vendor | null>(() => {
-    if (DEMO_MODE) {
-      const savedVendor = localStorage.getItem('mmo-current-vendor');
-      if (savedVendor) {
-        try {
-          return JSON.parse(savedVendor);
-        } catch {
-          localStorage.removeItem('mmo-current-vendor');
-        }
+    // Check localStorage for persisted vendor on initial load
+    const savedVendor = localStorage.getItem('mmo-current-vendor');
+    if (savedVendor) {
+      try {
+        const parsed = JSON.parse(savedVendor);
+        console.log('Restored vendor from localStorage:', parsed.name);
+        return parsed;
+      } catch (e) {
+        console.error('Failed to parse saved vendor:', e);
+        localStorage.removeItem('mmo-current-vendor');
       }
     }
     return null;
@@ -51,21 +52,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Persist user to localStorage whenever it changes
   useEffect(() => {
-    if (!DEMO_MODE) return;
-    if (currentUser) localStorage.setItem('mmo-current-user', JSON.stringify(currentUser));
-    else localStorage.removeItem('mmo-current-user');
+    if (currentUser) {
+      localStorage.setItem('mmo-current-user', JSON.stringify(currentUser));
+      console.log('User saved to localStorage:', currentUser.name);
+    } else {
+      localStorage.removeItem('mmo-current-user');
+    }
   }, [currentUser]);
 
   // Persist vendor to localStorage whenever it changes
   useEffect(() => {
-    if (!DEMO_MODE) return;
-    if (currentVendor) localStorage.setItem('mmo-current-vendor', JSON.stringify(currentVendor));
-    else localStorage.removeItem('mmo-current-vendor');
+    if (currentVendor) {
+      localStorage.setItem('mmo-current-vendor', JSON.stringify(currentVendor));
+      console.log('Vendor saved to localStorage:', currentVendor.name);
+    } else {
+      localStorage.removeItem('mmo-current-vendor');
+    }
   }, [currentVendor]);
 
   useEffect(() => {
-    // In demo mode, allow localStorage mock auth to skip Firebase.
-    if (DEMO_MODE && localStorage.getItem('mmo-current-user')) {
+    // First check if we have a localStorage user (mock login)
+    const savedUser = localStorage.getItem('mmo-current-user');
+    if (savedUser) {
       setLoading(false);
       return;
     }
@@ -90,16 +98,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const logout = () => {
-    if (DEMO_MODE) {
-      localStorage.removeItem('mmo-current-user');
-      localStorage.removeItem('mmo-current-vendor');
-    }
+    console.log('Logging out...');
+    localStorage.removeItem('mmo-current-user');
+    localStorage.removeItem('mmo-current-vendor');
     setCurrentUser(null);
     setCurrentVendor(null);
-    // Ensure Firebase session is cleared in production.
-    if (auth) {
-      void auth.signOut();
-    }
   };
 
   return (

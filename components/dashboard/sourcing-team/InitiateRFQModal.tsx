@@ -3,7 +3,6 @@ import { VENDORS, formatDate } from '../../../constants';
 import { MaterialRequest, RFQ, RFQStatus, RFQItem } from '../../../types';
 import Modal from '../../shared/Modal';
 import { UsersIcon, CalendarIcon, PaperAirplaneIcon, XMarkIcon } from '../../icons/IconComponents';
-import { useToast } from '../../shared/toast/ToastProvider';
 
 interface InitiateRFQModalProps {
     isOpen: boolean;
@@ -13,7 +12,6 @@ interface InitiateRFQModalProps {
 }
 
 const InitiateRFQModal: React.FC<InitiateRFQModalProps> = ({ isOpen, onClose, request, onInitiate }) => {
-    const toast = useToast();
     const [selectedVendorIds, setSelectedVendorIds] = useState<string[]>([]);
     const [deadline, setDeadline] = useState('');
     const [notes, setNotes] = useState('');
@@ -31,11 +29,11 @@ const InitiateRFQModal: React.FC<InitiateRFQModalProps> = ({ isOpen, onClose, re
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (selectedVendorIds.length === 0) {
-            toast.error('Please select at least one vendor.');
+            alert('Please select at least one vendor.');
             return;
         }
         if (!deadline) {
-            toast.error('Please set a deadline.');
+            alert('Please set a deadline.');
             return;
         }
 

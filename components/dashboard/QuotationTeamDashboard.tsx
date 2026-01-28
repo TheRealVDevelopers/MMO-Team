@@ -17,10 +17,8 @@ import { useLeads } from '../../hooks/useLeads';
 import { useProjects } from '../../hooks/useProjects';
 import { useAuth } from '../../context/AuthContext';
 import { useCatalog } from '../../hooks/useCatalog';
-import { useToast } from '../shared/toast/ToastProvider';
 
 const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
-  const toast = useToast();
   const { currentUser } = useAuth();
   const { leads: firebaseLeads, loading: leadsLoading } = useLeads();
   const { projects: firebaseProjects, loading: projectsLoading, addProject } = useProjects(); // Destructure addProject
@@ -213,7 +211,7 @@ const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (p
       }
     } catch (err) {
       console.error("Failed to create project", err);
-      toast.error('Failed to create project.');
+      alert("Failed to create project");
     }
   };
 
@@ -222,7 +220,7 @@ const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (p
       await addItem(newItemData); // Use global hook
     } catch (err) {
       console.error("Failed to create item", err);
-      toast.error('Failed to create item.');
+      alert("Failed to create item");
     }
   };
 

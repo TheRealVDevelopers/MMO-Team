@@ -10,6 +10,167 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet">
+<<<<<<< HEAD
+=======
+  <style>
+    :root {
+      /* Light Mode - Soft Green Theme */
+      --color-primary: 34 197 94;
+      /* #22C55E - Green-500 (softer) */
+      --color-secondary: 22 163 74;
+      /* #16A34A - Green-600 */
+      --color-accent: 74 222 128;
+      /* #4ADE80 - Green-400 */
+
+      --color-background: 255 255 255;
+      /* White */
+      --color-surface: 249 250 251;
+      /* Gray-50 */
+      --color-subtle-background: 243 244 246;
+
+      --color-text-primary: 17 24 39;
+      /* Gray-900 */
+      --color-text-secondary: 75 85 99;
+      --color-text-tertiary: 156 163 175;
+
+      --color-border: 229 231 235;
+      --color-error: 239 68 68;
+      --color-purple: 168 85 247;
+
+      /* Subtle States */
+      --color-primary-subtle-background: 240 253 244;
+      --color-primary-subtle-text: 22 101 52;
+      --color-secondary-subtle-background: 220 252 231;
+      --color-secondary-subtle-text: 20 83 45;
+      --color-accent-subtle-background: 236 253 245;
+      --color-accent-subtle-text: 5 150 105;
+      --color-error-subtle-background: 254 242 242;
+      --color-error-subtle-text: 185 28 28;
+      --color-purple-subtle-background: 243 232 255;
+      --color-purple-subtle-text: 124 58 237;
+    }
+
+    .dark {
+      /* Dark Mode - Purple & Black Theme */
+      --color-primary: 168 85 247;
+      /* #A855F7 - Purple-500 */
+      --color-secondary: 147 51 234;
+      /* #9333EA - Purple-600 */
+      --color-accent: 192 132 252;
+      /* #C084FC - Purple-400 */
+
+      --color-background: 0 0 0;
+      /* Pure Black */
+      --color-surface: 23 23 23;
+      /* Very Dark Gray */
+      --color-subtle-background: 38 38 38;
+
+      --color-text-primary: 250 250 250;
+      --color-text-secondary: 163 163 163;
+      --color-text-tertiary: 115 115 115;
+
+      --color-border: 64 64 64;
+      --color-error: 248 113 113;
+      --color-purple: 196 181 253;
+
+      --color-primary-subtle-background: 88 28 135;
+      --color-primary-subtle-text: 233 213 255;
+      --color-secondary-subtle-background: 76 29 149;
+      --color-secondary-subtle-text: 221 214 254;
+      --color-accent-subtle-background: 107 33 168;
+      --color-accent-subtle-text: 243 232 255;
+      --color-error-subtle-background: 127 29 29;
+      --color-error-subtle-text: 252 165 165;
+      --color-purple-subtle-background: 88 28 135;
+      --color-purple-subtle-text: 233 213 255;
+    }
+
+    /* Smooth Scrolling */
+    html {
+      scroll-behavior: smooth;
+    }
+
+    .font-serif,
+    .font-sans {
+      font-family: 'Nunito', sans-serif;
+    }
+
+    .scrollbar-hide::-webkit-scrollbar {
+      display: none;
+    }
+
+    .scrollbar-hide {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    body {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+    }
+  </style>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      important: true,
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Nunito', 'sans-serif'],
+            serif: ['Nunito', 'sans-serif'],
+          },
+          colors: {
+            primary: 'rgb(var(--color-primary) / <alpha-value>)',
+            secondary: 'rgb(var(--color-secondary) / <alpha-value>)',
+            accent: 'rgb(var(--color-accent) / <alpha-value>)',
+
+            error: 'rgb(var(--color-error) / <alpha-value>)',
+            purple: 'rgb(var(--color-purple) / <alpha-value>)',
+
+            background: 'rgb(var(--color-background) / <alpha-value>)',
+            surface: 'rgb(var(--color-surface) / <alpha-value>)',
+            'subtle-background': 'rgb(var(--color-subtle-background) / <alpha-value>)',
+
+            'text-primary': 'rgb(var(--color-text-primary) / <alpha-value>)',
+            'text-secondary': 'rgb(var(--color-text-secondary) / <alpha-value>)',
+            'text-tertiary': 'rgb(var(--color-text-tertiary) / <alpha-value>)',
+
+            border: 'rgb(var(--color-border) / <alpha-value>)',
+
+            'primary-subtle-background': 'rgb(var(--color-primary-subtle-background) / <alpha-value>)',
+            'primary-subtle-text': 'rgb(var(--color-primary-subtle-text) / <alpha-value>)',
+            'secondary-subtle-background': 'rgb(var(--color-secondary-subtle-background) / <alpha-value>)',
+            'secondary-subtle-text': 'rgb(var(--color-secondary-subtle-text) / <alpha-value>)',
+            'accent-subtle-background': 'rgb(var(--color-accent-subtle-background) / <alpha-value>)',
+            'accent-subtle-text': 'rgb(var(--color-accent-subtle-text) / <alpha-value>)',
+            'error-subtle-background': 'rgb(var(--color-error-subtle-background) / <alpha-value>)',
+            'error-subtle-text': 'rgb(var(--color-error-subtle-text) / <alpha-value>)',
+            'purple-subtle-background': 'rgb(var(--color-purple-subtle-background) / <alpha-value>)',
+            'purple-subtle-text': 'rgb(var(--color-purple-subtle-text) / <alpha-value>)',
+
+            // Legacy mapping for compatibility
+            slate: {
+              50: '#fafafa', 100: '#f5f5f5', 200: '#e5e5e5', 300: '#d4d4d4', 400: '#a3a3a3',
+              500: '#737373', 600: '#525252', 700: '#404040', 800: '#262626', 900: '#171717', 950: '#0a0a0a',
+            },
+          },
+          boxShadow: {
+            'luxury': '0px 8px 24px rgba(0, 0, 0, 0.06)',
+            'luxury-hover': '0px 12px 32px rgba(0, 0, 0, 0.08)',
+          },
+          borderRadius: {
+            'lg': '16px',
+            'md': '12px',
+            'sm': '8px',
+            '2xl': '24px',
+            '3xl': '32px',
+          },
+        }
+      }
+    }
+  </script>
+>>>>>>> parent of eab59cb (Resolve merge conflict in AccountsTeamDashboard, unify handleVerifyPayment logic, and use toast notifications)
   <script type="importmap">
 {
   "imports": {

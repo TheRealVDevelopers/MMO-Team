@@ -8,11 +8,9 @@ import ChatWindow from './ChatWindow';
 import UserListModal from './UserListModal';
 import CreateGroupModal from './CreateGroupModal';
 import { ChatChannel } from '../../types';
-import { useToast } from '../shared/toast/ToastProvider';
 
 const CommunicationDashboard: React.FC = () => {
     const { currentUser } = useAuth();
-    const toast = useToast();
     const { channels, loading: channelsLoading } = useChannels(currentUser?.id);
     // Move chat logic inside specific channel view, here we manage selection
     const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
@@ -54,7 +52,7 @@ const CommunicationDashboard: React.FC = () => {
             if (channelId) setSelectedChannelId(channelId);
         } catch (e) {
             console.error("Failed to create DM", e);
-            toast.error('Failed to create chat.');
+            alert("Failed to create chat");
         }
     };
 
@@ -65,7 +63,7 @@ const CommunicationDashboard: React.FC = () => {
             if (channelId) setSelectedChannelId(channelId);
         } catch (e) {
             console.error("Failed to create group", e);
-            toast.error('Failed to create group.');
+            alert("Failed to create group");
         }
     };
 

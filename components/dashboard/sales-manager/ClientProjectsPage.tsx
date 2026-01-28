@@ -20,7 +20,6 @@ import {
     updateClientProject,
     addProjectUpdate
 } from '../../../hooks/useClientProjects';
-import { useToast } from '../../shared/toast/ToastProvider';
 
 interface ClientProject {
     id: string;
@@ -44,7 +43,6 @@ interface ProjectStage {
 }
 
 const ClientProjectsPage: React.FC = () => {
-    const toast = useToast();
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStage, setFilterStage] = useState('all');
     const [selectedProject, setSelectedProject] = useState<ClientProject | null>(null);
@@ -102,10 +100,13 @@ const ClientProjectsPage: React.FC = () => {
             // Update project in Firebase
             try {
                 await setProjectPassword(selectedProject.id, password);
-                toast.success('Password generated. Copy and share with the client.');
+                alert(`Password generated for ${selectedProject.projectId}: ${password}\n\nPlease share this with the client via WhatsApp or Email.`);
+                setShowPasswordModal(false);
+                setSelectedProject(null);
+                setGeneratedPassword('');
             } catch (error) {
                 console.error('Error generating password:', error);
-                toast.error('Failed to generate password. Please try again.');
+                alert('Failed to generate password. Please try again.');
             }
         }
     };
@@ -129,10 +130,9 @@ const ClientProjectsPage: React.FC = () => {
 
                 setShowStageUpdateModal(false);
                 setSelectedProject(null);
-                toast.success('Project stage updated.');
             } catch (error) {
                 console.error('Error updating stage:', error);
-                toast.error('Failed to update stage. Please try again.');
+                alert('Failed to update stage. Please try again.');
             }
         }
     };
@@ -342,64 +342,23 @@ const ClientProjectsPage: React.FC = () => {
                                         <span className="font-bold">Important:</span> You must share this password with the client via WhatsApp or Email immediately after generation.
                                     </p>
                                 </div>
-
-                                {generatedPassword ? (
-                                    <div className="space-y-4">
-                                        <div className="bg-subtle-background border border-border rounded-xl p-4">
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-2">Client Password</p>
-                                            <div className="flex items-center gap-2">
-                                                <input
-                                                    value={generatedPassword}
-                                                    readOnly
-                                                    className="flex-1 px-3 py-2 bg-white border border-border rounded-lg font-mono text-sm"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={async () => {
-                                                        try {
-                                                            await navigator.clipboard.writeText(generatedPassword);
-                                                            toast.success('Copied to clipboard.');
-                                                        } catch {
-                                                            toast.error('Copy failed. Please copy manually.');
-                                                        }
-                                                    }}
-                                                    className="px-3 py-2 bg-primary text-white text-sm font-bold rounded-lg hover:bg-secondary transition-colors"
-                                                >
-                                                    Copy
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={() => {
-                                                setShowPasswordModal(false);
-                                                setSelectedProject(null);
-                                                setGeneratedPassword('');
-                                            }}
-                                            className="w-full px-4 py-3 bg-gray-100 text-text-primary font-medium rounded-xl hover:bg-gray-200 transition-colors"
-                                        >
-                                            Close
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="flex space-x-3">
-                                        <button
-                                            onClick={() => {
-                                                setShowPasswordModal(false);
-                                                setSelectedProject(null);
-                                                setGeneratedPassword('');
-                                            }}
-                                            className="flex-1 px-4 py-3 bg-gray-100 text-text-primary font-medium rounded-xl hover:bg-gray-200 transition-colors"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            onClick={confirmGeneratePassword}
-                                            className="flex-1 px-4 py-3 bg-primary text-white font-medium rounded-xl hover:bg-primary-dark transition-colors"
-                                        >
-                                            Generate Password
-                                        </button>
-                                    </div>
-                                )}
+                                <div className="flex space-x-3">
+                                    <button
+                                        onClick={() => {
+                                            setShowPasswordModal(false);
+                                            setSelectedProject(null);
+                                        }}
+                                        className="flex-1 px-4 py-3 bg-gray-100 text-text-primary font-medium rounded-xl hover:bg-gray-200 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={confirmGeneratePassword}
+                                        className="flex-1 px-4 py-3 bg-primary text-white font-medium rounded-xl hover:bg-primary-dark transition-colors"
+                                    >
+                                        Generate Password
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}

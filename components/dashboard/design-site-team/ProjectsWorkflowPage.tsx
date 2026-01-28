@@ -17,8 +17,6 @@ import {
 } from '@heroicons/react/24/outline';
 import { formatDateTime, USERS } from '../../../constants';
 import BOQSubmissionModal from '../drawing-team/BOQSubmissionModal';
-import { useToast } from '../../shared/toast/ToastProvider';
-import { uploadToStorage } from '../../../services/storageService';
 
 // Animation variant
 const fadeInUp: Variants = {
@@ -177,7 +175,6 @@ const ProjectsWorkflowPage: React.FC<ProjectsWorkflowPageProps> = ({
 }) => {
     const { currentUser } = useAuth();
     const { addTask } = useMyDayTasks(currentUser?.id || '');
-    const toast = useToast();
     const [activeStage, setActiveStage] = useState<string | null>(null);
     const [isBOQModalOpen, setIsBOQModalOpen] = useState(false);
     const [selectedProjectForBOQ, setSelectedProjectForBOQ] = useState<Project | null>(null);
@@ -225,39 +222,15 @@ const ProjectsWorkflowPage: React.FC<ProjectsWorkflowPageProps> = ({
                 createdAt: new Date(),
             });
         } else if (action === 'submit-drawing') {
-            // Production: upload PDF to Firebase Storage and then open BOQ.
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'application/pdf';
-            input.onchange = async () => {
-                const file = (input.files && input.files[0]) || null;
-                if (!file) return;
-                if (file.type !== 'application/pdf') {
-                    toast.error('Please select a PDF drawing.');
-                    return;
-                }
+            // Mock file upload interaction as requested by user
+            const mockFile = window.prompt("Enter drawing filename/details to upload (e.g. 'FloorPlan_v1.pdf'):");
 
-                try {
-                    toast.info('Uploading drawing...');
-                    const safeName = file.name.replace(/[^\w.\-() ]+/g, '_');
-                    const storagePath = `projects/${project.id}/drawings/${Date.now()}-${safeName}`;
-                    const result = await uploadToStorage({ path: storagePath, file });
-
-                    await onUpdateProject(project.id, {
-                        drawingSubmittedAt: new Date(),
-                        drawing2DUrl: result.url,
-                        drawing2DName: result.name,
-                    });
-
-                    toast.success('Drawing uploaded.');
-                    setSelectedProjectForBOQ(project);
-                    setIsBOQModalOpen(true);
-                } catch (e) {
-                    console.error('Upload failed', e);
-                    toast.error('Upload failed. Please try again.');
-                }
-            };
-            input.click();
+            if (mockFile) {
+                // Do NOT mark as submitted/completed yet.
+                // Open BOQ Modal for the final step.
+                setSelectedProjectForBOQ(project);
+                setIsBOQModalOpen(true);
+            }
         } else if (action === 'submit-boq') {
             setSelectedProjectForBOQ(project);
             setIsBOQModalOpen(true);
@@ -296,13 +269,13 @@ const ProjectsWorkflowPage: React.FC<ProjectsWorkflowPageProps> = ({
                 });
             }
 
-            toast.success('BOQ submitted. Project moved to quotation.');
+            alert("BOQ Submitted and Project Phase Completed!");
             setIsBOQModalOpen(false);
             setSelectedProjectForBOQ(null);
 
         } catch (error) {
             console.error("Failed to submit BOQ", error);
-            toast.error('Failed to submit BOQ. Please try again.');
+            alert("Failed to submit BOQ");
         }
     };
 

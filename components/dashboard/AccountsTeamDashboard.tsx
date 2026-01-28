@@ -18,10 +18,8 @@ import { Invoice, Expense, VendorBill, Project, LeadPipelineStatus, ProjectStatu
 import { db } from '../../firebase';
 // Mock data import
 import { PAYMENT_VERIFICATION_REQUESTS } from '../../constants';
-import { useToast } from '../shared/toast/ToastProvider';
 
 const AccountsTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
-  const toast = useToast();
   const { invoices, loading: invoicesLoading } = useInvoices();
   const { expenses, loading: expensesLoading } = useExpenses();
   const { vendorBills, loading: billsLoading } = useVendorBills();
@@ -89,13 +87,13 @@ const AccountsTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (pa
         };
 
         await addProject(newProject);
-                toast.success(`Payment confirmed! Lead "${lead.clientName}" converted to Project.`);
+        alert(`Payment confirmed! Lead "${lead.clientName}" converted to Project.`);
       }
 
       setPaymentRequests(prev => prev.filter(r => r.id !== requestId));
     } catch (error) {
       console.error("Error verifying payment:", error);
-            toast.error('Failed to verify payment and create project.');
+      alert('Failed to verify payment and create project.');
     }
   };
 

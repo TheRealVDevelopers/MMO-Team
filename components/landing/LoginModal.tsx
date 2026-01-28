@@ -14,7 +14,6 @@ interface LoginModalProps {
 }
 
 const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initialType = 'staff' }) => {
-    const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
     const [loginType, setLoginType] = useState<'staff' | 'vendor'>(initialType);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -53,7 +52,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
                     setEmail('');
                     setPassword('');
                 } else {
-                    throw new Error('Invalid vendor credentials.');
+                    throw new Error('Invalid vendor credentials. Try vendor@makemyoffice.com / 123456');
                 }
             }
         } catch (err: any) {
@@ -167,11 +166,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
                                 autoComplete="current-password"
                             />
                         </div>
-                        {DEMO_MODE && (
-                            <p className="text-[10px] uppercase tracking-widest text-text-secondary/40 mt-3 ml-1">
-                                Demo password: 123456
-                            </p>
-                        )}
+                        <p className="text-[10px] uppercase tracking-widest text-text-secondary/40 mt-3 ml-1">Default password: 123456</p>
                     </div>
 
                     {/* Error Message */}

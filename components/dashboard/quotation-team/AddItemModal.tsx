@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import Modal from '../../shared/Modal';
 import { Item } from '../../../types';
-import { useToast } from '../../shared/toast/ToastProvider';
 
 interface AddItemModalProps {
     isOpen: boolean;
@@ -10,7 +9,6 @@ interface AddItemModalProps {
 }
 
 const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, onSubmit }) => {
-    const toast = useToast();
     const [name, setName] = useState('');
     const [category, setCategory] = useState('Workstations');
     const [price, setPrice] = useState('');
@@ -21,7 +19,7 @@ const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, onSubmit }
 
         const priceNum = parseFloat(price);
         if (isNaN(priceNum)) {
-            toast.error('Please enter a valid price.');
+            alert("Please enter a valid price");
             return;
         }
 
