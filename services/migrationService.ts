@@ -4,6 +4,10 @@ import { USERS } from '../constants';
 import { UserRole } from '../types';
 
 export const migrateUsersToFirestore = async () => {
+    if (!db) {
+        console.log("Skipping user migration because Firebase is not initialized (demo mode).");
+        return;
+    }
     try {
         console.log("Checking if user migration is needed...");
         const migrationDocRef = doc(db, 'system', 'migrations');

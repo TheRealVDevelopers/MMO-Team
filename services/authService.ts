@@ -18,11 +18,12 @@ import {
     where,
     getDocs
 } from 'firebase/firestore';
-import { auth, db } from '../firebase';
+import { auth, db, logAgent } from '../firebase';
 import { User, UserRole, Vendor } from '../types';
 import { USERS, VENDORS } from '../constants';
 
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
+const AGENT_LOG_ENABLED = !!import.meta.env.VITE_AGENT_LOG_URL;
 
 // Default password for all staff accounts created via initialization script
 export const DEFAULT_STAFF_PASSWORD = '123456';
@@ -67,27 +68,56 @@ export const signInStaff = async (email: string, password: string): Promise<User
         }
     }
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/331cbd8c-3af3-403a-970c-0264da8f26fd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authService.ts:61',message:'Attempting staff sign-in',data:{email,passwordLength:password.length,hasAuth:!!auth,demoMode:DEMO_MODE},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
+        logAgent({
+        location: 'authService.ts:61',
+        message: 'Attempting staff sign-in',
+        data: {
+            email,
+            passwordLength: password.length,
+            hasAuth: !!auth,
+            demoMode: DEMO_MODE,
+        },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'A',
+    });
 
     if (!auth) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/331cbd8c-3af3-403a-970c-0264da8f26fd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authService.ts:71',message:'Firebase Auth not initialized',data:{email},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
+        logAgent({
+            location: 'authService.ts:71',
+            message: 'Firebase Auth not initialized',
+            data: { email },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'B',
+        });
         throw new Error('Firebase Auth is not initialized. Check your Firebase configuration.');
     }
 
     try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/331cbd8c-3af3-403a-970c-0264da8f26fd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authService.ts:75',message:'Sign-in successful',data:{email,userId:userCredential.user.uid},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
+        logAgent({
+            location: 'authService.ts:75',
+            message: 'Sign-in successful',
+            data: { email, userId: userCredential.user.uid },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'C',
+        });
         return await convertToAppUser(userCredential.user);
     } catch (error: any) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/331cbd8c-3af3-403a-970c-0264da8f26fd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authService.ts:79',message:'Sign-in failed',data:{email,errorCode:error.code,errorMessage:error.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
+        logAgent({
+            location: 'authService.ts:79',
+            message: 'Sign-in failed',
+            data: { email, errorCode: error.code, errorMessage: error.message },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'D',
+        });
         console.error('Staff sign-in error:', error);
         
         // Provide helpful error message for invalid credentials

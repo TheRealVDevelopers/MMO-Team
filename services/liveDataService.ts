@@ -20,6 +20,10 @@ import {
 import { Notification, Activity } from '../types';
 
 export const seedDemoData = async () => {
+    if (!db) {
+        console.log("Skipping demo data seeding because Firebase is not initialized (demo mode).");
+        return;
+    }
     console.log("Starting demo data seeding...");
 
     // Seed Leads
