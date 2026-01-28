@@ -22,20 +22,16 @@ import { auth, db, logAgent } from '../firebase';
 import { User, UserRole, Vendor } from '../types';
 import { USERS, VENDORS } from '../constants';
 
-<<<<<<< HEAD
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
-const AGENT_LOG_ENABLED = !!import.meta.env.VITE_AGENT_LOG_URL;
 
 // Default password for all staff accounts created via initialization script
-=======
-// Default password for all new staff accounts
->>>>>>> parent of eab59cb (Resolve merge conflict in AccountsTeamDashboard, unify handleVerifyPayment logic, and use toast notifications)
 export const DEFAULT_STAFF_PASSWORD = '123456';
 export const DEFAULT_CLIENT_PASSWORD = '123456';
 
 // Convert Firebase User + Firestore data to our User type
 export const convertToAppUser = async (firebaseUser: FirebaseUser): Promise<User | null> => {
     try {
+        if (!db) return null;
         const userDoc = await getDoc(doc(db, 'staffUsers', firebaseUser.uid));
         if (!userDoc.exists()) {
             return null;
@@ -69,9 +65,16 @@ export const signInStaff = async (email: string, password: string): Promise<User
     // Check if the email exists in our USERS constant for mock login
     const mockUser = USERS.find(u => u.email === email);
 
-<<<<<<< HEAD
-        logAgent({
-        location: 'authService.ts:61',
+    if (mockUser && password === '123456') {
+        console.log(`Simplified staff login for ${mockUser.name} (${mockUser.role})`);
+        return {
+            ...mockUser,
+            lastUpdateTimestamp: new Date(),
+        };
+    }
+
+    logAgent({
+        location: 'authService.ts:sign-in',
         message: 'Attempting staff sign-in',
         data: {
             email,
@@ -87,7 +90,7 @@ export const signInStaff = async (email: string, password: string): Promise<User
 
     if (!auth) {
         logAgent({
-            location: 'authService.ts:71',
+            location: 'authService.ts:sign-in',
             message: 'Firebase Auth not initialized',
             data: { email },
             timestamp: Date.now(),
@@ -96,21 +99,12 @@ export const signInStaff = async (email: string, password: string): Promise<User
             hypothesisId: 'B',
         });
         throw new Error('Firebase Auth is not initialized. Check your Firebase configuration.');
-=======
-    if (mockUser && password === '123456') {
-        console.log(`Simplified staff login for ${mockUser.name} (${mockUser.role})`);
-        return {
-            ...mockUser,
-            lastUpdateTimestamp: new Date(),
-        };
->>>>>>> parent of eab59cb (Resolve merge conflict in AccountsTeamDashboard, unify handleVerifyPayment logic, and use toast notifications)
     }
 
     try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
-<<<<<<< HEAD
         logAgent({
-            location: 'authService.ts:75',
+            location: 'authService.ts:sign-in',
             message: 'Sign-in successful',
             data: { email, userId: userCredential.user.uid },
             timestamp: Date.now(),
@@ -121,7 +115,7 @@ export const signInStaff = async (email: string, password: string): Promise<User
         return await convertToAppUser(userCredential.user);
     } catch (error: any) {
         logAgent({
-            location: 'authService.ts:79',
+            location: 'authService.ts:sign-in',
             message: 'Sign-in failed',
             data: { email, errorCode: error.code, errorMessage: error.message },
             timestamp: Date.now(),
@@ -129,10 +123,6 @@ export const signInStaff = async (email: string, password: string): Promise<User
             runId: 'run1',
             hypothesisId: 'D',
         });
-=======
-        return await convertToAppUser(userCredential.user);
-    } catch (error: any) {
->>>>>>> parent of eab59cb (Resolve merge conflict in AccountsTeamDashboard, unify handleVerifyPayment logic, and use toast notifications)
         console.error('Staff sign-in error:', error);
         throw new Error(error.message || 'Failed to sign in');
     }
@@ -143,6 +133,7 @@ export const signInStaff = async (email: string, password: string): Promise<User
  */
 export const signOutStaff = async (): Promise<void> => {
     try {
+        if (!auth) return;
         await signOut(auth);
     } catch (error) {
         console.error('Sign out error:', error);
@@ -162,6 +153,8 @@ export const createStaffAccount = async (
     region?: string
 ): Promise<string> => {
     try {
+        if (!auth || !db) throw new Error("Firebase not initialized");
+
         // Create Firebase Auth account
         const userCredential = await createUserWithEmailAndPassword(
             auth,
@@ -198,6 +191,7 @@ export const changeStaffPassword = async (
     newPassword: string
 ): Promise<void> => {
     try {
+        if (!auth || !db) throw new Error("Firebase not initialized");
         const user = auth.currentUser;
         if (!user || !user.email) {
             throw new Error('No authenticated user');
@@ -232,6 +226,7 @@ export const updateStaffProfile = async (
     updates: Partial<User>
 ): Promise<void> => {
     try {
+        if (!db) return;
         const allowedUpdates: any = {
             updatedAt: serverTimestamp(),
         };
@@ -255,6 +250,7 @@ export const updateStaffProfile = async (
  */
 export const getStaffMember = async (userId: string): Promise<User | null> => {
     try {
+        if (!db) return null;
         const userDoc = await getDoc(doc(db, 'staffUsers', userId));
         if (!userDoc.exists()) {
             return null;
@@ -283,6 +279,7 @@ export const getStaffMember = async (userId: string): Promise<User | null> => {
  */
 export const getAllStaff = async (): Promise<User[]> => {
     try {
+        if (!db) return USERS.filter(u => u.role !== UserRole.SUPER_ADMIN);
         const staffSnapshot = await getDocs(collection(db, 'staffUsers'));
         return staffSnapshot.docs.map(doc => {
             const data = doc.data();
@@ -338,6 +335,7 @@ export const verifyClientCredentials = async (
     }
 
     try {
+        if (!db) return false;
         const projectsRef = collection(db, 'clientProjects');
         const q = query(projectsRef, where('clientEmail', '==', email));
         const snapshot = await getDocs(q);
@@ -365,6 +363,7 @@ export const changeClientPassword = async (
     newPassword: string
 ): Promise<void> => {
     try {
+        if (!db) throw new Error("Firebase not initialized");
         // First verify current password
         const isValid = await verifyClientCredentials(projectId, currentPassword);
         if (!isValid) {
@@ -395,6 +394,10 @@ export const changeClientPassword = async (
  * Monitor authentication state
  */
 export const onAuthStateChange = (callback: (user: User | null) => void) => {
+    if (!auth) {
+        callback(null);
+        return () => { };
+    }
     return auth.onAuthStateChanged(async (firebaseUser) => {
         if (firebaseUser) {
             const appUser = await convertToAppUser(firebaseUser);
