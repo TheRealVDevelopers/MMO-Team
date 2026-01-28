@@ -5,6 +5,7 @@ import { PlusIcon, TrashIcon, PencilSquareIcon } from '../../icons/IconComponent
 import { PrimaryButton, SecondaryButton } from '../shared/DashboardUI';
 import { Item } from '../../../types';
 import { useCatalog } from '../../../hooks/useCatalog';
+import { useToast } from '../../shared/toast/ToastProvider';
 
 // Extended Item interface for this component
 interface CatalogItem extends Item {
@@ -13,6 +14,7 @@ interface CatalogItem extends Item {
 }
 
 const SimpleItemsCatalog: React.FC = () => {
+    const toast = useToast();
     const { items, loading, addItem, updateItem, removeItem } = useCatalog();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -66,7 +68,7 @@ const SimpleItemsCatalog: React.FC = () => {
             setIsModalOpen(false);
         } catch (error) {
             console.error("Failed to save item:", error);
-            alert("Error saving item to catalog.");
+            toast.error('Error saving item to catalog.');
         }
     };
 
@@ -76,7 +78,7 @@ const SimpleItemsCatalog: React.FC = () => {
                 await removeItem(id);
             } catch (error) {
                 console.error("Failed to remove item:", error);
-                alert("Error removing item from catalog.");
+                toast.error('Error removing item from catalog.');
             }
         }
     };

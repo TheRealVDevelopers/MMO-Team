@@ -12,6 +12,7 @@ import {
     ChatBubbleBottomCenterTextIcon
 } from '@heroicons/react/24/outline';
 import SmartDateTimePicker from '../../shared/SmartDateTimePicker';
+import { useToast } from '../../shared/toast/ToastProvider';
 
 import Modal from '../../shared/Modal';
 
@@ -22,6 +23,7 @@ interface DirectAssignTaskModalProps {
 }
 
 const DirectAssignTaskModal: React.FC<DirectAssignTaskModalProps> = ({ isOpen, onClose, onAssign }) => {
+    const toast = useToast();
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [assigneeId, setAssigneeId] = useState('');
@@ -56,7 +58,7 @@ const DirectAssignTaskModal: React.FC<DirectAssignTaskModalProps> = ({ isOpen, o
             onClose();
         } catch (error) {
             console.error('Error assigning task:', error);
-            alert('Mission Failure: Failed to assign task.');
+            toast.error('Failed to assign task. Please try again.');
         } finally {
             setProcessing(false);
         }

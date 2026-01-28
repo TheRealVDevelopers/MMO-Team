@@ -10,6 +10,7 @@ import { useQuotationAudit } from '../../../hooks/useQuotationAudit';
 import { useCatalog } from '../../../hooks/useCatalog';
 import { Project, ProjectStatus, ApprovalRequestType, UserRole } from '../../../types';
 import { formatCurrencyINR } from '../../../constants';
+import { useToast } from '../../shared/toast/ToastProvider';
 
 // Interface for items loaded from catalog
 interface CatalogItem {
@@ -32,6 +33,7 @@ interface QuoteLineItem extends CatalogItem {
 }
 
 const QuotationBuilderPage: React.FC = () => {
+    const toast = useToast();
     const { currentUser } = useAuth();
     const { projects } = useProjects();
     const { submitRequest, loading: submitting } = useApprovals();
@@ -167,7 +169,7 @@ const QuotationBuilderPage: React.FC = () => {
 
         } catch (error) {
             console.error("Failed to submit quotation:", error);
-            alert("Failed to submit quotation. Please try again.");
+            toast.error('Failed to submit quotation. Please try again.');
         } finally {
             setIsSubmitting(false);
         }

@@ -14,6 +14,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../firebase';
 import { Lead, LeadCommunicationMessage, LeadFile, ProjectMilestone, LeadPipelineStatus } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../shared/toast/ToastProvider';
 
 interface LeadManagementPageProps {
   leadId: string;
@@ -33,6 +34,7 @@ const PROJECT_STAGES = [
 
 const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose }) => {
   const { currentUser } = useAuth();
+  const toast = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -129,7 +131,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
       await fetchLead();
     } catch (error) {
       console.error('Error sending message:', error);
-      alert('Failed to send message. Please try again.');
+      toast.error('Failed to send message. Please try again.');
     } finally {
       setSending(false);
     }
@@ -171,10 +173,10 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
       }
 
       await fetchLead();
-      alert('Files uploaded successfully!');
+      toast.success('Files uploaded.');
     } catch (error) {
       console.error('Error uploading files:', error);
-      alert('Failed to upload files. Please try again.');
+      toast.error('Failed to upload files. Please try again.');
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
@@ -236,10 +238,10 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
       setMilestoneDeadline('');
       setMilestoneStatus('pending');
       await fetchLead();
-      alert('Milestone updated successfully!');
+      toast.success('Milestone updated.');
     } catch (error) {
       console.error('Error updating milestone:', error);
-      alert('Failed to update milestone. Please try again.');
+      toast.error('Failed to update milestone. Please try again.');
     } finally {
       setUpdatingMilestone(false);
     }

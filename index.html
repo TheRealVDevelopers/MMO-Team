@@ -84,9 +84,32 @@
       --color-purple-subtle-text: 233 213 255;
     }
 
-    /* Smooth Scrolling */
+    /* Smooth Scrolling and Responsive Base Typography */
     html {
       scroll-behavior: smooth;
+      /* Base font size for medium screens (Tailwind rem units scale from this) */
+      font-size: 16px;
+    }
+
+    /* Smaller laptops / tablets: slightly smaller UI */
+    @media (max-width: 1279px) {
+      html {
+        font-size: 15px;
+      }
+    }
+
+    /* Mobile screens: more compact UI */
+    @media (max-width: 767px) {
+      html {
+        font-size: 14px;
+      }
+    }
+
+    /* Large desktops: slightly larger UI */
+    @media (min-width: 1536px) {
+      html {
+        font-size: 18px;
+      }
     }
 
     .font-serif,

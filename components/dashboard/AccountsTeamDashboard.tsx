@@ -17,8 +17,10 @@ import { Invoice, Expense, VendorBill, Project } from '../../types';
 import { db } from '../../firebase';
 // Mock data import
 import { PAYMENT_VERIFICATION_REQUESTS } from '../../constants';
+import { useToast } from '../shared/toast/ToastProvider';
 
 const AccountsTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
+  const toast = useToast();
   const { invoices, loading: invoicesLoading } = useInvoices();
   const { expenses, loading: expensesLoading } = useExpenses();
   const { vendorBills, loading: billsLoading } = useVendorBills();
@@ -31,7 +33,7 @@ const AccountsTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (pa
     // In real app: Call API to verify payment and trigger Project Creation flow
     setPaymentRequests(prev => prev.filter(r => r.id !== requestId));
     // Provide notification?
-    alert('Payment confirmed! Admin has been notified to create project.');
+    toast.success('Payment confirmed. Admin has been notified to create the project.');
   };
 
   const handleRejectPayment = (requestId: string) => {

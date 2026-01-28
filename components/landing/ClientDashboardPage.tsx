@@ -34,6 +34,7 @@ import { Invoice, CompanyInfo } from '../../types';
 import { formatCurrencyINR, formatDate } from '../../constants';
 // Import Payment Submission Modal
 import PaymentSubmissionModal from '../client-portal/PaymentSubmissionModal';
+import { useToast } from '../shared/toast/ToastProvider';
 
 // Mock Company Info
 const MOCK_COMPANY_INFO: CompanyInfo = {
@@ -190,6 +191,7 @@ const MOCK_DOCS = [
 ];
 
 const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, onLogout }) => {
+    const toast = useToast();
     const [project] = useState<ClientProject>(() => createDemoProject(projectId));
     const [selectedStage, setSelectedStage] = useState<JourneyStage | null>(null);
     const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -209,8 +211,7 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
         console.log('Payment Submitted:', data);
         // Here you would call an API/Firestore to save the PaymentRequest
         // const paymentRequest: PaymentRequest = { ... };
-
-        alert('Payment Details Submitted! Accounts team will verify shortly.');
+        toast.success('Payment submitted. Accounts will verify shortly.');
         setShowPayModal(false);
     };
 
@@ -264,11 +265,11 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
                     <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-8">
                         {/* Left - Project Info */}
                         <div className="flex-1">
-                            <div className="flex items-center gap-4 mb-2">
-                                <h1 className="text-3xl font-bold text-gray-900 tracking-tight">{project.projectName}</h1>
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-2">
+                                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">{project.projectName}</h1>
                                 <StatusBadge health={project.transparency.projectHealth} />
                             </div>
-                            <p className="text-gray-500 text-lg">Welcome back, {project.clientName} 👋</p>
+                            <p className="text-gray-500 text-base sm:text-lg">Welcome back, {project.clientName} 👋</p>
 
                             <div className="flex flex-wrap gap-4 mt-6">
                                 <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-xl border border-gray-100">
@@ -289,7 +290,7 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
                         </div>
 
                         {/* Right - Live Status & Help */}
-                        <div className="flex flex-col sm:flex-row lg:flex-col gap-4 min-w-[300px]">
+                        <div className="flex flex-col sm:flex-row lg:flex-col gap-4 w-full sm:min-w-[300px]">
                             {/* Live Updates Mini Widget */}
                             <div className="bg-gray-900 rounded-2xl p-4 text-white shadow-xl shadow-gray-200/50">
                                 <div className="flex items-center justify-between mb-3">
@@ -326,8 +327,8 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
             {/* ============================================ */}
             {/* MAIN CONTENT - Reorganized */}
             {/* ============================================ */}
-            <main className="max-w-6xl mx-auto px-4 py-8">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
                     {/* LEFT COLUMN: Roadmap & Actionables */}
                     <div className="lg:col-span-2 space-y-8">
 
@@ -350,12 +351,12 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ projectId, on
                             </div>
                         )}
 
-                        <div>
-                            <div className="flex items-center gap-3 mb-6">
-                                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                                    <CheckCircleIcon className="w-6 h-6" />
+                        <div className="overflow-x-hidden">
+                            <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+                                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                                    <CheckCircleIcon className="w-5 h-5 sm:w-6 sm:h-6" />
                                 </div>
-                                <h2 className="text-2xl font-bold text-gray-800 tracking-tight">Project Journey</h2>
+                                <h2 className="text-xl sm:text-2xl font-bold text-gray-800 tracking-tight">Project Journey</h2>
                             </div>
                             <VerticalRoadmap
                                 stages={project.stages}
