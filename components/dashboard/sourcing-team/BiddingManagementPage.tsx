@@ -6,6 +6,7 @@ import Modal from '../../shared/Modal';
 import ComparativeStatement from './ComparativeStatement';
 import InitiateRFQModal from './InitiateRFQModal';
 import SubmitQuoteModal from '../../shared/SubmitQuoteModal';
+import { useToast } from '../../shared/toast/ToastProvider';
 
 // --- Start: NewRequestModal Component ---
 
@@ -16,6 +17,7 @@ interface NewRequestModalProps {
 }
 
 const NewRequestModal: React.FC<NewRequestModalProps> = ({ isOpen, onClose, onAddRequest }) => {
+    const toast = useToast();
     const [projectId, setProjectId] = useState(PROJECTS[0]?.id || '');
     const [materials, setMaterials] = useState<{ name: string; spec: string }[]>([{ name: '', spec: '' }]);
     const [requiredBy, setRequiredBy] = useState('');
@@ -41,7 +43,7 @@ const NewRequestModal: React.FC<NewRequestModalProps> = ({ isOpen, onClose, onAd
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!projectId || !requiredBy || materials.some(m => !m.name.trim())) {
-            alert('Please fill all required fields.');
+            toast.error('Please fill all required fields.');
             return;
         }
 

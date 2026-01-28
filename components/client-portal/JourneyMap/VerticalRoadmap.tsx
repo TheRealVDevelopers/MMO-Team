@@ -44,8 +44,8 @@ const VerticalRoadmap: React.FC<VerticalRoadmapProps> = ({
     };
 
     return (
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-            <h3 className="text-lg font-bold text-gray-800 mb-6">
+        <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 overflow-hidden">
+            <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-4 sm:mb-6">
                 Your Project Journey
             </h3>
 
@@ -62,7 +62,7 @@ const VerticalRoadmap: React.FC<VerticalRoadmapProps> = ({
                             {/* Connector Line */}
                             {index < stages.length - 1 && (
                                 <div className={`
-                                    absolute left-[2.25rem] top-[4rem] w-0.5 h-[calc(100%-2rem)]
+                                    absolute left-[1.5rem] sm:left-[2.25rem] top-[3rem] sm:top-[4rem] w-0.5 h-[calc(100%-1.5rem)] sm:h-[calc(100%-2rem)]
                                     ${status === 'completed' ? 'bg-emerald-400' : 'bg-gray-100'}
                                     transition-colors duration-500
                                 `} />
@@ -73,7 +73,7 @@ const VerticalRoadmap: React.FC<VerticalRoadmapProps> = ({
                                 onClick={() => isClickable && onStageClick(stage)}
                                 disabled={!isClickable}
                                 className={`
-                                    w-full flex items-center gap-6 p-5 rounded-[1.5rem]
+                                    w-full flex items-center gap-3 sm:gap-6 p-3 sm:p-5 rounded-xl sm:rounded-[1.5rem]
                                     transition-all duration-300
                                     ${status === 'current'
                                         ? 'bg-white border-2 border-primary shadow-xl shadow-primary/10'
@@ -88,7 +88,7 @@ const VerticalRoadmap: React.FC<VerticalRoadmapProps> = ({
                             >
                                 {/* Stage Icon */}
                                 <div className={`
-                                    relative w-16 h-16 rounded-2xl flex-shrink-0
+                                    relative w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl flex-shrink-0
                                     flex items-center justify-center
                                     transition-all duration-500
                                     ${status === 'completed'
@@ -101,18 +101,18 @@ const VerticalRoadmap: React.FC<VerticalRoadmapProps> = ({
                                     {status === 'locked' ? (
                                         <LockClosedIcon className="w-6 h-6 text-gray-300" />
                                     ) : (
-                                        <span className="text-3xl">{scene.emoji}</span>
+                                        <span className="text-xl sm:text-3xl">{scene.emoji}</span>
                                     )}
 
                                     {/* Status Badge */}
                                     {status === 'completed' && (
-                                        <div className="absolute -top-2 -right-2 w-6 h-6 bg-white rounded-full shadow-md flex items-center justify-center">
-                                            <CheckCircleIcon className="w-5 h-5 text-emerald-500" />
+                                        <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-5 h-5 sm:w-6 sm:h-6 bg-white rounded-full shadow-md flex items-center justify-center">
+                                            <CheckCircleIcon className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500" />
                                         </div>
                                     )}
                                     {status === 'current' && (
-                                        <div className="absolute -top-2 -right-2 w-6 h-6 bg-white rounded-full shadow-md flex items-center justify-center">
-                                            <div className="w-3 h-3 bg-primary rounded-full animate-pulse" />
+                                        <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-5 h-5 sm:w-6 sm:h-6 bg-white rounded-full shadow-md flex items-center justify-center">
+                                            <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-primary rounded-full animate-pulse" />
                                         </div>
                                     )}
                                 </div>
@@ -120,7 +120,7 @@ const VerticalRoadmap: React.FC<VerticalRoadmapProps> = ({
                                 {/* Stage Info */}
                                 <div className="flex-1 text-left min-w-0">
                                     <div className="flex items-center gap-3">
-                                        <h4 className={`text-lg font-bold tracking-tight ${status === 'completed' ? 'text-emerald-800'
+                                        <h4 className={`text-sm sm:text-lg font-bold tracking-tight ${status === 'completed' ? 'text-emerald-800'
                                             : status === 'current' ? 'text-gray-900'
                                                 : status === 'locked' ? 'text-gray-400'
                                                     : 'text-gray-700'

@@ -503,6 +503,11 @@ export interface Project {
   drawingSubmittedAt?: Date; // When drawing was submitted
   drawingRedFlagged?: boolean; // If deadline missed
   createdAt?: Date; // Project creation timestamp
+  // Production: uploaded artifact links
+  recceDrawingUrl?: string;
+  recceDrawingName?: string;
+  drawing2DUrl?: string;
+  drawing2DName?: string;
 
   // NEW FIELDS FOR REFACTOR
   organizationId?: string; // Link to Organization

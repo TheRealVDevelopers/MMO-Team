@@ -4,6 +4,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { createApprovalRequest } from '../../../hooks/useApprovalSystem';
 import { ApprovalRequestType } from '../../../types';
 import Modal from '../../shared/Modal';
+import { useToast } from '../../shared/toast/ToastProvider';
 
 interface RequestApprovalModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface RequestApprovalModalProps {
 
 const RequestApprovalModal: React.FC<RequestApprovalModalProps> = ({ isOpen, onClose }) => {
   const { currentUser } = useAuth();
+  const toast = useToast();
   const [requestType, setRequestType] = useState<ApprovalRequestType>(ApprovalRequestType.LEAVE);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -25,7 +27,7 @@ const RequestApprovalModal: React.FC<RequestApprovalModalProps> = ({ isOpen, onC
     e.preventDefault();
 
     if (!currentUser || !title.trim() || !description.trim()) {
-      alert('Please fill in all required fields');
+      toast.error('Please fill in all required fields.');
       return;
     }
 
@@ -54,11 +56,11 @@ const RequestApprovalModal: React.FC<RequestApprovalModalProps> = ({ isOpen, onC
       setPriority('Medium');
       setRequestType(ApprovalRequestType.LEAVE);
 
-      alert('Request submitted successfully!');
+      toast.success('Request submitted.');
       onClose();
     } catch (error) {
       console.error('Error submitting request:', error);
-      alert('Failed to submit request. Please try again.');
+      toast.error('Failed to submit request. Please try again.');
     } finally {
       setSubmitting(false);
     }
