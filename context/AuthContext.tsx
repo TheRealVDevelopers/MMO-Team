@@ -65,10 +65,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     // In demo mode, allow localStorage mock auth to skip Firebase.
-    if (DEMO_MODE) {
-      // Immediately finish loading in demo mode (Firebase auth is disabled)
+    if (DEMO_MODE && localStorage.getItem('mmo-current-user')) {
       setLoading(false);
-      // If a mock user exists in storage, state already initialized above
       return;
     }
 
