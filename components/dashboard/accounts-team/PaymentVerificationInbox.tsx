@@ -1,20 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { CheckCircleIcon, XCircleIcon, ClockIcon, CurrencyRupeeIcon } from '@heroicons/react/24/outline';
 import { formatCurrencyINR } from '../../../constants';
-
-interface PaymentRequest {
-    id: string;
-    leadId: string;
-    clientName: string;
-    amount: number;
-    paymentMode: string;
-    transactionId: string;
-    paymentDate: Date;
-    notes?: string;
-    status: 'Pending' | 'Verified' | 'Rejected';
-    requestedBy: string;
-    requestedAt: Date;
-}
+import { PaymentRequest } from '../../../types';
 
 interface PaymentVerificationInboxProps {
     requests: PaymentRequest[];
@@ -49,26 +36,26 @@ const PaymentVerificationInbox: React.FC<PaymentVerificationInboxProps> = ({ req
                                 <h4 className="font-bold text-gray-900">{request.clientName}</h4>
                                 <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
                                     <ClockIcon className="w-3 h-3" />
-                                    Requested by {request.requestedBy}
+                                    Submitted at {new Date(request.submittedAt).toLocaleString()}
                                 </p>
                             </div>
                         </div>
                         <div className="text-right">
                             <p className="text-xl font-black text-emerald-600">{formatCurrencyINR(request.amount)}</p>
                             <span className="inline-block px-2 py-0.5 bg-yellow-100 text-yellow-700 text-[10px] font-bold uppercase tracking-wider rounded-md mt-1">
-                                Review Needed
+                                {request.status} Needed
                             </span>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 mb-5 p-4 bg-gray-50 rounded-xl text-sm border border-gray-100">
                         <div>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Payment Mode</p>
-                            <p className="font-medium text-gray-800">{request.paymentMode}</p>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Payment Method</p>
+                            <p className="font-medium text-gray-800">{request.paymentMethod}</p>
                         </div>
                         <div>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Transaction ID</p>
-                            <p className="font-mono font-medium text-gray-800">{request.transactionId}</p>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">UTR / Ref Number</p>
+                            <p className="font-mono font-medium text-gray-800">{request.utrNumber || 'N/A'}</p>
                         </div>
                         <div className="col-span-2">
                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Notes</p>

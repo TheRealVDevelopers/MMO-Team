@@ -13,7 +13,8 @@ import { useInvoices, addInvoice, updateInvoice } from '../../hooks/useInvoices'
 import { useExpenses, updateExpense, addExpense } from '../../hooks/useExpenses';
 import { useVendorBills, updateVendorBill, addVendorBill } from '../../hooks/useVendorBills';
 import { useProjects } from '../../hooks/useProjects';
-import { Invoice, Expense, VendorBill, Project } from '../../types';
+import { useLeads, updateLead } from '../../hooks/useLeads';
+import { Invoice, Expense, VendorBill, Project, LeadPipelineStatus, ProjectStatus, ProjectLifecycleStatus } from '../../types';
 import { db } from '../../firebase';
 // Mock data import
 import { PAYMENT_VERIFICATION_REQUESTS } from '../../constants';
@@ -22,16 +23,78 @@ const AccountsTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (pa
   const { invoices, loading: invoicesLoading } = useInvoices();
   const { expenses, loading: expensesLoading } = useExpenses();
   const { vendorBills, loading: billsLoading } = useVendorBills();
-  const { projects, loading: projectsLoading } = useProjects();
+  const { projects, loading: projectsLoading, addProject } = useProjects();
+  const { leads, loading: leadsLoading } = useLeads();
 
   // Local state for payment requests (demo only)
   const [paymentRequests, setPaymentRequests] = useState(PAYMENT_VERIFICATION_REQUESTS);
 
-  const handleVerifyPayment = (requestId: string) => {
-    // In real app: Call API to verify payment and trigger Project Creation flow
-    setPaymentRequests(prev => prev.filter(r => r.id !== requestId));
-    // Provide notification?
-    alert('Payment confirmed! Admin has been notified to create project.');
+  const handleVerifyPayment = async (requestId: string) => {
+    const request = paymentRequests.find(r => r.id === requestId);
+    if (!request) return;
+
+    try {
+      // 1. Update Lead Status to WON
+      const leadId = request.projectId; // projectId field in PaymentRequest holds leadId for new projects
+      const lead = leads.find(l => l.id === leadId);
+
+      if (lead) {
+        await updateLead(leadId, {
+          status: LeadPipelineStatus.WON
+        });
+
+        // 2. Create a new Project
+        const newProject: Omit<Project, 'id'> = {
+          projectName: lead.projectName,
+          clientName: lead.clientName,
+          status: ProjectStatus.SITE_VISIT_PENDING,
+          lifecycleStatus: ProjectLifecycleStatus.ADVANCE_PAID,
+          priority: lead.priority || 'Medium',
+          budget: lead.value || 0,
+          advancePaid: request.amount, // Advance that was just verified
+          clientAddress: '', // Lead doesn't have address, can be added later
+          clientContact: {
+            name: lead.clientName,
+            phone: lead.clientMobile || ''
+          },
+          startDate: new Date(),
+          endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 3 months default
+          progress: 5, // Initial progress
+          assignedTeam: {
+            drawing: '',
+            execution: [],
+            quotation: ''
+          },
+          stages: [
+            { id: 'stage-1', name: 'Site Visit', status: 'Pending', deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
+            { id: 'stage-2', name: 'Drawing', status: 'Pending', deadline: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) },
+            { id: 'stage-3', name: 'BOQ', status: 'Pending', deadline: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000) }
+          ],
+          milestones: [
+            { name: 'Site Visit Completed', completed: false },
+            { name: 'Design Approved', completed: false },
+            { name: 'BOQ Signed', completed: false }
+          ],
+          documents: [],
+          history: [
+            {
+              action: 'Project Created',
+              user: 'System',
+              timestamp: new Date(),
+              notes: 'Created automatically after advance payment verification.'
+            }
+          ]
+        };
+
+        await addProject(newProject);
+        alert(`Payment confirmed! Lead "${lead.clientName}" converted to Project.`);
+      }
+
+      setPaymentRequests(prev => prev.filter(r => r.id !== requestId));
+    } catch (error) {
+      console.error("Error verifying payment:", error);
+      alert('Failed to verify payment and create project.');
+    }
   };
 
   const handleRejectPayment = (requestId: string) => {
@@ -93,7 +156,7 @@ const AccountsTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (pa
     }
   };
 
-  if (invoicesLoading || expensesLoading || billsLoading || projectsLoading) {
+  if (invoicesLoading || expensesLoading || billsLoading || projectsLoading || leadsLoading) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
