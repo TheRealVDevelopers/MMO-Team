@@ -22,7 +22,8 @@ export const useNotifications = (userId?: string) => {
     const [error, setError] = useState<Error | null>(null);
 
     useEffect(() => {
-        if (!userId) {
+        if (!userId || !db) {
+            // In demo mode (db null) or no user, return empty list
             setNotifications([]);
             setLoading(false);
             return;
