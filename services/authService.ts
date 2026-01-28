@@ -94,8 +94,10 @@ export const signInStaff = async (email: string, password: string): Promise<User
         if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') {
             throw new Error(
                 `Invalid credentials. The user "${email}" may not exist in Firebase Auth.\n\n` +
-                `To create staff accounts, run:\n` +
-                `  npx ts-node scripts/initializeStaffUsers.ts\n\n` +
+                `To create staff accounts (from Node using Firebase Admin), run:\n` +
+                `  npm run seed:staff\n\n` +
+                `Before running, set FIREBASE_SERVICE_ACCOUNT_PATH (or GOOGLE_APPLICATION_CREDENTIALS)\n` +
+                `to a Firebase service account JSON key file.\n\n` +
                 `Or enable demo mode by setting VITE_DEMO_MODE=true in .env`
             );
         }
