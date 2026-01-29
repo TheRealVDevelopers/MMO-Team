@@ -33,9 +33,15 @@
   --color-purple-subtle-background: #F3E8FF;
   --color-purple-subtle-text: #7C3AED;
 
+  /* Custom Shadows */
   --shadow-luxury: 0px 8px 24px rgba(0, 0, 0, 0.06);
   --shadow-luxury-hover: 0px 12px 32px rgba(0, 0, 0, 0.08);
+  --shadow-luxury-subtle: 0px 4px 12px rgba(0, 0, 0, 0.04);
 
+  /* Custom Easing */
+  --ease-luxury: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Border Radius */
   --radius-lg: 16px;
   --radius-md: 12px;
   --radius-sm: 8px;

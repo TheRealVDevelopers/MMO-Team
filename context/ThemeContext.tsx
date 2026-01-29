@@ -37,37 +37,37 @@ export const themes: Record<string, Theme> = {
     type: 'light',
     colors: {
       // Soft Green Theme (Professional)
-      primary: '34 197 94',       // #22C55E - Green-500 (softer)
-      secondary: '22 163 74',     // #16A34A - Green-600
-      accent: '74 222 128',       // #4ADE80 - Green-400
-      error: '239 68 68',         // Red-500
-      purple: '168 85 247',       // Purple-500 (for accents)
+      primary: '#22C55E',       // Green-500 (softer)
+      secondary: '#16A34A',     // Green-600
+      accent: '#4ADE80',        // Green-400
+      error: '#EF4444',         // Red-500
+      purple: '#A855F7',        // Purple-500 (for accents)
 
       // Backgrounds
-      background: '255 255 255',  // White
-      surface: '249 250 251',     // Gray-50 (very light)
-      'subtle-background': '243 244 246', // Gray-100
+      background: '#FFFFFF',    // White
+      surface: '#F9FAFB',       // Gray-50 (very light)
+      'subtle-background': '#F3F4F6', // Gray-100
 
       // Text
-      'text-primary': '17 24 39',     // Gray-900
-      'text-secondary': '75 85 99',   // Gray-600
-      'text-tertiary': '156 163 175', // Gray-400
+      'text-primary': '#111827',     // Gray-900
+      'text-secondary': '#4B5563',   // Gray-600
+      'text-tertiary': '#9CA3AF',    // Gray-400
 
       // UI Elements
-      border: '229 231 235',      // Gray-200
-      'toggle-background': '209 213 219',
+      border: '#E5E7EB',        // Gray-200
+      'toggle-background': '#D1D5DB',
 
       // Subtle States
-      'primary-subtle-background': '240 253 244',
-      'primary-subtle-text': '22 101 52',
-      'secondary-subtle-background': '220 252 231',
-      'secondary-subtle-text': '20 83 45',
-      'accent-subtle-background': '236 253 245',
-      'accent-subtle-text': '5 150 105',
-      'error-subtle-background': '254 242 242',
-      'error-subtle-text': '185 28 28',
-      'purple-subtle-background': '243 232 255',
-      'purple-subtle-text': '124 58 237',
+      'primary-subtle-background': '#F0FDF4',
+      'primary-subtle-text': '#166534',
+      'secondary-subtle-background': '#DCF2E7',
+      'secondary-subtle-text': '#14532D',
+      'accent-subtle-background': '#ECFDF5',
+      'accent-subtle-text': '#059669',
+      'error-subtle-background': '#FEF2F2',
+      'error-subtle-text': '#B91C1C',
+      'purple-subtle-background': '#F3E8FF',
+      'purple-subtle-text': '#7C3AED',
     },
   },
   'dark': {
@@ -75,37 +75,37 @@ export const themes: Record<string, Theme> = {
     type: 'dark',
     colors: {
       // Purple Theme on Black
-      primary: '168 85 247',      // #A855F7 - Purple-500
-      secondary: '147 51 234',    // #9333EA - Purple-600
-      accent: '192 132 252',      // #C084FC - Purple-400
-      error: '248 113 113',       // Red-400
-      purple: '196 181 253',      // Purple-300 (lighter for dark)
+      primary: '#A855F7',        // Purple-500
+      secondary: '#9333EA',      // Purple-600
+      accent: '#C084FC',         // Purple-400
+      error: '#F87171',          // Red-400
+      purple: '#C4B5FD',         // Purple-300 (lighter for dark)
 
       // Backgrounds - Pure Black Theme
-      background: '0 0 0',        // #000000 - Pure Black
-      surface: '23 23 23',        // #171717 - Very Dark Gray
-      'subtle-background': '38 38 38', // #262626
+      background: '#000000',     // Pure Black
+      surface: '#171717',        // Very Dark Gray
+      'subtle-background': '#262626',
 
       // Text - High Contrast
-      'text-primary': '250 250 250',   // Almost White
-      'text-secondary': '163 163 163', // Gray-400
-      'text-tertiary': '115 115 115',  // Gray-500
+      'text-primary': '#FAFAFA',      // Almost White
+      'text-secondary': '#A3A3A3',    // Gray-400
+      'text-tertiary': '#737373',     // Gray-500
 
       // UI Elements
-      border: '64 64 64',         // #404040
-      'toggle-background': '82 82 82',
+      border: '#404040',
+      'toggle-background': '#525252',
 
       // Subtle States - Purple tints
-      'primary-subtle-background': '88 28 135',
-      'primary-subtle-text': '233 213 255',
-      'secondary-subtle-background': '76 29 149',
-      'secondary-subtle-text': '221 214 254',
-      'accent-subtle-background': '107 33 168',
-      'accent-subtle-text': '243 232 255',
-      'error-subtle-background': '127 29 29',
-      'error-subtle-text': '252 165 165',
-      'purple-subtle-background': '88 28 135',
-      'purple-subtle-text': '233 213 255',
+      'primary-subtle-background': '#581C87',
+      'primary-subtle-text': '#E9D5FF',
+      'secondary-subtle-background': '#4C1D95',
+      'secondary-subtle-text': '#DDD6FE',
+      'accent-subtle-background': '#6B21A8',
+      'accent-subtle-text': '#F3E8FF',
+      'error-subtle-background': '#7F1D1D',
+      'error-subtle-text': '#FCA5A5',
+      'purple-subtle-background': '#581C87',
+      'purple-subtle-text': '#E9D5FF',
     },
   },
 };
