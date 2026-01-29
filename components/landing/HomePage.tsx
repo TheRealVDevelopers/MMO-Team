@@ -129,6 +129,17 @@ const HeroSection: React.FC<{ onNavigate: (page: string) => void }> = ({ onNavig
 
     return (
         <section className="relative h-screen min-h-[700px] flex items-center justify-center overflow-hidden bg-background">
+            <div className="fixed top-0 left-0 w-full z-[9999] flex flex-col font-mono text-[10px] sm:text-xs">
+                <div className="bg-red-600 text-white p-2 text-center">
+                    1. ENGINE CHECK: RED (Should be visible)
+                </div>
+                <div style={{ backgroundColor: 'var(--color-primary)', color: 'white' }} className="p-2 text-center border-y border-white">
+                    2. VARIABLE CHECK: var(--color-primary) (Should be GREEN)
+                </div>
+                <div className="bg-primary text-white p-2 text-center">
+                    3. CLASS CHECK: bg-primary (Should be GREEN)
+                </div>
+            </div>
             <AnimatePresence mode="wait">
                 <motion.div
                     key={currentSlide}
