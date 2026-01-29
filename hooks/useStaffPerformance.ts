@@ -17,7 +17,8 @@ export const useStaffPerformance = () => {
             setLoading(false);
             return;
         }
-        const usersRef = collection(db, 'users');
+        // FIXED: Query staffUsers collection (not 'users') to match where users are created
+        const usersRef = collection(db, 'staffUsers');
         // Fetch all users (you can filter by role if needed, but for now we fetch all)
         const q = query(usersRef);
 

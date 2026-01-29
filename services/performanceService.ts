@@ -6,7 +6,8 @@ import {
     getDocs,
     doc,
     updateDoc,
-    Timestamp
+    Timestamp,
+    onSnapshot
 } from 'firebase/firestore';
 import { Task, TaskStatus, User, UserRole } from '../types';
 import { createNotification } from './liveDataService';
@@ -83,8 +84,93 @@ export const calculateUserPerformance = (tasks: Task[]): {
 };
 
 /**
- * Updates a user's performance flag in Firestore
+ * Monitors real-time task changes for a specific user and automatically updates their performance flag
+ * This creates a live listener that triggers performance recalculation on any task change
  */
+export const monitorUserPerformance = (userId: string, onUpdate?: (flag: 'green' | 'yellow' | 'red', reason: string) => void): (() => void) => {
+    if (!db) {
+        console.log('monitorUserPerformance: db is null (demo mode)');
+        return () => {};
+    }
+
+    const tasksRef = collection(db, 'myDayTasks');
+    const q = query(tasksRef, where('userId', '==', userId));
+
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+        const tasks: Task[] = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            tasks.push({
+                ...data,
+                id: doc.id,
+                dueAt: data.dueAt?.toDate ? data.dueAt.toDate() : (data.dueAt ? new Date(data.dueAt) : undefined)
+            } as Task);
+        });
+
+        // Calculate performance in real-time
+        const { flag, reason, metrics } = calculateUserPerformance(tasks);
+
+        // Update user document
+        try {
+            const userRef = doc(db, 'users', userId);
+            await updateDoc(userRef, {
+                performanceFlag: flag,
+                flagReason: reason,
+                activeTaskCount: metrics.activeTaskCount,
+                overdueTaskCount: metrics.overdueTaskCount,
+                upcomingDeadlineCount: metrics.upcomingDeadlineCount,
+                flagUpdatedAt: new Date()
+            });
+
+            // Call callback if provided
+            if (onUpdate) {
+                onUpdate(flag, reason);
+            }
+
+            console.log(`Real-time performance update for user ${userId}: ${flag} - ${reason}`);
+        } catch (error) {
+            console.error(`Error updating real-time performance for user ${userId}:`, error);
+        }
+    }, (error) => {
+        console.error(`Error monitoring performance for user ${userId}:`, error);
+    });
+
+    return unsubscribe;
+};
+
+/**
+ * Sets up real-time performance monitoring for all active users
+ * Returns cleanup function to unsubscribe all listeners
+ */
+export const monitorAllUsersPerformance = async (): Promise<(() => void)> => {
+    if (!db) {
+        console.log('monitorAllUsersPerformance: db is null (demo mode)');
+        return () => {};
+    }
+
+    try {
+        const usersRef = collection(db, 'users');
+        const snapshot = await getDocs(usersRef);
+
+        const unsubscribers: (() => void)[] = [];
+
+        snapshot.forEach((userDoc) => {
+            const unsubscribe = monitorUserPerformance(userDoc.id);
+            unsubscribers.push(unsubscribe);
+        });
+
+        console.log(`Real-time performance monitoring started for ${unsubscribers.length} users`);
+
+        // Return combined cleanup function
+        return () => {
+            unsubscribers.forEach(unsub => unsub());
+            console.log('All performance monitors stopped');
+        };
+    } catch (error) {
+        console.error('Error setting up global performance monitoring:', error);
+        return () => {};
+    }
+};
 export const updateUserPerformanceFlag = async (userId: string) => {
     try {
         if (!db) {
@@ -111,8 +197,8 @@ export const updateUserPerformanceFlag = async (userId: string) => {
         const { flag, reason, metrics } = calculateUserPerformance(tasks);
 
         // 3. Get current user data to check for changes
-        const userRef = doc(db, 'users', userId);
-        const userSnap = await getDocs(query(collection(db, 'users'), where('__name__', '==', userId)));
+        const userRef = doc(db, 'staffUsers', userId);
+        const userSnap = await getDocs(query(collection(db, 'staffUsers'), where('__name__', '==', userId)));
         const userData = userSnap.docs[0]?.data() as User;
 
         // 4. Update user document
@@ -146,7 +232,7 @@ const notifyManagersOfEscalation = async (userName: string, reason: string, user
             console.log("Skipping notifyManagersOfEscalation because db is null (demo mode).");
             return;
         }
-        const usersRef = collection(db, 'users');
+        const usersRef = collection(db, 'staffUsers');
         const q = query(usersRef, where('role', 'in', [UserRole.MANAGER, UserRole.SUPER_ADMIN]));
         const snapshot = await getDocs(q);
 
@@ -177,7 +263,7 @@ export const updateAllUsersPerformance = async () => {
             console.log("Skipping updateAllUsersPerformance because db is null (demo mode).");
             return;
         }
-        const usersRef = collection(db, 'users');
+        const usersRef = collection(db, 'staffUsers');
         const snapshot = await getDocs(usersRef);
 
         const updates = [];

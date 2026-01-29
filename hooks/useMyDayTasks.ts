@@ -24,6 +24,14 @@ export const useMyDayTasks = (userId?: string) => {
             return;
         }
 
+        // If database is not available (demo mode), return empty
+        if (!db) {
+            console.warn('Database not initialized. Tasks will not persist.');
+            setTasks([]);
+            setLoading(false);
+            return;
+        }
+
         setLoading(true);
         setError(null);
 

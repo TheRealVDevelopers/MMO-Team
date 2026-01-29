@@ -61,13 +61,13 @@ export const seedDemoData = async () => {
     }
 
     // Seed Users
-    const usersRef = collection(db, 'users');
+    const usersRef = collection(db, 'staffUsers');
     const usersSnapshot = await getDocs(usersRef);
     if (usersSnapshot.size <= 1) { // Only seed if empty or just one user
         console.log("Seeding users...");
         const { setDoc, doc } = await import('firebase/firestore');
         for (const user of USERS) {
-            await setDoc(doc(db, 'users', user.id), {
+            await setDoc(doc(db, 'staffUsers', user.id), {
                 ...user,
                 lastUpdateTimestamp: serverTimestamp(),
                 performanceFlag: ['green', 'yellow', 'red'][Math.floor(Math.random() * 3)], // Mock performance

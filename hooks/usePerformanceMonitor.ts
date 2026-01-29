@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
-import { updateAllUsersPerformance } from '../services/performanceService';
+import { updateAllUsersPerformance, monitorAllUsersPerformance } from '../services/performanceService';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
 import { db } from '../firebase';
 
 /**
- * Background monitor that recalculates all user performance flags every minute.
+ * Real-time performance monitor that uses Firestore listeners for instant updates.
+ * Automatically recalculates performance flags when tasks change.
  * Only active for Super Admin or Manager.
  */
 export const usePerformanceMonitor = () => {
@@ -14,22 +15,34 @@ export const usePerformanceMonitor = () => {
     useEffect(() => {
         if (!currentUser || !db) return;
 
-        // Only Super Admin and Manager roles trigger the global background monitoring
+        // Only Super Admin and Manager roles trigger the real-time monitoring
         if (currentUser.role !== UserRole.SUPER_ADMIN && currentUser.role !== UserRole.MANAGER) {
             return;
         }
 
-        console.log('Performance monitoring active...');
+        console.log('Real-time performance monitoring active...');
 
-        // Run immediately on mount
-        updateAllUsersPerformance();
+        let cleanupMonitors: (() => void) | null = null;
 
-        // Run every minute
+        // Set up real-time monitoring for all users
+        const setupMonitoring = async () => {
+            cleanupMonitors = await monitorAllUsersPerformance();
+        };
+
+        setupMonitoring();
+
+        // Also run a periodic check every 5 minutes as backup
+        // (in case of any missed updates)
         const intervalId = setInterval(() => {
-            console.log('Running scheduled performance update...');
+            console.log('Running backup performance update...');
             updateAllUsersPerformance();
-        }, 60000);
+        }, 300000); // 5 minutes
 
-        return () => clearInterval(intervalId);
+        return () => {
+            clearInterval(intervalId);
+            if (cleanupMonitors) {
+                cleanupMonitors();
+            }
+        };
     }, [currentUser?.role]);
 };

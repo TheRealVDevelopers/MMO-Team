@@ -3,6 +3,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { TASKS, formatDateTime, ATTENDANCE_DATA } from '../../../constants';
 import { Task, TaskStatus, AttendanceType, UserRole, Reminder, AttendanceStatus } from '../../../types';
 import TaskCard from './TaskCard';
+import CriticalAlertBanner from './CriticalAlertBanner';
 import {
     BoltIcon,
     CalendarDaysIcon,
@@ -232,6 +233,9 @@ const MyDayPage: React.FC = () => {
             animate="animate"
             className="space-y-8"
         >
+            {/* Real-time Critical Alert Banner */}
+            <CriticalAlertBanner userId={currentUser.id} compact={true} />
+
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-6">
                 <div>
                     <h2 className="text-3xl font-serif font-black text-text-primary tracking-tight">Today's Focus</h2>

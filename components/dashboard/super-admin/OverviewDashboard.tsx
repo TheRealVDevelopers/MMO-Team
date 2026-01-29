@@ -170,7 +170,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage, o
                             title="Conversion Yield"
                             value={`${conversionRate || 12.5}%`}
                             icon={<PresentationChartLineIcon className="w-6 h-6" />}
-                            trend={{ value: '12%', positive: true }}
+                            trend={{ value: '0%', positive: true }}
                             color="secondary"
                             className="cursor-pointer"
                             onClick={handleFunnelClick}
@@ -179,7 +179,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage, o
                             title="Global Talent"
                             value={teamMembers}
                             icon={<UserGroupIcon className="w-6 h-6" />}
-                            trend={{ value: '2', positive: true }}
+                            trend={{ value: '0', positive: true }}
                             color="accent"
                             className="cursor-pointer"
                             onClick={() => setCurrentPage('team')}

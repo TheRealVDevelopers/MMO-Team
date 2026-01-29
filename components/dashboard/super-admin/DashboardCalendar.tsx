@@ -24,36 +24,21 @@ import {
 } from '@heroicons/react/24/outline';
 import { ContentCard, cn } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
-
-export interface CalendarTask {
-    id: string;
-    title: string;
-    completed: boolean;
-    time?: string;
-    isRecurring?: boolean;
-    type: 'meeting' | 'task' | 'reminder';
-}
-
-const MOCK_TASKS: Record<string, CalendarTask[]> = {
-    [format(new Date(), 'yyyy-MM-dd')]: [
-        { id: '1', title: 'Weekly Strategy Sync', completed: false, time: '10:00 AM', type: 'meeting' },
-        { id: '2', title: 'Review Q1 Projections', completed: true, time: '2:00 PM', type: 'task' },
-    ],
-    [format(addDays(new Date(), 1), 'yyyy-MM-dd')]: [
-        { id: '3', title: 'Client Pitch: Skyline', completed: false, time: '11:30 AM', type: 'meeting' },
-    ]
-};
+import { useCalendarTasks, CalendarTask } from '../../../hooks/useCalendarTasks';
+import { useAuth } from '../../../context/AuthContext';
 
 interface DashboardCalendarProps {
-    initialTasks?: Record<string, CalendarTask[]>;
     className?: string;
 }
 
-const DashboardCalendar: React.FC<DashboardCalendarProps> = ({ initialTasks, className }) => {
+const DashboardCalendar: React.FC<DashboardCalendarProps> = ({ className }) => {
+    const { currentUser } = useAuth();
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
-    const [tasks, setTasks] = useState<Record<string, CalendarTask[]>>(initialTasks || MOCK_TASKS);
     const [newTask, setNewTask] = useState('');
+    
+    // Use the calendar tasks hook with Firebase persistence
+    const { tasks, addTask: addTaskToFirebase, toggleTask, deleteTask: deleteTaskFromFirebase, loading } = useCalendarTasks(currentUser?.id);
 
     const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
     const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
@@ -62,38 +47,30 @@ const DashboardCalendar: React.FC<DashboardCalendarProps> = ({ initialTasks, cla
         setSelectedDate(day);
     };
 
-    const handleAddTask = (e: React.FormEvent) => {
+    const handleAddTask = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newTask.trim()) return;
+        if (!newTask.trim() || !currentUser) return;
 
         const dateKey = format(selectedDate, 'yyyy-MM-dd');
-        const newItem: CalendarTask = {
-            id: Date.now().toString(),
+        const newItem: Omit<CalendarTask, 'id'> = {
             title: newTask,
             completed: false,
-            type: 'task'
+            type: 'task',
+            date: dateKey,
+            userId: currentUser.id
         };
 
-        setTasks(prev => ({
-            ...prev,
-            [dateKey]: [...(prev[dateKey] || []), newItem]
-        }));
+        await addTaskToFirebase(newItem);
         setNewTask('');
     };
 
-    const toggleTask = (taskId: string, dateKey: string) => {
-        setTasks(prev => ({
-            ...prev,
-            [dateKey]: prev[dateKey].map(t => t.id === taskId ? { ...t, completed: !t.completed } : t)
-        }));
+    const handleToggleTask = async (taskId: string) => {
+        await toggleTask(taskId);
     };
 
-    const deleteTask = (taskId: string, dateKey: string) => {
-        setTasks(prev => ({
-            ...prev,
-            [dateKey]: prev[dateKey].filter(t => t.id !== taskId)
-        }));
-    }
+    const handleDeleteTask = async (taskId: string) => {
+        await deleteTaskFromFirebase(taskId);
+    };
 
     const renderHeader = () => {
         return (
@@ -207,7 +184,7 @@ const DashboardCalendar: React.FC<DashboardCalendarProps> = ({ initialTasks, cla
                                 )}
                             >
                                 <button
-                                    onClick={() => toggleTask(task.id, dateKey)}
+                                    onClick={() => handleToggleTask(task.id)}
                                     className={cn(
                                         "mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors",
                                         task.completed ? "bg-emerald-500 border-emerald-500 text-white" : "border-text-tertiary hover:border-primary"
@@ -224,7 +201,7 @@ const DashboardCalendar: React.FC<DashboardCalendarProps> = ({ initialTasks, cla
                                     )}
                                 </div>
                                 <button
-                                    onClick={() => deleteTask(task.id, dateKey)}
+                                    onClick={() => handleDeleteTask(task.id)}
                                     className="opacity-0 group-hover:opacity-100 p-1 text-text-tertiary hover:text-error transition-all"
                                 >
                                     <TrashIcon className="w-3.5 h-3.5" />
