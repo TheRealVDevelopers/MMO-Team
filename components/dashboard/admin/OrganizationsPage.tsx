@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { PlusIcon, BuildingOfficeIcon, MagnifyingGlassIcon, UserIcon, MapPinIcon } from '@heroicons/react/24/outline';
-import { ORGANIZATIONS } from '../../../constants';
+// import { ORGANIZATIONS } from '../../../constants';
 import { Organization, ProjectStatus, Project, ExecutionStage, PaymentTerm } from '../../../types';
 import { useProjects } from '../../../hooks/useProjects';
 import CreateOrganizationModal from './CreateOrganizationModal';
@@ -27,7 +27,7 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
     const { organizations: realOrgs, addOrganization, updateOrganization } = useOrganizations(); // Use the hook
 
     // Merge mock organizations with real Firestore organizations
-    const organizations = [...realOrgs, ...ORGANIZATIONS]; // Real ones first so new adds show up top
+    const organizations = realOrgs; // Removed mock ORGANIZATIONS
 
     const handleCreateOrganization = async (orgData: Omit<Organization, 'id' | 'createdAt' | 'createdBy' | 'projects'>) => {
         try {

@@ -8,7 +8,10 @@ import {
     CalendarIcon,
     CreditCardIcon
 } from '@heroicons/react/24/outline';
-import { USERS, PROJECTS, PENDING_APPROVALS_COUNT, ACTIVITIES, formatLargeNumberINR, INVOICES } from '../../../constants';
+import { formatLargeNumberINR } from '../../../constants';
+import { useProjects } from '../../../hooks/useProjects';
+import { useUsers } from '../../../hooks/useUsers';
+import { useLeads } from '../../../hooks/useLeads';
 import { ActivityStatus, ProjectStatus, PaymentStatus, Project } from '../../../types';
 import { ContentCard, StatCard, SectionHeader, staggerContainer, cn } from '../shared/DashboardUI';
 import { motion } from 'framer-motion';
@@ -97,21 +100,26 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage, o
     const [funnelLeads, setFunnelLeads] = useState<Project[]>([]);
 
     // KPI Calculations
-    const totalProjects = PROJECTS.length;
-    const activeProjects = PROJECTS.filter(p => [ProjectStatus.IN_EXECUTION, ProjectStatus.PROCUREMENT, ProjectStatus.DESIGN_IN_PROGRESS].includes(p.status)).length;
+    const { projects } = useProjects();
+    const { users } = useUsers();
+    const { leads } = useLeads();
 
-    const totalLeads = PROJECTS.length; // Simplified for this view
-    const conversionRate = 12.5; // Mocked for simplicity here
+    // KPI Calculations
+    const totalProjects = projects.length;
+    const activeProjects = projects.filter(p => [ProjectStatus.IN_EXECUTION, ProjectStatus.PROCUREMENT, ProjectStatus.DESIGN_IN_PROGRESS].includes(p.status)).length;
 
-    const teamMembers = USERS.length;
-    const totalRevenue = PROJECTS.filter(p => p.status === ProjectStatus.COMPLETED || p.status === ProjectStatus.APPROVED).reduce((sum, p) => sum + p.budget, 0);
+    const totalLeads = leads.length;
+    const conversionRate = 12.5; // TODO: Calculate real conversion rate
 
-    // Outstanding Payments Calculation
-    const unpaidInvoices = INVOICES.filter(i => i.status !== PaymentStatus.PAID);
+    const teamMembers = users.length;
+    const totalRevenue = projects.filter(p => p.status === ProjectStatus.COMPLETED || p.status === ProjectStatus.APPROVED).reduce((sum, p) => sum + p.budget, 0);
+
+    // Outstanding Payments Calculation (Placeholder until Finance Hook Integration)
+    const unpaidInvoices: any[] = [];
     // const outstandingTotal -> Moved to FinanceOverview
 
-    // Alert Calculations
-    const pendingApprovals = ACTIVITIES.filter(a => a.status === ActivityStatus.PENDING);
+    // Alert Calculations (Placeholder until Alerts Hook Integration)
+    const pendingApprovals: any[] = [];
 
     // Handlers
     const handleProjectSelect = (project: Project) => {
@@ -122,8 +130,13 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage, o
     const handleFunnelClick = () => {
         // Filter leads (mocked here by taking 'NEW' or 'ASSIGNED' projects as leads)
         // In real app, this would be leads from LEADS constant or API
-        const leads = PROJECTS.filter(p => p.status === ProjectStatus.AWAITING_DESIGN || p.status === ProjectStatus.PENDING_REVIEW);
-        setFunnelLeads(leads);
+        // Filter leads (mocked here by taking 'NEW' or 'ASSIGNED' projects as leads)
+        // In real app, this would be leads from LEADS constant or API
+        const leadsList = projects.filter(p => p.status === ProjectStatus.AWAITING_DESIGN || p.status === ProjectStatus.PENDING_REVIEW); // Keeping logic but using real projects
+        // Ideally use 'leads' from useLeads, but for compatibility with funnel modal expecting 'Project[]', we might need mapping?
+        // Let's assume FunnelModal accepts Project[] as per original code.
+        setFunnelLeads(leadsList);
+
         setFunnelStage("Active Pipeline");
         setIsFunnelModalOpen(true);
     };
@@ -215,7 +228,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage, o
 
                     <AlertCard
                         title="Strategic Approvals"
-                        count={PENDING_APPROVALS_COUNT}
+                        count={pendingApprovals.length}
                         items={pendingApprovals.map(a => a.description)}
                         type="warning"
                     />

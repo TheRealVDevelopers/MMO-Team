@@ -1,23 +1,15 @@
 
 import React from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { RFQS, BIDS_DATA } from '../../../constants';
 import { RFQStatus, BidStatus, RFQ, Bid } from '../../../types';
 import { ClipboardDocumentListIcon, DocumentCheckIcon, TrophyIcon, FireIcon, ClockIcon } from '@heroicons/react/24/outline';
 
 const VendorOverview: React.FC = () => {
     const { currentVendor } = useAuth();
 
-    // Load from localStorage
-    const [rfqs] = React.useState<RFQ[]>(() => {
-        const saved = localStorage.getItem('mmo_rfqs');
-        return saved ? JSON.parse(saved) : RFQS;
-    });
-
-    const [bids] = React.useState<Bid[]>(() => {
-        const saved = localStorage.getItem('mmo_bids');
-        return saved ? JSON.parse(saved) : BIDS_DATA;
-    });
+    // Removed localStorage fallback and hardcoded RFQS/BIDS_DATA
+    const [rfqs] = React.useState<RFQ[]>([]);
+    const [bids] = React.useState<Bid[]>([]);
 
     if (!currentVendor) return null;
 

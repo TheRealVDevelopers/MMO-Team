@@ -51,7 +51,7 @@ export const useCriticalAlerts = (teamView: boolean = true) => {
             });
 
             // Filter team tasks if teamView is enabled
-            const filteredTasks = teamView 
+            const filteredTasks = teamView
                 ? tasksData.filter(task => task.userId !== task.createdBy)
                 : tasksData;
 
@@ -105,21 +105,21 @@ export const useCriticalAlerts = (teamView: boolean = true) => {
             if (task.status === TaskStatus.COMPLETED) return;
 
             const userName = users.find(u => u.id === task.userId)?.name || 'Unknown User';
-            
+
             // Check for overdue tasks
             if (task.deadline) {
                 const deadline = new Date(task.deadline);
                 const diffMs = now.getTime() - deadline.getTime();
                 const diffHours = diffMs / (1000 * 60 * 60);
 
-                if (diffHours > 24) {
-                    // Critical: Overdue by more than 24 hours
+                if (diffHours > 2) {
+                    // Critical: Overdue by more than 2 hours (Red Flag condition)
                     generatedAlerts.push({
                         id: `overdue-critical-${task.id}`,
                         type: 'overdue',
                         severity: 'critical',
                         title: `CRITICAL: Task Overdue by ${Math.floor(diffHours)} hours`,
-                        description: `${userName} - "${task.title}" is severely overdue`,
+                        description: `${userName} - "${task.title}" is severely overdue (Red Flag)`,
                         taskId: task.id,
                         userId: task.userId,
                         userName,
@@ -186,6 +186,22 @@ export const useCriticalAlerts = (teamView: boolean = true) => {
                     userId: task.userId,
                     userName,
                     timestamp: now
+                });
+            }
+        });
+
+        // Check for users with persistent Red Flags (from Performance Cycle)
+        users.forEach(user => {
+            if (user.performanceFlag === 'red') {
+                generatedAlerts.push({
+                    id: `user-red-flag-${user.id}`,
+                    type: 'red_flag',
+                    severity: 'critical',
+                    title: `CRITICAL PERFORMANCE FLAG: ${user.name}`,
+                    description: `${user.name} is in the Red Zone. ${user.flagReason || 'Multiple operational failures detected.'}`,
+                    userId: user.id,
+                    userName: user.name,
+                    timestamp: user.flagUpdatedAt ? new Date(user.flagUpdatedAt) : now,
                 });
             }
         });

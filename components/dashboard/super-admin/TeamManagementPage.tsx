@@ -143,9 +143,10 @@ const TeamManagementPage: React.FC<{ setCurrentPage: (page: string) => void; ini
                                                         {/* Status Dot */}
                                                         <div className={cn(
                                                             "absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-surface flex items-center justify-center",
-                                                            user.performanceFlag === 'green' ? "bg-emerald-500" :
-                                                                user.performanceFlag === 'red' ? "bg-error" : "bg-amber-500"
-                                                        )}>
+                                                            user.attendanceStatus === 'CLOCKED_IN' ? "bg-emerald-500" :
+                                                                user.attendanceStatus === 'ON_BREAK' ? "bg-amber-500" : "bg-subtle-background border-border"
+                                                        )} title={user.attendanceStatus?.replace('_', ' ')}>
+                                                            {/* Performance Warning Layer */}
                                                             {user.performanceFlag === 'red' && <FlagIcon className="w-2 h-2 text-white" />}
                                                         </div>
                                                     </div>
@@ -155,9 +156,12 @@ const TeamManagementPage: React.FC<{ setCurrentPage: (page: string) => void; ini
                                                                 "text-sm font-bold truncate transition-colors",
                                                                 selectedUser?.id === user.id ? "text-primary" : "text-text-primary"
                                                             )}>{user.name}</p>
-                                                            {/* Mini Pulse Indicator */}
-                                                            {user.activeTaskCount && user.activeTaskCount > 0 && (
-                                                                <SignalIcon className="w-3 h-3 text-emerald-500 animate-pulse" />
+                                                            {/* Online Indicator Text */}
+                                                            {user.attendanceStatus === 'CLOCKED_IN' && (
+                                                                <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">ONLINE</span>
+                                                            )}
+                                                            {user.attendanceStatus === 'ON_BREAK' && (
+                                                                <span className="text-[9px] font-black text-amber-600 uppercase tracking-widest">BREAK</span>
                                                             )}
                                                         </div>
                                                         <p className="text-[10px] font-semibold text-text-tertiary tracking-wide uppercase italic truncate">{user.role}</p>

@@ -64,7 +64,7 @@ const AttendanceCalendar: React.FC<{ attendanceData: Attendance[] }> = ({ attend
                                 key={day}
                                 whileHover={{ scale: 1.05 }}
                                 className={cn(
-                                    "aspect-square rounded-xl flex flex-col items-center justify-center relative transition-all border",
+                                    "aspect-square rounded-xl flex flex-col items-center justify-center relative transition-all border group", // Added group class
                                     isToday ? "ring-2 ring-primary ring-offset-2 ring-offset-surface" : "",
                                     isWeekend ? "bg-subtle-background/50 border-border/20 opacity-40" : "bg-surface border-border shadow-sm",
                                     config ? cn(config.bg, "border-transparent shadow-none") : ""
@@ -79,6 +79,20 @@ const AttendanceCalendar: React.FC<{ attendanceData: Attendance[] }> = ({ attend
                                 </span>
                                 {config && (
                                     <div className={cn("w-1 h-1 rounded-full mt-1", config.dot)} />
+                                )}
+
+                                {/* Hover Tooltip for Times */}
+                                {status && ((attendanceData.find(a => new Date(a.date).getDate() === day)?.clockIn) || (attendanceData.find(a => new Date(a.date).getDate() === day)?.clockOut)) && (
+                                    <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-max px-2 py-1 bg-surface border border-border/60 shadow-lg rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+                                        <div className="flex flex-col gap-0.5 text-[9px] font-bold text-text-secondary leading-tight">
+                                            {attendanceData.find(a => new Date(a.date).getDate() === day)?.clockIn && (
+                                                <span className="text-emerald-500">In: {attendanceData.find(a => new Date(a.date).getDate() === day)?.clockIn}</span>
+                                            )}
+                                            {attendanceData.find(a => new Date(a.date).getDate() === day)?.clockOut && (
+                                                <span className="text-error">Out: {attendanceData.find(a => new Date(a.date).getDate() === day)?.clockOut}</span>
+                                            )}
+                                        </div>
+                                    </div>
                                 )}
                             </motion.div>
                         );

@@ -167,6 +167,7 @@ export interface User {
   performanceFlag?: 'green' | 'yellow' | 'red';
   flagReason?: string;
   flagUpdatedAt?: Date;
+  attendanceStatus?: 'CLOCKED_IN' | 'CLOCKED_OUT' | 'ON_BREAK' | 'ABSENT';
 
   // Real-Time Task Reflection
   currentTaskDetails?: {
@@ -706,6 +707,7 @@ export enum MaterialRequestStatus {
   ORDER_PLACED = "Order Placed",
   DELIVERED = "Delivered",
   NEGOTIATION = "Negotiation",
+  PO_READY = "PO Ready",
 }
 
 
@@ -797,6 +799,23 @@ export interface RFQItem {
   unit: string; // e.g. 'sqft', 'nos'
   targetPrice?: number;
 }
+
+export interface StoredRedFlag {
+  id: string; // usually taskId
+  taskId: string;
+  taskTitle: string;
+  userId: string;
+  userName: string;
+  deadline: Date;
+  triggeredAt: Date;
+  hoursOverdue: number;
+  resolved: boolean;
+  resolvedAt?: Date;
+  resolvedBy?: string;
+  severity: 'critical' | 'high' | 'medium';
+  type: string;
+}
+
 
 export interface RFQ {
   id: string;
@@ -985,6 +1004,8 @@ export enum AttendanceStatus {
 export interface Attendance {
   date: Date;
   status: AttendanceStatus;
+  clockIn?: string; // Time string HH:mm
+  clockOut?: string; // Time string HH:mm
 }
 export enum DrawingRequestStatus {
   REQUESTED = "Requested",

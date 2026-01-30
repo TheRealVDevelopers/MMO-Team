@@ -9,7 +9,7 @@ import ProjectTemplatesPage from './quotation-team/ProjectTemplatesPage';
 import MyDayPage from './shared/MyDayPage';
 import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
-import { PROJECTS, ITEMS, PROJECT_TEMPLATES, RFQS, BIDS_DATA, USERS } from '../../constants';
+import { ITEMS, PROJECT_TEMPLATES, RFQS, BIDS_DATA, USERS } from '../../constants';
 import AddProjectModal from './quotation-team/AddProjectModal';
 import AddItemModal from './quotation-team/AddItemModal';
 import AddTemplateModal from './quotation-team/AddTemplateModal';
@@ -27,7 +27,7 @@ const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (p
   // Lifted State with LocalStorage Persistence for custom/demo overrides
   const [projectsState, setProjects] = useState<Project[]>(() => {
     const saved = localStorage.getItem('mmo_projects');
-    return saved ? JSON.parse(saved) : PROJECTS;
+    return saved ? JSON.parse(saved) : [];
   });
 
   // Merge logic: Combine Firebase leads (in site visit+), Firebase projects, and local projects
@@ -173,7 +173,7 @@ const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (p
       localStorage.removeItem('mmo_templates');
       localStorage.removeItem('mmo_rfqs');
       localStorage.removeItem('mmo_bids');
-      setProjects(PROJECTS);
+      setProjects([]);
       // setItems(ITEMS); // Items are now global
       setTemplates(PROJECT_TEMPLATES);
       setRfqs(RFQS);

@@ -2,13 +2,15 @@ import React from 'react';
 import { Activity } from '../../types';
 import { DocumentCheckIcon } from '../icons/IconComponents';
 import { formatDateTime } from '../../constants';
-import { USERS } from '../../constants';
+import { useUsers } from '../../hooks/useUsers';
 
-const ProjectActivityHistory: React.FC<{ activities: Activity[] }> = ({ activities }) => (
+const ProjectActivityHistory: React.FC<{ activities: Activity[] }> = ({ activities }) => {
+  const { users } = useUsers();
+  return (
     <div className="flow-root max-h-64 overflow-y-auto pr-2">
       <ul role="list" className="-mb-8">
-        {[...activities].sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime()).map((item, itemIdx) => {
-          const user = USERS.find(u => u.id === item.userId);
+        {[...activities].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()).map((item, itemIdx) => {
+          const user = users.find(u => u.id === item.userId);
           return (
             <li key={item.id}>
               <div className="relative pb-8">
@@ -26,7 +28,7 @@ const ProjectActivityHistory: React.FC<{ activities: Activity[] }> = ({ activiti
                       <p className="text-sm text-text-primary">
                         {item.description}
                       </p>
-                       <p className="text-xs text-text-secondary">by <span className="font-medium">{user?.name || 'System'}</span></p>
+                      <p className="text-xs text-text-secondary">by <span className="font-medium">{user?.name || 'System'}</span></p>
                     </div>
                     <div className="whitespace-nowrap text-right text-sm text-text-secondary">
                       <time dateTime={item.timestamp.toISOString()}>{formatDateTime(item.timestamp)}</time>
@@ -39,6 +41,7 @@ const ProjectActivityHistory: React.FC<{ activities: Activity[] }> = ({ activiti
         })}
       </ul>
     </div>
-);
+  );
+};
 
 export default ProjectActivityHistory;

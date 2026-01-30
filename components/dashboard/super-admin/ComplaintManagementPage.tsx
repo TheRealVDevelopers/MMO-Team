@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { COMPLAINTS, USERS, formatDate } from '../../../constants';
+import { formatDate } from '../../../constants';
+import { useUsers } from '../../../hooks/useUsers';
 import { Complaint, ComplaintStatus, UserRole } from '../../../types';
 import {
     ShieldExclamationIcon,
@@ -15,7 +16,8 @@ import Modal from '../../shared/Modal';
 import { ComplaintPriority, ComplaintType } from '../../../types';
 
 const ComplaintManagementPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
-    const [complaints, setComplaints] = useState<Complaint[]>(COMPLAINTS);
+    const [complaints, setComplaints] = useState<Complaint[]>([]);
+    const { users } = useUsers();
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
     // Simple Add Form State
@@ -103,7 +105,7 @@ const ComplaintManagementPage: React.FC<{ setCurrentPage: (page: string) => void
                                     <div>
                                         <p className="text-[10px] font-black text-text-tertiary uppercase tracking-wider">Who Reported</p>
                                         <p className="text-xs font-bold text-text-primary">
-                                            {USERS.find(u => u.id === complaint.submittedBy)?.name || complaint.submittedBy || "Unknown"}
+                                            {users.find(u => u.id === complaint.submittedBy)?.name || complaint.submittedBy || "Unknown"}
                                         </p>
                                     </div>
                                 </div>
@@ -146,7 +148,7 @@ const ComplaintManagementPage: React.FC<{ setCurrentPage: (page: string) => void
                             className="w-full bg-subtle-background/50 border border-border rounded-xl focus:border-primary focus:ring-4 focus:ring-primary/10 text-sm p-3 outline-none transition-all"
                         >
                             <option value="">Select Staff Member</option>
-                            {USERS.map(user => (
+                            {users.map(user => (
                                 <option key={user.id} value={user.id}>{user.name} ({user.role})</option>
                             ))}
                         </select>
@@ -161,7 +163,7 @@ const ComplaintManagementPage: React.FC<{ setCurrentPage: (page: string) => void
                             className="w-full bg-subtle-background/50 border border-border rounded-xl focus:border-primary focus:ring-4 focus:ring-primary/10 text-sm p-3 outline-none transition-all"
                         >
                             <option value="">Select Target Staff</option>
-                            {USERS.map(user => (
+                            {users.map(user => (
                                 <option key={user.id} value={user.name}>{user.name} ({user.role})</option>
                             ))}
                         </select>

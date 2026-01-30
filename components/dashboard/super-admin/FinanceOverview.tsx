@@ -1,8 +1,10 @@
 import React from 'react';
-import { PROJECTS, INVOICES } from '../../../constants';
+import { formatLargeNumberINR } from '../../../constants';
+import { useProjects } from '../../../hooks/useProjects';
+import { useInvoices } from '../../../hooks/useInvoices';
 import { PaymentStatus, ProjectStatus } from '../../../types';
 import { ContentCard, cn } from '../shared/DashboardUI';
-import { formatLargeNumberINR } from '../../../constants';
+
 import {
     BanknotesIcon,
     ArrowTrendingUpIcon,
@@ -13,23 +15,24 @@ import {
 import { motion } from 'framer-motion';
 
 const FinanceOverview: React.FC = () => {
+    const { projects } = useProjects();
+    const { invoices } = useInvoices();
+
     // 1. Total Revenue (Completed & Approved Projects)
-    const revenueProjects = PROJECTS.filter(p => p.status === ProjectStatus.COMPLETED || p.status === ProjectStatus.APPROVED);
+    const revenueProjects = projects.filter(p => p.status === ProjectStatus.COMPLETED || p.status === ProjectStatus.APPROVED);
     const totalRevenue = revenueProjects.reduce((sum, p) => sum + p.budget, 0);
 
     // 2. Outstanding (Pending Invoices)
-    const unpaidInvoices = INVOICES.filter(i => i.status !== PaymentStatus.PAID);
+    const unpaidInvoices = invoices.filter(i => i.status !== PaymentStatus.PAID);
     const outstandingAmount = unpaidInvoices.reduce((sum, i) => sum + (i.total - (i.paidAmount || 0)), 0);
 
     // 3. New Leads vs Old Leads Value (Mock Logic for Demo)
-    // Assuming "New" means created this year, "Old" means earlier. 
-    // Since we don't have detailed dates in mock constants, we'll simulate a 40/60 split of total project value
-    const totalPipelineValue = PROJECTS.reduce((sum, p) => sum + p.budget, 0);
+    const totalPipelineValue = projects.reduce((sum, p) => sum + p.budget, 0);
     const newBusinessValue = totalPipelineValue * 0.4;
 
     // 4. Payment Breakdown
-    const totalInvoiced = INVOICES.reduce((sum, i) => sum + i.total, 0);
-    const paidAmount = INVOICES.reduce((sum, i) => sum + (i.paidAmount || 0), 0);
+    const totalInvoiced = invoices.reduce((sum, i) => sum + i.total, 0);
+    const paidAmount = invoices.reduce((sum, i) => sum + (i.paidAmount || 0), 0);
     const paidPercentage = totalInvoiced > 0 ? (paidAmount / totalInvoiced) * 100 : 0;
 
     // Mocking Advance/50%/30% breakdown based on standard terms

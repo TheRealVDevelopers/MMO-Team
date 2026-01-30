@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { PROJECTS, INVOICES, formatLargeNumberINR } from '../../../constants';
+import { formatLargeNumberINR } from '../../../constants';
+import { useProjects } from '../../../hooks/useProjects';
+import { useInvoices } from '../../../hooks/useInvoices';
 import { PaymentStatus, ProjectStatus, Invoice } from '../../../types';
 import { ContentCard, SectionHeader, cn, staggerContainer } from '../shared/DashboardUI';
 import { format } from 'date-fns';
@@ -18,19 +20,25 @@ import { motion } from 'framer-motion';
 
 const FinancePage: React.FC = () => {
     const [filterStatus, setFilterStatus] = useState<PaymentStatus | 'All'>('All');
+    const { projects } = useProjects();
+    const { invoices } = useInvoices();
 
     // 1. Calculations
-    const revenueProjects = PROJECTS.filter(p => p.status === ProjectStatus.COMPLETED || p.status === ProjectStatus.APPROVED);
-    const totalRevenue = revenueProjects.reduce((sum, p) => sum + p.budget, 0);
+    const totalRevenue = React.useMemo(() => {
+        const revenueProjects = projects.filter(p => p.status === ProjectStatus.COMPLETED || p.status === ProjectStatus.APPROVED);
+        return revenueProjects.reduce((sum, p) => sum + p.budget, 0);
+    }, [projects]);
 
-    const unpaidInvoices = INVOICES.filter(i => i.status !== PaymentStatus.PAID);
-    const outstandingAmount = unpaidInvoices.reduce((sum, i) => sum + (i.total - (i.paidAmount || 0)), 0);
+    const outstandingAmount = React.useMemo(() => {
+        const unpaidInvoices = invoices.filter(i => i.status !== PaymentStatus.PAID);
+        return unpaidInvoices.reduce((sum, i) => sum + (i.total - (i.paidAmount || 0)), 0);
+    }, [invoices]);
 
-    const totalPipelineValue = PROJECTS.reduce((sum, p) => sum + p.budget, 0);
+    const totalPipelineValue = React.useMemo(() => projects.reduce((sum, p) => sum + p.budget, 0), [projects]);
 
     // Mocking Month-over-Month
     const lastMonthRevenue = totalRevenue * 0.85; // Mock
-    const revenueGrowth = ((totalRevenue - lastMonthRevenue) / lastMonthRevenue) * 100;
+    const revenueGrowth = lastMonthRevenue > 0 ? ((totalRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 : 0;
 
     // Payment Breakdown by Category (Mock)
     const breakdown = [
@@ -55,11 +63,11 @@ const FinancePage: React.FC = () => {
 
     const maxVal = Math.max(...monthlyData.map(d => d.value));
 
-    const paidPercentage = (totalRevenue / totalPipelineValue) * 100;
+    const paidPercentage = totalPipelineValue > 0 ? (totalRevenue / totalPipelineValue) * 100 : 0;
 
-    const filteredInvoices = filterStatus === 'All'
-        ? INVOICES
-        : INVOICES.filter(i => i.status === filterStatus);
+    const filteredInvoices = React.useMemo(() => filterStatus === 'All'
+        ? invoices
+        : invoices.filter(i => i.status === filterStatus), [invoices, filterStatus]);
 
     return (
         <motion.div
@@ -258,7 +266,7 @@ const FinancePage: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {PROJECTS.slice(0, 6).map((project, idx) => {
+                    {projects.slice(0, 6).map((project, idx) => {
                         const paid = project.budget * (idx % 2 === 0 ? 0.7 : 0.4);
                         const progress = (paid / project.budget) * 100;
                         return (

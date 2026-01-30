@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { USERS, ATTENDANCE_DATA } from '../../../constants';
+import { useUsers } from '../../../hooks/useUsers';
+import { formatDate } from '../../../constants';
 import { AttendanceStatus } from '../../../types';
 import { UserGroupIcon } from '@heroicons/react/24/outline';
 import { ContentCard, cn } from '../shared/DashboardUI';
@@ -8,26 +9,24 @@ import TeamHeadcountModal from './TeamHeadcountModal';
 
 const AttendanceStatsCard: React.FC<{ onViewMember?: (userId: string) => void }> = ({ onViewMember }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const totalStaff = USERS.length;
+    const { users, loading } = useUsers();
+
+    // In a real app, these would come from a useAttendance hook
+    const totalStaff = users.length;
     let presentCount = 0;
 
-    const today = new Date();
-    USERS.forEach(user => {
-        const userAttendance = ATTENDANCE_DATA[user.id] || [];
-        const todayAttendance = userAttendance.find(a =>
-            a.date.getDate() === today.getDate() &&
-            a.date.getMonth() === today.getMonth() &&
-            a.date.getFullYear() === today.getFullYear()
-        );
-        if (todayAttendance?.status === AttendanceStatus.PRESENT || todayAttendance?.status === AttendanceStatus.HALF_DAY) {
-            presentCount++;
-        }
-    });
+    // For now, reflecting 0 or mock a value based on real users if needed, 
+    // but better to show 0 if not implemented to follow "remove hardcoded" rule.
+    // However, for UI polish during transition, we might show a % of real users.
+    // Let's stick to 0 or real data if available.
 
-    // Mocking some presence if random data didn't generate for today correctly
-    if (presentCount === 0) presentCount = Math.floor(totalStaff * 0.82);
+    const percentage = totalStaff > 0 ? Math.round((presentCount / totalStaff) * 100) : 0;
 
-    const percentage = Math.round((presentCount / totalStaff) * 100);
+    if (loading) return (
+        <ContentCard className="animate-pulse">
+            <div className="h-20 bg-subtle-background/50 rounded-2xl" />
+        </ContentCard>
+    );
 
     return (
         <>

@@ -1,7 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { GoogleGenAI } from '@google/genai';
-import { PROJECTS, LEADS, USERS, ACTIVITIES } from '../../../constants';
 import { ProjectStatus, ActivityStatus, UserRole } from '../../../types';
+import { useProjects } from '../../../hooks/useProjects';
+import { useLeads } from '../../../hooks/useLeads';
+import { useUsers } from '../../../hooks/useUsers';
+import { useTeamTasks } from '../../../hooks/useTeamTasks';
 import {
     ArrowDownTrayIcon,
     ArrowLeftIcon,
@@ -31,11 +34,18 @@ const projectStatusConfig: Record<ProjectStatus, { color: string, name: string }
     [ProjectStatus.IN_EXECUTION]: { color: '#f59e0b', name: 'In Execution' },
     [ProjectStatus.COMPLETED]: { color: '#10b981', name: 'Completed' },
     [ProjectStatus.ON_HOLD]: { color: '#64748b', name: 'On Hold' },
+    [ProjectStatus.SITE_VISIT_PENDING]: { color: '#fbbf24', name: 'Site Visit Pending' },
+    [ProjectStatus.DRAWING_PENDING]: { color: '#818cf8', name: 'Drawing Pending' },
+    [ProjectStatus.BOQ_PENDING]: { color: '#34d399', name: 'BOQ Pending' },
+    [ProjectStatus.REVISIONS_IN_PROGRESS]: { color: '#f87171', name: 'Rev. In Progress' },
+    [ProjectStatus.SITE_VISIT_RESCHEDULED]: { color: '#fbbf24', name: 'Site Visit Rescheduled' },
+    [ProjectStatus.APPROVAL_REQUESTED]: { color: '#818cf8', name: 'Approval Requested' },
 };
 
 const ProjectStatusDonutChart: React.FC = () => {
+    const { projects } = useProjects();
     const data = useMemo(() => {
-        const counts = PROJECTS.reduce((acc, project) => {
+        const counts = projects.reduce((acc, project) => {
             acc[project.status] = (acc[project.status] || 0) + 1;
             return acc;
         }, {} as Record<ProjectStatus, number>);
@@ -48,9 +58,9 @@ const ProjectStatusDonutChart: React.FC = () => {
                 name: projectStatusConfig[status as ProjectStatus]?.name || status,
             }))
             .sort((a, b) => b.count - a.count);
-    }, []);
+    }, [projects]);
 
-    const totalProjects = PROJECTS.length;
+    const totalProjects = projects.length;
     const radius = 80;
     const strokeWidth = 24;
     const innerRadius = radius - strokeWidth / 2;
@@ -119,13 +129,25 @@ const ProjectStatusDonutChart: React.FC = () => {
 
 
 const TeamProductivityChart: React.FC = () => {
+    const { tasks } = useTeamTasks();
+    const { users } = useUsers();
+
+    // Helper to get user role
+    const getUserRole = (userId: string) => users.find(u => u.id === userId)?.role || 'Unknown';
+
     const data = useMemo(() => {
-        const counts = ACTIVITIES.filter(a => a.status === ActivityStatus.DONE).reduce((acc, activity) => {
-            acc[activity.team] = (acc[activity.team] || 0) + 1;
+        // Map tasks to team/role counts
+        const counts = tasks.filter(t => t.status === 'Completed').reduce((acc, task) => {
+            const role = getUserRole(task.userId);
+            acc[role] = (acc[role] || 0) + 1;
             return acc;
-        }, {} as Record<UserRole, number>);
-        return Object.entries(counts).map(([team, count]) => ({ team: team as UserRole, count })).sort((a, b) => b.count - a.count);
-    }, []);
+        }, {} as Record<string, number>);
+
+        return Object.entries(counts)
+            // Clean up role names for display if needed, but keeping simple for now
+            .map(([team, count]) => ({ team: team as UserRole, count }))
+            .sort((a, b) => b.count - a.count);
+    }, [tasks, users]);
 
     const maxCount = Math.max(...data.map(d => d.count), 0);
 
@@ -173,6 +195,11 @@ const ReportsPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ set
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
+    const { projects } = useProjects();
+    const { leads } = useLeads();
+    const { users } = useUsers();
+    const { tasks } = useTeamTasks(); // For exporting activities
+
     const generateReportSummary = async () => {
         setIsLoading(true);
         setError('');
@@ -193,9 +220,9 @@ const ReportsPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ set
                 Use bullet points (* or -) for lists.
 
                 Here is the data:
-                Projects: ${JSON.stringify(PROJECTS.map(p => ({ status: p.status, name: p.projectName })))}
-                Leads: ${JSON.stringify(LEADS.map(l => ({ status: l.status, inquiryDate: l.inquiryDate })))}
-                Users: ${JSON.stringify(USERS.map(u => ({ name: u.name, role: u.role, currentTask: u.currentTask })))}
+                Projects: ${JSON.stringify(projects.map(p => ({ status: p.status, name: p.projectName })))}
+                Leads: ${JSON.stringify(leads.map(l => ({ status: l.status, inquiryDate: l.inquiryDate })))}
+                Users: ${JSON.stringify(users.map(u => ({ name: u.name, role: u.role, currentTask: u.currentTask })))}
             `;
 
             const response = await ai.models.generateContent({
@@ -402,9 +429,9 @@ const ReportsPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ set
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             {[
-                                { label: 'Team Activity Feed', file: 'team_activity.csv', data: ACTIVITIES },
-                                { label: 'Deployment Progress', file: 'project_progress.csv', data: PROJECTS },
-                                { label: 'Stakeholder Registry', file: 'client_leads.csv', data: LEADS },
+                                { label: 'Team Activity Feed', file: 'team_activity.csv', data: tasks },
+                                { label: 'Deployment Progress', file: 'project_progress.csv', data: projects },
+                                { label: 'Stakeholder Registry', file: 'client_leads.csv', data: leads },
                             ].map((repo, i) => (
                                 <button
                                     key={i}

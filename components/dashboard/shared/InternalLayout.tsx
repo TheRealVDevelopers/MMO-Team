@@ -21,7 +21,7 @@ import {
     Bars3Icon,
     XMarkIcon
 } from '@heroicons/react/24/outline';
-import UserSelector from '../../shared/UserSelector';
+// import UserSelector from '../../shared/UserSelector';
 import CommandPalette from './CommandPalette';
 import NotificationPopover from './NotificationPopover';
 
@@ -202,7 +202,7 @@ const InternalLayout: React.FC<InternalLayoutProps> = ({
 
                         <div className="flex items-center gap-4">
                             <div className="hidden md:block">
-                                <UserSelector />
+                                {/* UserSelector removed for production */}
                             </div>
                             <div className="text-right hidden sm:block">
                                 <p className="text-sm font-bold text-text-primary">{currentUser?.name}</p>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { User, UserRole } from '../types';
-import { USERS } from '../constants';
+
 
 /**
  * Hook to fetch all staff members and their performance metrics
@@ -13,37 +13,74 @@ export const useStaffPerformance = () => {
 
     useEffect(() => {
         if (!db) {
-            setStaff(USERS.filter(u => u.role !== UserRole.SUPER_ADMIN));
+            setStaff([]);
             setLoading(false);
             return;
         }
-        // FIXED: Query staffUsers collection (not 'users') to match where users are created
-        const usersRef = collection(db, 'staffUsers');
-        // Fetch all users (you can filter by role if needed, but for now we fetch all)
-        const q = query(usersRef);
 
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const usersData: User[] = [];
+        // 1. Fetch Staff Users
+        const usersRef = collection(db, 'staffUsers');
+        const qUsers = query(usersRef);
+
+        // 2. Fetch Today's Attendance (Real-time)
+        const today = new Date().toLocaleDateString('en-CA'); // strict YYYY-MM-DD
+        const timeEntriesRef = collection(db, 'timeEntries');
+        const qTime = query(timeEntriesRef, where('date', '==', today));
+
+        // Use a composite listener approach or just independent listeners?
+        // Independent listeners are easier to manage but might cause double renders.
+        // Let's nest them or use state to combine.
+
+        // We'll stick to a simpler pattern: Listen to users, and inside that listener, listen to time?
+        // No, that's bad for perf. Let's listen to both independently and combine in a useEffect or useMemo.
+        // Actually, let's just do it in one effect with two listeners updating partial state.
+
+        let usersMap: Record<string, User> = {};
+        let attendanceMap: Record<string, string> = {};
+
+        const updateCombinedState = () => {
+            const combinedStaff = Object.values(usersMap).map(user => ({
+                ...user,
+                attendanceStatus: (attendanceMap[user.id] as any) || 'ABSENT'
+            }));
+            // Filter out super admin if needed, though they might want to see themselves?
+            // Existing logic filtered them out.
+            setStaff(combinedStaff.filter(u => u.role !== UserRole.SUPER_ADMIN));
+            setLoading(false);
+        };
+
+        const unsubUsers = onSnapshot(qUsers, (snapshot) => {
             snapshot.forEach((doc) => {
                 const data = doc.data();
-                usersData.push({
+                usersMap[doc.id] = {
                     ...data,
                     id: doc.id,
                     flagUpdatedAt: data.flagUpdatedAt?.toDate ? data.flagUpdatedAt.toDate() : (data.flagUpdatedAt ? new Date(data.flagUpdatedAt) : undefined),
                     lastUpdateTimestamp: data.lastUpdateTimestamp?.toDate ? data.lastUpdateTimestamp.toDate() : (data.lastUpdateTimestamp ? new Date(data.lastUpdateTimestamp) : undefined),
-                } as User);
+                } as User;
             });
-
-            // Filter out Super Admins from performance monitoring if desired, 
-            // or keep all internal users
-            setStaff(usersData.filter(u => u.role !== UserRole.SUPER_ADMIN));
-            setLoading(false);
-        }, (err) => {
-            console.error('Error fetching staff performance:', err);
-            setLoading(false);
+            updateCombinedState();
         });
 
-        return () => unsubscribe();
+        const unsubTime = onSnapshot(qTime, (snapshot) => {
+            const newAttendanceMap: Record<string, string> = {};
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                // Determine status based on clockIn/clockOut/breaks
+                let status = 'CLOCKED_IN';
+                if (data.clockOut) status = 'CLOCKED_OUT';
+                else if (data.breaks && data.breaks.some((b: any) => !b.endTime)) status = 'ON_BREAK';
+
+                newAttendanceMap[data.userId] = status;
+            });
+            attendanceMap = newAttendanceMap;
+            updateCombinedState();
+        });
+
+        return () => {
+            unsubUsers();
+            unsubTime();
+        };
     }, []);
 
     const performanceStats = {

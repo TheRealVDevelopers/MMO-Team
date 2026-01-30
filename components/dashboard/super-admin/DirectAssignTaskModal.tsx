@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { USERS, PROJECTS } from '../../../constants';
+import { useUsers } from '../../../hooks/useUsers';
+import { useProjects } from '../../../hooks/useProjects';
+import { useLeads } from '../../../hooks/useLeads';
 import { UserRole, TaskStatus } from '../../../types';
 import { cn } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -22,6 +24,10 @@ interface DirectAssignTaskModalProps {
 }
 
 const DirectAssignTaskModal: React.FC<DirectAssignTaskModalProps> = ({ isOpen, onClose, onAssign }) => {
+    const { users } = useUsers();
+    const { projects } = useProjects();
+    const { leads } = useLeads();
+
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [assigneeId, setAssigneeId] = useState('');
@@ -168,11 +174,11 @@ const DirectAssignTaskModal: React.FC<DirectAssignTaskModalProps> = ({ isOpen, o
                             >
                                 <option value="">Select Target...</option>
                                 {contextType === 'project'
-                                    ? PROJECTS.filter(p => p.status === 'In Execution' || p.status === 'Procurement').map(p => (
+                                    ? projects.filter(p => p.status === 'In Execution' || p.status === 'Procurement').map(p => (
                                         <option key={p.id} value={p.id}>{p.projectName}</option>
                                     ))
-                                    : PROJECTS.filter(p => p.status === 'Awaiting Design' || p.status === 'Pending Review' || p.status === 'New').map(p => ( // Using Projects as Leads for mock
-                                        <option key={p.id} value={p.id}>{p.clientName} ({p.projectName || 'New Enquiry'})</option>
+                                    : leads.map(l => (
+                                        <option key={l.id} value={l.id}>{l.clientName} ({l.projectName || 'New Enquiry'})</option>
                                     ))
                                 }
                             </select>
@@ -239,7 +245,7 @@ const DirectAssignTaskModal: React.FC<DirectAssignTaskModalProps> = ({ isOpen, o
                             Specialist Assignment
                         </label>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar p-1">
-                            {USERS.map(user => (
+                            {users.map(user => (
                                 <button
                                     key={user.id}
                                     type="button"

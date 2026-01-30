@@ -28,8 +28,9 @@ const TeamLiveStatusCard: React.FC = () => {
             }
             if (groups[user.role]) {
                 groups[user.role]!.total++;
-                // Active if not red flagged (simplification for "Pulse")
-                if (user.performanceFlag !== 'red') {
+                // Active if clocked in (Active or On Break)
+                const isOnline = user.attendanceStatus === 'CLOCKED_IN' || user.attendanceStatus === 'ON_BREAK';
+                if (isOnline) {
                     groups[user.role]!.active++;
                 }
                 if (user.performanceFlag === 'red') {
@@ -59,6 +60,9 @@ const TeamLiveStatusCard: React.FC = () => {
 
                     const activePercentage = stats.total > 0 ? (stats.active / stats.total) * 100 : 0;
 
+                    // Get list of users in this role to render specific bars
+                    const usersInRole = staff.filter(u => u.role === role);
+
                     return (
                         <motion.div
                             key={role}
@@ -71,21 +75,23 @@ const TeamLiveStatusCard: React.FC = () => {
                                 <h4 className="text-sm font-bold text-text-primary">{role}</h4>
                                 <span className={cn(
                                     "px-2 py-0.5 rounded-full text-[10px] font-black uppercase",
-                                    activePercentage === 100 ? "bg-emerald-500/10 text-emerald-500" : "bg-text-secondary/10 text-text-secondary"
+                                    activePercentage > 0 ? "bg-emerald-500/10 text-emerald-500" : "bg-text-secondary/10 text-text-secondary"
                                 )}>
-                                    {stats.active}/{stats.total} Active
+                                    {stats.active}/{stats.total} Online
                                 </span>
                             </div>
 
                             {/* Status Bar */}
                             <div className="flex gap-1 h-1.5 w-full rounded-full overflow-hidden bg-border/30">
-                                {Array.from({ length: stats.total }).map((_, i) => (
+                                {usersInRole.map((u, i) => (
                                     <div
-                                        key={i}
+                                        key={u.id}
                                         className={cn(
                                             "flex-1 rounded-full",
-                                            i < stats.active ? "bg-emerald-500" : "bg-error"
+                                            u.attendanceStatus === 'CLOCKED_IN' ? "bg-emerald-500" :
+                                                u.attendanceStatus === 'ON_BREAK' ? "bg-amber-500" : "bg-border"
                                         )}
+                                        title={`${u.name}: ${u.attendanceStatus?.replace('_', ' ') || 'ABSENT'}`}
                                     />
                                 ))}
                             </div>
@@ -93,7 +99,7 @@ const TeamLiveStatusCard: React.FC = () => {
                             <div className="flex items-center gap-4 mt-3 text-[10px] font-medium text-text-tertiary">
                                 <span className="flex items-center gap-1.5">
                                     <CheckCircleIcon className="w-3 h-3 text-emerald-500" />
-                                    {stats.active} Online
+                                    {stats.active} Active
                                 </span>
                                 {stats.redFlag > 0 && (
                                     <span className="flex items-center gap-1.5 text-error">

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { formatDate, formatCurrencyINR } from '../../../constants';
 import { useProjects } from '../../../hooks/useProjects';
-import { Project, ProjectStatus } from '../../../types';
+import { Project, ProjectStatus, UserRole } from '../../../types';
 import ProjectDetailModal from './ProjectDetailModal';
 import GanttChart from './GanttChart';
 import {
@@ -10,8 +10,14 @@ import {
     AdjustmentsHorizontalIcon,
     ListBulletIcon,
     ViewColumnsIcon,
-    ChevronRightIcon
+    ChevronRightIcon,
+    TrashIcon
 } from '@heroicons/react/24/outline';
+import { db } from '../../../firebase';
+import { deleteDoc, doc } from 'firebase/firestore';
+import { useAuth } from '../../../context/AuthContext';
+
+
 import { ContentCard, cn, staggerContainer } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -34,10 +40,22 @@ const getProgressColor = (progress: number): string => {
 
 const ProjectTrackingPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
     const { projects, loading } = useProjects();
+    const { currentUser } = useAuth();
     const [view, setView] = useState<'list' | 'gantt'>('list');
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
     const [statusFilter, setStatusFilter] = useState<ProjectStatus | 'all'>('all');
     const [searchTerm, setSearchTerm] = useState('');
+
+    const handleDeleteProject = async (projectId: string) => {
+        if (window.confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
+            try {
+                await deleteDoc(doc(db, 'projects', projectId));
+            } catch (error) {
+                console.error("Error deleting project:", error);
+                alert("Failed to delete project.");
+            }
+        }
+    };
 
     const filteredProjects = useMemo(() => {
         return projects.filter(project => {
@@ -200,8 +218,28 @@ const ProjectTrackingPage: React.FC<{ setCurrentPage: (page: string) => void }> 
                                                         {formatCurrencyINR(project.budget)}
                                                     </td>
                                                     <td className="px-8 py-6 text-center">
-                                                        <div className="w-8 h-8 rounded-xl bg-subtle-background flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all shadow-sm">
-                                                            <ChevronRightIcon className="w-4 h-4" />
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            <div
+                                                                className="w-8 h-8 rounded-xl bg-subtle-background flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all shadow-sm"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setSelectedProject(project);
+                                                                }}
+                                                            >
+                                                                <ChevronRightIcon className="w-4 h-4" />
+                                                            </div>
+                                                            {currentUser?.role === UserRole.SUPER_ADMIN && (
+                                                                <div
+                                                                    className="w-8 h-8 rounded-xl bg-error/10 flex items-center justify-center text-error hover:bg-error hover:text-white transition-all shadow-sm opacity-0 group-hover:opacity-100"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleDeleteProject(project.id);
+                                                                    }}
+                                                                    title="Delete Project"
+                                                                >
+                                                                    <TrashIcon className="w-4 h-4" />
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </motion.tr>

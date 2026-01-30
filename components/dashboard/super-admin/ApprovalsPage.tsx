@@ -15,7 +15,8 @@ import { useAuth } from '../../../context/AuthContext';
 import { useApprovalRequests, approveRequest, rejectRequest, getApprovalStats } from '../../../hooks/useApprovalSystem';
 import { addTask } from '../../../hooks/useMyDayTasks';
 import { ApprovalRequest, ApprovalStatus, ApprovalRequestType, UserRole } from '../../../types';
-import { formatDateTime, USERS } from '../../../constants';
+import { formatDateTime } from '../../../constants';
+import { useUsers } from '../../../hooks/useUsers';
 import { ContentCard, StatCard, SectionHeader, cn, staggerContainer, PrimaryButton } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -37,6 +38,7 @@ const ApprovalsPage: React.FC = () => {
 
   const { requests, loading } = useApprovalRequests(filterStatus === 'All' ? undefined : filterStatus);
   const { requests: allRequests } = useApprovalRequests(); // For stats or full list if needed
+  const { users } = useUsers();
 
   // Fallback mapping from request type to target role (for requests without targetRole set)
   const derivedTargetRole = useMemo(() => {
@@ -57,7 +59,7 @@ const ApprovalsPage: React.FC = () => {
 
   // Personnel for assignment - show everyone but sort matching role to top for convenience
   const personnel = useMemo(() => {
-    return [...USERS].sort((a, b) => {
+    return [...users].sort((a, b) => {
       // Put users with the "correct" role at the top
       const aIsMatch = a.role === derivedTargetRole;
       const bIsMatch = b.role === derivedTargetRole;
@@ -68,7 +70,7 @@ const ApprovalsPage: React.FC = () => {
       // Secondary sort by name
       return a.name.localeCompare(b.name);
     });
-  }, [derivedTargetRole]);
+  }, [derivedTargetRole, users]);
 
   // Handle personnel selection reset
   useEffect(() => {

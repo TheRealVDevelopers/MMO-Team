@@ -1,7 +1,9 @@
 import React from 'react';
 import { Project, User, MaterialRequestStatus, ProjectStatus } from '../../../types';
-import { USERS, MATERIAL_REQUESTS, VENDORS, VENDOR_BILLS, formatCurrencyINR } from '../../../constants';
+import { formatCurrencyINR } from '../../../constants';
 import { useActivities } from '../../../hooks/useActivities';
+import { useUsers } from '../../../hooks/useUsers';
+import { useVendorBills } from '../../../hooks/useVendorBills';
 import { logActivity } from '../../../services/liveDataService';
 import { updateProject } from '../../../hooks/useProjects';
 import Modal from '../../shared/Modal';
@@ -34,19 +36,22 @@ const getStatusConfig = (status: MaterialRequestStatus) => {
 
 const ProjectDetailModal: React.FC<{ project: Project; isOpen: boolean; onClose: () => void; }> = ({ project, isOpen, onClose }) => {
     const { activities, loading: activitiesLoading } = useActivities(project.id);
+    const { users } = useUsers();
+    // const { vendorBills } = useVendorBills(); // Using empty for now as VENDORS is also removed
 
     const assignedTeamMembers = Object.entries(project.assignedTeam)
         .flatMap(([role, userIdOrIds]) => {
             const userIds = Array.isArray(userIdOrIds) ? userIdOrIds : [userIdOrIds];
             return userIds.map(userId => {
-                const user = USERS.find(u => u.id === userId);
+                const user = users.find(u => u.id === userId);
                 return user ? { ...user, designatedRole: role.replace('_', ' ') } : null;
             });
         })
         .filter((user): user is User & { designatedRole: string } => user !== null);
 
-    const projectMaterials = MATERIAL_REQUESTS.filter(m => m.projectId === project.id);
-    const projectVendors = VENDORS.filter(v => VENDOR_BILLS.some(b => b.projectId === project.id && b.vendorId === v.id));
+    const projectMaterials: any[] = []; // TODO: Implement useMaterialRequests
+    const projectVendors: any[] = []; // TODO: Implement useVendors or useOrganizations
+    // const projectVendors = VENDORS.filter(v => VENDOR_BILLS.some(b => b.projectId === project.id && b.vendorId === v.id));
 
     const remainingBalance = project.budget - project.advancePaid;
     const budgetUsedPercentage = project.totalExpenses ? (project.totalExpenses / project.budget) * 100 : 0;
@@ -68,7 +73,7 @@ const ProjectDetailModal: React.FC<{ project: Project; isOpen: boolean; onClose:
             if (newNote.trim()) {
                 await logActivity({
                     description: `ADMIN OVERRIDE: ${newNote}`,
-                    team: project.assignedTeam.drawing ? (USERS.find(u => u.id === project.assignedTeam.drawing)?.role || project.assignedTeam.drawing as any) : 'Management' as any,
+                    team: project.assignedTeam.drawing ? (users.find(u => u.id === project.assignedTeam.drawing)?.role || project.assignedTeam.drawing as any) : 'Management' as any,
                     userId: 'admin',
                     status: 'done' as any,
                     projectId: project.id

@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { BIDS_DATA, RFQS } from '../../../constants';
 import { BidStatus, Bid } from '../../../types';
 import { formatCurrencyINR } from '../../../constants';
 import { DocumentTextIcon } from '@heroicons/react/24/outline';
@@ -9,13 +8,8 @@ import { DocumentTextIcon } from '@heroicons/react/24/outline';
 const MyBids: React.FC = () => {
     const { currentVendor } = useAuth();
 
-    // Filter Bids submitted by current vendor
-    const [allBids, setAllBids] = React.useState<Bid[]>([]);
-
-    React.useEffect(() => {
-        const localBids = JSON.parse(localStorage.getItem('mmo_mock_bids') || '[]');
-        setAllBids([...BIDS_DATA, ...localBids]);
-    }, []);
+    // Removed hardcoded BIDS_DATA and localStorage fallback
+    const [allBids] = React.useState<Bid[]>([]);
 
     const myBids = allBids.filter(bid =>
         currentVendor &&
@@ -32,7 +26,8 @@ const MyBids: React.FC = () => {
     };
 
     const getRFQDetails = (rfqId: string) => {
-        return RFQS.find(r => r.id === rfqId);
+        // Since we don't have a hook for RFQs here yet, returning undefined
+        return undefined;
     };
 
     return (

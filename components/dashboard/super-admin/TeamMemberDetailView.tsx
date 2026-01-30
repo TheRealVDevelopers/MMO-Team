@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { User, UserRole, LeadPipelineStatus, ActivityStatus, ProjectStatus } from '../../../types';
-import { ACTIVITIES, LEADS, PROJECTS, ATTENDANCE_DATA, formatCurrencyINR, formatDateTime } from '../../../constants';
+import { formatCurrencyINR, formatDateTime } from '../../../constants';
+import { useProjects } from '../../../hooks/useProjects';
+import { useLeads } from '../../../hooks/useLeads';
 import {
     PresentationChartBarIcon,
     CheckCircleIcon,
@@ -18,7 +20,8 @@ import AttendanceCalendar from './AttendanceCalendar';
 import { ContentCard, cn, staggerContainer } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTeamTasks } from '../../../hooks/useTeamTasks';
-import { TaskStatus } from '../../../types';
+import { TaskStatus, Attendance, AttendanceStatus, TimeTrackingStatus } from '../../../types';
+import { useTimeEntries } from '../../../hooks/useTimeTracking';
 
 const TabButton: React.FC<{
     icon: React.ElementType;
@@ -62,6 +65,8 @@ const UserMetric: React.FC<{ title: string; value: string | number; icon: React.
 const TeamMemberDetailView: React.FC<{ user: User }> = ({ user }) => {
     const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'attendance'>('overview');
     const { tasks, loading } = useTeamTasks();
+    const { projects } = useProjects();
+    const { leads } = useLeads();
 
     const userTasks = useMemo(() =>
         tasks.filter(t => t.userId === user.id),
@@ -81,7 +86,7 @@ const TeamMemberDetailView: React.FC<{ user: User }> = ({ user }) => {
 
     const userKPIs = useMemo(() => {
         if (user.role === UserRole.SALES_TEAM_MEMBER) {
-            const memberLeads = LEADS.filter(l => l.assignedTo === user.id);
+            const memberLeads = leads.filter(l => l.assignedTo === user.id);
             const wonLeads = memberLeads.filter(l => l.status === LeadPipelineStatus.WON).length;
             const conversionRate = memberLeads.length > 0 ? (wonLeads / memberLeads.length) * 100 : 0;
             const revenue = memberLeads.filter(l => l.status === LeadPipelineStatus.WON).reduce((sum, l) => sum + l.value, 0);
@@ -92,7 +97,7 @@ const TeamMemberDetailView: React.FC<{ user: User }> = ({ user }) => {
             ];
         }
         if (user.role === UserRole.DRAWING_TEAM) {
-            const memberProjects = PROJECTS.filter(p => p.assignedTeam.drawing === user.id);
+            const memberProjects = projects.filter(p => p.assignedTeam.drawing === user.id);
             const completed = memberProjects.filter(p => p.status === ProjectStatus.COMPLETED).length;
             return [
                 { title: 'Project Load', value: memberProjects.length, icon: DocumentCheckIcon },
@@ -101,9 +106,46 @@ const TeamMemberDetailView: React.FC<{ user: User }> = ({ user }) => {
             ];
         }
         return [];
-    }, [user.id, user.role]);
+    }, [user.id, user.role, leads, projects]);
 
-    const attendanceForMonth = ATTENDANCE_DATA[user.id] || [];
+    // Attendance Data Fetching
+    const today = new Date();
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toLocaleDateString('en-CA');
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toLocaleDateString('en-CA');
+
+    const { entries: timeEntries } = useTimeEntries(user.id, startOfMonth, endOfMonth);
+
+    const attendanceForMonth: Attendance[] = useMemo(() => {
+        return timeEntries.map(entry => {
+            let status = AttendanceStatus.ABSENT;
+
+            // Determine status based on time
+            if (entry.totalWorkHours && entry.totalWorkHours >= 8) {
+                status = AttendanceStatus.PRESENT;
+            } else if (entry.totalWorkHours && entry.totalWorkHours >= 4) {
+                status = AttendanceStatus.HALF_DAY;
+            } else if (entry.status === TimeTrackingStatus.CLOCKED_IN || entry.status === TimeTrackingStatus.ON_BREAK) {
+                status = AttendanceStatus.PRESENT; // Currently working
+            } else if (entry.clockIn) {
+                status = AttendanceStatus.HALF_DAY; // Clocked in but less than 4 hours (and clocked out)
+            }
+
+            // Format times (handle Date or Timestamp objects safely)
+            const formatTime = (timeVal: any) => {
+                if (!timeVal) return undefined;
+                const d = typeof timeVal.toDate === 'function' ? timeVal.toDate() : new Date(timeVal);
+                return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+            };
+
+            return {
+                date: new Date(entry.date), // entry.date is YYYY-MM-DD string
+                status,
+                clockIn: formatTime(entry.clockIn),
+                clockOut: formatTime(entry.clockOut)
+            };
+        });
+    }, [timeEntries]);
+
 
     return (
         <ContentCard className="h-full flex flex-col !p-0 overflow-hidden">

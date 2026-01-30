@@ -1,5 +1,6 @@
 import React from 'react';
-import { LEADS, USERS, formatLargeNumberINR, formatDateTime } from '../../../constants';
+import { formatLargeNumberINR, formatDateTime } from '../../../constants';
+import { useUsers } from '../../../hooks/useUsers';
 import { LeadPipelineStatus, UserRole } from '../../../types';
 import {
     BanknotesIcon,
@@ -11,8 +12,12 @@ import {
     ClockIcon,
     CalendarIcon,
     MagnifyingGlassIcon,
-    AdjustmentsHorizontalIcon
+    AdjustmentsHorizontalIcon,
+    TrashIcon
 } from '@heroicons/react/24/outline';
+import { db } from '../../../firebase';
+import { deleteDoc, doc } from 'firebase/firestore';
+import { useAuth } from '../../../context/AuthContext';
 import { ContentCard, StatCard, cn, staggerContainer } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLeads, updateLead } from '../../../hooks/useLeads';
@@ -35,6 +40,8 @@ const getStatusConfig = (status: LeadPipelineStatus) => {
 
 const LeadsManagementPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
     const { leads, loading } = useLeads();
+    const { currentUser } = useAuth();
+    const { users } = useUsers();
     const [selectedLead, setSelectedLead] = React.useState<any>(null);
     const [searchTerm, setSearchTerm] = React.useState('');
     const [statusFilter, setStatusFilter] = React.useState<LeadPipelineStatus | 'all'>('all');
@@ -60,11 +67,23 @@ const LeadsManagementPage: React.FC<{ setCurrentPage: (page: string) => void }> 
         });
     }, [leads, searchTerm, statusFilter, repFilter]);
 
-    const salesTeam = USERS.filter(u => u.role === UserRole.SALES_TEAM_MEMBER || u.role === UserRole.SALES_GENERAL_MANAGER);
+    const salesTeam = users.filter(u => u.role === UserRole.SALES_TEAM_MEMBER || u.role === UserRole.SALES_GENERAL_MANAGER);
 
     const handleLeadUpdate = async (updatedLead: any) => {
         await updateLead(updatedLead.id, updatedLead);
         setSelectedLead(updatedLead);
+    };
+
+    const handleDeleteLead = async (leadId: string) => {
+        if (window.confirm('Are you sure you want to delete this lead? This action cannot be undone.')) {
+            try {
+                await deleteDoc(doc(db, 'leads', leadId));
+                // Optionally refresh or show success toast
+            } catch (error) {
+                console.error("Error deleting lead:", error);
+                alert("Failed to delete lead.");
+            }
+        }
     };
 
     const funnelStages = [
@@ -252,9 +271,9 @@ const LeadsManagementPage: React.FC<{ setCurrentPage: (page: string) => void }> 
                                         <td className="px-8 py-6">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-[10px] font-black text-primary border border-primary/20">
-                                                    {USERS.find(u => u.id === lead.assignedTo)?.name.charAt(0)}
+                                                    {users.find(u => u.id === lead.assignedTo)?.name.charAt(0)}
                                                 </div>
-                                                <span className="text-xs font-semibold text-text-secondary">{USERS.find(u => u.id === lead.assignedTo)?.name}</span>
+                                                <span className="text-xs font-semibold text-text-secondary">{users.find(u => u.id === lead.assignedTo)?.name}</span>
                                             </div>
                                         </td>
                                         <td className="px-8 py-6">
@@ -266,8 +285,28 @@ const LeadsManagementPage: React.FC<{ setCurrentPage: (page: string) => void }> 
                                             {formatDateTime(lead.inquiryDate)}
                                         </td>
                                         <td className="px-8 py-6 text-center">
-                                            <div className="w-8 h-8 rounded-xl bg-subtle-background flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all shadow-sm mx-auto">
-                                                <ChevronRightIcon className="w-4 h-4" />
+                                            <div className="flex items-center justify-center gap-2">
+                                                <div
+                                                    className="w-8 h-8 rounded-xl bg-subtle-background flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all shadow-sm"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedLead(lead);
+                                                    }}
+                                                >
+                                                    <ChevronRightIcon className="w-4 h-4" />
+                                                </div>
+                                                {currentUser?.role === UserRole.SUPER_ADMIN && (
+                                                    <div
+                                                        className="w-8 h-8 rounded-xl bg-error/10 flex items-center justify-center text-error hover:bg-error hover:text-white transition-all shadow-sm opacity-0 group-hover:opacity-100"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDeleteLead(lead.id);
+                                                        }}
+                                                        title="Delete Lead"
+                                                    >
+                                                        <TrashIcon className="w-4 h-4" />
+                                                    </div>
+                                                )}
                                             </div>
                                         </td>
                                     </motion.tr>

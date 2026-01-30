@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { RFQS, formatCurrencyINR } from '../../../constants';
+import { formatCurrencyINR } from '../../../constants';
 import { RFQStatus, RFQ, Bid } from '../../../types';
 import { ClockIcon, TrophyIcon, UserCircleIcon, FireIcon } from '@heroicons/react/24/outline';
 import SubmitQuoteModal from '../../shared/SubmitQuoteModal';
@@ -10,41 +10,18 @@ const UnifiedBiddingBoard: React.FC = () => {
     const [selectedRFQ, setSelectedRFQ] = useState<RFQ | null>(null);
     const [currentTime, setCurrentTime] = useState(new Date());
 
-    // Update timer every minute and listen for storage changes
+    // Update timer every minute
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 60000);
-
-        const handleStorageChange = (e: StorageEvent) => {
-            if (e.key === 'mmo_rfqs' || e.key === 'mmo_bids') {
-                console.log('Storage changed, refreshing bidding board data...');
-                refreshData();
-            }
-        };
-
-        window.addEventListener('storage', handleStorageChange);
-        return () => {
-            clearInterval(timer);
-            window.removeEventListener('storage', handleStorageChange);
-        };
+        return () => clearInterval(timer);
     }, []);
 
-    // Load from localStorage
-    const [rfqs, setRfqs] = useState<RFQ[]>(() => {
-        const saved = localStorage.getItem('mmo_rfqs');
-        return saved ? JSON.parse(saved) : RFQS;
-    });
-
-    const [bids, setBids] = useState<Bid[]>(() => {
-        const saved = localStorage.getItem('mmo_bids');
-        return saved ? JSON.parse(saved) : [];
-    });
+    // Removed hardcoded RFQS and localStorage logic
+    const [rfqs, setRfqs] = useState<RFQ[]>([]);
+    const [bids, setBids] = useState<Bid[]>([]);
 
     const refreshData = () => {
-        const savedRfqs = localStorage.getItem('mmo_rfqs');
-        if (savedRfqs) setRfqs(JSON.parse(savedRfqs));
-
-        const savedBids = localStorage.getItem('mmo_bids');
-        if (savedBids) setBids(JSON.parse(savedBids));
+        // NO-OP as we are removing localStorage sync
     };
 
     // Filter RFQs where the current vendor is invited and status is OPEN

@@ -24,6 +24,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (savedUser) {
       try {
         const parsed = JSON.parse(savedUser);
+        // Revive Date objects
+        if (parsed.lastUpdateTimestamp) parsed.lastUpdateTimestamp = new Date(parsed.lastUpdateTimestamp);
+        if (parsed.currentTaskDetails?.startTime) parsed.currentTaskDetails.startTime = new Date(parsed.currentTaskDetails.startTime);
+
         console.log('Restored user from localStorage:', parsed.name);
         return parsed;
       } catch (e) {
@@ -71,21 +75,48 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [currentVendor]);
 
   useEffect(() => {
-    // First check if we have a localStorage user (mock login)
-    const savedUser = localStorage.getItem('mmo-current-user');
-    if (savedUser) {
-      setLoading(false);
-      return;
-    }
+    // We listen for Firebase auth changes regardless of localStorage
+    const unsubscribe = onAuthStateChange((firebaseUser) => {
+      console.log('Auth State Verified. User:', firebaseUser?.email || 'None');
 
-    // Otherwise, listen for Firebase auth changes
-    const unsubscribe = onAuthStateChange((user) => {
-      setCurrentUser(user);
+      if (firebaseUser) {
+        // Firebase has confirmed a user session -> Update Source of Truth
+        setCurrentUser(firebaseUser);
+      } else {
+        // Firebase says "No User"
+        // Check if we are currently using a "Simplified/Mock" login which relies ONLY on localStorage
+        // Mock users have IDs like 'user-1', 'user-2' etc. (length < 20)
+        // Real Firebase UIDs are 28 chars string
+
+        // We access the current Reference of state inside the callback? 
+        // No, closure captures initial state! We need to check localStorage directly or use functional update?
+        // Actually, we can check localStorage here since it's the persistence layer for mock users.
+        const localData = localStorage.getItem('mmo-current-user');
+        let isMockUser = false;
+
+        if (localData) {
+          try {
+            const parsed = JSON.parse(localData);
+            // Simple heuristic: If ID is short (e.g. "user-1"), it's a mock user from constants
+            if (parsed.id && parsed.id.length < 20) {
+              isMockUser = true;
+            }
+          } catch (e) { }
+        }
+
+        if (isMockUser) {
+          console.log('Keeping Simplified/Mock User session active despite no Firebase session.');
+          // Do NOT clear currentUser
+        } else {
+          console.log('No Firebase session and not a mock user -> Clearing session.');
+          setCurrentUser(null);
+        }
+      }
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, []); // Run once on mount
 
   const updateCurrentUserAvatar = (avatarDataUrl: string) => {
     if (currentUser) {

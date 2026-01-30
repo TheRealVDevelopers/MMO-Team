@@ -61,17 +61,17 @@ export const convertToAppUser = async (firebaseUser: FirebaseUser): Promise<User
  * Sign in staff member with email and password
  */
 export const signInStaff = async (email: string, password: string): Promise<User | null> => {
-    // Simplified Auth for Development
-    // Check if the email exists in our USERS constant for mock login
-    const mockUser = USERS.find(u => u.email === email);
+    // Simplified Auth for Development - REMOVED
+    // Check if the email exists in our USERS constant for mock login - REMOVED
+    // const mockUser = USERS.find(u => u.email === email);
 
-    if (mockUser && password === '123456') {
-        console.log(`Simplified staff login for ${mockUser.name} (${mockUser.role})`);
-        return {
-            ...mockUser,
-            lastUpdateTimestamp: new Date(),
-        };
-    }
+    // if (mockUser && password === '123456') {
+    //     console.log(`Simplified staff login for ${mockUser.name} (${mockUser.role})`);
+    //     return {
+    //         ...mockUser,
+    //         lastUpdateTimestamp: new Date(),
+    //     };
+    // }
 
     logAgent({
         location: 'authService.ts:sign-in',
@@ -279,7 +279,7 @@ export const getStaffMember = async (userId: string): Promise<User | null> => {
  */
 export const getAllStaff = async (): Promise<User[]> => {
     try {
-        if (!db) return USERS.filter(u => u.role !== UserRole.SUPER_ADMIN);
+        if (!db) return [];
         const staffSnapshot = await getDocs(collection(db, 'staffUsers'));
         return staffSnapshot.docs.map(doc => {
             const data = doc.data();
@@ -307,14 +307,14 @@ export const getAllStaff = async (): Promise<User[]> => {
  * Sign in vendor with email and password
  */
 export const signInVendor = async (email: string, password: string): Promise<Vendor | null> => {
-    // Simplified Auth for Vendor Portal
-    // Check if the email exists in our VENDORS constant
-    const mockVendor = VENDORS.find(v => v.email === email);
+    // Simplified Auth for Vendor Portal - REMOVED
+    // Check if the email exists in our VENDORS constant - REMOVED
+    // const mockVendor = VENDORS.find(v => v.email === email);
 
-    if (mockVendor && password === '123456') {
-        console.log(`Simplified vendor login for ${mockVendor.name}`);
-        return mockVendor;
-    }
+    // if (mockVendor && password === '123456') {
+    //     console.log(`Simplified vendor login for ${mockVendor.name}`);
+    //     return mockVendor;
+    // }
 
     // In a real app, this would query a 'vendors' collection in Firestore
     return null;
@@ -329,10 +329,10 @@ export const verifyClientCredentials = async (
     email: string,
     password: string
 ): Promise<boolean> => {
-    // Simplified Auth for Development - Default client credentials
-    if (email === 'client@makemyoffice.com' && password === '123456') {
-        return true;
-    }
+    // Simplified Auth for Development - Default client credentials - REMOVED
+    // if (email === 'client@makemyoffice.com' && password === '123456') {
+    //     return true;
+    // }
 
     try {
         if (!db) return false;

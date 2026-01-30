@@ -1,5 +1,5 @@
 import React from 'react';
-import { PROJECTS } from '../../../constants';
+import { useProjects } from '../../../hooks/useProjects';
 import { Project, ProjectStatus } from '../../../types';
 import { RocketLaunchIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { ContentCard, cn } from '../shared/DashboardUI';
@@ -19,11 +19,12 @@ interface OngoingProjectsCardProps {
 }
 
 const OngoingProjectsCard: React.FC<OngoingProjectsCardProps> = ({ onProjectSelect }) => {
-    const ongoingProjects = PROJECTS.filter(p =>
+    const { projects } = useProjects();
+    const ongoingProjects = projects.filter(p =>
         p.status === ProjectStatus.IN_EXECUTION ||
         p.status === ProjectStatus.PROCUREMENT ||
         p.status === ProjectStatus.DESIGN_IN_PROGRESS
-    ).slice(0, 5); // Show top 5 ongoing
+    );
 
     return (
         <ContentCard>
@@ -43,7 +44,7 @@ const OngoingProjectsCard: React.FC<OngoingProjectsCardProps> = ({ onProjectSele
                 </button>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-6 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
                 {ongoingProjects.map((project, idx) => {
                     const phase = getPhase(project.progress);
                     return (

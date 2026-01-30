@@ -1,7 +1,7 @@
 import React from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { XMarkIcon, UserIcon, FlagIcon } from '@heroicons/react/24/outline';
-import { USERS, ATTENDANCE_DATA } from '../../../constants';
+import { useUsers } from '../../../hooks/useUsers';
 import { UserRole, AttendanceStatus } from '../../../types';
 import { cn } from '../shared/DashboardUI';
 
@@ -12,24 +12,20 @@ interface TeamHeadcountModalProps {
 }
 
 const TeamHeadcountModal: React.FC<TeamHeadcountModalProps> = ({ isOpen, onClose, onViewMemberProfile }) => {
+    const { users, loading } = useUsers();
 
     // Group users by Department/Team
     const teams = {
-        'Sales Team': USERS.filter(u => [UserRole.SALES_GENERAL_MANAGER, UserRole.SALES_TEAM_MEMBER, UserRole.MANAGER].includes(u.role)),
-        'Execution Team': USERS.filter(u => [UserRole.EXECUTION_TEAM, UserRole.SITE_ENGINEER, UserRole.PROCUREMENT_TEAM].includes(u.role)),
-        'Drawing & Design': USERS.filter(u => [UserRole.DRAWING_TEAM, UserRole.DESIGNER, UserRole.QUOTATION_TEAM].includes(u.role)),
-        'Accounts & Admin': USERS.filter(u => [UserRole.ACCOUNTS_TEAM, UserRole.SUPER_ADMIN].includes(u.role)),
+        'Sales Team': users.filter(u => [UserRole.SALES_GENERAL_MANAGER, UserRole.SALES_TEAM_MEMBER, UserRole.MANAGER].includes(u.role)),
+        'Execution Team': users.filter(u => [UserRole.EXECUTION_TEAM, UserRole.SITE_ENGINEER, UserRole.PROCUREMENT_TEAM].includes(u.role)),
+        'Drawing & Design': users.filter(u => [UserRole.DRAWING_TEAM, UserRole.DESIGNER, UserRole.QUOTATION_TEAM].includes(u.role)),
+        'Accounts & Admin': users.filter(u => [UserRole.ACCOUNTS_TEAM, UserRole.SUPER_ADMIN].includes(u.role)),
     };
 
     const getAttendanceStatus = (userId: string) => {
-        const today = new Date();
-        const userAttendance = ATTENDANCE_DATA[userId] || [];
-        const todayRecord = userAttendance.find(a =>
-            a.date.getDate() === today.getDate() &&
-            a.date.getMonth() === today.getMonth() &&
-            a.date.getFullYear() === today.getFullYear()
-        );
-        return todayRecord?.status || AttendanceStatus.ABSENT;
+        // In a real app, this would check a useAttendance hook or similar
+        // For now, reflecting ABSENT as fallback since ATTENDANCE_DATA is removed
+        return AttendanceStatus.ABSENT;
     };
 
     const isPresent = (status: AttendanceStatus) => [AttendanceStatus.PRESENT, AttendanceStatus.HALF_DAY].includes(status);
@@ -78,7 +74,7 @@ const TeamHeadcountModal: React.FC<TeamHeadcountModalProps> = ({ isOpen, onClose
                                 </div>
 
                                 <div className="p-8 max-h-[80vh] overflow-y-auto bg-gray-50/50 space-y-10">
-                                    {(Object.entries(teams) as [string, typeof USERS][]).map(([teamName, members]) => (
+                                    {(Object.entries(teams) as [string, typeof users][]).map(([teamName, members]) => (
                                         <div key={teamName}>
                                             <h4 className="text-sm font-black uppercase tracking-[0.2em] text-gray-400 mb-6 border-b border-gray-200 pb-2">
                                                 {teamName}

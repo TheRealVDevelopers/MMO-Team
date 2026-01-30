@@ -12,11 +12,14 @@ import {
     UserGroupIcon
 } from '@heroicons/react/24/outline';
 import { ComplaintType, ComplaintPriority, UserRole } from '../../types';
-import { PROJECTS, USERS } from '../../constants';
+import { useUsers } from '../../hooks/useUsers';
+import { useProjects } from '../../hooks/useProjects';
 import { ContentCard, StatCard, SectionHeader, cn, staggerContainer } from '../dashboard/shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const EscalateIssuePage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
+    const { users } = useUsers();
+    const { projects } = useProjects();
     const [complaintType, setComplaintType] = useState<ComplaintType>(ComplaintType.COMMUNICATION_BREAKDOWN);
     const [priority, setPriority] = useState<ComplaintPriority>(ComplaintPriority.MEDIUM);
     const [submitted, setSubmitted] = useState(false);
@@ -154,14 +157,15 @@ const EscalateIssuePage: React.FC<{ setCurrentPage: (page: string) => void }> = 
                                             {Object.values(UserRole).map(role => <option key={role} value={role}>{role}</option>)}
                                         </optgroup>
                                         <optgroup label="Team Members">
-                                            {USERS.map(user => <option key={user.id} value={user.id}>{user.name}</option>)}
+                                            {users.map(user => <option key={user.id} value={user.id}>{user.name}</option>)}
                                         </optgroup>
                                     </select>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary px-1">Project Alignment</label>
                                     <select className="w-full h-14 bg-subtle-background/50 border border-border rounded-2xl px-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 transition-all cursor-pointer appearance-none">
-                                        {PROJECTS.map(p => <option key={p.id} value={p.id}>{p.projectName}</option>)}
+                                        <option value="">Select Project (Optional)</option>
+                                        {projects.map(p => <option key={p.id} value={p.id}>{p.projectName}</option>)}
                                     </select>
                                 </div>
                             </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Complaint, ComplaintStatus } from '../../../types';
-import { USERS, formatDate } from '../../../constants';
+import { formatDate } from '../../../constants';
+import { useUsers } from '../../../hooks/useUsers';
 import {
     XMarkIcon,
     CalendarIcon,
@@ -62,6 +63,7 @@ const DetailBlock = ({ label, children, icon: Icon }: any) => (
 const ComplaintDetailModal: React.FC<ComplaintDetailModalProps> = ({ complaint, isOpen, onClose, onUpdateStatus }) => {
     const [currentStatus, setCurrentStatus] = useState<ComplaintStatus | undefined>(undefined);
     const [isUpdating, setIsUpdating] = useState(false);
+    const { users } = useUsers();
 
     useEffect(() => {
         if (complaint) {
@@ -71,7 +73,7 @@ const ComplaintDetailModal: React.FC<ComplaintDetailModalProps> = ({ complaint, 
 
     if (!complaint) return null;
 
-    const submittedByUser = USERS.find(u => u.id === complaint.submittedBy);
+    const submittedByUser = users.find(u => u.id === complaint.submittedBy);
     const theme = getStatusTheme(currentStatus || complaint.status);
     const StatusIcon = theme.icon;
 

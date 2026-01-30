@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MATERIAL_REQUESTS, PROJECTS, RFQS, formatDate } from '../../../constants';
+import { formatDate } from '../../../constants';
 import { MaterialRequest, MaterialRequestStatus, RFQ, RFQStatus } from '../../../types';
 import { ClockIcon, FireIcon, ArrowLeftIcon, PlusIcon, XMarkIcon, ChartBarIcon } from '../../icons/IconComponents';
 import Modal from '../../shared/Modal';
@@ -12,13 +12,13 @@ import SubmitQuoteModal from '../../shared/SubmitQuoteModal';
 interface NewRequestModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onAddRequest: (requestData: Omit<MaterialRequest, 'id' | 'status' | 'projectName'> & { projectId: string }) => void;
+    onAddRequest: (requestData: Omit<MaterialRequest, 'id' | 'status' | 'projectName' | 'itemId' | 'itemName' | 'quantityRequested' | 'unit' | 'createdAt'> & { projectId: string }) => void;
 }
 
 const NewRequestModal: React.FC<NewRequestModalProps> = ({ isOpen, onClose, onAddRequest }) => {
-    const [projectId, setProjectId] = useState(PROJECTS[0]?.id || '');
+    const [projectId, setProjectId] = useState('');
     const [materials, setMaterials] = useState<{ name: string; spec: string }[]>([{ name: '', spec: '' }]);
-    const [requiredBy, setRequiredBy] = useState('');
+    const [requiredDate, setRequiredDate] = useState('');
     const [priority, setPriority] = useState<'High' | 'Medium' | 'Low'>('Medium');
 
     const handleMaterialChange = (index: number, field: 'name' | 'spec', value: string) => {
@@ -40,7 +40,7 @@ const NewRequestModal: React.FC<NewRequestModalProps> = ({ isOpen, onClose, onAd
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!projectId || !requiredBy || materials.some(m => !m.name.trim())) {
+        if (!projectId || !requiredDate || materials.some(m => !m.name.trim())) {
             alert('Please fill all required fields.');
             return;
         }
@@ -48,14 +48,15 @@ const NewRequestModal: React.FC<NewRequestModalProps> = ({ isOpen, onClose, onAd
         onAddRequest({
             projectId,
             materials,
-            requiredBy: new Date(requiredBy),
+            requiredDate,
             priority,
+            requestedBy: 'Current User', // TODO: Use actual user
         });
 
         // Reset form
-        setProjectId(PROJECTS[0]?.id || '');
+        setProjectId('');
         setMaterials([{ name: '', spec: '' }]);
-        setRequiredBy('');
+        setRequiredDate('');
         setPriority('Medium');
     };
 
@@ -70,7 +71,8 @@ const NewRequestModal: React.FC<NewRequestModalProps> = ({ isOpen, onClose, onAd
                         className="mt-1 block w-full p-2 border border-border rounded-md bg-surface"
                         required
                     >
-                        {PROJECTS.map(p => <option key={p.id} value={p.id}>{p.projectName} - {p.clientName}</option>)}
+                        {/* {PROJECTS.map(p => <option key={p.id} value={p.id}>{p.projectName} - {p.clientName}</option>)} */}
+                        <option value="" disabled>No Projects Loaded (Demo Data Removed)</option>
                     </select>
                 </div>
 
@@ -120,8 +122,8 @@ const NewRequestModal: React.FC<NewRequestModalProps> = ({ isOpen, onClose, onAd
                         <label className="block text-sm font-medium text-text-primary">Required By</label>
                         <input
                             type="date"
-                            value={requiredBy}
-                            onChange={(e) => setRequiredBy(e.target.value)}
+                            value={requiredDate}
+                            onChange={(e) => setRequiredDate(e.target.value)}
                             className="mt-1 block w-full p-2 border border-border rounded-md bg-surface"
                             required
                         />
@@ -190,8 +192,8 @@ const EditRequestModal: React.FC<EditRequestModalProps> = ({ isOpen, onClose, re
 
     const handleFieldChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        if (name === 'requiredBy') {
-            setEditedRequestData({ ...editedRequestData, requiredBy: new Date(value) });
+        if (name === 'requiredDate') {
+            setEditedRequestData({ ...editedRequestData, requiredDate: value });
         } else {
             setEditedRequestData({ ...editedRequestData, [name]: value as any });
         }
@@ -250,8 +252,8 @@ const EditRequestModal: React.FC<EditRequestModalProps> = ({ isOpen, onClose, re
                         <label className="block text-sm font-medium text-text-primary">Required By</label>
                         <input
                             type="date"
-                            name="requiredBy"
-                            value={new Date(editedRequestData.requiredBy).toISOString().split('T')[0]}
+                            name="requiredDate"
+                            value={new Date(editedRequestData.requiredDate).toISOString().split('T')[0]}
                             onChange={handleFieldChange}
                             className="mt-1 block w-full p-2 border border-border rounded-md bg-surface"
                             required
@@ -310,7 +312,7 @@ const RequestCard: React.FC<{
             <div className="flex justify-between items-center text-[10px] text-text-secondary border-t border-border pt-2 uppercase font-bold tracking-widest">
                 <div className="flex items-center space-x-1">
                     <ClockIcon className="w-3 h-3" />
-                    <span>Due: {formatDate(request.requiredBy)}</span>
+                    <span>Due: {formatDate(request.requiredDate)}</span>
                 </div>
             </div>
 
@@ -355,13 +357,13 @@ const RequestCard: React.FC<{
 };
 
 const BiddingManagementPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
-    const [materialRequests, setMaterialRequests] = useState(MATERIAL_REQUESTS);
+    const [materialRequests, setMaterialRequests] = useState<MaterialRequest[]>([]);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState<MaterialRequest | null>(null);
     const [csRequestId, setCsRequestId] = useState<string | null>(null);
     const [rfqInitiateRequestId, setRfqInitiateRequestId] = useState<string | null>(null);
     const [submitBidRequestId, setSubmitBidRequestId] = useState<string | null>(null);
-    const [rfqs, setRfqs] = useState(RFQS);
+    const [rfqs, setRfqs] = useState<RFQ[]>([]);
 
     const handleStartBidding = (requestId: string) => {
         setRfqInitiateRequestId(requestId);
@@ -384,18 +386,25 @@ const BiddingManagementPage: React.FC<{ setCurrentPage: (page: string) => void }
         setRfqInitiateRequestId(null);
     };
 
-    const handleAddNewRequest = (newRequestData: Omit<MaterialRequest, 'id' | 'status' | 'projectName'> & { projectId: string }) => {
-        const project = PROJECTS.find(p => p.id === newRequestData.projectId);
-        if (!project) return;
+    const handleAddNewRequest = (newRequestData: Omit<MaterialRequest, 'id' | 'status' | 'projectName' | 'itemId' | 'itemName' | 'quantityRequested' | 'unit' | 'createdAt'> & { projectId: string }) => {
+        // const project = PROJECTS.find(p => p.id === newRequestData.projectId);
+        // if (!project) return;
 
         const newRequest: MaterialRequest = {
             id: `mr-${Date.now()}`,
             status: MaterialRequestStatus.RFQ_PENDING,
-            projectName: project.projectName,
+            projectName: 'Project Name (TODO: Fetch)', // TODO: Fetch real project name
             projectId: newRequestData.projectId,
             materials: newRequestData.materials,
-            requiredBy: newRequestData.requiredBy,
+            requestedBy: newRequestData.requestedBy,
             priority: newRequestData.priority,
+            // Dummy values to satisfy MaterialRequest interface which expects single item
+            itemId: 'multi-item',
+            itemName: 'Multi-item Request',
+            quantityRequested: 0,
+            unit: 'lot',
+            requiredDate: newRequestData.requiredDate || new Date().toISOString(),
+            createdAt: new Date(),
         };
         setMaterialRequests(prev => [newRequest, ...prev]);
         setIsCreateModalOpen(false);
@@ -491,7 +500,7 @@ const BiddingManagementPage: React.FC<{ setCurrentPage: (page: string) => void }
                 <SubmitQuoteModal
                     isOpen={!!submitBidRequestId}
                     onClose={() => setSubmitBidRequestId(null)}
-                    rfq={rfqs.find(r => r.procurementRequestId === submitBidRequestId) || RFQS[0]}
+                    rfq={rfqs.find(r => r.procurementRequestId === submitBidRequestId)!}
                 />
             )}
         </>
