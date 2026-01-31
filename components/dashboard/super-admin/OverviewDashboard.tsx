@@ -12,6 +12,7 @@ import { formatLargeNumberINR } from '../../../constants';
 import { useProjects } from '../../../hooks/useProjects';
 import { useUsers } from '../../../hooks/useUsers';
 import { useLeads } from '../../../hooks/useLeads';
+import { useDashboardStats } from '../../../hooks/useDashboardStats';
 import { ActivityStatus, ProjectStatus, PaymentStatus, Project } from '../../../types';
 import { ContentCard, StatCard, SectionHeader, staggerContainer, cn } from '../shared/DashboardUI';
 import { motion } from 'framer-motion';
@@ -103,13 +104,14 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage, o
     const { projects } = useProjects();
     const { users } = useUsers();
     const { leads } = useLeads();
+    const { stats, loading: statsLoading } = useDashboardStats(); // Admin-wide stats
 
     // KPI Calculations
     const totalProjects = projects.length;
     const activeProjects = projects.filter(p => [ProjectStatus.IN_EXECUTION, ProjectStatus.PROCUREMENT, ProjectStatus.DESIGN_IN_PROGRESS].includes(p.status)).length;
 
     const totalLeads = leads.length;
-    const conversionRate = 12.5; // TODO: Calculate real conversion rate
+    const conversionRate = stats.conversionRate.toFixed(1);
 
     const teamMembers = users.length;
     const totalRevenue = projects.filter(p => p.status === ProjectStatus.COMPLETED || p.status === ProjectStatus.APPROVED).reduce((sum, p) => sum + p.budget, 0);
@@ -174,16 +176,16 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage, o
                             title="Enterprise Projects"
                             value={totalProjects}
                             icon={<RectangleStackIcon className="w-6 h-6" />}
-                            trend={{ value: '8%', positive: true }}
+                            trend={{ value: stats.projectsTrend, positive: stats.projectsTrendPositive }}
                             color="primary"
                             className="cursor-pointer"
                             onClick={() => setCurrentPage('projects')}
                         />
                         <StatCard
                             title="Conversion Yield"
-                            value={`${conversionRate || 12.5}%`}
+                            value={`${conversionRate}%`}
                             icon={<PresentationChartLineIcon className="w-6 h-6" />}
-                            trend={{ value: '0%', positive: true }}
+                            trend={{ value: stats.conversionTrend, positive: stats.conversionTrendPositive }}
                             color="secondary"
                             className="cursor-pointer"
                             onClick={handleFunnelClick}
@@ -192,7 +194,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage, o
                             title="Global Talent"
                             value={teamMembers}
                             icon={<UserGroupIcon className="w-6 h-6" />}
-                            trend={{ value: '0', positive: true }}
+                            trend={{ value: stats.leadsTrend, positive: stats.leadsTrendPositive }}
                             color="accent"
                             className="cursor-pointer"
                             onClick={() => setCurrentPage('team')}
@@ -201,7 +203,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage, o
                             title="Fiscal Velocity (YTD)"
                             value={formatLargeNumberINR(totalRevenue)}
                             icon={<BanknotesIcon className="w-6 h-6" />}
-                            trend={{ value: '18%', positive: true }}
+                            trend={{ value: stats.revenueTrend, positive: stats.revenueTrendPositive }}
                             color="purple"
                             className="cursor-pointer"
                             onClick={() => setCurrentPage('finance')}

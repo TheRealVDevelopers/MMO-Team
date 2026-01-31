@@ -89,7 +89,7 @@ const ProjectDetailModal: React.FC<{ project: Project; isOpen: boolean; onClose:
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`${project.projectName} Detail View`}>
+        <Modal isOpen={isOpen} onClose={onClose} title={`${project.projectName} Detail View`} size="7xl">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 p-1">
                 {/* Main Intel Column */}
                 <div className="lg:col-span-8 space-y-8">

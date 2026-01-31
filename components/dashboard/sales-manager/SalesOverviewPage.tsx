@@ -17,12 +17,14 @@ import DashboardCalendar, { CalendarTask } from '../super-admin/DashboardCalenda
 import { useTeamTasks } from '../../../hooks/useTeamTasks';
 import { updateLead } from '../../../hooks/useLeads';
 import LeadDetailModal from '../../shared/LeadDetailModal';
+import { useDashboardStats } from '../../../hooks/useDashboardStats';
 
 const salesTeam = USERS.filter(u => u.role === UserRole.SALES_TEAM_MEMBER);
 const pipelineOrder = Object.values(LeadPipelineStatus);
 
 const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; leads: Lead[] }> = ({ setCurrentPage, leads }) => {
     const { tasks: teamTasks, loading: tasksLoading } = useTeamTasks();
+    const { stats, loading: statsLoading } = useDashboardStats(); // Team-wide stats
     // --- STATE ---
     const [selectedStage, setSelectedStage] = useState<string>('');
     const [isPipelineModalOpen, setIsPipelineModalOpen] = useState(false);
@@ -36,9 +38,9 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; lead
 
     const leadsThisMonth = leads.filter(l => l.inquiryDate >= startOfMonth);
     const totalLeads = leadsThisMonth.length;
-    const projectsWon = leadsThisMonth.filter(l => l.status === LeadPipelineStatus.WON).length;
-    const totalRevenue = leadsThisMonth.filter(l => l.status === LeadPipelineStatus.WON).reduce((sum, l) => sum + (l.value || 0), 0);
-    const conversionRate = totalLeads > 0 ? ((projectsWon / totalLeads) * 100).toFixed(1) : '0';
+    const projectsWon = stats.projectsWon;
+    const totalRevenue = stats.totalRevenue;
+    const conversionRate = stats.conversionRate.toFixed(1);
 
     const pipelineCounts = leads.reduce((acc, lead) => {
         acc[lead.status] = (acc[lead.status] || 0) + 1;
@@ -98,7 +100,7 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; lead
                     value={totalLeads.toString()}
                     icon={<FunnelIcon className="w-6 h-6" />}
                     color="primary"
-                    trend={{ value: '12%', positive: true }}
+                    trend={{ value: stats.leadsTrend, positive: stats.leadsTrendPositive }}
                     className="cursor-pointer"
                 />
                 <StatCard
@@ -106,21 +108,21 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; lead
                     value={`${conversionRate}%`}
                     icon={<PresentationChartLineIcon className="w-6 h-6" />}
                     color="purple"
-                    trend={{ value: '2.4%', positive: true }}
+                    trend={{ value: stats.conversionTrend, positive: stats.conversionTrendPositive }}
                 />
                 <StatCard
                     title="Projects Won (Month)"
                     value={projectsWon.toString()}
                     icon={<TrophyIcon className="w-6 h-6" />}
                     color="accent"
-                    trend={{ value: '5%', positive: true }}
+                    trend={{ value: stats.projectsTrend, positive: stats.projectsTrendPositive }}
                 />
                 <StatCard
                     title="Revenue (Month)"
                     value={formatCurrencyINR(totalRevenue)}
                     icon={<BanknotesIcon className="w-6 h-6" />}
                     color="secondary"
-                    trend={{ value: '8.2%', positive: true }}
+                    trend={{ value: stats.revenueTrend, positive: stats.revenueTrendPositive }}
                 />
             </div>
 
