@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useUsers } from '../../../hooks/useUsers';
+import { useStaffPerformance } from '../../../hooks/useStaffPerformance';
 import { formatDate } from '../../../constants';
 import { AttendanceStatus } from '../../../types';
 import { UserGroupIcon } from '@heroicons/react/24/outline';
@@ -9,16 +9,13 @@ import TeamHeadcountModal from './TeamHeadcountModal';
 
 const AttendanceStatsCard: React.FC<{ onViewMember?: (userId: string) => void }> = ({ onViewMember }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const { users, loading } = useUsers();
+    const { staff, loading } = useStaffPerformance();
 
-    // In a real app, these would come from a useAttendance hook
-    const totalStaff = users.length;
-    let presentCount = 0;
-
-    // For now, reflecting 0 or mock a value based on real users if needed, 
-    // but better to show 0 if not implemented to follow "remove hardcoded" rule.
-    // However, for UI polish during transition, we might show a % of real users.
-    // Let's stick to 0 or real data if available.
+    // Calculate real attendance based on timeEntries
+    const totalStaff = staff.length;
+    const presentCount = staff.filter(u => 
+        u.attendanceStatus === 'CLOCKED_IN' || u.attendanceStatus === 'ON_BREAK'
+    ).length;
 
     const percentage = totalStaff > 0 ? Math.round((presentCount / totalStaff) * 100) : 0;
 

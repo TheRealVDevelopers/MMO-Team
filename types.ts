@@ -139,6 +139,7 @@ export enum UserRole {
   SUPER_ADMIN = "Super Admin",
   MANAGER = "Manager",
   DESIGNER = "Designer",
+  PROJECT_HEAD = "Project Head",
   SALES_GENERAL_MANAGER = "Sales General Manager",
   SALES_TEAM_MEMBER = "Sales Team Member",
   DRAWING_TEAM = "Drawing Team",
@@ -375,6 +376,7 @@ export enum ApprovalRequestType {
   ACCOUNTS_TOKEN = "Accounts Token",
   QUOTATION_APPROVAL = "Quotation Approval",
   NEGOTIATION = "Negotiation",
+  STAFF_REGISTRATION = "Staff Registration",
   OTHER = "Other",
 }
 
@@ -432,6 +434,13 @@ export interface ApprovalRequest {
     timestamp: Date;
     notes?: string;
   }[];
+
+  // Staff Registration specific fields
+  email?: string; // For staff registration requests
+  password?: string; // For staff registration requests (stored temporarily)
+  phone?: string; // For staff registration requests
+  region?: string; // For staff registration requests
+  requestedRole?: UserRole; // For staff registration requests
 }
 
 export type ExpenseCategory = 'Travel' | 'Site' | 'Office' | 'Client Meeting' | 'Other';

@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import Modal from '../shared/Modal';
 import { User, Vendor } from '../../types';
-import { signInStaff, registerStaffAccount } from '../../services/authService';
+import { signInStaff, submitStaffRegistrationRequest } from '../../services/authService';
 import { EnvelopeIcon, LockClosedIcon, ArrowRightIcon, BuildingOfficeIcon, BuildingStorefrontIcon, ExclamationCircleIcon, UserIcon, PhoneIcon, BriefcaseIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import { UserRole } from '../../types';
 
@@ -45,10 +45,15 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
                 if (!name.trim() || !phone.trim() || !role) {
                     throw new Error('Please fill in all fields.');
                 }
-                await registerStaffAccount(email, password, name, phone, role as UserRole, region);
-                setSuccess('Account created! You can now sign in.');
+                // Submit registration request (does NOT create account immediately)
+                await submitStaffRegistrationRequest(email, password, name, phone, role as UserRole, region);
+                setSuccess('Registration request submitted successfully! An administrator will review your request and approve your account. You will be notified via email once approved.');
                 setIsRegistering(false);
                 setPassword('');
+                setName('');
+                setPhone('');
+                setRegion('');
+                setRole(UserRole.SALES_TEAM_MEMBER);
             } else if (loginType === 'staff') {
                 const user = await signInStaff(email, password);
                 if (user) {

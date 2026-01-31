@@ -1,7 +1,7 @@
 import React from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { XMarkIcon, UserIcon, FlagIcon } from '@heroicons/react/24/outline';
-import { useUsers } from '../../../hooks/useUsers';
+import { useStaffPerformance } from '../../../hooks/useStaffPerformance';
 import { UserRole, AttendanceStatus } from '../../../types';
 import { cn } from '../shared/DashboardUI';
 
@@ -12,19 +12,21 @@ interface TeamHeadcountModalProps {
 }
 
 const TeamHeadcountModal: React.FC<TeamHeadcountModalProps> = ({ isOpen, onClose, onViewMemberProfile }) => {
-    const { users, loading } = useUsers();
+    const { staff, loading } = useStaffPerformance();
 
     // Group users by Department/Team
     const teams = {
-        'Sales Team': users.filter(u => [UserRole.SALES_GENERAL_MANAGER, UserRole.SALES_TEAM_MEMBER, UserRole.MANAGER].includes(u.role)),
-        'Execution Team': users.filter(u => [UserRole.EXECUTION_TEAM, UserRole.SITE_ENGINEER, UserRole.PROCUREMENT_TEAM].includes(u.role)),
-        'Drawing & Design': users.filter(u => [UserRole.DRAWING_TEAM, UserRole.DESIGNER, UserRole.QUOTATION_TEAM].includes(u.role)),
-        'Accounts & Admin': users.filter(u => [UserRole.ACCOUNTS_TEAM, UserRole.SUPER_ADMIN].includes(u.role)),
+        'Sales Team': staff.filter(u => [UserRole.SALES_GENERAL_MANAGER, UserRole.SALES_TEAM_MEMBER, UserRole.MANAGER].includes(u.role)),
+        'Execution Team': staff.filter(u => [UserRole.EXECUTION_TEAM, UserRole.SITE_ENGINEER, UserRole.PROCUREMENT_TEAM].includes(u.role)),
+        'Drawing & Design': staff.filter(u => [UserRole.DRAWING_TEAM, UserRole.DESIGNER, UserRole.QUOTATION_TEAM].includes(u.role)),
+        'Accounts & Admin': staff.filter(u => [UserRole.ACCOUNTS_TEAM, UserRole.SUPER_ADMIN].includes(u.role)),
     };
 
-    const getAttendanceStatus = (userId: string) => {
-        // In a real app, this would check a useAttendance hook or similar
-        // For now, reflecting ABSENT as fallback since ATTENDANCE_DATA is removed
+    const getAttendanceStatus = (user: typeof staff[0]): AttendanceStatus => {
+        // Map real-time attendance status from timeEntries to AttendanceStatus enum
+        if (user.attendanceStatus === 'CLOCKED_IN' || user.attendanceStatus === 'ON_BREAK') {
+            return AttendanceStatus.PRESENT;
+        }
         return AttendanceStatus.ABSENT;
     };
 
@@ -82,7 +84,7 @@ const TeamHeadcountModal: React.FC<TeamHeadcountModalProps> = ({ isOpen, onClose
 
                                             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
                                                 {members.map(user => {
-                                                    const status = getAttendanceStatus(user.id);
+                                                    const status = getAttendanceStatus(user);
                                                     const present = isPresent(status);
 
                                                     return (
@@ -110,6 +112,13 @@ const TeamHeadcountModal: React.FC<TeamHeadcountModalProps> = ({ isOpen, onClose
                                                             <div className="text-center w-full">
                                                                 <p className="text-sm font-bold text-gray-900 truncate px-2">{user.name}</p>
                                                                 <p className="text-[10px] text-gray-500 uppercase font-medium truncate opacity-70 mb-2">{user.role.replace(' Member', '')}</p>
+
+                                                                {/* Current Assignment */}
+                                                                {user.currentTask && (
+                                                                    <p className="text-[9px] text-gray-600 mb-2 px-2 truncate italic" title={user.currentTask}>
+                                                                        📋 {user.currentTask}
+                                                                    </p>
+                                                                )}
 
                                                                 {/* Presence Badge */}
                                                                 <div className={cn(

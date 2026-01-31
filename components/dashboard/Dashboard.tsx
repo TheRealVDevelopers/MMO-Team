@@ -22,7 +22,7 @@ const Dashboard: React.FC<{ currentPage: string; setCurrentPage: (page: string) 
 
   // If vendor is logged in, show Vendor Dashboard
   if (currentVendor) {
-    return <VendorDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
+    return <VendorDashboard />;
   }
 
   if (!currentUser) {
@@ -48,6 +48,7 @@ const Dashboard: React.FC<{ currentPage: string; setCurrentPage: (page: string) 
       case UserRole.SALES_GENERAL_MANAGER:
         return <SalesGeneralManagerDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.DRAWING_TEAM:
+      case UserRole.DESIGNER: // Designers go to Drawing Team dashboard
         return <DesignAndSiteEngineeringDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.QUOTATION_TEAM:
         return <QuotationTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
@@ -56,9 +57,12 @@ const Dashboard: React.FC<{ currentPage: string; setCurrentPage: (page: string) 
       case UserRole.PROCUREMENT_TEAM:
         return <ProcurementTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.EXECUTION_TEAM:
+      case UserRole.PROJECT_HEAD: // Project Heads go to Execution Team dashboard
         return <ExecutionTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.ACCOUNTS_TEAM:
         return <AccountsTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
+      case UserRole.MANAGER: // Managers go to Sales Manager dashboard
+        return <SalesGeneralManagerDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       default:
         return <PlaceholderDashboard role={currentUser.role} />;
     }

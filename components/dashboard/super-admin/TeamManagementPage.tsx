@@ -165,6 +165,13 @@ const TeamManagementPage: React.FC<{ setCurrentPage: (page: string) => void; ini
                                                             )}
                                                         </div>
                                                         <p className="text-[10px] font-semibold text-text-tertiary tracking-wide uppercase italic truncate">{user.role}</p>
+                                                        {/* Current Task/Assignment */}
+                                                        {user.currentTask && (
+                                                            <p className="text-[10px] text-text-secondary mt-1 truncate flex items-center gap-1">
+                                                                <span className="w-1 h-1 rounded-full bg-primary flex-shrink-0"></span>
+                                                                {user.currentTask}
+                                                            </p>
+                                                        )}
                                                     </div>
                                                     <ChevronRightIcon className={cn(
                                                         "w-4 h-4 transition-all",

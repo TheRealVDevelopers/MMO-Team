@@ -29,6 +29,7 @@ const navConfig = {
       { id: 'organizations', label: 'Organizations', icon: <BuildingOfficeIcon className="w-6 h-6" /> },
       { id: 'leads', label: 'Leads', icon: <FunnelIcon className="w-6 h-6" /> },
       { id: 'approvals', label: 'Request Inbox', icon: <CheckCircleIcon className="w-6 h-6" /> },
+      { id: 'registrations', label: 'Registrations', icon: <UsersIcon className="w-6 h-6" /> },
       { id: 'finance', label: 'Finance', icon: <BanknotesIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
     ],

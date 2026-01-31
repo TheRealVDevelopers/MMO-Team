@@ -9,6 +9,7 @@ import CommunicationDashboard from '../communication/CommunicationDashboard';
 import ComplaintManagementPage from './super-admin/ComplaintManagementPage';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
 import ApprovalsPage from './super-admin/ApprovalsPage';
+import RegistrationsPage from './super-admin/RegistrationsPage';
 import FinancePage from './super-admin/FinancePage';
 import OrganizationsPage from './admin/OrganizationsPage';
 
@@ -42,13 +43,14 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ currentPage, 
             );
         case 'projects':
             return <ProjectTrackingPage setCurrentPage={setCurrentPage} />;
-        // ... keep existing cases ...
         case 'leads':
             return <LeadsManagementPage setCurrentPage={setCurrentPage} />;
         case 'communication':
             return <CommunicationDashboard />;
         case 'approvals':
             return <ApprovalsPage />;
+        case 'registrations':
+            return <RegistrationsPage />;
         case 'reports':
             return <ReportsPage setCurrentPage={setCurrentPage} />;
         case 'complaints':

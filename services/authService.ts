@@ -16,10 +16,11 @@ import {
     collection,
     query,
     where,
-    getDocs
+    getDocs,
+    addDoc
 } from 'firebase/firestore';
 import { auth, db, logAgent } from '../firebase';
-import { User, UserRole, Vendor } from '../types';
+import { User, UserRole, Vendor, ApprovalRequestType } from '../types';
 import { USERS, VENDORS } from '../constants';
 
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
@@ -142,7 +143,53 @@ export const signOutStaff = async (): Promise<void> => {
 };
 
 /**
- * Create a new staff account (Super Admin only)
+ * Create Staff Account from Approved Registration Request
+ * Called by admin after approving a registration request
+ */
+export const createStaffAccountFromApproval = async (
+    email: string,
+    password: string,
+    name: string,
+    role: UserRole,
+    phone: string,
+    region?: string,
+    avatar?: string
+): Promise<string> => {
+    try {
+        if (!auth || !db) throw new Error("Firebase not initialized");
+
+        // Create Firebase Auth account
+        const userCredential = await createUserWithEmailAndPassword(
+            auth,
+            email,
+            password
+        );
+
+        // Create Firestore document
+        await setDoc(doc(db, 'staffUsers', userCredential.user.uid), {
+            email,
+            name,
+            role,
+            avatar: avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+            phone,
+            region: region || null,
+            currentTask: '',
+            lastUpdateTimestamp: serverTimestamp(),
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        });
+
+        console.log(`Staff account created successfully: ${name} (${email})`);
+        return userCredential.user.uid;
+    } catch (error: any) {
+        console.error('Error creating staff account:', error);
+        throw new Error(error.message || 'Failed to create staff account');
+    }
+};
+
+/**
+ * Create a new staff account (Super Admin only - Direct Creation)
+ * Also creates an approval request notification for admins
  */
 export const createStaffAccount = async (
     email: string,
@@ -176,6 +223,31 @@ export const createStaffAccount = async (
             updatedAt: serverTimestamp(),
         });
 
+        // Create an approval request notification for admins about the new staff member
+        try {
+            await addDoc(collection(db, 'approvalRequests'), {
+                requestType: 'OTHER',
+                requesterId: userCredential.user.uid,
+                requesterName: name,
+                requesterRole: role,
+                title: `New Staff Account Created: ${name}`,
+                description: `A new staff member "${name}" with role "${role}" has been added to the system by administrator. Email: ${email}, Phone: ${phone}, Region: ${region || 'N/A'}.`,
+                status: 'Approved', // Auto-approved since admin created it
+                requestedAt: serverTimestamp(),
+                reviewedAt: serverTimestamp(),
+                reviewedBy: 'system',
+                reviewerName: 'System Administrator',
+                reviewerComments: 'Staff account created successfully by administrator.',
+                priority: 'Medium',
+                attachments: [],
+            });
+
+            console.log(`Approval record created for new staff: ${name}`);
+        } catch (notifError) {
+            console.error('Error creating approval record:', notifError);
+            // Don't fail the entire registration if notification fails
+        }
+
         return userCredential.user.uid;
     } catch (error: any) {
         console.error('Error creating staff account:', error);
@@ -184,44 +256,70 @@ export const createStaffAccount = async (
 };
 
 /**
- * Public Staff Registration
+ * Public Staff Registration Request (Does NOT create account immediately)
+ * Creates a pending approval request that admin must approve before account creation
  */
-export const registerStaffAccount = async (
+export const submitStaffRegistrationRequest = async (
     email: string,
     password: string,
     name: string,
     phone: string,
-    role: UserRole = UserRole.SALES_TEAM_MEMBER,
+    requestedRole?: UserRole,
     region?: string
 ): Promise<string> => {
     try {
-        if (!auth || !db) throw new Error("Firebase not initialized");
+        if (!db) throw new Error("Firebase not initialized");
 
-        // Create Firebase Auth account
-        const userCredential = await createUserWithEmailAndPassword(
-            auth,
-            email,
-            password
+        // Check if email already has a pending request or existing account
+        const existingAccountCheck = await getDocs(
+            query(collection(db, 'staffUsers'), where('email', '==', email))
+        );
+        
+        if (!existingAccountCheck.empty) {
+            throw new Error('An account with this email already exists.');
+        }
+
+        const pendingRequestCheck = await getDocs(
+            query(
+                collection(db, 'approvalRequests'),
+                where('requestType', '==', ApprovalRequestType.STAFF_REGISTRATION),
+                where('status', '==', 'Pending')
+            )
         );
 
-        // Create Firestore document
-        await setDoc(doc(db, 'staffUsers', userCredential.user.uid), {
-            email,
-            name,
-            role,
-            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
-            phone,
+        const hasPendingRequest = pendingRequestCheck.docs.some(
+            doc => doc.data().email === email
+        );
+
+        if (hasPendingRequest) {
+            throw new Error('A registration request with this email is already pending approval.');
+        }
+
+        // Create approval request (account NOT created yet)
+        const requestDoc = await addDoc(collection(db, 'approvalRequests'), {
+            requestType: ApprovalRequestType.STAFF_REGISTRATION,
+            requesterId: 'pending', // No user ID yet
+            requesterName: name,
+            requesterRole: requestedRole || UserRole.SALES_TEAM_MEMBER,
+            title: `Staff Registration Request: ${name}`,
+            description: `New staff registration request from "${name}". Email: ${email}, Phone: ${phone}, Requested Role: ${requestedRole || 'Not specified'}, Region: ${region || 'N/A'}.`,
+            status: 'Pending', // Requires admin approval
+            requestedAt: serverTimestamp(),
+            priority: 'High',
+            attachments: [],
+            // Store registration data for later account creation
+            email: email,
+            password: password, // Store securely (will be used when creating account)
+            phone: phone,
             region: region || '',
-            currentTask: '',
-            lastUpdateTimestamp: serverTimestamp(),
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
+            requestedRole: requestedRole,
         });
 
-        return userCredential.user.uid;
+        console.log(`Staff registration request submitted for: ${name}`);
+        return requestDoc.id;
     } catch (error: any) {
-        console.error('Error registering staff account:', error);
-        throw new Error(error.message || 'Failed to register account');
+        console.error('Error submitting staff registration request:', error);
+        throw new Error(error.message || 'Failed to submit registration request');
     }
 };
 

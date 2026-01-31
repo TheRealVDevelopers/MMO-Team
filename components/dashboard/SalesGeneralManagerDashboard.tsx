@@ -15,6 +15,7 @@ import EscalateIssuePage from '../escalation/EscalateIssuePage';
 import { useLeads, addLead, updateLead } from '../../hooks/useLeads';
 import { useNewEnquiries, useEnquiries } from '../../hooks/useEnquiries';
 import ApprovalsPage from './super-admin/ApprovalsPage';
+import OrganizationsPage from './admin/OrganizationsPage';
 import EnquiryNotificationBanner from './EnquiryNotificationBanner';
 import EnquiriesListModal from './EnquiriesListModal';
 import { SectionHeader, PrimaryButton, SecondaryButton } from './shared/DashboardUI';
@@ -32,6 +33,7 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
   const pageTitles: { [key: string]: string } = {
     overview: 'Sales Overview',
     leads: 'Lead Management',
+    organizations: 'Organizations',
     team: 'Team Analytics',
     reports: 'Business Reports',
     // performance: 'Personal Performance',
@@ -145,6 +147,8 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
         return <SalesOverviewPage setCurrentPage={setCurrentPage} leads={leads} />;
       case 'leads':
         return <LeadManagementPage leads={leads} />;
+      case 'organizations':
+        return <OrganizationsPage setCurrentPage={setCurrentPage} />;
       case 'team':
         return <TeamManagementPage leads={leads} />;
       case 'reports':

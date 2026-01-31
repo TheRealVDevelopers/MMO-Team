@@ -96,6 +96,12 @@ export const useApprovalRequests = (filterStatus?: ApprovalStatus) => {
           clientName: data.clientName,
           targetRole: data.targetRole,
           assigneeId: data.assigneeId,
+          // Staff registration specific fields
+          email: data.email,
+          password: data.password,
+          phone: data.phone,
+          region: data.region,
+          requestedRole: data.requestedRole,
         });
       });
       setRequests(approvalRequests);
@@ -152,6 +158,12 @@ export const useMyApprovalRequests = (userId: string) => {
           clientName: data.clientName,
           targetRole: data.targetRole,
           assigneeId: data.assigneeId,
+          // Staff registration specific fields
+          email: data.email,
+          password: data.password,
+          phone: data.phone,
+          region: data.region,
+          requestedRole: data.requestedRole,
         });
       });
       setMyRequests(approvalRequests);
@@ -209,6 +221,12 @@ export const useAssignedApprovalRequests = (userId: string) => {
           targetRole: data.targetRole,
           assigneeId: data.assigneeId,
           stages: data.stages || [], // Include stages
+          // Staff registration specific fields
+          email: data.email,
+          password: data.password,
+          phone: data.phone,
+          region: data.region,
+          requestedRole: data.requestedRole,
         });
       });
       setAssignedRequests(approvalRequests);
@@ -284,6 +302,54 @@ export const approveRequest = async (
     const requestSnap = await getDoc(requestRef);
     if (!requestSnap.exists()) return;
     const data = requestSnap.data() as ApprovalRequest;
+
+    // Handle Staff Registration Approval - Create Account
+    if (data.requestType === ApprovalRequestType.STAFF_REGISTRATION) {
+      try {
+        // Import the account creation function
+        const { createStaffAccountFromApproval } = await import('../services/authService');
+        
+        // Use the assigned role (from admin) or fallback to requested role
+        const finalRole = (data.assigneeId && data.targetRole) ? data.targetRole : (data.requestedRole || UserRole.SALES_TEAM_MEMBER);
+        
+        // Create the actual Firebase Auth account
+        const userId = await createStaffAccountFromApproval(
+          data.email!,
+          data.password!,
+          data.requesterName,
+          finalRole,
+          data.phone!,
+          data.region
+        );
+
+        // Update the request with the new user ID
+        await updateDoc(requestRef, {
+          status: ApprovalStatus.APPROVED,
+          reviewedAt: serverTimestamp(),
+          reviewedBy: reviewerId,
+          reviewerName: reviewerName,
+          reviewerComments: comments || 'Staff registration approved. Account created successfully.',
+          requesterId: userId, // Update with the actual created user ID
+          assigneeId: null // Not applicable for staff registration
+        });
+
+        // Notify the new user (they can now login)
+        await createNotification({
+          title: 'Account Approved',
+          message: `Welcome to Make My Office! Your staff account has been approved. You can now login with your email (${data.email}) and assigned role: ${finalRole}.`,
+          user_id: userId,
+          entity_type: 'system',
+          entity_id: requestId,
+          type: 'success'
+        });
+
+        console.log(`Staff account created and approved for: ${data.requesterName}`);
+        return;
+      } catch (error) {
+        console.error('Error creating staff account from approval:', error);
+        throw new Error('Failed to create staff account. Please try again.');
+      }
+    }
 
     const assignee = USERS.find(u => u.id === assigneeId);
     const assigneeName = assignee ? assignee.name : 'Team Member';

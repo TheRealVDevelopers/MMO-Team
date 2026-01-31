@@ -82,11 +82,18 @@ const ApprovalsPage: React.FC = () => {
   }, [selectedRequest, personnel]);
 
   const filteredRequests = useMemo(() => {
-    if (filterStatus === 'All') return requests;
-    return requests.filter(r => r.status === filterStatus);
+    // Filter out staff registration requests - they should only appear in RegistrationsPage
+    const operationalRequests = requests.filter(r => r.requestType !== ApprovalRequestType.STAFF_REGISTRATION);
+    
+    if (filterStatus === 'All') return operationalRequests;
+    return operationalRequests.filter(r => r.status === filterStatus);
   }, [requests, filterStatus]);
 
-  const stats = useMemo(() => getApprovalStats(requests), [requests]);
+  const stats = useMemo(() => {
+    // Calculate stats only for operational requests (exclude staff registrations)
+    const operationalRequests = requests.filter(r => r.requestType !== ApprovalRequestType.STAFF_REGISTRATION);
+    return getApprovalStats(operationalRequests);
+  }, [requests]);
 
   const handleReview = (request: ApprovalRequest, action: 'approve' | 'reject') => {
     setSelectedRequest(request);
@@ -415,7 +422,7 @@ const ApprovalsPage: React.FC = () => {
               />
             </div>
 
-            {reviewAction === 'approve' && (
+            {reviewAction === 'approve' && selectedRequest?.requestType !== ApprovalRequestType.STAFF_REGISTRATION && (
               <div className="mb-10">
                 <SmartDateTimePicker
                   label="Deadline"
@@ -426,7 +433,43 @@ const ApprovalsPage: React.FC = () => {
               </div>
             )}
 
-            {reviewAction === 'approve' && (
+            {reviewAction === 'approve' && selectedRequest?.requestType === ApprovalRequestType.STAFF_REGISTRATION && (
+              <div className="mb-10 space-y-3">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-tertiary px-1">
+                  Assign Designation/Role <span className="text-secondary">*</span>
+                </label>
+                <p className="text-xs text-text-secondary mb-4">
+                  Select the role that will be assigned to this new staff member. They will access the dashboard corresponding to this role.
+                </p>
+                <select
+                  value={assigneeId}
+                  onChange={(e) => {
+                    setAssigneeId(e.target.value);
+                    // Store the selected role in a way that approveRequest can access it
+                    if (selectedRequest) {
+                      selectedRequest.targetRole = e.target.value as UserRole;
+                    }
+                  }}
+                  className="w-full p-4 border border-border rounded-2xl bg-subtle-background/30 focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium"
+                  required
+                >
+                  <option value="">Select a role...</option>
+                  {Object.values(UserRole).filter(r => r !== UserRole.SUPER_ADMIN).map((role) => (
+                    <option key={role} value={role}>{role}</option>
+                  ))}
+                </select>
+                {selectedRequest && (
+                  <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
+                    <p className="text-xs text-text-primary"><span className="font-bold">Requested by:</span> {selectedRequest.requesterName}</p>
+                    <p className="text-xs text-text-primary"><span className="font-bold">Email:</span> {selectedRequest.email}</p>
+                    <p className="text-xs text-text-primary"><span className="font-bold">Phone:</span> {selectedRequest.phone}</p>
+                    <p className="text-xs text-text-primary"><span className="font-bold">Requested Role:</span> {selectedRequest.requestedRole || 'Not specified'}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {reviewAction === 'approve' && selectedRequest?.requestType !== ApprovalRequestType.STAFF_REGISTRATION && (
               <div className="mb-10 space-y-3">
                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-text-tertiary px-1">
                   Personnel Assignment <span className="text-secondary">*</span>
@@ -479,7 +522,12 @@ const ApprovalsPage: React.FC = () => {
               </button>
               <button
                 onClick={handleSubmitReview}
-                disabled={processing || (reviewAction === 'reject' && !reviewComments.trim()) || (reviewAction === 'approve' && (!deadline || !assigneeId))}
+                disabled={
+                  processing ||
+                  (reviewAction === 'reject' && !reviewComments.trim()) ||
+                  (reviewAction === 'approve' && selectedRequest?.requestType === ApprovalRequestType.STAFF_REGISTRATION && !assigneeId) ||
+                  (reviewAction === 'approve' && selectedRequest?.requestType !== ApprovalRequestType.STAFF_REGISTRATION && (!deadline || !assigneeId))
+                }
                 className={cn(
                   "p-5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl disabled:opacity-50",
                   reviewAction === 'approve'

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { USERS, formatCurrencyINR } from '../../../constants';
+import { formatCurrencyINR } from '../../../constants';
 import { User, UserRole, LeadPipelineStatus, Lead } from '../../../types';
+import { useUsers } from '../../../hooks/useUsers';
 import {
     MapPinIcon,
     FunnelIcon,
@@ -11,8 +12,6 @@ import {
 } from '@heroicons/react/24/outline';
 import { ContentCard, cn, staggerContainer } from '../shared/DashboardUI';
 import { motion } from 'framer-motion';
-
-const salesTeam = USERS.filter(u => u.role === UserRole.SALES_TEAM_MEMBER);
 
 const TeamMemberCard: React.FC<{ member: User; leads: Lead[] }> = ({ member, leads }) => {
     const memberLeads = leads.filter(l => l.assignedTo === member.id);
@@ -72,13 +71,36 @@ const TeamMemberCard: React.FC<{ member: User; leads: Lead[] }> = ({ member, lea
 
 const TeamManagementPage: React.FC<{ leads: Lead[] }> = ({ leads }) => {
     const [regionFilter, setRegionFilter] = useState<'all' | string>('all');
+    const { users, loading } = useUsers();
+
+    // Filter to get only sales team members from real data
+    const salesTeam = useMemo(() => {
+        return users.filter(u => u.role === UserRole.SALES_TEAM_MEMBER);
+    }, [users]);
 
     const filteredTeam = useMemo(() => {
         if (regionFilter === 'all') return salesTeam;
         return salesTeam.filter(member => member.region === regionFilter);
-    }, [regionFilter]);
+    }, [regionFilter, salesTeam]);
 
     const regions = [...new Set(salesTeam.map(m => m.region).filter(Boolean))] as string[];
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center h-64">
+                <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
+                <p className="text-text-secondary animate-pulse">Loading team members...</p>
+            </div>
+        );
+    }
+
+    if (salesTeam.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center h-64">
+                <p className="text-text-secondary">No sales team members found.</p>
+            </div>
+        );
+    }
 
     return (
         <motion.div

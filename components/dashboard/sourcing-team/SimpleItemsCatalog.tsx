@@ -102,11 +102,19 @@ const SimpleItemsCatalog: React.FC = () => {
                 )}
                 {items.map(item => (
                     <Card key={item.id} className="relative group hover:border-primary transition-colors">
-                        <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => handleOpenModal(item)} className="p-1 text-text-secondary hover:text-primary">
+                        <div className="absolute top-4 right-4 flex gap-2">
+                            <button 
+                                onClick={() => handleOpenModal(item)} 
+                                className="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all shadow-sm"
+                                title="Edit item"
+                            >
                                 <PencilSquareIcon className="w-4 h-4" />
                             </button>
-                            <button onClick={() => handleDelete(item.id)} className="p-1 text-text-secondary hover:text-error">
+                            <button 
+                                onClick={() => handleDelete(item.id)} 
+                                className="p-2 rounded-lg bg-error/10 text-error hover:bg-error hover:text-white transition-all shadow-sm"
+                                title="Delete item"
+                            >
                                 <TrashIcon className="w-4 h-4" />
                             </button>
                         </div>

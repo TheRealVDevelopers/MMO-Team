@@ -170,11 +170,27 @@ const TeamMemberDetailView: React.FC<{ user: User }> = ({ user }) => {
                                 <PhoneIcon className="w-3.5 h-3.5" />
                                 <span className="text-xs font-semibold">{user.phone}</span>
                             </div>
+                            {user.region && (
+                                <div className="flex items-center gap-1.5 text-text-tertiary">
+                                    <MapPinIcon className="w-3.5 h-3.5" />
+                                    <span className="text-xs font-semibold">{user.region}</span>
+                                </div>
+                            )}
                             <div className="flex items-center gap-1.5 text-text-tertiary">
                                 <ClockIcon className="w-3.5 h-3.5" />
                                 <span className="text-xs font-semibold italic">Active profile</span>
                             </div>
                         </div>
+                        {/* Current Assignment/Task Info */}
+                        {user.currentTask && (
+                            <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-primary/5 border border-primary/20 rounded-xl">
+                                <BriefcaseIcon className="w-4 h-4 text-primary flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-primary/60">Current Assignment</p>
+                                    <p className="text-xs font-semibold text-text-primary truncate">{user.currentTask}</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
