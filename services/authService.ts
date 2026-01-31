@@ -184,6 +184,48 @@ export const createStaffAccount = async (
 };
 
 /**
+ * Public Staff Registration
+ */
+export const registerStaffAccount = async (
+    email: string,
+    password: string,
+    name: string,
+    phone: string,
+    role: UserRole = UserRole.SALES_TEAM_MEMBER,
+    region?: string
+): Promise<string> => {
+    try {
+        if (!auth || !db) throw new Error("Firebase not initialized");
+
+        // Create Firebase Auth account
+        const userCredential = await createUserWithEmailAndPassword(
+            auth,
+            email,
+            password
+        );
+
+        // Create Firestore document
+        await setDoc(doc(db, 'staffUsers', userCredential.user.uid), {
+            email,
+            name,
+            role,
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+            phone,
+            region: region || '',
+            currentTask: '',
+            lastUpdateTimestamp: serverTimestamp(),
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        });
+
+        return userCredential.user.uid;
+    } catch (error: any) {
+        console.error('Error registering staff account:', error);
+        throw new Error(error.message || 'Failed to register account');
+    }
+};
+
+/**
  * Change staff password
  */
 export const changeStaffPassword = async (
@@ -351,6 +393,52 @@ export const verifyClientCredentials = async (
     } catch (error) {
         console.error('Error verifying client credentials:', error);
         return false;
+    }
+};
+
+/**
+ * Create a new client account/project (Registration)
+ */
+export const createClientAccount = async (
+    email: string,
+    password: string,
+    clientName: string
+): Promise<void> => {
+    try {
+        if (!db) throw new Error("Firebase not initialized");
+
+        // Check if email already exists
+        const projectsRef = collection(db, 'clientProjects');
+        const q = query(projectsRef, where('clientEmail', '==', email));
+        const snapshot = await getDocs(q);
+
+        if (!snapshot.empty) {
+            throw new Error('An account with this email already exists.');
+        }
+
+        // Create a basic clientProject document
+        // In a real app, this would have more fields, but for now we follow createDemoProject structure
+        const now = new Date();
+        const projectId = email; // Using email as ID for simplicity as seen in ClientDashboardPage
+
+        await setDoc(doc(db, 'clientProjects', email), {
+            projectId: email,
+            clientEmail: email,
+            password: password,
+            clientName: clientName,
+            projectName: `${clientName}'s Project`,
+            projectType: 'Office Interior',
+            status: 'in-progress',
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+            // Minimum required for dashboard if it were real data
+            area: 'To be surveyed',
+            budget: 'To be finalized',
+            startDate: serverTimestamp(),
+        });
+    } catch (error: any) {
+        console.error('Error creating client account:', error);
+        throw new Error(error.message || 'Failed to create account');
     }
 };
 

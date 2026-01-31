@@ -3,8 +3,9 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import Modal from '../shared/Modal';
 import { User, Vendor } from '../../types';
-import { signInStaff } from '../../services/authService';
-import { EnvelopeIcon, LockClosedIcon, ArrowRightIcon, BuildingOfficeIcon, BuildingStorefrontIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
+import { signInStaff, registerStaffAccount } from '../../services/authService';
+import { EnvelopeIcon, LockClosedIcon, ArrowRightIcon, BuildingOfficeIcon, BuildingStorefrontIcon, ExclamationCircleIcon, UserIcon, PhoneIcon, BriefcaseIcon, MapPinIcon } from '@heroicons/react/24/outline';
+import { UserRole } from '../../types';
 
 interface LoginModalProps {
     isOpen: boolean;
@@ -17,8 +18,14 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
     const [loginType, setLoginType] = useState<'staff' | 'vendor'>(initialType);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [name, setName] = useState('');
+    const [phone, setPhone] = useState('');
+    const [role, setRole] = useState<UserRole>(UserRole.SALES_TEAM_MEMBER);
+    const [region, setRegion] = useState('');
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
+    const [isRegistering, setIsRegistering] = useState(false);
 
     // Update loginType when initialType changes and modal is closed/reopened
     React.useEffect(() => {
@@ -27,13 +34,22 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
         }
     }, [isOpen, initialType]);
 
-    const handleLogin = async (e: React.FormEvent) => {
+    const handleAuth = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError('');
+        setSuccess('');
 
         try {
-            if (loginType === 'staff') {
+            if (isRegistering && loginType === 'staff') {
+                if (!name.trim() || !phone.trim() || !role) {
+                    throw new Error('Please fill in all fields.');
+                }
+                await registerStaffAccount(email, password, name, phone, role as UserRole, region);
+                setSuccess('Account created! You can now sign in.');
+                setIsRegistering(false);
+                setPassword('');
+            } else if (loginType === 'staff') {
                 const user = await signInStaff(email, password);
                 if (user) {
                     onLogin(user, 'staff');
@@ -56,7 +72,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
                 }
             }
         } catch (err: any) {
-            setError(err.message || 'Failed to sign in. Please check your credentials.');
+            setError(err.message || 'An error occurred. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -123,13 +139,98 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
                     </div>
                 </div>
 
-                {/* Login Form */}
-                <form onSubmit={handleLogin} className="space-y-6">
+                {/* Auth Form */}
+                <form onSubmit={handleAuth} className="space-y-6">
+
+                    {isRegistering && loginType === 'staff' && (
+                        <>
+                            {/* Name Input */}
+                            <div>
+                                <label className="block text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] mb-4">
+                                    Full Name
+                                </label>
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-text-secondary/50 group-focus-within:text-primary transition-colors">
+                                        <UserIcon className="w-5 h-5" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={name}
+                                        onChange={(e) => setName(e.target.value)}
+                                        placeholder="John Doe"
+                                        className="w-full pl-14 pr-6 py-5 bg-background border-2 border-border rounded-2xl focus:border-primary outline-none transition-all text-text-primary text-lg placeholder:text-text-secondary/60"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Phone Input */}
+                            <div>
+                                <label className="block text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] mb-4">
+                                    Phone Number
+                                </label>
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-text-secondary/50 group-focus-within:text-primary transition-colors">
+                                        <PhoneIcon className="w-5 h-5" />
+                                    </div>
+                                    <input
+                                        type="tel"
+                                        value={phone}
+                                        onChange={(e) => setPhone(e.target.value)}
+                                        placeholder="+91 98765 43210"
+                                        className="w-full pl-14 pr-6 py-5 bg-background border-2 border-border rounded-2xl focus:border-primary outline-none transition-all text-text-primary text-lg placeholder:text-text-secondary/60"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Role / Designation Select */}
+                            <div>
+                                <label className="block text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] mb-4">
+                                    Designation
+                                </label>
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-text-secondary/50 group-focus-within:text-primary transition-colors">
+                                        <BriefcaseIcon className="w-5 h-5" />
+                                    </div>
+                                    <select
+                                        value={role}
+                                        onChange={(e) => setRole(e.target.value as UserRole)}
+                                        className="w-full pl-14 pr-6 py-5 bg-background border-2 border-border rounded-2xl focus:border-primary outline-none transition-all text-text-primary text-lg appearance-none"
+                                        required
+                                    >
+                                        {Object.values(UserRole).filter(r => r !== UserRole.SUPER_ADMIN).map((r) => (
+                                            <option key={r} value={r}>{r}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Region Input */}
+                            <div>
+                                <label className="block text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] mb-4">
+                                    Project Region
+                                </label>
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-text-secondary/50 group-focus-within:text-primary transition-colors">
+                                        <MapPinIcon className="w-5 h-5" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={region}
+                                        onChange={(e) => setRegion(e.target.value)}
+                                        placeholder="Enter Region (e.g. North, Bangalore, etc.)"
+                                        className="w-full pl-14 pr-6 py-5 bg-background border-2 border-border rounded-2xl focus:border-primary outline-none transition-all text-text-primary text-lg placeholder:text-text-secondary/60"
+                                    />
+                                </div>
+                            </div>
+                        </>
+                    )}
 
                     {/* Email Input */}
                     <div>
                         <label className="block text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] mb-4">
-                            {loginType === 'staff' ? 'Work Email' : 'Registered Email'}
+                            {loginType === 'staff' ? (isRegistering ? 'Work Email' : 'Work Email') : 'Registered Email'}
                         </label>
                         <div className="relative group">
                             <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-text-secondary/50 group-focus-within:text-primary transition-colors">
@@ -139,7 +240,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                placeholder={loginType === 'staff' ? "admin@makemyoffice.com / sales@makemyoffice.com" : "vendor@makemyoffice.com"}
+                                placeholder={loginType === 'staff' ? "email@makemyoffice.com" : "vendor@makemyoffice.com"}
                                 className="w-full pl-14 pr-6 py-5 bg-background border-2 border-border rounded-2xl focus:border-primary outline-none transition-all text-text-primary text-lg placeholder:text-text-secondary/60"
                                 required
                                 autoComplete="email"
@@ -150,7 +251,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
                     {/* Password Input */}
                     <div>
                         <label className="block text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] mb-4">
-                            Passcode
+                            {isRegistering ? 'Create Password' : 'Passcode'}
                         </label>
                         <div className="relative group">
                             <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-text-secondary/50 group-focus-within:text-primary transition-colors">
@@ -163,17 +264,26 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
                                 placeholder="Enter your password"
                                 className="w-full pl-14 pr-6 py-5 bg-background border-2 border-border rounded-2xl focus:border-primary outline-none transition-all text-text-primary text-lg placeholder:text-text-secondary/60"
                                 required
-                                autoComplete="current-password"
+                                autoComplete={isRegistering ? "new-password" : "current-password"}
                             />
                         </div>
-                        <p className="text-[10px] uppercase tracking-widest text-text-secondary/40 mt-3 ml-1">Default password: 123456</p>
+                        {!isRegistering && loginType === 'staff' && (
+                            <p className="text-[10px] uppercase tracking-widest text-text-secondary/40 mt-3 ml-1">Default password: 123456</p>
+                        )}
                     </div>
 
-                    {/* Error Message */}
+                    {/* Status Messages */}
                     {error && (
                         <div className="flex items-start space-x-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
                             <ExclamationCircleIcon className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                             <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
+                        </div>
+                    )}
+
+                    {success && (
+                        <div className="flex items-start space-x-3 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl">
+                            <ExclamationCircleIcon className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+                            <p className="text-sm text-emerald-800 dark:text-emerald-300">{success}</p>
                         </div>
                     )}
 
@@ -190,15 +300,31 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
-                                Signing in...
+                                {isRegistering ? 'Registering...' : 'Signing in...'}
                             </div>
                         ) : (
                             <>
-                                Access {loginType === 'staff' ? 'Dashboard' : 'Portal'}
+                                {isRegistering ? 'Create Staff Account' : `Access ${loginType === 'staff' ? 'Dashboard' : 'Portal'}`}
                                 <ArrowRightIcon className="w-4 h-4 ml-3 group-hover:translate-x-1 transition-transform" />
                             </>
                         )}
                     </button>
+
+                    {loginType === 'staff' && (
+                        <div className="text-center pt-4">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsRegistering(!isRegistering);
+                                    setError('');
+                                    setSuccess('');
+                                }}
+                                className="text-[10px] font-black text-primary uppercase tracking-[0.2em] hover:text-secondary transition-colors"
+                            >
+                                {isRegistering ? 'Already have an account? Sign in' : "Don't have an account? Create new account"}
+                            </button>
+                        </div>
+                    )}
                 </form>
 
                 {/* Help Text */}

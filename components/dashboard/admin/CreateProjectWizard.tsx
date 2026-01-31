@@ -187,7 +187,7 @@ const CreateProjectWizard: React.FC<CreateProjectWizardProps> = ({ isOpen, onClo
                                                     </select>
                                                 </div>
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Topic / Location</label>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project  Location</label>
                                                     <input
                                                         type="text"
                                                         value={formData.location}

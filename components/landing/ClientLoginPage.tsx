@@ -8,7 +8,7 @@ import {
     ExclamationCircleIcon,
     CheckCircleIcon
 } from '@heroicons/react/24/outline';
-import { verifyClientCredentials } from '../../services/authService';
+import { verifyClientCredentials, createClientAccount } from '../../services/authService';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -59,12 +59,16 @@ interface ClientLoginPageProps {
 const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [name, setName] = useState(''); // Added for registration
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState(''); // Added for registration success
     const [isLoading, setIsLoading] = useState(false);
+    const [isRegistering, setIsRegistering] = useState(false); // Added for mode toggle
 
-    const handleLogin = async (e: React.FormEvent) => {
+    const handleAuth = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        setSuccess('');
         setIsLoading(true);
 
         try {
@@ -76,17 +80,35 @@ const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => 
                 return;
             }
 
-            // Verify credentials with Firebase
-            const isValid = await verifyClientCredentials(email, password);
+            if (isRegistering) {
+                if (!name.trim()) {
+                    setError('Please enter your full name.');
+                    setIsLoading(false);
+                    return;
+                }
+                if (password.length < 6) {
+                    setError('Password must be at least 6 characters long.');
+                    setIsLoading(false);
+                    return;
+                }
 
-            if (isValid) {
-                onLoginSuccess(email);
+                await createClientAccount(email, password, name);
+                setSuccess('Account created successfully! You can now log in.');
+                setIsRegistering(false);
+                setPassword('');
             } else {
-                setError('Invalid email or password. Please check your credentials.');
+                // Verify credentials with Firebase
+                const isValid = await verifyClientCredentials(email, password);
+
+                if (isValid) {
+                    onLoginSuccess(email);
+                } else {
+                    setError('Invalid email or password. Please check your credentials.');
+                }
             }
-        } catch (error) {
-            setError('Unable to verify credentials. Please try again later.');
-            console.error('Client login error:', error);
+        } catch (error: any) {
+            setError(error.message || 'Unable to process request. Please try again later.');
+            console.error('Client auth error:', error);
         } finally {
             setIsLoading(false);
         }
@@ -114,18 +136,46 @@ const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => 
                                 className="h-16 w-auto object-contain"
                             />
                         </motion.div>
-                        <h1 className="text-5xl md:text-6xl font-serif font-bold text-text-primary mb-4 tracking-tight">View My Project</h1>
+                        <h1 className="text-5xl md:text-6xl font-serif font-bold text-text-primary mb-4 tracking-tight">
+                            {isRegistering ? 'Create Account' : 'View My Project'}
+                        </h1>
                         <p className="text-text-secondary font-light text-xl tracking-[0.05em] opacity-80 max-w-lg mx-auto leading-relaxed">
-                            Experience your interior journey through our exclusive client portal
+                            {isRegistering
+                                ? 'Join the MMO family and start your project journey today'
+                                : 'Experience your interior journey through our exclusive client portal'}
                         </p>
                     </div>
 
-                    {/* Login Card */}
+                    {/* Login/Register Card */}
                     <div className="bg-surface/80 backdrop-blur-2xl border border-white/20 rounded-[3rem] shadow-luxury p-10 md:p-16 relative overflow-hidden group">
                         {/* Decorative Gradient Blob */}
                         <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors duration-1000"></div>
 
-                        <form onSubmit={handleLogin} className="space-y-10 relative z-10">
+                        <form onSubmit={handleAuth} className="space-y-8 relative z-10">
+                            {isRegistering && (
+                                <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                >
+                                    <label className="block text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] mb-4">
+                                        Full Name
+                                    </label>
+                                    <div className="relative group">
+                                        <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-text-secondary/50 group-focus-within:text-primary transition-colors">
+                                            <IdentificationIcon className="w-5 h-5" />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={name}
+                                            onChange={(e) => setName(e.target.value)}
+                                            placeholder="Enter your full name"
+                                            className="w-full pl-14 pr-6 py-5 bg-background border-2 border-border rounded-2xl focus:border-primary outline-none transition-all text-text-primary text-lg placeholder:text-text-secondary/60"
+                                            required={isRegistering}
+                                        />
+                                    </div>
+                                </motion.div>
+                            )}
+
                             <div>
                                 <label className="block text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] mb-4">
                                     Email Address
@@ -143,7 +193,9 @@ const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => 
                                         required
                                     />
                                 </div>
-                                <p className="text-[10px] uppercase tracking-widest text-text-secondary/40 mt-3 ml-1">Enter your registered email address</p>
+                                <p className="text-[10px] uppercase tracking-widest text-text-secondary/40 mt-3 ml-1">
+                                    {isRegistering ? 'We will use this for project updates' : 'Enter your registered email address'}
+                                </p>
                             </div>
 
                             <div>
@@ -158,19 +210,28 @@ const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => 
                                         type="password"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        placeholder="Enter your password"
+                                        placeholder={isRegistering ? "Create a secure password" : "Enter your password"}
                                         className="w-full pl-14 pr-6 py-5 bg-background border-2 border-border rounded-2xl focus:border-primary outline-none transition-all text-text-primary text-lg placeholder:text-text-secondary/60"
                                         required
                                     />
                                 </div>
-                                <p className="text-[10px] uppercase tracking-widest text-text-secondary/40 mt-3 ml-1">Provided by your sales consultant</p>
+                                {!isRegistering && (
+                                    <p className="text-[10px] uppercase tracking-widest text-text-secondary/40 mt-3 ml-1">Provided by your sales consultant</p>
+                                )}
                             </div>
 
-                            {/* Error Message */}
+                            {/* Status Messages */}
                             {error && (
                                 <div className="flex items-start space-x-3 p-4 bg-red-50 border border-red-200 rounded-xl">
                                     <ExclamationCircleIcon className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                                     <p className="text-sm text-red-800">{error}</p>
+                                </div>
+                            )}
+
+                            {success && (
+                                <div className="flex items-start space-x-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                                    <CheckCircleIcon className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                                    <p className="text-sm text-emerald-800">{success}</p>
                                 </div>
                             )}
 
@@ -185,15 +246,29 @@ const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => 
                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                         </svg>
-                                        Authenticating...
+                                        Processing...
                                     </div>
                                 ) : (
                                     <>
-                                        Access Project
+                                        {isRegistering ? 'Create My Account' : 'Access Project'}
                                         <ArrowRightIcon className="w-4 h-4 ml-3 group-hover:translate-x-1 transition-transform" />
                                     </>
                                 )}
                             </button>
+
+                            <div className="text-center pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsRegistering(!isRegistering);
+                                        setError('');
+                                        setSuccess('');
+                                    }}
+                                    className="text-[10px] font-black text-primary uppercase tracking-[0.2em] hover:text-secondary transition-colors"
+                                >
+                                    {isRegistering ? 'Already have an account? Login' : "Don't have an account? Create one"}
+                                </button>
+                            </div>
                         </form>
 
                         {/* Help Section */}
