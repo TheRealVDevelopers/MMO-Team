@@ -3,6 +3,32 @@ import { Lead } from '../../types';
 import { CheckCircleIcon } from '../icons/IconComponents';
 import { formatDateTime } from '../../constants';
 
+import { DocumentTextIcon, CameraIcon } from '../icons/IconComponents';
+import { LeadHistoryAttachment } from '../../types';
+
+const AttachmentItem: React.FC<{ attachment: LeadHistoryAttachment }> = ({ attachment }) => {
+  const isImage = attachment.fileType === 'image';
+
+  return (
+    <a
+      href={attachment.fileUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center p-2 rounded-md border border-border/50 bg-surface/50 hover:bg-surface transition-colors group"
+    >
+      <div className="flex-shrink-0 h-8 w-8 rounded bg-subtle-background flex items-center justify-center text-text-tertiary group-hover:text-primary transition-colors">
+        {isImage ? <CameraIcon className="w-5 h-5" /> : <DocumentTextIcon className="w-5 h-5" />}
+      </div>
+      <div className="ml-3 min-w-0 flex-1">
+        <p className="text-xs font-medium text-text-primary truncate">{attachment.fileName}</p>
+        <p className="text-[10px] text-text-tertiary">
+          {new Date(attachment.uploadedAt).toLocaleDateString()}
+        </p>
+      </div>
+    </a>
+  );
+};
+
 const LeadHistoryView: React.FC<{ lead: Lead }> = ({ lead }) => {
   const sortedHistory = [...lead.history].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
@@ -30,6 +56,13 @@ const LeadHistoryView: React.FC<{ lead: Lead }> = ({ lead }) => {
                       <p className="mt-1.5 text-sm text-text-secondary italic bg-subtle-background/50 p-2 rounded-lg border-l-2 border-primary/20">
                         "{item.notes}"
                       </p>
+                    )}
+                    {item.attachments && item.attachments.length > 0 && (
+                      <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {item.attachments.map((att) => (
+                          <AttachmentItem key={att.id} attachment={att} />
+                        ))}
+                      </div>
                     )}
                   </div>
                   <div className="whitespace-nowrap text-right text-[11px] font-semibold text-text-tertiary bg-subtle-background px-2 py-1 rounded-md ml-4">

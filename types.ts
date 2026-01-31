@@ -196,11 +196,21 @@ export interface Notification {
 
 
 
+export interface LeadHistoryAttachment {
+  id: string;
+  fileName: string;
+  fileUrl: string;
+  fileType: 'image' | 'document' | 'other';
+  fileSize: number;
+  uploadedAt: Date;
+}
+
 export interface LeadHistory {
   action: string;
   user: string;
   timestamp: Date;
   notes?: string;
+  attachments?: LeadHistoryAttachment[];
 }
 
 export interface Lead {

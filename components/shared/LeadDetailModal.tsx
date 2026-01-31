@@ -3,11 +3,13 @@ import Modal from './Modal';
 import { Lead, LeadPipelineStatus, LeadHistory, Reminder, UserRole, TaskStatus } from '../../types';
 import LeadHistoryView from './LeadHistoryView';
 import { useAuth } from '../../context/AuthContext';
-import { PlusIcon, BellIcon, MapPinIcon, PaintBrushIcon, CalculatorIcon, TruckIcon, WrenchScrewdriverIcon, CreditCardIcon, PhoneIcon, ChatBubbleLeftRightIcon, BanknotesIcon, CalendarIcon, UserCircleIcon, FireIcon } from '../icons/IconComponents';
+import { PlusIcon, BellIcon, MapPinIcon, PaintBrushIcon, CalculatorIcon, TruckIcon, WrenchScrewdriverIcon, CreditCardIcon, PhoneIcon, ChatBubbleLeftRightIcon, BanknotesIcon, CalendarIcon, UserCircleIcon, FireIcon, PaperClipIcon, XMarkIcon } from '../icons/IconComponents';
 import RaiseRequestModal from '../dashboard/sales-team/RaiseRequestModal';
 import { addTask } from '../../hooks/useMyDayTasks';
 import { formatLargeNumberINR, formatDateTime } from '../../constants';
 import SmartDateTimePicker from './SmartDateTimePicker';
+import { uploadMultipleLeadAttachments, formatFileSize } from '../../services/leadAttachmentService';
+import { LeadHistoryAttachment } from '../../types';
 
 interface LeadDetailModalProps {
     isOpen: boolean;
@@ -25,42 +27,71 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
 
     const [reminderNote, setReminderNote] = useState('');
     const [reminderDate, setReminderDate] = useState('');
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+    const [isUploading, setIsUploading] = useState(false);
 
     const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
 
     // Removed handleOpenTaskModal as we now use RaiseRequestModal directly
 
-    const handleLogActivity = (e: React.FormEvent) => {
+    const handleLogActivity = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newNote.trim() && newStatus === lead.status) return;
+        if ((!newNote.trim() && newStatus === lead.status && selectedFiles.length === 0) || isUploading) return;
 
-        const historyItems: LeadHistory[] = [];
+        setIsUploading(true);
 
-        if (newStatus !== lead.status) {
-            historyItems.push({
-                action: `Status changed to ${newStatus}`,
-                user: currentUser?.name || 'Unknown',
-                timestamp: new Date(),
-            });
+        try {
+            let uploadedAttachments: LeadHistoryAttachment[] = [];
+
+            if (selectedFiles.length > 0) {
+                uploadedAttachments = await uploadMultipleLeadAttachments(selectedFiles, lead.id);
+            }
+
+            const historyItems: LeadHistory[] = [];
+
+            if (newStatus !== lead.status) {
+                historyItems.push({
+                    action: `Status changed to ${newStatus}`,
+                    user: currentUser?.name || 'Unknown',
+                    timestamp: new Date(),
+                });
+            }
+
+            if (newNote.trim() || uploadedAttachments.length > 0) {
+                historyItems.push({
+                    action: uploadedAttachments.length > 0 ? 'Note added with attachments' : 'Note added',
+                    user: currentUser?.name || 'Unknown',
+                    timestamp: new Date(),
+                    notes: newNote,
+                    attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
+                });
+            }
+
+            const updatedLead = {
+                ...lead,
+                status: newStatus,
+                history: [...lead.history, ...historyItems],
+            };
+
+            onUpdate(updatedLead);
+            setNewNote('');
+            setSelectedFiles([]);
+        } catch (error) {
+            console.error("Error logging activity:", error);
+            alert("Failed to upload attachments. Please try again.");
+        } finally {
+            setIsUploading(false);
         }
+    };
 
-        if (newNote.trim()) {
-            historyItems.push({
-                action: 'Note added',
-                user: currentUser?.name || 'Unknown',
-                timestamp: new Date(),
-                notes: newNote,
-            });
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            setSelectedFiles(prev => [...prev, ...Array.from(e.target.files!)]);
         }
+    };
 
-        const updatedLead = {
-            ...lead,
-            status: newStatus,
-            history: [...lead.history, ...historyItems],
-        };
-
-        onUpdate(updatedLead);
-        setNewNote('');
+    const removeFile = (index: number) => {
+        setSelectedFiles(prev => prev.filter((_, i) => i !== index));
     };
 
     const handleAddReminder = async (e: React.FormEvent) => {
@@ -240,14 +271,56 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
                                         className="mt-1 block w-full rounded-md border-border shadow-sm focus:border-primary focus:ring-primary sm:text-sm bg-surface"
                                         placeholder="Client requested a follow-up next week..."
                                     />
+
+                                    <div className="mt-3">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <label
+                                                htmlFor="file-upload"
+                                                className="cursor-pointer inline-flex items-center px-3 py-1.5 border border-border rounded-md shadow-sm text-xs font-medium text-text-secondary bg-surface hover:bg-subtle-background transition-colors"
+                                            >
+                                                <PaperClipIcon className="h-4 w-4 mr-1.5 text-text-tertiary" />
+                                                Attach Files
+                                            </label>
+                                            <input
+                                                id="file-upload"
+                                                type="file"
+                                                multiple
+                                                className="hidden"
+                                                onChange={handleFileSelect}
+                                            />
+                                            <span className="text-xs text-text-tertiary">
+                                                {selectedFiles.length > 0 ? `${selectedFiles.length} file(s) selected` : 'Optional'}
+                                            </span>
+                                        </div>
+
+                                        {selectedFiles.length > 0 && (
+                                            <div className="space-y-2 bg-surface p-2 rounded-md border border-border/50">
+                                                {selectedFiles.map((file, index) => (
+                                                    <div key={index} className="flex items-center justify-between text-xs p-1.5 bg-subtle-background rounded">
+                                                        <span className="truncate max-w-[200px] text-text-primary font-medium">{file.name}</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-text-tertiary">{formatFileSize(file.size)}</span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => removeFile(index)}
+                                                                className="text-text-tertiary hover:text-error transition-colors"
+                                                            >
+                                                                <XMarkIcon className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                                 <button
                                     type="submit"
                                     className="w-full inline-flex justify-center items-center rounded-md border border-transparent bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
-                                    disabled={!newNote.trim() && newStatus === lead.status}
+                                    disabled={(!newNote.trim() && newStatus === lead.status && selectedFiles.length === 0) || isUploading}
                                 >
                                     <PlusIcon className="w-4 h-4 mr-2" />
-                                    Log Activity
+                                    {isUploading ? 'Uploading...' : 'Log Activity'}
                                 </button>
                             </form>
                         </div>
