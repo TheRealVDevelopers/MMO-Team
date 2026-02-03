@@ -4,6 +4,7 @@ import { LeadPipelineStatus, SiteVisit } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { useLeads } from '../../../hooks/useLeads';
 import { useProjects } from '../../../hooks/useProjects';
+import { useDashboardStats } from '../../../hooks/useDashboardStats';
 import {
     ChevronRightIcon,
     ClockIcon,
@@ -22,6 +23,7 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void, site
     const { currentUser } = useAuth();
     const { leads, loading: leadsLoading } = useLeads();
     const { projects, loading: projectsLoading } = useProjects();
+    const { stats, loading: statsLoading } = useDashboardStats(currentUser?.id);
 
     if (!currentUser) return null;
 
@@ -30,9 +32,9 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void, site
 
     const leadsThisMonth = myLeads.filter(l => l.inquiryDate > new Date(new Date().setDate(1)));
     const activeLeads = myLeads.filter(l => ![LeadPipelineStatus.WON, LeadPipelineStatus.LOST].includes(l.status)).length;
-    const projectsWon = leadsThisMonth.filter(l => l.status === LeadPipelineStatus.WON).length;
-    const totalRevenue = leadsThisMonth.filter(l => l.status === LeadPipelineStatus.WON).reduce((sum, l) => sum + l.value, 0);
-    const conversionRate = leadsThisMonth.length > 0 ? ((projectsWon / leadsThisMonth.length) * 100).toFixed(1) : '0';
+    const projectsWon = stats.projectsWon;
+    const totalRevenue = stats.totalRevenue;
+    const conversionRate = stats.conversionRate.toFixed(1);
 
     const todaysFollowUps = myLeads.filter(l => l.status === LeadPipelineStatus.CONTACTED_CALL_DONE || l.status === LeadPipelineStatus.NEW_NOT_CONTACTED);
 
@@ -60,28 +62,28 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void, site
                     value={activeLeads}
                     icon={<UsersIcon className="w-6 h-6" />}
                     color="primary"
-                    trend={{ value: '12%', positive: true }}
+                    trend={{ value: stats.leadsTrend, positive: stats.leadsTrendPositive }}
                 />
                 <StatCard
                     title="Conversion Rate"
                     value={`${conversionRate}%`}
                     icon={<PresentationChartLineIcon className="w-6 h-6" />}
                     color="secondary"
-                    trend={{ value: '5%', positive: true }}
+                    trend={{ value: stats.conversionTrend, positive: stats.conversionTrendPositive }}
                 />
                 <StatCard
                     title="Successes"
                     value={projectsWon}
                     icon={<TrophyIcon className="w-6 h-6" />}
                     color="accent"
-                    trend={{ value: '2', positive: true }}
+                    trend={{ value: stats.projectsTrend, positive: stats.projectsTrendPositive }}
                 />
                 <StatCard
                     title="Projected Revenue"
                     value={formatCurrencyINR(totalRevenue)}
                     icon={<BanknotesIcon className="w-6 h-6" />}
                     color="purple"
-                    trend={{ value: '18%', positive: true }}
+                    trend={{ value: stats.revenueTrend, positive: stats.revenueTrendPositive }}
                 />
             </div>
 

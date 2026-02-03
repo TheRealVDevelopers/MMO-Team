@@ -53,10 +53,13 @@ const CreateProjectWizard: React.FC<CreateProjectWizardProps> = ({ isOpen, onClo
         // Financials
         budget: '',
         advanceAmount: '',
+        gstPercentage: 18, // Default GST 18%
+        gstAmount: '',
+        totalWithGST: '',
         paymentTerms: [
-            { milestone: 'Project Kickoff (Advance)', percentage: 50, amount: 0, dueDate: '' },
-            { milestone: 'Material Delivery', percentage: 30, amount: 0, dueDate: '' },
-            { milestone: 'Completion & Handover', percentage: 20, amount: 0, dueDate: '' }
+            { milestone: 'Project Kickoff (Advance)', percentage: 50, amount: '', dueDate: '' },
+            { milestone: 'Material Delivery', percentage: 30, amount: '', dueDate: '' },
+            { milestone: 'Completion & Handover', percentage: 20, amount: '', dueDate: '' }
         ]
     });
 
@@ -67,6 +70,39 @@ const CreateProjectWizard: React.FC<CreateProjectWizardProps> = ({ isOpen, onClo
             organizationId: orgId,
             clientName: org?.name || '',
             location: org?.address || '' // Auto-fill location if available
+        });
+    };
+
+    // Auto-calculate GST and total when budget or GST percentage changes
+    const handleBudgetChange = (budget: string) => {
+        const budgetValue = Number(budget);
+        const gstAmount = (budgetValue * formData.gstPercentage / 100).toFixed(2);
+        const totalWithGST = (budgetValue + Number(gstAmount)).toFixed(2);
+        
+        setFormData({
+            ...formData,
+            budget,
+            gstAmount,
+            totalWithGST,
+            // Also update payment terms if they exist
+            paymentTerms: formData.paymentTerms.map(term => ({
+                ...term,
+                amount: budgetValue && term.percentage ? 
+                    (budgetValue * term.percentage / 100).toFixed(2) : term.amount
+            }))
+        });
+    };
+
+    const handleGSTChange = (gstPercentage: number) => {
+        const budgetValue = Number(formData.budget);
+        const gstAmount = (budgetValue * gstPercentage / 100).toFixed(2);
+        const totalWithGST = (budgetValue + Number(gstAmount)).toFixed(2);
+        
+        setFormData({
+            ...formData,
+            gstPercentage,
+            gstAmount,
+            totalWithGST
         });
     };
 
@@ -367,15 +403,59 @@ const CreateProjectWizard: React.FC<CreateProjectWizardProps> = ({ isOpen, onClo
                                             exit={{ opacity: 0, x: -20 }}
                                             className="space-y-6"
                                         >
+                                            {/* GST Section - At the top */}
+                                            <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border-2 border-blue-200 dark:border-blue-800">
+                                                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                                                    <span className="w-8 h-8 bg-blue-600 text-white rounded-lg flex items-center justify-center text-sm font-bold">%</span>
+                                                    GST Configuration
+                                                </h3>
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">GST Rate (%)</label>
+                                                        <input
+                                                            type="number"
+                                                            value={formData.gstPercentage}
+                                                            onChange={(e) => handleGSTChange(Number(e.target.value))}
+                                                            className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 font-bold"
+                                                            step="0.1"
+                                                        />
+                                                        <p className="text-xs text-gray-500 mt-1">Default: 18%</p>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">GST Amount (₹)</label>
+                                                        <input
+                                                            type="text"
+                                                            value={formData.gstAmount}
+                                                            readOnly
+                                                            className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-600 dark:text-white bg-gray-100 font-bold text-blue-600"
+                                                        />
+                                                        <p className="text-xs text-gray-500 mt-1">Auto-calculated</p>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Total with GST (₹)</label>
+                                                        <input
+                                                            type="text"
+                                                            value={formData.totalWithGST}
+                                                            readOnly
+                                                            className="w-full p-2.5 border-2 border-green-300 dark:border-green-700 rounded-lg dark:bg-slate-600 dark:text-white bg-green-50 font-bold text-green-700 text-lg"
+                                                        />
+                                                        <p className="text-xs text-gray-500 mt-1">Budget + GST</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Budget Section */}
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Total Budget (₹)</label>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Base Budget (₹) *</label>
                                                     <input
                                                         type="number"
                                                         value={formData.budget}
-                                                        onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
+                                                        onChange={(e) => handleBudgetChange(e.target.value)}
                                                         className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500"
+                                                        placeholder="Budget excluding GST"
                                                     />
+                                                    <p className="text-xs text-gray-500 mt-1">Enter budget without GST</p>
                                                 </div>
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Advance Amount (₹)</label>
@@ -385,6 +465,7 @@ const CreateProjectWizard: React.FC<CreateProjectWizardProps> = ({ isOpen, onClo
                                                         onChange={(e) => setFormData({ ...formData, advanceAmount: e.target.value })}
                                                         className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500"
                                                     />
+                                                    <p className="text-xs text-gray-500 mt-1">Initial payment received</p>
                                                 </div>
                                             </div>
 
@@ -394,7 +475,7 @@ const CreateProjectWizard: React.FC<CreateProjectWizardProps> = ({ isOpen, onClo
                                                     <button
                                                         onClick={() => setFormData({
                                                             ...formData,
-                                                            paymentTerms: [...formData.paymentTerms, { milestone: 'New Stage', percentage: 0, amount: 0, dueDate: '' }]
+                                                            paymentTerms: [...formData.paymentTerms, { milestone: 'New Stage', percentage: 0, amount: '', dueDate: '' }]
                                                         })}
                                                         className="flex items-center gap-1 text-sm font-bold text-blue-600 hover:text-blue-700"
                                                     >
@@ -421,7 +502,13 @@ const CreateProjectWizard: React.FC<CreateProjectWizardProps> = ({ isOpen, onClo
                                                                     value={term.percentage}
                                                                     onChange={(e) => {
                                                                         const newTerms = [...formData.paymentTerms];
-                                                                        newTerms[idx].percentage = Number(e.target.value);
+                                                                        const percentage = Number(e.target.value);
+                                                                        newTerms[idx].percentage = percentage;
+                                                                        // Auto-calculate amount based on budget and percentage
+                                                                        if (formData.budget) {
+                                                                            const calculatedAmount = (Number(formData.budget) * percentage / 100).toFixed(2);
+                                                                            newTerms[idx].amount = calculatedAmount;
+                                                                        }
                                                                         setFormData({ ...formData, paymentTerms: newTerms });
                                                                     }}
                                                                     className="w-full p-2 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm"
@@ -431,15 +518,16 @@ const CreateProjectWizard: React.FC<CreateProjectWizardProps> = ({ isOpen, onClo
                                                             </div>
                                                             <div className="w-32 relative">
                                                                 <input
-                                                                    type="number"
+                                                                    type="text"
                                                                     value={term.amount}
                                                                     onChange={(e) => {
                                                                         const newTerms = [...formData.paymentTerms];
-                                                                        newTerms[idx].amount = Number(e.target.value);
+                                                                        newTerms[idx].amount = e.target.value;
                                                                         setFormData({ ...formData, paymentTerms: newTerms });
                                                                     }}
                                                                     className="w-full p-2 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm"
                                                                     placeholder="Amount"
+                                                                    readOnly
                                                                 />
                                                             </div>
                                                             <div className="w-36">
