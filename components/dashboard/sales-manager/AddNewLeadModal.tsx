@@ -1,36 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Modal from '../../shared/Modal';
-import { USERS } from '../../../constants';
-import { UserRole, Lead } from '../../../types';
+import { UserRole, Lead, User } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { BanknotesIcon, BuildingOfficeIcon, TagIcon, UserCircleIcon, CheckCircleIcon, CalendarDaysIcon, PencilSquareIcon } from '../../icons/IconComponents';
 import SmartDateTimePicker from '../../shared/SmartDateTimePicker';
 
-const salesTeam = USERS.filter(u => u.role === UserRole.SALES_TEAM_MEMBER);
-
 interface AddNewLeadModalProps {
     isOpen: boolean;
     onClose: () => void;
+    users: User[];
     onAddLead: (
         newLeadData: Omit<Lead, 'id' | 'status' | 'inquiryDate' | 'history' | 'lastContacted'>,
         reminder?: { date: string; notes: string }
     ) => void;
 }
 
-const initialFormData = {
-    clientName: '',
-    projectName: '',
-    value: '',
-    source: '',
-    assignedTo: salesTeam[0]?.id || '',
-    priority: 'Medium' as 'High' | 'Medium' | 'Low',
-    reminderDate: '',
-    reminderNotes: '',
-}
-
-const AddNewLeadModal: React.FC<AddNewLeadModalProps> = ({ isOpen, onClose, onAddLead }) => {
+const AddNewLeadModal: React.FC<AddNewLeadModalProps> = ({ isOpen, onClose, users, onAddLead }) => {
     const { currentUser } = useAuth();
-    const [formData, setFormData] = useState({
+    const salesTeam = useMemo(() => users.filter(u => u.role === UserRole.SALES_TEAM_MEMBER), [users]);
+
+    const initialFormData = {
         clientName: '',
         clientEmail: '',
         clientMobile: '',
@@ -41,10 +30,12 @@ const AddNewLeadModal: React.FC<AddNewLeadModalProps> = ({ isOpen, onClose, onAd
         priority: 'Medium' as 'High' | 'Medium' | 'Low',
         reminderDate: '',
         reminderNotes: '',
-    });
+    };
+
+    const [formData, setFormData] = useState(initialFormData);
 
     // Set default assignedTo when modal opens or user changes
-    React.useEffect(() => {
+    useEffect(() => {
         if (isOpen && currentUser) {
             if (currentUser.role === UserRole.SALES_TEAM_MEMBER) {
                 setFormData(prev => ({ ...prev, assignedTo: currentUser.id }));
@@ -52,7 +43,7 @@ const AddNewLeadModal: React.FC<AddNewLeadModalProps> = ({ isOpen, onClose, onAd
                 setFormData(prev => ({ ...prev, assignedTo: salesTeam[0]?.id || '' }));
             }
         }
-    }, [isOpen, currentUser]);
+    }, [isOpen, currentUser, salesTeam]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -89,9 +80,7 @@ const AddNewLeadModal: React.FC<AddNewLeadModalProps> = ({ isOpen, onClose, onAd
         Low: 'border-slate-400 text-slate-500 bg-slate-400/10'
     }
 
-    // Filter assignable users: If sales team member, only show themselves (or others if allowed, but requirement says "Enable sales team members to add their own leads")
-    // Requirement: "When a sales member adds a lead: assignedTo = their userId"
-    // So we enforce this.
+    // Filter assignable users
     const assignableUsers = currentUser?.role === UserRole.SALES_TEAM_MEMBER
         ? [currentUser] // Only self
         : salesTeam; // Manager can assign to anyone

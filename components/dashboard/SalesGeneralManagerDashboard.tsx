@@ -15,6 +15,7 @@ import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
 import { useLeads, addLead, updateLead } from '../../hooks/useLeads';
 import { useNewEnquiries, useEnquiries } from '../../hooks/useEnquiries';
+import { useUsers } from '../../hooks/useUsers';
 import ApprovalsPage from './super-admin/ApprovalsPage';
 import OrganizationsPage from './admin/OrganizationsPage';
 import EnquiryNotificationBanner from './EnquiryNotificationBanner';
@@ -25,6 +26,7 @@ import { UserPlusIcon, UsersIcon, ArrowDownTrayIcon } from '@heroicons/react/24/
 const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
   const { leads, loading: leadsLoading, error: leadsError } = useLeads();
+  const { users, loading: usersLoading } = useUsers();
   const { newEnquiries } = useNewEnquiries(currentUser?.id);
   const { enquiries } = useEnquiries();
   const [isAddLeadModalOpen, setAddLeadModalOpen] = useState(false);
@@ -58,7 +60,7 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
           action: 'Lead Created',
           user: currentUser?.name || 'System',
           timestamp: new Date(),
-          notes: `Assigned to ${USERS.find(u => u.id === newLeadData.assignedTo)?.name}`
+          notes: `Assigned to ${users.find(u => u.id === newLeadData.assignedTo)?.name || 'Unknown'}`
         }
       ],
       tasks: {},
@@ -85,7 +87,7 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
   const handleAssignLead = async (leadId: string, newOwnerId: string) => {
     const lead = leads.find(l => l.id === leadId);
     if (lead) {
-      const newOwner = USERS.find(u => u.id === newOwnerId);
+      const newOwner = users.find(u => u.id === newOwnerId);
       const newHistoryItem: LeadHistory = {
         action: `Lead assigned to ${newOwner?.name || 'Unknown'}`,
         user: currentUser?.name || 'System',
@@ -132,11 +134,11 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
   };
 
   const renderPage = () => {
-    if (leadsLoading) {
+    if (leadsLoading || usersLoading) {
       return (
         <div className="flex flex-col items-center justify-center h-64">
           <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
-          <p className="text-text-secondary animate-pulse">Synchronizing leads...</p>
+          <p className="text-text-secondary animate-pulse">Synchronizing dashboard data...</p>
         </div>
       );
     }
@@ -146,19 +148,19 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
 
     switch (currentPage) {
       case 'overview':
-        return <SalesOverviewPage setCurrentPage={setCurrentPage} leads={leads} />;
+        return <SalesOverviewPage setCurrentPage={setCurrentPage} leads={leads} users={users} />;
       case 'leads':
-        return <LeadManagementPage leads={leads} />;
+        return <LeadManagementPage leads={leads} users={users} />;
       case 'projects':
         return <ProjectTrackingPage setCurrentPage={setCurrentPage} />;
       case 'organizations':
         return <OrganizationsPage setCurrentPage={setCurrentPage} />;
       case 'team':
-        return <TeamManagementPage leads={leads} />;
+        return <TeamManagementPage leads={leads} users={users} />;
       case 'reports':
         return <ReportsPage />;
       case 'performance':
-        return <PerformancePage />;
+        return <PerformancePage users={users} />;
       case 'communication':
         return <CommunicationDashboard />;
       case 'approvals':
@@ -166,7 +168,7 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
       case 'escalate-issue':
         return <EscalateIssuePage setCurrentPage={setCurrentPage} />;
       default:
-        return <SalesOverviewPage setCurrentPage={setCurrentPage} leads={leads} />;
+        return <SalesOverviewPage setCurrentPage={setCurrentPage} leads={leads} users={users} />;
     }
   };
 
@@ -206,12 +208,14 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
       <AddNewLeadModal
         isOpen={isAddLeadModalOpen}
         onClose={() => setAddLeadModalOpen(false)}
+        users={users}
         onAddLead={handleAddLead}
       />
       <AssignLeadModal
         isOpen={isAssignLeadModalOpen}
         onClose={() => setAssignLeadModalOpen(false)}
         leads={leads}
+        users={users}
         onAssignLead={handleAssignLead}
       />
       <EnquiriesListModal

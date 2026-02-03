@@ -6,16 +6,16 @@ import { MagnifyingGlassIcon, UserCircleIcon } from '../../icons/IconComponents'
 import { useSmartAssignment } from '../../../hooks/useSmartAssignment';
 import { SparklesIcon } from '@heroicons/react/24/outline'; // Importing direct to ensure availability
 
-const salesTeam = USERS.filter(u => u.role === UserRole.SALES_TEAM_MEMBER);
-
 interface AssignLeadModalProps {
   isOpen: boolean;
   onClose: () => void;
   leads: Lead[];
+  users: User[];
   onAssignLead: (leadId: string, newOwnerId: string) => void;
 }
 
-const AssignLeadModal: React.FC<AssignLeadModalProps> = ({ isOpen, onClose, leads, onAssignLead }) => {
+const AssignLeadModal: React.FC<AssignLeadModalProps> = ({ isOpen, onClose, leads, users, onAssignLead }) => {
+  const salesTeam = useMemo(() => users.filter(u => u.role === UserRole.SALES_TEAM_MEMBER), [users]);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [selectedRepId, setSelectedRepId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -75,7 +75,7 @@ const AssignLeadModal: React.FC<AssignLeadModalProps> = ({ isOpen, onClose, lead
           </div>
           <div className="flex-1 overflow-y-auto p-3 space-y-2">
             {filteredLeads.map(lead => {
-              const currentOwner = USERS.find(u => u.id === lead.assignedTo);
+              const currentOwner = users.find(u => u.id === lead.assignedTo);
               return (
                 <button key={lead.id} onClick={() => setSelectedLeadId(lead.id)} className={`w-full text-left p-3 rounded-md border-2 transition-colors ${selectedLeadId === lead.id ? 'bg-primary-subtle-background border-primary' : 'bg-surface border-transparent hover:border-border'}`}>
                   <p className="font-bold text-sm text-text-primary">{lead.projectName}</p>

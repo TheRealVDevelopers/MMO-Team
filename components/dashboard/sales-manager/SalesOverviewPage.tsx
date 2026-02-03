@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { USERS, formatCurrencyINR } from '../../../constants';
-import { Lead, LeadPipelineStatus, UserRole, TaskStatus } from '../../../types';
+import { Lead, LeadPipelineStatus, UserRole, TaskStatus, User } from '../../../types';
 import {
     UsersIcon,
     PresentationChartLineIcon,
@@ -13,16 +13,17 @@ import {
 import { StatCard, ContentCard, cn, staggerContainer } from '../shared/DashboardUI';
 import { motion } from 'framer-motion';
 import PipelineDetailModal from './PipelineDetailModal';
-import DashboardCalendar, { CalendarTask } from '../super-admin/DashboardCalendar';
+import DashboardCalendar from '../super-admin/DashboardCalendar';
+import type { CalendarTask } from '../super-admin/DashboardCalendar';
 import { useTeamTasks } from '../../../hooks/useTeamTasks';
 import { updateLead } from '../../../hooks/useLeads';
 import LeadDetailModal from '../../shared/LeadDetailModal';
 import { useDashboardStats } from '../../../hooks/useDashboardStats';
 
-const salesTeam = USERS.filter(u => u.role === UserRole.SALES_TEAM_MEMBER);
 const pipelineOrder = Object.values(LeadPipelineStatus);
 
-const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; leads: Lead[] }> = ({ setCurrentPage, leads }) => {
+const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; leads: Lead[]; users: User[] }> = ({ setCurrentPage, leads, users }) => {
+    const salesTeam = useMemo(() => users.filter(u => u.role === UserRole.SALES_TEAM_MEMBER), [users]);
     const { tasks: teamTasks, loading: tasksLoading } = useTeamTasks();
     const { stats, loading: statsLoading } = useDashboardStats(); // Team-wide stats
     // --- STATE ---
@@ -65,9 +66,10 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; lead
             }
             mappedTasks[dateStr].push({
                 id: task.id,
-                title: `${USERS.find(u => u.id === task.userId)?.name.split(' ')[0]}: ${task.title}`,
+                title: `${users.find(u => u.id === task.userId)?.name.split(' ')[0] || 'Unknown'}: ${task.title}`,
                 completed: task.status === TaskStatus.COMPLETED,
                 type: 'task',
+                date: dateStr,
                 time: 'All Day' // Mock time for now
             });
         });

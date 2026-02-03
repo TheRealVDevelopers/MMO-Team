@@ -24,21 +24,25 @@ import {
 } from '@heroicons/react/24/outline';
 import { ContentCard, cn } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useCalendarTasks, CalendarTask } from '../../../hooks/useCalendarTasks';
+import { useCalendarTasks, type CalendarTask } from '../../../hooks/useCalendarTasks';
+export type { CalendarTask };
 import { useAuth } from '../../../context/AuthContext';
 
 interface DashboardCalendarProps {
     className?: string;
+    initialTasks?: Record<string, CalendarTask[]>;
 }
 
-const DashboardCalendar: React.FC<DashboardCalendarProps> = ({ className }) => {
+const DashboardCalendar: React.FC<DashboardCalendarProps> = ({ className, initialTasks }) => {
     const { currentUser } = useAuth();
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [newTask, setNewTask] = useState('');
-    
+
     // Use the calendar tasks hook with Firebase persistence
-    const { tasks, addTask: addTaskToFirebase, toggleTask, deleteTask: deleteTaskFromFirebase, loading } = useCalendarTasks(currentUser?.id);
+    const { tasks: firebaseTasks, addTask: addTaskToFirebase, toggleTask, deleteTask: deleteTaskFromFirebase, loading } = useCalendarTasks(currentUser?.id);
+
+    const tasks = initialTasks || firebaseTasks;
 
     const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
     const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { USERS, formatDateTime, formatLargeNumberINR } from '../../../constants';
-import { Lead, LeadPipelineStatus, UserRole } from '../../../types';
+import { Lead, LeadPipelineStatus, UserRole, User } from '../../../types';
 import { useSearchParams } from 'react-router-dom';
 import {
     FunnelIcon,
@@ -16,7 +16,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import LeadDetailModal from '../../shared/LeadDetailModal';
 import { updateLead } from '../../../hooks/useLeads';
 
-const salesTeam = USERS.filter(u => u.role === UserRole.SALES_TEAM_MEMBER);
+interface LeadManagementPageProps {
+    leads: Lead[];
+    users: User[];
+}
 
 const LeadStatusPill: React.FC<{ status: LeadPipelineStatus }> = ({ status }) => {
     const variants: Record<string, string> = {
@@ -55,11 +58,9 @@ const PriorityPill: React.FC<{ priority: 'High' | 'Medium' | 'Low' }> = ({ prior
     );
 };
 
-interface LeadManagementPageProps {
-    leads: Lead[];
-}
 
-const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leads }) => {
+const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leads, users }) => {
+    const salesTeam = useMemo(() => users.filter(u => u.role === UserRole.SALES_TEAM_MEMBER), [users]);
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
     const [filter, setFilter] = useState<{ status: LeadPipelineStatus | 'all', rep: string | 'all' }>({ status: 'all', rep: 'all' });
     const [searchTerm, setSearchTerm] = useState('');
@@ -241,9 +242,9 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leads }) => {
                                             <td className="px-4 py-5">
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-6 h-6 rounded-lg bg-subtle-background flex items-center justify-center text-[10px] font-bold">
-                                                        {USERS.find(u => u.id === lead.assignedTo)?.name.charAt(0)}
+                                                        {users.find(u => u.id === lead.assignedTo)?.name.charAt(0) || '?'}
                                                     </div>
-                                                    <span className="text-xs text-text-primary">{USERS.find(u => u.id === lead.assignedTo)?.name}</span>
+                                                    <span className="text-xs text-text-primary">{users.find(u => u.id === lead.assignedTo)?.name || 'Unassigned'}</span>
                                                 </div>
                                             </td>
                                             <td className="px-4 py-5">

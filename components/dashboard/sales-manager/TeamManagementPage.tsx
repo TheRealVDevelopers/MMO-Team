@@ -69,9 +69,8 @@ const TeamMemberCard: React.FC<{ member: User; leads: Lead[] }> = ({ member, lea
     );
 };
 
-const TeamManagementPage: React.FC<{ leads: Lead[] }> = ({ leads }) => {
+const TeamManagementPage: React.FC<{ leads: Lead[]; users: User[] }> = ({ leads, users }) => {
     const [regionFilter, setRegionFilter] = useState<'all' | string>('all');
-    const { users, loading } = useUsers();
 
     // Filter to get only sales team members from real data
     const salesTeam = useMemo(() => {
@@ -85,14 +84,6 @@ const TeamManagementPage: React.FC<{ leads: Lead[] }> = ({ leads }) => {
 
     const regions = [...new Set(salesTeam.map(m => m.region).filter(Boolean))] as string[];
 
-    if (loading) {
-        return (
-            <div className="flex flex-col items-center justify-center h-64">
-                <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
-                <p className="text-text-secondary animate-pulse">Loading team members...</p>
-            </div>
-        );
-    }
 
     if (salesTeam.length === 0) {
         return (

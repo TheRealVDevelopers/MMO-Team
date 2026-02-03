@@ -2,7 +2,7 @@
 import React, { useMemo } from 'react';
 import Card from '../../shared/Card';
 import { USERS } from '../../../constants';
-import { LeadPipelineStatus, UserRole } from '../../../types';
+import { LeadPipelineStatus, UserRole, User } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { useLeads } from '../../../hooks/useLeads';
 import { TrophyIcon, SparklesIcon } from '../../icons/IconComponents';
@@ -20,12 +20,12 @@ const getStatusInverted = (value: number, green: number, yellow: number): 'green
     return 'red';
 };
 
-const PerformancePage: React.FC = () => {
+const PerformancePage: React.FC<{ users: User[] }> = ({ users }) => {
     const { currentUser } = useAuth();
     const { leads: teamLeads, loading } = useLeads(); // Fetch all leads for manager
     if (!currentUser) return null;
 
-    const salesTeamIds = useMemo(() => USERS.filter(u => u.role === UserRole.SALES_TEAM_MEMBER).map(u => u.id), []);
+    const salesTeamIds = useMemo(() => users.filter(u => u.role === UserRole.SALES_TEAM_MEMBER).map(u => u.id), [users]);
 
     const metrics = useMemo(() => {
         // MOCK data where not available
