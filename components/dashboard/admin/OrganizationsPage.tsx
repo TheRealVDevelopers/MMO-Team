@@ -56,51 +56,42 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
         console.log('Creating project:', projectData);
 
         try {
+            // Build assignedTeam object conditionally to avoid undefined values
+            const assignedTeam: any = {
+                execution: projectData.projectHeadId ? [projectData.projectHeadId] : [],
+            };
+            
+            // Only add site_engineer if it has a value
+            if (projectData.siteEngineerId) {
+                assignedTeam.site_engineer = projectData.siteEngineerId;
+            }
+            
+            // Only add drawing if it has a value
+            if (projectData.designerId) {
+                assignedTeam.drawing = projectData.designerId;
+            }
+            
+            // Only add quotation if it has a value
+            if (projectData.quotationId) {
+                assignedTeam.quotation = projectData.quotationId;
+            }
+
             // Map Wizard Data to Project Interface
             const newProject: Omit<Project, 'id'> = {
-                clientName: projectData.clientName,
-                projectName: projectData.projectName,
+                clientName: projectData.clientName || '',
+                projectName: projectData.projectName || '',
                 status: ProjectStatus.SITE_VISIT_PENDING, // Updated initial status
                 priority: 'Medium', // Default
                 budget: Number(projectData.budget) || 0,
                 advancePaid: Number(projectData.advanceAmount) || 0,
-                clientAddress: projectData.location,
-                clientContact: { name: projectData.clientName, phone: '' }, // Placeholder
+                clientAddress: projectData.location || '',
+                clientContact: { name: projectData.clientName || '', phone: '' }, // Placeholder
                 progress: 0,
-                assignedTeam: {
-                    execution: projectData.projectHeadId ? [projectData.projectHeadId] : [],
-                    site_engineer: projectData.siteEngineerId,
-                    drawing: projectData.designerId,
-                },
-                // Populate root-level assignment fields for dashboard filtering
-                assignedEngineerId: projectData.siteEngineerId,
-                drawingTeamMemberId: projectData.designerId,
-
+                assignedTeam: assignedTeam,
                 milestones: [],
                 startDate: projectData.startDate ? new Date(projectData.startDate) : new Date(),
                 endDate: projectData.deadline ? new Date(projectData.deadline) : new Date(),
-                salespersonId: projectData.salesPersonId,
-                organizationId: projectData.organizationId,
                 is_demo: false,
-
-                // Map Timeline to Stages
-                stages: projectData.timeline?.map((t: any, idx: number) => ({
-                    id: `stage-${Date.now()}-${idx}`,
-                    name: t.phase,
-                    deadline: t.date ? new Date(t.date) : new Date(),
-                    status: 'Pending',
-                } as ExecutionStage)) || [],
-
-                // Map Payment Terms
-                paymentTerms: projectData.paymentTerms?.map((t: any, idx: number) => ({
-                    id: `pay-${Date.now()}-${idx}`,
-                    milestone: t.milestone,
-                    percentage: t.percentage,
-                    amount: t.amount,
-                    dueDate: t.dueDate ? new Date(t.dueDate) : undefined,
-                    status: 'Pending'
-                } as PaymentTerm)) || [],
-
                 checklists: { daily: [], quality: [] },
                 history: [{
                     action: 'Project Created',
@@ -109,6 +100,51 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                     notes: 'Project initialized via Admin Wizard'
                 }]
             };
+
+            // Only add optional fields if they have values
+            if (projectData.siteEngineerId) {
+                newProject.assignedEngineerId = projectData.siteEngineerId;
+            }
+            if (projectData.designerId) {
+                newProject.drawingTeamMemberId = projectData.designerId;
+            }
+            if (projectData.salesPersonId) {
+                newProject.salespersonId = projectData.salesPersonId;
+            }
+            if (projectData.organizationId) {
+                newProject.organizationId = projectData.organizationId;
+            }
+
+            // Map Timeline to Stages only if provided
+            if (projectData.timeline && Array.isArray(projectData.timeline) && projectData.timeline.length > 0) {
+                newProject.stages = projectData.timeline.map((t: any, idx: number) => ({
+                    id: `stage-${Date.now()}-${idx}`,
+                    name: t.phase,
+                    deadline: t.date ? new Date(t.date) : new Date(),
+                    status: 'Pending',
+                } as ExecutionStage));
+            }
+
+            // Map Payment Terms only if provided
+            if (projectData.paymentTerms && Array.isArray(projectData.paymentTerms) && projectData.paymentTerms.length > 0) {
+                newProject.paymentTerms = projectData.paymentTerms.map((t: any, idx: number) => {
+                    const term: PaymentTerm = {
+                        id: `pay-${Date.now()}-${idx}`,
+                        milestone: t.milestone,
+                        percentage: t.percentage,
+                        status: 'Pending'
+                    };
+                    // Only add amount if it exists
+                    if (t.amount) {
+                        term.amount = t.amount;
+                    }
+                    // Only add dueDate if it exists
+                    if (t.dueDate) {
+                        term.dueDate = new Date(t.dueDate);
+                    }
+                    return term;
+                });
+            }
 
             const projectId = await addProject(newProject);
 

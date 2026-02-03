@@ -17,11 +17,14 @@ const ProjectCard: React.FC<{ project: Project; onSelect: () => void; onAction: 
 
     const handleActionClick = (e: React.MouseEvent, action: string) => {
         e.stopPropagation();
+        console.log('ProjectCard action clicked:', action, 'for project:', project.projectName);
         onAction(action, project);
     };
 
     let ActionButton = null;
     const currentStatus = project.status as string;
+
+    console.log('Rendering ProjectCard:', project.projectName, 'Status:', currentStatus);
 
     const isOverdue = currentStatus === ProjectStatus.DRAWING_PENDING &&
         project.drawingDeadline &&
@@ -48,9 +51,13 @@ const ProjectCard: React.FC<{ project: Project; onSelect: () => void; onAction: 
             </button>
         );
     } else if (currentStatus === ProjectStatus.BOQ_PENDING) {
+        console.log('Rendering Submit BOQ button for:', project.projectName);
         ActionButton = (
             <button
-                onClick={(e) => handleActionClick(e, 'submit_boq')}
+                onClick={(e) => {
+                    console.log('Submit BOQ button clicked!', e);
+                    handleActionClick(e, 'submit_boq');
+                }}
                 className="w-full mt-2 py-1.5 bg-green-50 text-green-600 hover:bg-green-100 rounded-md text-xs font-medium flex items-center justify-center gap-1 transition-colors"
             >
                 <DocumentTextIcon className="w-4 h-4" />
@@ -58,6 +65,8 @@ const ProjectCard: React.FC<{ project: Project; onSelect: () => void; onAction: 
             </button>
         );
     }
+
+    console.log('ActionButton for', project.projectName, ':', ActionButton ? 'Rendered' : 'NULL');
 
     return (
         <div onClick={onSelect} className="bg-surface p-3 rounded-md border border-border space-y-3 cursor-pointer hover:shadow-lg transition-all duration-200 hover:-translate-y-1 group relative">
@@ -98,6 +107,17 @@ const ProjectsBoardPage: React.FC<{ onProjectSelect: (project: Project) => void;
     const [isBOQModalOpen, setIsBOQModalOpen] = useState(false);
     const [selectedProjectForBOQ, setSelectedProjectForBOQ] = useState<Project | null>(null);
 
+    // Debug: Log projects and user info
+    React.useEffect(() => {
+        console.log('Drawing Team User ID:', currentUser?.id);
+        console.log('Drawing Team User Name:', currentUser?.name);
+        console.log('Projects fetched:', projects.length);
+        console.log('Projects data:', projects);
+        if (projects.length > 0) {
+            console.log('First project assignedTeam:', projects[0].assignedTeam);
+        }
+    }, [currentUser, projects]);
+
     if (!currentUser) return null;
 
     if (loading) {
@@ -125,19 +145,75 @@ const ProjectsBoardPage: React.FC<{ onProjectSelect: (project: Project) => void;
                     });
                 }
             } else if (action === 'upload_drawing') {
-                // Mock file upload interaction
-                const mockFile = window.prompt("Enter filename to simulate upload (e.g. 'FloorPlan_v1.pdf'):");
-                if (mockFile) {
-                    await updateProject(project.id, {
-                        status: ProjectStatus.BOQ_PENDING,
-                        drawingSubmittedAt: new Date(),
-                        drawingRedFlagged: false
-                    });
-                    alert("Drawing uploaded! Project moved to BOQ Pending.");
-                }
+                // ✅ Create file input and trigger file picker
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.pdf,.dwg,.dxf,.png,.jpg,.jpeg'; // Accept drawing file formats
+                input.multiple = false;
+                
+                input.onchange = async (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (!file) return;
+
+                    try {
+                        // Show loading state
+                        const loadingMessage = `Uploading ${file.name}...`;
+                        console.log(loadingMessage);
+
+                        // TODO: Upload to Firebase Storage
+                        // For now, just simulate upload and update project
+                        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate upload delay
+
+                        // Determine file type
+                        const fileExt = file.name.split('.').pop()?.toLowerCase();
+                        let docType: 'pdf' | 'docx' | 'jpg' | 'zip' = 'pdf';
+                        if (fileExt === 'jpg' || fileExt === 'jpeg' || fileExt === 'png') {
+                            docType = 'jpg';
+                        } else if (fileExt === 'docx' || fileExt === 'dwg' || fileExt === 'dxf') {
+                            docType = 'docx';
+                        } else if (fileExt === 'zip') {
+                            docType = 'zip';
+                        }
+
+                        // Format file size
+                        const fileSizeKB = file.size / 1024;
+                        const fileSizeMB = fileSizeKB / 1024;
+                        const formattedSize = fileSizeMB > 1 
+                            ? `${fileSizeMB.toFixed(2)} MB` 
+                            : `${fileSizeKB.toFixed(2)} KB`;
+
+                        // Update project with drawing info
+                        await updateProject(project.id, {
+                            status: ProjectStatus.BOQ_PENDING,
+                            drawingSubmittedAt: new Date(),
+                            drawingRedFlagged: false,
+                            documents: [
+                                ...(project.documents || []),
+                                {
+                                    id: `doc_${Date.now()}`,
+                                    name: file.name,
+                                    type: docType,
+                                    url: URL.createObjectURL(file), // Temporary URL
+                                    uploaded: new Date(),
+                                    size: formattedSize
+                                }
+                            ]
+                        });
+
+                        alert(`Drawing "${file.name}" uploaded successfully! Project moved to BOQ Pending.`);
+                    } catch (error) {
+                        console.error('Upload error:', error);
+                        alert('Failed to upload drawing. Please try again.');
+                    }
+                };
+
+                // Trigger file picker
+                input.click();
             } else if (action === 'submit_boq') {
+                console.log('Submit BOQ clicked for project:', project.projectName);
                 setSelectedProjectForBOQ(project);
                 setIsBOQModalOpen(true);
+                console.log('BOQ Modal should open now. isOpen:', true);
             }
         } catch (error) {
             console.error("Action failed:", error);
@@ -209,8 +285,12 @@ const ProjectsBoardPage: React.FC<{ onProjectSelect: (project: Project) => void;
 
             <BOQSubmissionModal
                 isOpen={isBOQModalOpen}
-                onClose={() => setIsBOQModalOpen(false)}
+                onClose={() => {
+                    console.log('Closing BOQ modal');
+                    setIsBOQModalOpen(false);
+                }}
                 onSubmit={handleBOQSubmit}
+                projectName={selectedProjectForBOQ?.projectName}
             />
         </div>
     );

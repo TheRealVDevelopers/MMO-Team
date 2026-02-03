@@ -1,29 +1,23 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MagnifyingGlassIcon, CalendarIcon, UserIcon, MapPinIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
-import { PROJECTS } from '../../../constants'; // Using mock PROJECTS for now
+import { MagnifyingGlassIcon, CalendarIcon, UserIcon, MapPinIcon, ChevronRightIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 import { Project, ProjectStatus } from '../../../types';
-
-import { useProjects } from '../../../hooks/useProjects';
+import ProjectEditModal from './ProjectEditModal';
+import { updateProject } from '../../../hooks/useProjects';
 
 interface ExecutionProjectsPageProps {
     onProjectSelect: (projectId: string) => void;
+    projects: Project[]; // Accept projects as props instead of fetching
 }
 
-const ExecutionProjectsPage: React.FC<ExecutionProjectsPageProps> = ({ onProjectSelect }) => {
+const ExecutionProjectsPage: React.FC<ExecutionProjectsPageProps> = ({ onProjectSelect, projects }) => {
     const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('active');
     const [groupBy, setGroupBy] = useState<'none' | 'status'>('none');
     const [searchQuery, setSearchQuery] = useState('');
+    const [editingProject, setEditingProject] = useState<Project | null>(null);
 
-    // Fetch real projects from Firestore
-    const { projects: realProjects, loading } = useProjects();
-
-    // Combine mock and real projects
-    // Note: In a real migration, we would remove PROJECTS constant usage
-    const allProjects = [...PROJECTS, ...realProjects];
-
-    // Filter projects relevant to execution team
-    const relevantProjects = allProjects.filter(p =>
+    // Use projects from props (already filtered by user in parent component)
+    const relevantProjects = projects.filter(p =>
         p.status === ProjectStatus.IN_EXECUTION ||
         p.status === ProjectStatus.APPROVED ||
         p.assignedTeam?.execution?.length > 0 // Robust check
@@ -118,53 +112,69 @@ const ExecutionProjectsPage: React.FC<ExecutionProjectsPageProps> = ({ onProject
                                 <motion.div
                                     key={project.id}
                                     layoutId={project.id}
-                                    onClick={() => onProjectSelect(project.id)}
-                                    className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all cursor-pointer p-6 group"
+                                    className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all p-6 group relative"
                                 >
-                                    <div className="flex justify-between items-start mb-4">
-                                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold
-                                            ${project.status === ProjectStatus.IN_EXECUTION ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                                                project.status === ProjectStatus.APPROVED ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                                                    'bg-gray-100 text-gray-700'
-                                            }`}>
-                                            {project.status}
-                                        </span>
-                                        <span className="text-xs text-gray-400">ID: {project.id}</span>
-                                    </div>
+                                    {/* Edit Button - Top Right */}
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditingProject(project);
+                                        }}
+                                        className="absolute top-4 right-4 p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all opacity-0 group-hover:opacity-100 z-10"
+                                        title="Edit Project"
+                                    >
+                                        <PencilSquareIcon className="w-5 h-5" />
+                                    </button>
 
-                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 group-hover:text-blue-600 transition-colors">
-                                        {project.projectName}
-                                    </h3>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{project.clientName}</p>
+                                    <div 
+                                        onClick={() => onProjectSelect(project.id)}
+                                        className="cursor-pointer"
+                                    >
+                                        <div className="flex justify-between items-start mb-4 pr-12">
+                                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold
+                                                ${project.status === ProjectStatus.IN_EXECUTION ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                                    project.status === ProjectStatus.APPROVED ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                                                        'bg-gray-100 text-gray-700'
+                                                }`}>
+                                                {project.status}
+                                            </span>
+                                            <span className="text-xs text-gray-400">ID: {project.id.slice(0, 8)}</span>
+                                        </div>
 
-                                    <div className="space-y-3 mb-6">
-                                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                                            <MapPinIcon className="w-4 h-4 text-gray-400" />
-                                            <span className="line-clamp-1">{project.clientAddress}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                                            <CalendarIcon className="w-4 h-4 text-gray-400" />
-                                            <span>Deadline: {new Date(project.endDate).toLocaleDateString()}</span>
-                                        </div>
-                                    </div>
+                                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 group-hover:text-blue-600 transition-colors">
+                                            {project.projectName}
+                                        </h3>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{project.clientName}</p>
 
-                                    {/* Progress Bar */}
-                                    <div className="mb-4">
-                                        <div className="flex justify-between text-xs mb-1">
-                                            <span className="text-gray-500">Completion</span>
-                                            <span className="font-medium text-gray-900 dark:text-white">{project.progress}%</span>
+                                        <div className="space-y-3 mb-6">
+                                            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                                                <MapPinIcon className="w-4 h-4 text-gray-400" />
+                                                <span className="line-clamp-1">{project.clientAddress}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                                                <CalendarIcon className="w-4 h-4 text-gray-400" />
+                                                <span>Deadline: {new Date(project.endDate).toLocaleDateString()}</span>
+                                            </div>
                                         </div>
-                                        <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2">
-                                            <div
-                                                className="bg-blue-600 h-2 rounded-full transition-all duration-500"
-                                                style={{ width: `${project.progress}%` }}
-                                            />
-                                        </div>
-                                    </div>
 
-                                    <div className="pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center text-sm font-medium text-blue-600 dark:text-blue-400">
-                                        View Dashboard
-                                        <ChevronRightIcon className="w-4 h-4" />
+                                        {/* Progress Bar */}
+                                        <div className="mb-4">
+                                            <div className="flex justify-between text-xs mb-1">
+                                                <span className="text-gray-500">Completion</span>
+                                                <span className="font-medium text-gray-900 dark:text-white">{project.progress}%</span>
+                                            </div>
+                                            <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2">
+                                                <div
+                                                    className="bg-blue-600 h-2 rounded-full transition-all duration-500"
+                                                    style={{ width: `${project.progress}%` }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center text-sm font-medium text-blue-600 dark:text-blue-400">
+                                            View Dashboard
+                                            <ChevronRightIcon className="w-4 h-4" />
+                                        </div>
                                     </div>
                                 </motion.div>
                             ))}
@@ -172,6 +182,27 @@ const ExecutionProjectsPage: React.FC<ExecutionProjectsPageProps> = ({ onProject
                     </div>
                 ))}
             </div>
+
+            {/* Edit Modal */}
+            {editingProject && (
+                <ProjectEditModal
+                    project={editingProject}
+                    isOpen={!!editingProject}
+                    onClose={() => setEditingProject(null)}
+                    onSave={async (updatedProject) => {
+                        try {
+                            // Update project in Firestore
+                            await updateProject(editingProject.id, updatedProject);
+                            console.log('Project updated successfully in Firestore');
+                            setEditingProject(null);
+                            // Projects will auto-refresh via useProjects hook in parent
+                        } catch (error) {
+                            console.error('Error updating project:', error);
+                            alert('Failed to update project. Please try again.');
+                        }
+                    }}
+                />
+            )}
         </div>
     );
 };

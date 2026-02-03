@@ -27,6 +27,12 @@ const BOQSubmissionModal: React.FC<BOQSubmissionModalProps> = ({ isOpen, onClose
     ]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Debug: Log when isOpen changes
+    useEffect(() => {
+        console.log('BOQSubmissionModal isOpen changed to:', isOpen);
+        console.log('Project name:', projectName);
+    }, [isOpen, projectName]);
+
     // Reset form when opening
     useEffect(() => {
         if (isOpen) {
@@ -35,7 +41,12 @@ const BOQSubmissionModal: React.FC<BOQSubmissionModalProps> = ({ isOpen, onClose
         }
     }, [isOpen]);
 
-    if (!isOpen) return null;
+    if (!isOpen) {
+        console.log('BOQSubmissionModal: not rendering because isOpen is false');
+        return null;
+    }
+
+    console.log('BOQSubmissionModal: rendering modal');
 
     const handleAddItem = () => {
         setBoqItems([

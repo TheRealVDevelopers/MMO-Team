@@ -34,6 +34,23 @@ const fromFirestore = (docData: FirestoreProject, id: string): Project => {
     } as Project;
 };
 
+// Helper function to recursively remove undefined values from objects
+const removeUndefinedValues = (obj: any): any => {
+    if (Array.isArray(obj)) {
+        return obj.map(item => removeUndefinedValues(item));
+    } else if (obj !== null && typeof obj === 'object' && !(obj instanceof Date)) {
+        const cleaned: any = {};
+        Object.keys(obj).forEach(key => {
+            const value = obj[key];
+            if (value !== undefined) {
+                cleaned[key] = removeUndefinedValues(value);
+            }
+        });
+        return cleaned;
+    }
+    return obj;
+};
+
 export const useProjects = (userId?: string) => {
     const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
@@ -47,6 +64,7 @@ export const useProjects = (userId?: string) => {
         let q = query(projectsCollection);
 
         if (userId) {
+            // ✅ Fixed: drawing is a string field, not array - use == operator
             q = query(projectsCollection, where('assignedTeam.drawing', '==', userId));
         }
 
@@ -79,8 +97,11 @@ export const useProjects = (userId?: string) => {
 
     const addProject = async (projectData: Omit<Project, 'id'>) => {
         try {
+            // Remove undefined values from the object to prevent Firebase errors
+            const cleanData = removeUndefinedValues(projectData);
+            
             const docRef = await addDoc(collection(db, 'projects'), {
-                ...projectData,
+                ...cleanData,
                 startDate: Timestamp.fromDate(projectData.startDate),
                 endDate: Timestamp.fromDate(projectData.endDate),
             });
@@ -217,8 +238,11 @@ export const raiseProjectIssue = async (projectId: string, issue: any, userName:
 
 export const addProject = async (projectData: Omit<Project, 'id'>) => {
     try {
+        // Remove undefined values from the object to prevent Firebase errors
+        const cleanData = removeUndefinedValues(projectData);
+        
         const docRef = await addDoc(collection(db, 'projects'), {
-            ...projectData,
+            ...cleanData,
             startDate: Timestamp.fromDate(projectData.startDate),
             endDate: Timestamp.fromDate(projectData.endDate),
         });

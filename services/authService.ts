@@ -374,6 +374,7 @@ export const submitStaffRegistrationRequest = async (
 
 /**
  * Change staff password
+ * Works for both Firebase Auth users and simplified/mock users
  */
 export const changeStaffPassword = async (
     currentPassword: string,
@@ -381,23 +382,61 @@ export const changeStaffPassword = async (
 ): Promise<void> => {
     try {
         if (!auth || !db) throw new Error("Firebase not initialized");
+        
         const user = auth.currentUser;
-        if (!user || !user.email) {
-            throw new Error('No authenticated user');
+        
+        // Check if this is a Firebase-authenticated user
+        if (user && user.email) {
+            // Firebase Auth user - use Firebase password change
+            const credential = EmailAuthProvider.credential(user.email, currentPassword);
+            await reauthenticateWithCredential(user, credential);
+            await updatePassword(user, newPassword);
+
+            // Update last password change in Firestore
+            await updateDoc(doc(db, 'staffUsers', user.uid), {
+                lastPasswordChange: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+            });
+        } else {
+            // Simplified/Mock user - update password in Firestore only
+            // Get current user from localStorage
+            const savedUser = localStorage.getItem('mmo-current-user');
+            if (!savedUser) {
+                throw new Error('No authenticated user found');
+            }
+            
+            const currentUser = JSON.parse(savedUser);
+            
+            // For mock users (ID length < 20), just show a message
+            if (currentUser.id && currentUser.id.length < 20) {
+                throw new Error('Password change is not available for demo accounts. Please create a real account to change password.');
+            }
+            
+            // For real Firestore users without Firebase Auth
+            // Verify current password by checking Firestore
+            const userDoc = await getDoc(doc(db, 'staffUsers', currentUser.id));
+            if (!userDoc.exists()) {
+                throw new Error('User not found');
+            }
+            
+            const userData = userDoc.data();
+            
+            // Check if stored password exists and matches (for users created with Firestore only)
+            if (userData.password) {
+                if (userData.password !== currentPassword) {
+                    throw new Error('Current password is incorrect');
+                }
+                
+                // Update password in Firestore
+                await updateDoc(doc(db, 'staffUsers', currentUser.id), {
+                    password: newPassword,
+                    lastPasswordChange: serverTimestamp(),
+                    updatedAt: serverTimestamp(),
+                });
+            } else {
+                throw new Error('Password change requires Firebase Authentication. Please contact administrator.');
+            }
         }
-
-        // Re-authenticate user
-        const credential = EmailAuthProvider.credential(user.email, currentPassword);
-        await reauthenticateWithCredential(user, credential);
-
-        // Update password
-        await updatePassword(user, newPassword);
-
-        // Update last password change in Firestore
-        await updateDoc(doc(db, 'staffUsers', user.uid), {
-            lastPasswordChange: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-        });
     } catch (error: any) {
         console.error('Error changing password:', error);
         if (error.code === 'auth/wrong-password') {

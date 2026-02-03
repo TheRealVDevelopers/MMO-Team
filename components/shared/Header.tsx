@@ -78,7 +78,10 @@ const Header: React.FC<HeaderProps> = ({ openSettings, onMenuToggle }) => {
 
                     {/* User Profile Section (Hidden on small screens) */}
                     {currentUser && (
-                        <div className="hidden md:flex items-center space-x-3 px-4 py-2 rounded-xl bg-subtle-background dark:bg-background border border-border/50 dark:border-border">
+                        <div 
+                            onClick={openSettings}
+                            className="hidden md:flex items-center space-x-3 px-4 py-2 rounded-xl bg-subtle-background dark:bg-background border border-border/50 dark:border-border cursor-pointer hover:border-primary transition-all"
+                        >
                             <img
                                 src={currentUser.avatar}
                                 alt={currentUser.name}

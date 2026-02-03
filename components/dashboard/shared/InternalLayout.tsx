@@ -38,6 +38,7 @@ interface InternalLayoutProps {
     title?: string;
     navItems?: NavItemProp[];
     secondaryNavItems?: NavItemProp[];
+    onOpenSettings?: () => void;
 }
 
 const InternalLayout: React.FC<InternalLayoutProps> = ({
@@ -46,7 +47,8 @@ const InternalLayout: React.FC<InternalLayoutProps> = ({
     setCurrentPage,
     title = "MMO",
     navItems = [],
-    secondaryNavItems = []
+    secondaryNavItems = [],
+    onOpenSettings
 }) => {
     const { currentUser, logout } = useAuth();
     const { isDark, toggleTheme } = useTheme();
@@ -208,7 +210,10 @@ const InternalLayout: React.FC<InternalLayoutProps> = ({
                                 <p className="text-sm font-bold text-text-primary">{currentUser?.name}</p>
                                 <p className="text-[10px] uppercase tracking-widest text-text-secondary font-black">{currentUser?.role}</p>
                             </div>
-                            <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center overflow-hidden border-2 border-border group cursor-pointer hover:border-primary transition-colors">
+                            <div 
+                                onClick={onOpenSettings}
+                                className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center overflow-hidden border-2 border-border group cursor-pointer hover:border-primary transition-colors"
+                            >
                                 {currentUser?.avatar ? (
                                     <img src={currentUser.avatar} alt="Avatar" className="w-full h-full object-cover" />
                                 ) : (

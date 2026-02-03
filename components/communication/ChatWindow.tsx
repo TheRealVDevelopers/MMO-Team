@@ -16,15 +16,20 @@ const Message: React.FC<{ message: ChatMessage; isGroup: boolean; channel: ChatC
     const senderName = isCurrentUser ? 'You' : (channel.memberNames?.[message.senderId] || 'Someone');
     const senderAvatar = channel.memberAvatars?.[message.senderId] || `https://ui-avatars.com/api/?name=${encodeURIComponent(senderName)}&background=random`;
 
+    // Convert timestamp to Date if it's not already
+    const messageTime = message.timestamp instanceof Date 
+        ? message.timestamp 
+        : new Date(message.timestamp);
+
     return (
-        <div className={`flex items-start gap-3 ${isCurrentUser ? 'flex-row-reverse' : ''}`}>
-            {!isCurrentUser && <img src={senderAvatar} alt={senderName} className="w-9 h-9 rounded-full shadow-sm" />}
-            <div className={`flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'}`}>
+        <div className={`flex items-start gap-3 mb-4 ${isCurrentUser ? 'flex-row-reverse' : ''}`}>
+            {!isCurrentUser && <img src={senderAvatar} alt={senderName} className="w-9 h-9 rounded-full shadow-sm flex-shrink-0" />}
+            <div className={`flex flex-col max-w-[70%] ${isCurrentUser ? 'items-end' : 'items-start'}`}>
                 {!isCurrentUser && isGroup && <p className="text-[11px] font-bold mb-1 text-primary ml-1">{senderName}</p>}
-                <div className={`p-3 rounded-2xl max-w-sm lg:max-w-md ${isCurrentUser ? 'bg-primary text-white rounded-tr-none shadow-md' : 'bg-surface border border-border rounded-tl-none shadow-sm'}`}>
-                    <p className="text-sm leading-relaxed">{message.content}</p>
+                <div className={`p-3 rounded-2xl ${isCurrentUser ? 'bg-primary text-white rounded-tr-none shadow-md' : 'bg-surface border border-border rounded-tl-none shadow-sm'}`}>
+                    <p className="text-sm leading-relaxed break-words">{message.content}</p>
                     <p className={`text-[10px] mt-1.5 opacity-60 font-medium ${isCurrentUser ? 'text-white text-right' : 'text-text-tertiary text-left'}`}>
-                        {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {messageTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>
                 </div>
             </div>
@@ -79,7 +84,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ channel, messages, onSendMessag
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin">
+            <div className="flex-1 overflow-y-auto p-6 space-y-2 scrollbar-thin bg-background">
                 {messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-text-tertiary">
                         <div className="w-16 h-16 bg-surface border border-border rounded-full flex items-center justify-center mb-4">
@@ -88,11 +93,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ channel, messages, onSendMessag
                         <p className="text-sm font-medium">No messages yet. Say hello!</p>
                     </div>
                 ) : (
-                    messages.map((msg) => (
-                        <Message key={msg.id} message={msg} isGroup={channel.isGroup} channel={channel} />
-                    ))
+                    <>
+                        {messages.map((msg) => (
+                            <Message key={msg.id} message={msg} isGroup={channel.isGroup} channel={channel} />
+                        ))}
+                        <div ref={messagesEndRef} />
+                    </>
                 )}
-                <div ref={messagesEndRef} />
             </div>
 
             {/* Input */}

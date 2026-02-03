@@ -20,8 +20,9 @@ import ApprovalsPage from './super-admin/ApprovalsPage';
 import OrganizationsPage from './admin/OrganizationsPage';
 import EnquiryNotificationBanner from './EnquiryNotificationBanner';
 import EnquiriesListModal from './EnquiriesListModal';
+import JustDialImportModal from './sales-manager/JustDialImportModal';
 import { SectionHeader, PrimaryButton, SecondaryButton } from './shared/DashboardUI';
-import { UserPlusIcon, UsersIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { UserPlusIcon, UsersIcon, ArrowDownTrayIcon, CloudArrowDownIcon } from '@heroicons/react/24/outline';
 
 const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
@@ -32,6 +33,7 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
   const [isAddLeadModalOpen, setAddLeadModalOpen] = useState(false);
   const [isAssignLeadModalOpen, setAssignLeadModalOpen] = useState(false);
   const [showEnquiriesModal, setShowEnquiriesModal] = useState(false);
+  const [showJustDialImport, setShowJustDialImport] = useState(false);
 
   const pageTitles: { [key: string]: string } = {
     overview: 'Sales Overview',
@@ -190,6 +192,9 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
               <PrimaryButton onClick={() => setAddLeadModalOpen(true)} icon={<UserPlusIcon className="w-4 h-4" />}>
                 Add Lead
               </PrimaryButton>
+              <SecondaryButton onClick={() => setShowJustDialImport(true)} icon={<CloudArrowDownIcon className="w-4 h-4" />}>
+                Just Dial Import
+              </SecondaryButton>
               <SecondaryButton onClick={() => setAssignLeadModalOpen(true)} icon={<UsersIcon className="w-4 h-4" />}>
                 Assign
               </SecondaryButton>
@@ -223,6 +228,14 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
         onClose={() => setShowEnquiriesModal(false)}
         enquiries={enquiries}
         currentUserId={currentUser?.id || ''}
+      />
+      <JustDialImportModal
+        isOpen={showJustDialImport}
+        onClose={() => setShowJustDialImport(false)}
+        onImportComplete={() => {
+          setShowJustDialImport(false);
+          // Leads will auto-refresh via useLeads hook
+        }}
       />
     </div>
   );

@@ -77,6 +77,7 @@ const CommunicationDashboard: React.FC = () => {
                 onSelectChannel={setSelectedChannelId}
                 onNewChat={() => setShowUserList(true)}
                 onCreateGroup={() => setShowCreateGroup(true)}
+                onSelectUser={handleCreateDM}
             />
 
             {selectedChannel ? (

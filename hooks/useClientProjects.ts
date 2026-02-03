@@ -12,6 +12,23 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 
+// Helper function to recursively remove undefined values from objects
+const removeUndefinedValues = (obj: any): any => {
+    if (Array.isArray(obj)) {
+        return obj.map(item => removeUndefinedValues(item));
+    } else if (obj !== null && typeof obj === 'object' && !(obj instanceof Date)) {
+        const cleaned: any = {};
+        Object.keys(obj).forEach(key => {
+            const value = obj[key];
+            if (value !== undefined) {
+                cleaned[key] = removeUndefinedValues(value);
+            }
+        });
+        return cleaned;
+    }
+    return obj;
+};
+
 export interface ClientProject {
     id: string;
     projectId: string;
@@ -262,8 +279,9 @@ export const updateClientProject = async (projectId: string, updates: Partial<Cl
 // Function to add a chat message
 export const addChatMessage = async (messageData: Omit<ChatMessage, 'id' | 'timestamp'>) => {
     try {
+        const cleanData = removeUndefinedValues(messageData);
         const docRef = await addDoc(collection(db, 'projectChats'), {
-            ...messageData,
+            ...cleanData,
             timestamp: serverTimestamp(),
         });
         return docRef.id;
@@ -276,8 +294,9 @@ export const addChatMessage = async (messageData: Omit<ChatMessage, 'id' | 'time
 // Function to add an issue
 export const addProjectIssue = async (issueData: Omit<ProjectIssue, 'id' | 'createdAt'>) => {
     try {
+        const cleanData = removeUndefinedValues(issueData);
         const docRef = await addDoc(collection(db, 'projectIssues'), {
-            ...issueData,
+            ...cleanData,
             createdAt: serverTimestamp(),
         });
         return docRef.id;
@@ -290,11 +309,14 @@ export const addProjectIssue = async (issueData: Omit<ProjectIssue, 'id' | 'crea
 // Function to update an issue
 export const updateProjectIssue = async (issueId: string, updates: Partial<ProjectIssue>) => {
     try {
+        // Only add respondedAt if there's a response
+        const cleanUpdates: any = removeUndefinedValues(updates);
+        if (updates.response) {
+            cleanUpdates.respondedAt = serverTimestamp();
+        }
+        
         const issueRef = doc(db, 'projectIssues', issueId);
-        await updateDoc(issueRef, {
-            ...updates,
-            respondedAt: updates.response ? serverTimestamp() : undefined,
-        });
+        await updateDoc(issueRef, cleanUpdates);
     } catch (error) {
         console.error('Error updating issue:', error);
         throw error;
@@ -304,8 +326,9 @@ export const updateProjectIssue = async (issueId: string, updates: Partial<Proje
 // Function to add project update (stage change notification)
 export const addProjectUpdate = async (updateData: Omit<ProjectUpdate, 'id' | 'timestamp'>) => {
     try {
+        const cleanData = removeUndefinedValues(updateData);
         const docRef = await addDoc(collection(db, 'projectUpdates'), {
-            ...updateData,
+            ...cleanData,
             timestamp: serverTimestamp(),
         });
         return docRef.id;

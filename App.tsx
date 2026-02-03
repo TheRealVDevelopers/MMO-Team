@@ -244,6 +244,7 @@ const AppContent: React.FC = () => {
         title={currentNavConfig?.title}
         navItems={currentNavConfig?.navItems}
         secondaryNavItems={currentNavConfig?.secondaryNavItems}
+        onOpenSettings={handleOpenSettings}
       >
         {isSettingsOpen ? (
           <SettingsPage onClose={handleCloseSettings} />

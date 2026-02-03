@@ -1,8 +1,9 @@
 
 import React, { useState, useMemo } from 'react';
-import { ChatChannel } from '../../types';
+import { ChatChannel, User } from '../../types';
 import { useAuth } from '../../context/AuthContext';
-import { MagnifyingGlassIcon, PlusIcon, UserGroupIcon, ChatBubbleLeftRightIcon } from '../icons/IconComponents';
+import { useUsers } from '../../hooks/useUsers';
+import { MagnifyingGlassIcon, PlusIcon, UserGroupIcon, ChatBubbleLeftRightIcon, UsersIcon } from '../icons/IconComponents';
 
 interface CommunicationSidebarProps {
     channels: ChatChannel[];
@@ -10,6 +11,7 @@ interface CommunicationSidebarProps {
     onSelectChannel: (channelId: string) => void;
     onNewChat: () => void;
     onCreateGroup: () => void;
+    onSelectUser?: (user: User) => void;  // New prop for quick DM
 }
 
 const formatTimestamp = (date?: any) => {
@@ -85,9 +87,34 @@ const ChatListItem: React.FC<{
     );
 }
 
-const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({ channels, selectedChannelId, onSelectChannel, onNewChat, onCreateGroup }) => {
+const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({ 
+    channels, 
+    selectedChannelId, 
+    onSelectChannel, 
+    onNewChat, 
+    onCreateGroup,
+    onSelectUser 
+}) => {
+    const { currentUser } = useAuth();
+    const { users } = useUsers();
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState<'all' | 'dm' | 'group'>('all'); // Filter tabs
+    const [showTeamMembers, setShowTeamMembers] = useState(true); // Toggle team members
+
+    // Filter out current user from team members
+    const teamMembers = useMemo(() => {
+        return users.filter(u => u.id !== currentUser?.id);
+    }, [users, currentUser]);
+
+    // Search in team members
+    const filteredTeamMembers = useMemo(() => {
+        if (!searchTerm.trim()) return teamMembers;
+        const lowercased = searchTerm.toLowerCase();
+        return teamMembers.filter(u => 
+            u.name.toLowerCase().includes(lowercased) ||
+            u.role.toLowerCase().includes(lowercased)
+        );
+    }, [teamMembers, searchTerm]);
 
     const filteredChannels = useMemo(() => {
         let sorted = [...channels];
@@ -174,7 +201,76 @@ const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({ channels, s
 
             {/* List */}
             <div className="flex-1 overflow-y-auto px-3 py-2 scrollbar-thin">
-                {filteredChannels.length === 0 ? (
+                {/* Team Members Section */}
+                {showTeamMembers && filteredTeamMembers.length > 0 && (
+                    <div className="mb-4">
+                        <button
+                            onClick={() => setShowTeamMembers(!showTeamMembers)}
+                            className="flex items-center justify-between w-full px-3 py-2 text-xs font-bold text-text-secondary uppercase tracking-wider hover:text-primary transition-colors"
+                        >
+                            <div className="flex items-center gap-2">
+                                <UsersIcon className="w-4 h-4" />
+                                <span>Team Members ({filteredTeamMembers.length})</span>
+                            </div>
+                            <svg 
+                                className={`w-4 h-4 transition-transform ${showTeamMembers ? 'rotate-180' : ''}`}
+                                fill="none" 
+                                viewBox="0 0 24 24" 
+                                stroke="currentColor"
+                            >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        {showTeamMembers && (
+                            <div className="space-y-1 mt-2">
+                                {filteredTeamMembers.slice(0, 10).map(user => (
+                                    <button
+                                        key={user.id}
+                                        onClick={() => onSelectUser?.(user)}
+                                        className="w-full flex items-center p-2 rounded-lg hover:bg-subtle-background transition-all group"
+                                    >
+                                        <img
+                                            src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`}
+                                            alt={user.name}
+                                            className="w-10 h-10 rounded-full flex-shrink-0 shadow-sm object-cover bg-surface"
+                                        />
+                                        <div className="flex-1 ml-3 text-left min-w-0">
+                                            <p className="text-sm font-semibold text-text-primary truncate group-hover:text-primary transition-colors">
+                                                {user.name}
+                                            </p>
+                                            <p className="text-xs text-text-tertiary truncate capitalize">
+                                                {user.role}
+                                            </p>
+                                        </div>
+                                        <ChatBubbleLeftRightIcon className="w-4 h-4 text-text-tertiary opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </button>
+                                ))}
+                                {filteredTeamMembers.length > 10 && (
+                                    <button
+                                        onClick={onNewChat}
+                                        className="w-full text-xs text-center py-2 text-primary hover:text-primary-hover font-medium"
+                                    >
+                                        View all {filteredTeamMembers.length} members
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Conversations Divider */}
+                {showTeamMembers && filteredTeamMembers.length > 0 && filteredChannels.length > 0 && (
+                    <div className="px-3 py-2">
+                        <div className="flex items-center gap-2">
+                            <div className="flex-1 h-px bg-border"></div>
+                            <span className="text-xs font-bold text-text-tertiary uppercase tracking-wider">Recent</span>
+                            <div className="flex-1 h-px bg-border"></div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Conversations List */}
+                {filteredChannels.length === 0 && (!showTeamMembers || filteredTeamMembers.length === 0) ? (
                     <div className="p-10 text-center text-text-tertiary flex flex-col items-center">
                         <ChatBubbleLeftRightIcon className="w-12 h-12 mb-3 opacity-10" />
                         <p className="text-sm font-medium">No conversations found</p>

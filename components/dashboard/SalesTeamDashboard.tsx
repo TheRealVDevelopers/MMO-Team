@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import MyLeadsPage from './sales-team/MyLeadsPage';
 import { useAuth } from '../../context/AuthContext';
 import { Lead, LeadPipelineStatus } from '../../types';
-import { USERS } from '../../constants';
+import { useUsers } from '../../hooks/useUsers';
 import MyRequestsPage from './sales-team/MyRequestsPage';
 import MyPerformancePage from './sales-team/MyPerformancePage';
 import MyDayPage from './shared/MyDayPage';
@@ -66,6 +66,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
   const { leads, loading: leadsLoading, error: leadsError } = useLeads(currentUser?.id);
+  const { users, loading: usersLoading } = useUsers();
   const [isAddLeadModalOpen, setIsAddLeadModalOpen] = useState(false);
 
   const pageTitles: { [key: string]: string } = {
@@ -95,7 +96,7 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
           action: 'Lead Created',
           user: currentUser?.name || 'System',
           timestamp: new Date(),
-          notes: `Assigned to ${USERS.find(u => u.id === newLeadData.assignedTo)?.name}`
+          notes: `Assigned to ${users.find(u => u.id === newLeadData.assignedTo)?.name}`
         }
       ],
       tasks: {},
@@ -121,6 +122,11 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
   };
 
   const renderPage = () => {
+    console.log('Sales Team Dashboard - Current Page:', currentPage);
+    console.log('Sales Team Dashboard - Leads Loading:', leadsLoading);
+    console.log('Sales Team Dashboard - Leads Error:', leadsError);
+    console.log('Sales Team Dashboard - Leads Count:', leads?.length);
+    
     // Shared Loading State
     if (leadsLoading && ['my-day', 'leads'].includes(currentPage)) {
       return (
@@ -132,30 +138,50 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
     }
 
     if (leadsError) {
+      console.error('Sales Team Dashboard - Leads Error Details:', leadsError);
       return (
         <div className="p-8 text-center bg-error/5 border border-error/20 rounded-3xl">
           <ExclamationTriangleIcon className="w-12 h-12 text-error mx-auto mb-4" />
           <h3 className="text-lg font-bold text-error">Data Synchronization Failed</h3>
           <p className="mt-2 text-text-secondary">Please verify your connection and try again.</p>
+          <p className="mt-1 text-xs text-error">{leadsError?.message || 'Unknown error'}</p>
         </div>
       );
     }
 
-    switch (currentPage) {
-      case 'my-day':
-        return <MyDayPage />;
-      case 'leads':
-        return <MyLeadsPage leads={leads} onUpdateLead={handleLeadUpdate} onAddNewLead={handleAddNewLead} />;
-      case 'my-requests':
-        return <MyRequestsPage />;
-      // case 'performance':
-      //   return <MyPerformancePage setCurrentPage={setCurrentPage} />;
-      case 'communication':
-        return <CommunicationDashboard />;
-      case 'escalate-issue':
-        return <EscalateIssuePage setCurrentPage={setCurrentPage} />;
-      default:
-        return <MyDayPage />;
+    try {
+      switch (currentPage) {
+        case 'my-day':
+          console.log('Rendering My Day Page');
+          return <MyDayPage />;
+        case 'leads':
+          console.log('Rendering My Leads Page');
+          return <MyLeadsPage leads={leads} onUpdateLead={handleLeadUpdate} onAddNewLead={handleAddNewLead} />;
+        case 'my-requests':
+          console.log('Rendering My Requests Page');
+          return <MyRequestsPage />;
+        // case 'performance':
+        //   return <MyPerformancePage setCurrentPage={setCurrentPage} />;
+        case 'communication':
+          console.log('Rendering Communication Dashboard');
+          return <CommunicationDashboard />;
+        case 'escalate-issue':
+          console.log('Rendering Escalate Issue Page');
+          return <EscalateIssuePage setCurrentPage={setCurrentPage} />;
+        default:
+          console.log('Rendering Default (My Day) Page');
+          return <MyDayPage />;
+      }
+    } catch (error) {
+      console.error('Sales Team Dashboard - Render Error:', error);
+      return (
+        <div className="p-8 text-center bg-error/5 border border-error/20 rounded-3xl">
+          <ExclamationTriangleIcon className="w-12 h-12 text-error mx-auto mb-4" />
+          <h3 className="text-lg font-bold text-error">Page Rendering Failed</h3>
+          <p className="mt-2 text-text-secondary">There was an error loading this page.</p>
+          <p className="mt-1 text-xs text-error">{error instanceof Error ? error.message : 'Unknown error'}</p>
+        </div>
+      );
     }
   };
 
@@ -182,6 +208,7 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
       <AddNewLeadModal
         isOpen={isAddLeadModalOpen}
         onClose={() => setIsAddLeadModalOpen(false)}
+        users={users}
         onAddLead={async (data, reminder) => {
           const newLead: Lead = {
             ...data,

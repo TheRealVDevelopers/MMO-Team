@@ -3,6 +3,7 @@ import ProfileCard from './ProfileCard';
 import ThemeSelector from './ThemeSelector';
 import NotificationSettings from './NotificationSettings';
 import PasswordChangeForm from './PasswordChangeForm';
+import JustDialSettings from './JustDialSettings';
 import { ArrowLeftIcon } from '../icons/IconComponents';
 
 interface SettingsPageProps {
@@ -31,6 +32,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose }) => {
         
         {/* Right Column */}
         <div className="lg:col-span-2 space-y-6">
+          <JustDialSettings />
           <ThemeSelector />
           <NotificationSettings />
           <PasswordChangeForm />

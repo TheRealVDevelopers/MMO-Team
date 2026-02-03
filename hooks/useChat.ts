@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import {
@@ -17,15 +16,44 @@ import {
 } from 'firebase/firestore';
 import { ChatChannel, ChatMessage } from '../types';
 
+// Helper function to recursively remove undefined values from objects
+const removeUndefinedValues = (obj: any): any => {
+    if (Array.isArray(obj)) {
+        return obj.map(item => removeUndefinedValues(item));
+    } else if (obj !== null && typeof obj === 'object' && !(obj instanceof Date)) {
+        const cleaned: any = {};
+        Object.keys(obj).forEach(key => {
+            const value = obj[key];
+            if (value !== undefined) {
+                cleaned[key] = removeUndefinedValues(value);
+            }
+        });
+        return cleaned;
+    }
+    return obj;
+};
+
 type FirestoreChatMessage = Omit<ChatMessage, 'timestamp'> & {
     timestamp: Timestamp;
 };
 
 const fromFirestoreMessage = (docData: FirestoreChatMessage, id: string): ChatMessage => {
+    // Safely convert timestamp
+    let timestamp: Date;
+    if (docData.timestamp && typeof docData.timestamp === 'object' && 'toDate' in docData.timestamp) {
+        timestamp = (docData.timestamp as any).toDate();
+    } else if (docData.timestamp instanceof Date) {
+        timestamp = docData.timestamp;
+    } else if (docData.timestamp) {
+        timestamp = new Date(docData.timestamp as any);
+    } else {
+        timestamp = new Date();
+    }
+
     return {
         ...docData,
         id,
-        timestamp: docData.timestamp?.toDate() || new Date(),
+        timestamp,
     };
 };
 
@@ -71,8 +99,8 @@ export const useChat = (channelId?: string) => {
     const sendMessage = async (content: string, senderId: string) => {
         if (!channelId) return;
         try {
-            // Add message
-            const messageRef = await addDoc(collection(db, 'chat_messages'), {
+            // Clean message data before sending
+            const messageData = removeUndefinedValues({
                 channelId,
                 senderId,
                 content,
@@ -80,16 +108,21 @@ export const useChat = (channelId?: string) => {
                 is_demo: false
             });
 
+            // Add message
+            const messageRef = await addDoc(collection(db, 'chat_messages'), messageData);
+
             // Update channel lastMessage
             const channelRef = doc(db, 'chat_channels', channelId);
-            await updateDoc(channelRef, {
+            const lastMessageData = removeUndefinedValues({
                 lastMessage: {
                     content,
                     senderId,
-                    timestamp: new Date() // Client side approximation, Firestore will use server time if we used serverTimestamp here but we're storing object
+                    timestamp: new Date() // Client side approximation
                 },
                 updatedAt: serverTimestamp()
             });
+            
+            await updateDoc(channelRef, lastMessageData);
 
             return messageRef.id;
         } catch (err) {
@@ -122,22 +155,53 @@ export const useChannels = (userId?: string) => {
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
 
-                // Parse lastMessage timestamp if it exists
+                // Safely parse lastMessage timestamp
                 let lastMessage = data.lastMessage;
-                if (lastMessage && lastMessage.timestamp && typeof lastMessage.timestamp.toDate === 'function') {
+                if (lastMessage && lastMessage.timestamp) {
+                    let msgTimestamp: Date;
+                    if (typeof lastMessage.timestamp === 'object' && 'toDate' in lastMessage.timestamp) {
+                        msgTimestamp = (lastMessage.timestamp as any).toDate();
+                    } else if (lastMessage.timestamp instanceof Date) {
+                        msgTimestamp = lastMessage.timestamp;
+                    } else {
+                        msgTimestamp = new Date(lastMessage.timestamp);
+                    }
                     lastMessage = {
                         ...lastMessage,
-                        timestamp: lastMessage.timestamp.toDate()
+                        timestamp: msgTimestamp
                     };
+                }
+
+                // Safely parse createdAt
+                let createdAt: Date;
+                if (data.createdAt && typeof data.createdAt === 'object' && 'toDate' in data.createdAt) {
+                    createdAt = (data.createdAt as any).toDate();
+                } else if (data.createdAt instanceof Date) {
+                    createdAt = data.createdAt;
+                } else if (data.createdAt) {
+                    createdAt = new Date(data.createdAt);
+                } else {
+                    createdAt = new Date();
+                }
+
+                // Safely parse updatedAt
+                let updatedAt: Date;
+                if (data.updatedAt && typeof data.updatedAt === 'object' && 'toDate' in data.updatedAt) {
+                    updatedAt = (data.updatedAt as any).toDate();
+                } else if (data.updatedAt instanceof Date) {
+                    updatedAt = data.updatedAt;
+                } else if (data.updatedAt) {
+                    updatedAt = new Date(data.updatedAt);
+                } else {
+                    updatedAt = new Date();
                 }
 
                 chans.push({
                     ...data,
                     id: doc.id,
                     lastMessage,
-                    // Ensure dates are parsed correctly if needed, though they might be timestamps
-                    createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
-                    updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(),
+                    createdAt,
+                    updatedAt,
                 } as ChatChannel);
             });
             // Sort by updatedAt descending
@@ -160,30 +224,27 @@ export const useChannels = (userId?: string) => {
     const createDirectChat = async (otherUserId: string, otherUserName: string, otherUserAvatar: string, currentUserName: string, currentUserAvatar: string) => {
         if (!userId) throw new Error("User not logged in");
 
-        // Check if DM already exists
-        // Note: Firestore array-contains doesn't support exact array match, so we have to filter client side or do a compound query if possible
-        // Ideally: each DM has a unique ID like "min(uid1, uid2)_max(uid1, uid2)" to prevent duplicates
-        const dmId = userId < otherUserId ? `${userId}_${otherUserId}` : `${otherUserId}_${userId}`;
-
-        // Check if it exists (using getDoc would be better but we have the list often)
-        const existing = channels.find(c => c.id === dmId);
-        if (existing) return existing.id;
-
-        // If not, try to create it with custom ID
         try {
-            // We use setDoc-like behavior but since we don't have setDoc imported and to be safe with collision
-            // We'll actually query first to be 100% sure if we weren't doing local check
+            // Check if DM already exists
+            const dmId = userId < otherUserId ? `${userId}_${otherUserId}` : `${otherUserId}_${userId}`;
+            const existing = channels.find(c => c.id === dmId);
+            if (existing) {
+                console.log('DM already exists, returning existing channel:', existing.id);
+                return existing.id;
+            }
 
-            // Actually, let's just create a new doc if we want to rely on auto-IDs, BUT for DMs unique ID is best. 
-            // Since we can't easily import setDoc here without changing imports significantly, let's iterate.
-            // Let's stick to auto-ID for now to be safe and simple, relying on querying:
+            // Helper to get avatar URL (use generated URL instead of base64 to avoid size limit)
+            const getAvatarUrl = (avatar: string, name: string) => {
+                // If it's already a URL, use it
+                if (avatar && (avatar.startsWith('http://') || avatar.startsWith('https://'))) {
+                    return avatar;
+                }
+                // If it's base64 (starts with data:), skip it and use generated avatar
+                // Base64 images can be huge and exceed Firestore's 1MB doc limit
+                return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
+            };
 
-            // Better approach without custom IDs matches:
-            // Query for channels with type 'dm' and these 2 members. 
-            // Since firestore "array-contains" is single value, we can't do "array-contains [a,b]".
-            // We can do "where members array-contains uid" and filter in JS, which we are essentially doing with 'channels'.
-
-            // Let's create a new one
+            // Create new DM channel - DON'T store base64 avatars!
             const newChannelData = {
                 type: 'dm',
                 members: [userId, otherUserId],
@@ -191,18 +252,25 @@ export const useChannels = (userId?: string) => {
                     [userId]: currentUserName,
                     [otherUserId]: otherUserName
                 },
+                // Store avatar URLs only, not base64 data
                 memberAvatars: {
-                    [userId]: currentUserAvatar,
-                    [otherUserId]: otherUserAvatar
+                    [userId]: getAvatarUrl(currentUserAvatar, currentUserName),
+                    [otherUserId]: getAvatarUrl(otherUserAvatar, otherUserName)
                 },
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
                 isGroup: false,
-                name: otherUserName, // For fallback
-                avatar: otherUserAvatar // For fallback
+                name: otherUserName,
+                avatar: getAvatarUrl(otherUserAvatar, otherUserName)
             };
 
-            const docRef = await addDoc(collection(db, 'chat_channels'), newChannelData);
+            // Clean undefined values before sending to Firestore
+            const cleanedData = removeUndefinedValues(newChannelData);
+            
+            console.log('Creating new DM (avatar URLs only)');
+            const docRef = await addDoc(collection(db, 'chat_channels'), cleanedData);
+            console.log('DM created successfully with ID:', docRef.id);
+            
             return docRef.id;
         } catch (err) {
             console.error("Error creating DM:", err);
@@ -215,8 +283,17 @@ export const useChannels = (userId?: string) => {
 
         const allMembers = [...members, userId]; // Ensure creator is included
 
-        // Default group avatar if none provided (could be an icon)
+        // Default group avatar if none provided
         const groupAvatar = "https://ui-avatars.com/api/?name=" + encodeURIComponent(name) + "&background=random";
+
+        // Helper to get avatar URL (avoid storing base64)
+        const getAvatarUrl = (avatar: string, name: string) => {
+            if (avatar && (avatar.startsWith('http://') || avatar.startsWith('https://'))) {
+                return avatar;
+            }
+            // If it's base64, use generated avatar instead
+            return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
+        };
 
         const memberNames: Record<string, string> = {};
         const memberAvatars: Record<string, string> = {};
@@ -224,7 +301,8 @@ export const useChannels = (userId?: string) => {
         allMembers.forEach(id => {
             if (memberDetails[id]) {
                 memberNames[id] = memberDetails[id].name;
-                memberAvatars[id] = memberDetails[id].avatar;
+                // Store avatar URLs only, not base64 data
+                memberAvatars[id] = getAvatarUrl(memberDetails[id].avatar, memberDetails[id].name);
             }
         });
 
@@ -241,8 +319,13 @@ export const useChannels = (userId?: string) => {
             admins: [userId]
         };
 
+        // Clean undefined values before sending to Firestore
+        const cleanedData = removeUndefinedValues(newChannelData);
+
         try {
-            const docRef = await addDoc(collection(db, 'chat_channels'), newChannelData);
+            console.log('Creating new group (avatar URLs only)');
+            const docRef = await addDoc(collection(db, 'chat_channels'), cleanedData);
+            console.log('Group created successfully with ID:', docRef.id);
             return docRef.id;
         } catch (err) {
             console.error("Error creating group:", err);
