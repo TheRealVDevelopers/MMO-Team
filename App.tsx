@@ -52,6 +52,21 @@ const navConfig = {
       { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
     ]
   },
+  [UserRole.SALES_GENERAL_MANAGER]: {
+    title: 'Sales Manager',
+    navItems: [
+      { id: 'overview', label: 'Dashboard', icon: <RectangleGroupIcon className="w-6 h-6" /> },
+      { id: 'leads', label: 'Leads', icon: <FunnelIcon className="w-6 h-6" /> },
+      { id: 'organizations', label: 'Organizations', icon: <BuildingOfficeIcon className="w-6 h-6" /> },
+      { id: 'team', label: 'Team', icon: <UsersIcon className="w-6 h-6" /> },
+      { id: 'approvals', label: 'Request Inbox', icon: <CheckCircleIcon className="w-6 h-6" /> },
+      { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
+      { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
+    ],
+    secondaryNavItems: [
+      { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
+    ]
+  },
   [UserRole.SALES_TEAM_MEMBER]: {
     title: 'My Workspace',
     navItems: [
