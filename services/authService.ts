@@ -5,8 +5,16 @@ import {
     updatePassword,
     User as FirebaseUser,
     EmailAuthProvider,
-    reauthenticateWithCredential
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut,
+    updatePassword,
+    User as FirebaseUser,
+    EmailAuthProvider,
+    reauthenticateWithCredential,
+    getAuth
 } from 'firebase/auth';
+import { initializeApp, deleteApp, getApp, getApps } from 'firebase/app';
 import {
     doc,
     setDoc,
@@ -22,6 +30,7 @@ import {
 import { auth, db, logAgent } from '../firebase';
 import { User, UserRole, Vendor, ApprovalRequestType } from '../types';
 import { USERS, VENDORS } from '../constants';
+import { firebaseConfig } from '../firebase';
 
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
 
@@ -158,15 +167,39 @@ export const createStaffAccountFromApproval = async (
     try {
         if (!auth || !db) throw new Error("Firebase not initialized");
 
-        // Create Firebase Auth account
-        const userCredential = await createUserWithEmailAndPassword(
-            auth,
-            email,
-            password
-        );
 
-        // Create Firestore document
-        await setDoc(doc(db, 'staffUsers', userCredential.user.uid), {
+        // Initialize a secondary Firebase app to create the user without logging out the admin
+        let secondaryApp;
+        let secondaryAuth;
+        let newUserUid;
+
+        try {
+            // Check if app already exists or create new unique one
+            const appName = `SecondaryApp-${Date.now()}`;
+            secondaryApp = initializeApp(firebaseConfig, appName);
+            secondaryAuth = getAuth(secondaryApp);
+
+            // Create Firebase Auth account using secondary auth
+            const userCredential = await createUserWithEmailAndPassword(
+                secondaryAuth,
+                email,
+                password
+            );
+            newUserUid = userCredential.user.uid;
+
+            // Immediately sign out from secondary to be safe, though deleting app handles it
+            await signOut(secondaryAuth);
+        } catch (authError) {
+            throw authError;
+        } finally {
+            // Clean up the secondary app
+            if (secondaryApp) {
+                await deleteApp(secondaryApp);
+            }
+        }
+
+        // Create Firestore document using the main db instance
+        await setDoc(doc(db, 'staffUsers', newUserUid), {
             email,
             name,
             role,
@@ -180,7 +213,7 @@ export const createStaffAccountFromApproval = async (
         });
 
         console.log(`Staff account created successfully: ${name} (${email})`);
-        return userCredential.user.uid;
+        return newUserUid;
     } catch (error: any) {
         console.error('Error creating staff account:', error);
         throw new Error(error.message || 'Failed to create staff account');
@@ -202,12 +235,34 @@ export const createStaffAccount = async (
     try {
         if (!auth || !db) throw new Error("Firebase not initialized");
 
-        // Create Firebase Auth account
-        const userCredential = await createUserWithEmailAndPassword(
-            auth,
-            email,
-            DEFAULT_STAFF_PASSWORD
-        );
+
+        // Initialize a secondary Firebase app to create the user without logging out the admin
+        let secondaryApp;
+        let secondaryAuth;
+        let newUserUid;
+
+        try {
+            const appName = `SecondaryApp-Direct-${Date.now()}`;
+            secondaryApp = initializeApp(firebaseConfig, appName);
+            secondaryAuth = getAuth(secondaryApp);
+
+            // Create Firebase Auth account
+            const userCredential = await createUserWithEmailAndPassword(
+                secondaryAuth,
+                email,
+                DEFAULT_STAFF_PASSWORD
+            );
+            newUserUid = userCredential.user.uid;
+            
+             // Immediately sign out from secondary
+            await signOut(secondaryAuth);
+        } catch (authError) {
+             throw authError;
+        } finally {
+            if (secondaryApp) {
+                await deleteApp(secondaryApp);
+            }
+        }
 
         // Create Firestore document
         await setDoc(doc(db, 'staffUsers', userCredential.user.uid), {
@@ -227,7 +282,7 @@ export const createStaffAccount = async (
         try {
             await addDoc(collection(db, 'approvalRequests'), {
                 requestType: 'OTHER',
-                requesterId: userCredential.user.uid,
+                requesterId: newUserUid,
                 requesterName: name,
                 requesterRole: role,
                 title: `New Staff Account Created: ${name}`,
@@ -248,7 +303,7 @@ export const createStaffAccount = async (
             // Don't fail the entire registration if notification fails
         }
 
-        return userCredential.user.uid;
+        return newUserUid;
     } catch (error: any) {
         console.error('Error creating staff account:', error);
         throw new Error(error.message || 'Failed to create staff account');

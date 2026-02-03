@@ -308,10 +308,11 @@ export const approveRequest = async (
       try {
         // Import the account creation function
         const { createStaffAccountFromApproval } = await import('../services/authService');
-        
-        // Use the assigned role (from admin) or fallback to requested role
-        const finalRole = (data.assigneeId && data.targetRole) ? data.targetRole : (data.requestedRole || UserRole.SALES_TEAM_MEMBER);
-        
+
+        // Use the assigned role (from admin UI selection) or fallback to requested role
+        // The UI passes the selected role string in the assigneeId parameter for this specific call
+        const finalRole = (assigneeId as UserRole) || data.targetRole || data.requestedRole || UserRole.SALES_TEAM_MEMBER;
+
         // Create the actual Firebase Auth account
         const userId = await createStaffAccountFromApproval(
           data.email!,

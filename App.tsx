@@ -37,21 +37,36 @@ const navConfig = {
       { id: 'complaints', label: 'Complaint Mgmt.', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
     ]
   },
-  [UserRole.SALES_GENERAL_MANAGER]: {
-    title: 'Sales Manager',
+  // Same nav as Sales Team Member
+  title: 'Sales Manager Workspace',
+  navItems: [
+    { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
+    { id: 'projects', label: 'Projects', icon: <RectangleStackIcon className="w-6 h-6" /> },
+    { id: 'leads', label: 'My Registry', icon: <FunnelIcon className="w-6 h-6" /> },
+    { id: 'my-requests', label: 'My Requests', icon: <RectangleStackIcon className="w-6 h-6" /> },
+    { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
+    // { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
+  ],
+  secondaryNavItems: [
+    { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
+  ]
+},
+  [UserRole.MANAGER]: {
+    // Also mapped to Sales Team Member dashboard structure per requirements
+    title: 'Sales Manager Workspace',
     navItems: [
-      { id: 'overview', label: 'Dashboard', icon: <RectangleGroupIcon className="w-6 h-6" /> },
-      { id: 'leads', label: 'Leads', icon: <FunnelIcon className="w-6 h-6" /> },
-      { id: 'organizations', label: 'Organizations', icon: <BuildingOfficeIcon className="w-6 h-6" /> },
-      { id: 'team', label: 'Team', icon: <UsersIcon className="w-6 h-6" /> },
-      { id: 'approvals', label: 'Request Inbox', icon: <CheckCircleIcon className="w-6 h-6" /> },
-      { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
-      { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
-      { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
-    ]
+      { id: 'my-day', label: 'My Day', icon: <ClockIcon className = "w-6 h-6" /> },
+{ id: 'projects', label: 'Projects', icon: <RectangleStackIcon className="w-6 h-6" /> },
+{ id: 'leads', label: 'My Registry', icon: <FunnelIcon className="w-6 h-6" /> },
+{ id: 'my-requests', label: 'My Requests', icon: <RectangleStackIcon className="w-6 h-6" /> },
+{ id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
+    ],
+secondaryNavItems: [
+  { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
+]
   },
-  [UserRole.SALES_TEAM_MEMBER]: {
-    title: 'My Workspace',
+[UserRole.SALES_TEAM_MEMBER]: {
+  title: 'My Workspace',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
       { id: 'leads', label: 'My Registry', icon: <FunnelIcon className="w-6 h-6" /> },
@@ -59,12 +74,12 @@ const navConfig = {
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
       // { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
     ],
-    secondaryNavItems: [
-      { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
-    ]
-  },
-  [UserRole.DRAWING_TEAM]: {
-    title: 'Drawing & Site Engineering',
+      secondaryNavItems: [
+        { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
+      ]
+},
+[UserRole.DRAWING_TEAM]: {
+  title: 'Drawing & Site Engineering',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
       { id: 'projects', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
@@ -72,9 +87,9 @@ const navConfig = {
       // { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
       { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
     ]
-  },
-  [UserRole.QUOTATION_TEAM]: {
-    title: 'Quotation',
+},
+[UserRole.QUOTATION_TEAM]: {
+  title: 'Quotation',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
       { id: 'quotations', label: 'Create Quotation', icon: <DocumentTextIcon className="w-6 h-6" /> },
@@ -83,9 +98,9 @@ const navConfig = {
       // { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
       { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
     ]
-  },
-  [UserRole.SITE_ENGINEER]: {
-    title: 'Drawing & Site Engineering',
+},
+[UserRole.SITE_ENGINEER]: {
+  title: 'Drawing & Site Engineering',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
       { id: 'projects', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
@@ -93,9 +108,9 @@ const navConfig = {
       // { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
       { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
     ]
-  },
-  [UserRole.PROCUREMENT_TEAM]: {
-    title: 'Procurement Hub',
+},
+[UserRole.PROCUREMENT_TEAM]: {
+  title: 'Procurement Hub',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
       { id: 'audit', label: 'Audit Quotations', icon: <DocumentTextIcon className="w-6 h-6" /> },
@@ -105,9 +120,9 @@ const navConfig = {
       // { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
       { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
     ]
-  },
-  [UserRole.EXECUTION_TEAM]: {
-    title: 'Execution Hub',
+},
+[UserRole.EXECUTION_TEAM]: {
+  title: 'Execution Hub',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
       { id: 'board', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
@@ -115,9 +130,9 @@ const navConfig = {
       // { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
       { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
     ]
-  },
-  [UserRole.ACCOUNTS_TEAM]: {
-    title: 'Finance Hub',
+},
+[UserRole.ACCOUNTS_TEAM]: {
+  title: 'Finance Hub',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
       { id: 'sales-invoices', label: 'Sales Invoices (Out)', icon: <BanknotesIcon className="w-6 h-6" /> },
@@ -126,7 +141,7 @@ const navConfig = {
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
       { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
     ]
-  }
+}
 };
 
 const AppContent: React.FC = () => {
