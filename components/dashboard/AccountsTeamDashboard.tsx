@@ -1,32 +1,48 @@
 import React, { useState } from 'react';
+import { useInvoices, addInvoice, updateInvoice } from '../../hooks/useInvoices';
+import { useExpenses, addExpense, updateExpense } from '../../hooks/useExpenses';
+import { useVendorBills, addVendorBill, updateVendorBill } from '../../hooks/useVendorBills';
+import { useProjects, addProject } from '../../hooks/useProjects';
+import { useLeads, updateLead } from '../../hooks/useLeads';
 import AccountsOverviewPage from './accounts-team/AccountsOverviewPage';
 import SalesInvoicesPage from './accounts-team/SalesInvoicesPage';
-import PurchaseInvoicesPage from './accounts-team/PurchaseInvoicesPage';
 import ExpensesPage from './accounts-team/ExpensesPage';
-import PaymentsPage from './accounts-team/PaymentsPage'; // Deprecated but kept for imports if needed
+import PurchaseInvoicesPage from './accounts-team/PurchaseInvoicesPage';
+import PaymentVerificationInbox from './accounts-team/PaymentVerificationInbox';
 import ReportsPage from './accounts-team/ReportsPage';
-import MyDayPage from './shared/MyDayPage';
 import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
-import PaymentVerificationInbox from './accounts-team/PaymentVerificationInbox';
-import { useInvoices, addInvoice, updateInvoice } from '../../hooks/useInvoices';
-import { useExpenses, updateExpense, addExpense } from '../../hooks/useExpenses';
-import { useVendorBills, updateVendorBill, addVendorBill } from '../../hooks/useVendorBills';
-import { useProjects } from '../../hooks/useProjects';
-import { useLeads, updateLead } from '../../hooks/useLeads';
-import { Invoice, Expense, VendorBill, Project, LeadPipelineStatus, ProjectStatus, ProjectLifecycleStatus } from '../../types';
-import { db } from '../../firebase';
-// Mock data import
+import MyDayPage from './shared/MyDayPage';
+import ProjectPnLPage from './accounts-team/ProjectPnLPage';
+import AccountsApprovalsPage from './accounts-team/AccountsApprovalsPage';
+import SalaryPage from './accounts-team/SalaryPage';
+import InventoryPage from './accounts-team/InventoryPage';
+import { Invoice, VendorBill, Expense, Project, LeadPipelineStatus, ProjectStatus, ProjectLifecycleStatus } from '../../types';
 import { PAYMENT_VERIFICATION_REQUESTS } from '../../constants';
 
-const AccountsTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
+// Placeholder for new pages
+const ComingSoonPage: React.FC<{ title: string }> = ({ title }) => (
+  <div className="flex flex-col items-center justify-center h-full text-center p-8">
+    <div className="bg-surface p-8 rounded-2xl border border-border bg-opacity-50">
+      <h2 className="text-2xl font-bold text-text-primary mb-2">{title}</h2>
+      <p className="text-text-secondary">This module is currently under development.</p>
+    </div>
+  </div>
+);
+
+interface AccountsTeamDashboardProps {
+  currentPage: string;
+  setCurrentPage: (page: string) => void;
+}
+
+const AccountsTeamDashboard: React.FC<AccountsTeamDashboardProps> = ({ currentPage, setCurrentPage }) => {
   const { invoices, loading: invoicesLoading } = useInvoices();
   const { expenses, loading: expensesLoading } = useExpenses();
   const { vendorBills, loading: billsLoading } = useVendorBills();
-  const { projects, loading: projectsLoading, addProject } = useProjects();
+  const { projects, loading: projectsLoading } = useProjects();
   const { leads, loading: leadsLoading } = useLeads();
 
-  // Local state for payment requests (demo only)
+  // Local state for payment requests
   const [paymentRequests, setPaymentRequests] = useState(PAYMENT_VERIFICATION_REQUESTS);
 
   const handleVerifyPayment = async (requestId: string) => {
@@ -34,8 +50,7 @@ const AccountsTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (pa
     if (!request) return;
 
     try {
-      // 1. Update Lead Status to WON
-      const leadId = request.projectId; // projectId field in PaymentRequest holds leadId for new projects
+      const leadId = request.projectId;
       const lead = leads.find(l => l.id === leadId);
 
       if (lead) {
@@ -43,7 +58,7 @@ const AccountsTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (pa
           status: LeadPipelineStatus.WON
         });
 
-        // 2. Create a new Project
+        // Create a new Project
         const newProject: Omit<Project, 'id'> = {
           projectName: lead.projectName,
           clientName: lead.clientName,
@@ -51,15 +66,15 @@ const AccountsTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (pa
           lifecycleStatus: ProjectLifecycleStatus.ADVANCE_PAID,
           priority: lead.priority || 'Medium',
           budget: lead.value || 0,
-          advancePaid: request.amount, // Advance that was just verified
-          clientAddress: '', // Lead doesn't have address, can be added later
+          advancePaid: request.amount,
+          clientAddress: '',
           clientContact: {
             name: lead.clientName,
             phone: lead.clientMobile || ''
           },
           startDate: new Date(),
-          endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 3 months default
-          progress: 5, // Initial progress
+          endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+          progress: 5,
           assignedTeam: {
             drawing: '',
             execution: [],
@@ -164,9 +179,12 @@ const AccountsTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (pa
     );
   }
 
+  // Routing Logic based on Sidebar IDs
   switch (currentPage) {
     case 'my-day':
       return <MyDayPage />;
+
+    // Overview
     case 'overview':
       return <AccountsOverviewPage
         setCurrentPage={setCurrentPage}
@@ -175,7 +193,8 @@ const AccountsTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (pa
         expenses={expenses}
         vendorBills={vendorBills}
       />;
-    case 'invoices':
+
+    // Sales Invoices
     case 'sales-invoices':
       return <SalesInvoicesPage
         setCurrentPage={setCurrentPage}
@@ -184,6 +203,17 @@ const AccountsTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (pa
         onAddInvoice={handleAddInvoice}
         onUpdateInvoice={handleUpdateInvoice}
       />;
+
+    // Vendor Bills (mapped from purchase-invoices)
+    case 'vendor-bills':
+      return <PurchaseInvoicesPage
+        setCurrentPage={setCurrentPage}
+        vendorBills={vendorBills}
+        onAddVendorBill={handleAddVendorBill}
+        onUpdateVendorBill={handleUpdateVendorBill}
+      />;
+
+    // Expenses
     case 'expenses':
       return <ExpensesPage
         setCurrentPage={setCurrentPage}
@@ -192,35 +222,31 @@ const AccountsTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (pa
         onAddExpense={handleAddExpense}
         onUpdateExpense={handleUpdateExpense}
       />;
-    case 'payments':
-    case 'purchase-invoices':
-      return <PurchaseInvoicesPage
-        setCurrentPage={setCurrentPage}
-        vendorBills={vendorBills}
-        onAddVendorBill={handleAddVendorBill}
-        onUpdateVendorBill={handleUpdateVendorBill}
-      />;
 
-    // New Case for Payment Verifications
-    case 'verification-requests':
-    case 'approvals': // Using 'approvals' as the general inbox for now
-      return (
-        <div className="max-w-4xl mx-auto p-6">
-          <h2 className="text-2xl font-bold mb-6">Payment Verifications</h2>
-          <PaymentVerificationInbox
-            requests={paymentRequests}
-            onVerify={handleVerifyPayment}
-            onReject={handleRejectPayment}
-          />
-        </div>
-      );
+    // New Modules
+    case 'project-pnl':
+      return <ProjectPnLPage setCurrentPage={setCurrentPage} />;
 
+    case 'salary':
+      return <SalaryPage title="Salary & Payroll" />;
+
+    case 'inventory':
+      return <InventoryPage />;
+
+    // Approvals
+    case 'approvals':
+      return <AccountsApprovalsPage />;
+
+    // Shared / Misc
     case 'reports':
       return <ReportsPage setCurrentPage={setCurrentPage} />;
+
     case 'communication':
       return <CommunicationDashboard />;
+
     case 'escalate-issue':
       return <EscalateIssuePage setCurrentPage={setCurrentPage} />;
+
     default:
       return <MyDayPage />;
   }

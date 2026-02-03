@@ -12,6 +12,8 @@ import { formatLargeNumberINR } from '../../../constants';
 import { useProjects } from '../../../hooks/useProjects';
 import { useUsers } from '../../../hooks/useUsers';
 import { useLeads } from '../../../hooks/useLeads';
+import { useInvoices } from '../../../hooks/useInvoices';
+import { useExpenses } from '../../../hooks/useExpenses';
 import { ActivityStatus, ProjectStatus, PaymentStatus, Project } from '../../../types';
 import { ContentCard, StatCard, SectionHeader, staggerContainer, cn } from '../shared/DashboardUI';
 import { motion } from 'framer-motion';
@@ -103,23 +105,33 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage, o
     const { projects } = useProjects();
     const { users } = useUsers();
     const { leads } = useLeads();
+    const { invoices } = useInvoices();
+    const { expenses } = useExpenses();
 
     // KPI Calculations
     const totalProjects = projects.length;
-    const activeProjects = projects.filter(p => [ProjectStatus.IN_EXECUTION, ProjectStatus.PROCUREMENT, ProjectStatus.DESIGN_IN_PROGRESS].includes(p.status)).length;
+    // Fix: Ensure ProjectStatus values match types.ts
+    const activeProjects = projects.filter(p => [ProjectStatus.IN_EXECUTION, ProjectStatus.IN_EXECUTION, 'Design In Progress'].includes(p.status)).length;
 
     const totalLeads = leads.length;
-    const conversionRate = 12.5; // TODO: Calculate real conversion rate
+    const conversionRate = totalLeads > 0 ? ((projects.length / totalLeads) * 100).toFixed(1) : 0;
 
     const teamMembers = users.length;
-    const totalRevenue = projects.filter(p => p.status === ProjectStatus.COMPLETED || p.status === ProjectStatus.APPROVED).reduce((sum, p) => sum + p.budget, 0);
 
-    // Outstanding Payments Calculation (Placeholder until Finance Hook Integration)
-    const unpaidInvoices: any[] = [];
-    // const outstandingTotal -> Moved to FinanceOverview
+    // Revenue based on Paid Invoices
+    const totalRevenue = invoices.reduce((sum, inv) => sum + (inv.paidAmount || 0), 0);
 
-    // Alert Calculations (Placeholder until Alerts Hook Integration)
-    const pendingApprovals: any[] = [];
+    // Outstanding Payments Calculation
+    const unpaidInvoices = invoices.filter(inv => inv.status !== PaymentStatus.PAID).map(inv => ({
+        projectName: inv.projectName || inv.clientName || 'Unknown Project',
+        total: inv.total || 0,
+        paidAmount: inv.paidAmount || 0
+    }));
+
+    // Alert Calculations
+    const pendingApprovals = projects.filter(p => p.status === ProjectStatus.SITE_VISIT_PENDING || (p.status as any) === 'Pending Review').map(p => ({
+        description: `Project Approval: ${p.projectName}`
+    }));
 
     // Handlers
     const handleProjectSelect = (project: Project) => {
@@ -128,15 +140,8 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage, o
     };
 
     const handleFunnelClick = () => {
-        // Filter leads (mocked here by taking 'NEW' or 'ASSIGNED' projects as leads)
-        // In real app, this would be leads from LEADS constant or API
-        // Filter leads (mocked here by taking 'NEW' or 'ASSIGNED' projects as leads)
-        // In real app, this would be leads from LEADS constant or API
-        const leadsList = projects.filter(p => p.status === ProjectStatus.AWAITING_DESIGN || p.status === ProjectStatus.PENDING_REVIEW); // Keeping logic but using real projects
-        // Ideally use 'leads' from useLeads, but for compatibility with funnel modal expecting 'Project[]', we might need mapping?
-        // Let's assume FunnelModal accepts Project[] as per original code.
+        const leadsList = projects.filter(p => ['Awaiting Design', 'Pending Review'].includes(p.status));
         setFunnelLeads(leadsList);
-
         setFunnelStage("Active Pipeline");
         setIsFunnelModalOpen(true);
     };
@@ -151,14 +156,15 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage, o
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                 {/* Main Content Area */}
                 <div className="lg:col-span-2 space-y-6">
-                    {/* ... existing content ... */}
                     <SectionHeader
                         title="Executive Overview"
                         subtitle="Synergized command center for MMO project operations."
                         actions={
                             <div className="flex items-center gap-2 bg-surface px-4 py-2 rounded-2xl border border-border shadow-sm">
                                 <CalendarIcon className="w-4 h-4 text-text-tertiary" />
-                                <span className="text-xs font-black uppercase tracking-[0.15em] text-text-secondary">January 2026</span>
+                                <span className="text-xs font-black uppercase tracking-[0.15em] text-text-secondary">
+                                    {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}
+                                </span>
                             </div>
                         }
                     />
@@ -169,7 +175,6 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage, o
                     {/* Primary Calendar View - Moved to Top */}
                     <DashboardCalendar />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {/* ... existing stats cards ... */}
                         <StatCard
                             title="Enterprise Projects"
                             value={totalProjects}
@@ -181,7 +186,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage, o
                         />
                         <StatCard
                             title="Conversion Yield"
-                            value={`${conversionRate || 12.5}%`}
+                            value={`${conversionRate}%`}
                             icon={<PresentationChartLineIcon className="w-6 h-6" />}
                             trend={{ value: '0%', positive: true }}
                             color="secondary"
@@ -215,8 +220,6 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage, o
                 <div className="lg:col-span-1 space-y-8">
                     <AttendanceStatsCard onViewMember={onNavigateToMember} />
 
-                    {/* ... existing sidebar content ... */}
-
                     {/* Performance Flag System */}
                     <div className="space-y-4">
                         <div className="flex items-center gap-2 px-1">
@@ -235,7 +238,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage, o
                     <AlertCard
                         title="Outstanding Payments"
                         count={unpaidInvoices.length}
-                        items={unpaidInvoices.map(i => `${i.projectName}: ${formatLargeNumberINR(i.total - i.paidAmount)}`)}
+                        items={unpaidInvoices.map(i => `${i.projectName}: ${formatLargeNumberINR((i.total || 0) - (i.paidAmount || 0))}`)}
                         type="error"
                     />
                 </div>

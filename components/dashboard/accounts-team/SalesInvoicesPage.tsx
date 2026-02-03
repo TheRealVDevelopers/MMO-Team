@@ -3,9 +3,10 @@ import Card from '../../shared/Card';
 import { formatCurrencyINR, formatDate } from '../../../constants';
 import { Invoice, PaymentStatus, Project } from '../../../types';
 import StatusPill from '../../shared/StatusPill';
-import { PlusIcon, ArrowLeftIcon, ArrowUpRightIcon } from '../../icons/IconComponents';
+import { PlusIcon, ArrowLeftIcon, ArrowUpRightIcon, TrashIcon } from '../../icons/IconComponents';
 import InvoiceDetailModal from './InvoiceDetailModal';
 import CreateInvoicePage from './CreateInvoicePage';
+import { deleteInvoice } from '../../../hooks/useInvoices';
 
 const PaymentStatusPill: React.FC<{ status: PaymentStatus }> = ({ status }) => {
     const color = {
@@ -23,30 +24,51 @@ interface SalesInvoicesPageProps {
     setCurrentPage: (page: string) => void;
     invoices: Invoice[];
     projects: Project[];
-    onAddInvoice: (newInvoice: Omit<Invoice, 'id'>) => void;
-    onUpdateInvoice: (updatedInvoice: Invoice) => void;
+    onAddInvoice: (newInvoice: Omit<Invoice, 'id'>) => Promise<void> | void;
+    onUpdateInvoice: (updatedInvoice: Invoice) => Promise<void> | void;
 }
 
 const SalesInvoicesPage: React.FC<SalesInvoicesPageProps> = ({ setCurrentPage, invoices, projects, onAddInvoice, onUpdateInvoice }) => {
-    const [view, setView] = useState<'list' | 'create'>('list');
+    const [view, setView] = useState<'list' | 'create' | 'edit'>('list');
     const [statusFilter, setStatusFilter] = useState<PaymentStatus | 'all'>('all');
     const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+    const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
 
     const filteredInvoices = useMemo(() => {
         return invoices.filter(invoice => statusFilter === 'all' || invoice.status === statusFilter);
     }, [statusFilter, invoices]);
 
-    const handleCreateInvoice = (newInvoice: Omit<Invoice, 'id'>) => {
-        onAddInvoice(newInvoice);
+    const handleCreateInvoice = async (newInvoice: Omit<Invoice, 'id'>) => {
+        await onAddInvoice(newInvoice);
         setView('list');
     }
 
-    if (view === 'create') {
+    const handleUpdateInvoice = async (invoice: Invoice) => {
+        await onUpdateInvoice(invoice);
+        setEditingInvoice(null);
+        setView('list');
+    }
+
+    const handleEditClick = (invoice: Invoice) => {
+        setEditingInvoice(invoice);
+        setView('edit');
+    }
+
+    const handleDeleteClick = async (e: React.MouseEvent, invoiceId: string) => {
+        e.stopPropagation();
+        if (window.confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) {
+            await deleteInvoice(invoiceId);
+        }
+    }
+
+    if (view === 'create' || view === 'edit') {
         return (
             <CreateInvoicePage
                 projects={projects}
                 onAddInvoice={handleCreateInvoice}
-                onBack={() => setView('list')}
+                onUpdateInvoice={handleUpdateInvoice}
+                onBack={() => { setView('list'); setEditingInvoice(null); }}
+                initialInvoice={editingInvoice}
             />
         );
     }
@@ -65,7 +87,7 @@ const SalesInvoicesPage: React.FC<SalesInvoicesPageProps> = ({ setCurrentPage, i
                         </button>
                         <div>
                             <h2 className="text-2xl font-bold text-text-primary flex items-center gap-2">
-                                Sales Invoices <span className="text-sm font-normal text-text-secondary bg-surface px-2 py-0.5 rounded-full border border-border">(Out)</span>
+                                GRIN <span className="text-sm font-normal text-text-secondary bg-surface px-2 py-0.5 rounded-full border border-border">(Out)</span>
                             </h2>
                             <p className="text-sm text-text-secondary">Manage outgoing invoices to clients</p>
                         </div>
@@ -100,6 +122,7 @@ const SalesInvoicesPage: React.FC<SalesInvoicesPageProps> = ({ setCurrentPage, i
                                     <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Amount</th>
                                     <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Due Date</th>
                                     <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Status</th>
+                                    <th className="px-4 py-2 text-right text-xs font-medium text-text-secondary uppercase">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-surface divide-y divide-border">
@@ -116,6 +139,15 @@ const SalesInvoicesPage: React.FC<SalesInvoicesPageProps> = ({ setCurrentPage, i
                                         </td>
                                         <td className="px-4 py-3 text-sm text-text-secondary">{formatDate(invoice.dueDate)}</td>
                                         <td className="px-4 py-3"><PaymentStatusPill status={invoice.status} /></td>
+                                        <td className="px-4 py-3 text-right">
+                                            <button
+                                                onClick={(e) => handleDeleteClick(e, invoice.id)}
+                                                className="text-text-secondary hover:text-error transition-colors p-1 rounded-full hover:bg-error/10"
+                                                title="Delete Invoice"
+                                            >
+                                                <TrashIcon className="w-4 h-4" />
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -128,6 +160,7 @@ const SalesInvoicesPage: React.FC<SalesInvoicesPageProps> = ({ setCurrentPage, i
                 onClose={() => setSelectedInvoice(null)}
                 invoice={selectedInvoice}
                 onUpdateInvoice={onUpdateInvoice}
+                onEditInvoice={handleEditClick}
             />
         </>
     );

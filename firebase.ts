@@ -61,4 +61,4 @@ if (!DEMO_MODE) {
   console.log('🔥 Demo mode enabled - Firebase initialization skipped. Using mock authentication.');
 }
 
-export { app, analytics, db, auth, storage, logAgent };
+export { app, analytics, db, auth, storage, logAgent, firebaseConfig };

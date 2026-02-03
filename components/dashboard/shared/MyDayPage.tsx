@@ -25,8 +25,58 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTimeEntries, addActivity } from '../../../hooks/useTimeTracking';
 import { useMyDayTasks, addTask, updateTask } from '../../../hooks/useMyDayTasks';
 import { useLeads } from '../../../hooks/useLeads';
+import { useFinance } from '../../../hooks/useFinance';
+import { ProjectStatus } from '../../../types';
+import { useProjects } from '../../../hooks/useProjects';
 
-// Define a type for the reminder with its associated lead info
+const SalesStats: React.FC<{ userId: string, leads: any[], timeEntries: any[] }> = ({ userId, leads, timeEntries }) => {
+    const myLeads = leads.filter(l => l.assignedTo === userId);
+    const totalLeads = myLeads.length;
+    const convertedProjects = myLeads.filter(l => l.status === 'Won').length;
+
+    const { projects } = useProjects();
+    const { costCenters } = useFinance();
+
+    const myProjects = projects.filter(p => p.salespersonId === userId);
+    const totalRevenue = myProjects.reduce((sum, proj) => {
+        const cc = costCenters.find(c => c.projectId === proj.id);
+        return sum + (cc?.totalPayIn || 0);
+    }, 0);
+
+    const pendingFollowups = myLeads.reduce((count, lead) => {
+        return count + (lead.reminders?.filter(r => !r.completed)?.length || 0);
+    }, 0);
+
+    const todayWorkSeconds = timeEntries.reduce((sum, e) => {
+        if (e.clockOut && e.clockIn) {
+            return sum + (new Date(e.clockOut).getTime() - new Date(e.clockIn).getTime());
+        } else if (e.clockIn && !e.clockOut) {
+            return sum + (Date.now() - new Date(e.clockIn).getTime());
+        }
+        return sum;
+    }, 0);
+    const workHours = Math.floor(todayWorkSeconds / (1000 * 60 * 60));
+    const workMinutes = Math.floor((todayWorkSeconds % (1000 * 60 * 60)) / (1000 * 60));
+
+    return (
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
+            <StatBox label="Leads Assigned" value={totalLeads} />
+            <StatBox label="Converted" value={convertedProjects} />
+            <StatBox label="Revenue (₹)" value={totalRevenue.toLocaleString('en-IN')} />
+            <StatBox label="Follow-ups" value={pendingFollowups} highlight={pendingFollowups > 0} />
+            <StatBox label="Tasks Today" value={timeEntries.length} />
+            <StatBox label="Work Time" value={`${workHours}h ${workMinutes}m`} />
+        </div>
+    );
+};
+
+const StatBox: React.FC<{ label: string, value: string | number, highlight?: boolean }> = ({ label, value, highlight }) => (
+    <div className={`p-4 rounded-2xl border ${highlight ? 'bg-error/5 border-error/20' : 'bg-surface border-border'} flex flex-col items-center justify-center text-center shadow-sm`}>
+        <span className={`text-2xl font-bold ${highlight ? 'text-error' : 'text-primary'}`}>{value}</span>
+        <span className="text-[10px] uppercase tracking-wider text-text-tertiary font-bold mt-1">{label}</span>
+    </div>
+);
+
 interface EnrichedReminder extends Reminder {
     leadId: string;
     leadName: string;
@@ -36,7 +86,6 @@ interface EnrichedReminder extends Reminder {
 const isOverdue = (date: Date) => {
     const reminderDate = new Date(date);
     const today = new Date();
-    // Compare dates only, ignoring time
     reminderDate.setHours(0, 0, 0, 0);
     today.setHours(0, 0, 0, 0);
     return reminderDate < today;
@@ -86,20 +135,16 @@ const ReminderItem: React.FC<{ reminder: EnrichedReminder, onToggle: (id: string
     );
 };
 
-
 const MyDayPage: React.FC = () => {
     const { currentUser } = useAuth();
-    // Live Tasks Hook
     const { tasks, loading: tasksLoading } = useMyDayTasks(currentUser?.id);
     const { leads, loading: leadsLoading } = useLeads();
 
     const [reminders, setReminders] = useState<EnrichedReminder[]>([]);
     const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
-    const [newTaskTitle, setNewTaskTitle] = useState('');
     const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
     const [showRequestApprovalModal, setShowRequestApprovalModal] = useState(false);
 
-    // Fetch today's time entry for the timeline
     const todayStr = new Date().toLocaleDateString('en-CA');
     const { entries: timeEntries, loading: timeLoading } = useTimeEntries(currentUser?.id || '', todayStr, todayStr);
     const todayTimeEntry = timeEntries.find(e => e.date === todayStr);
@@ -139,7 +184,6 @@ const MyDayPage: React.FC = () => {
         if (newStatus === TaskStatus.IN_PROGRESS) {
             updates.startTime = now;
             updates.isPaused = false;
-            // Activity Integration: Task Started
             await addActivity(currentUser.id, currentUser.name, `Task: ${task.title}`);
         }
 
@@ -149,7 +193,6 @@ const MyDayPage: React.FC = () => {
             updates.endTime = now;
             updates.timeSpent = timeSpent;
             updates.isPaused = true;
-            // Activity Integration: Task Finished
             await addActivity(currentUser.id, currentUser.name, `Task: ${task.title}`, true);
         }
 
@@ -236,26 +279,29 @@ const MyDayPage: React.FC = () => {
             {/* Real-time Critical Alert Banner */}
             <CriticalAlertBanner userId={currentUser.id} compact={true} />
 
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-6">
-                <div>
-                    <h2 className="text-3xl font-serif font-black text-text-primary tracking-tight">Today's Focus</h2>
-                    <p className="text-text-secondary font-light">Optimize your daily workflow and objectives.</p>
-                </div>
-                <div className="flex items-center gap-3">
-                    <PrimaryButton
-                        onClick={() => setIsAddTaskModalOpen(true)}
-                        icon={<PlusIcon className="w-4 h-4" />}
-                    >
-                        Add Task
-                    </PrimaryButton>
-                    <SecondaryButton
-                        onClick={() => setShowRequestApprovalModal(true)}
-                        icon={<SparklesIcon className="w-4 h-4" />}
-                    >
-                        Request Validation
-                    </SecondaryButton>
-                </div>
+            <div className="flex items-center gap-3">
+                <PrimaryButton
+                    onClick={() => setIsAddTaskModalOpen(true)}
+                    icon={<PlusIcon className="w-4 h-4" />}
+                >
+                    Add Task
+                </PrimaryButton>
+                <SecondaryButton
+                    onClick={() => setShowRequestApprovalModal(true)}
+                    icon={<SparklesIcon className="w-4 h-4" />}
+                >
+                    Request Validation
+                </SecondaryButton>
             </div>
+
+            {/* Sales Member Real-Time Dashboard */}
+            {currentUser.role === UserRole.SALES_TEAM_MEMBER && (
+                <SalesStats
+                    userId={currentUser.id}
+                    leads={leads}
+                    timeEntries={timeEntries}
+                />
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Left Column: Clocking & Calendar */}

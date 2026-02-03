@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { PlusIcon, BuildingOfficeIcon, MagnifyingGlassIcon, UserIcon, MapPinIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, BuildingOfficeIcon, MagnifyingGlassIcon, UserIcon, MapPinIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 // import { ORGANIZATIONS } from '../../../constants';
 import { Organization, ProjectStatus, Project, ExecutionStage, PaymentTerm } from '../../../types';
 import { useProjects } from '../../../hooks/useProjects';
 import CreateOrganizationModal from './CreateOrganizationModal';
 import CreateProjectWizard from './CreateProjectWizard';
+import ProjectDetailModal from '../super-admin/ProjectDetailModal';
 
 interface OrganizationsPageProps {
     setCurrentPage: (page: string) => void;
@@ -21,9 +22,10 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
     const [searchQuery, setSearchQuery] = useState('');
 
     const [isProjectsModalOpen, setIsProjectsModalOpen] = useState(false);
-    const [selectedOrgProjects, setSelectedOrgProjects] = useState<any[]>([]);
+    const [selectedOrgProjects, setSelectedOrgProjects] = useState<Project[]>([]);
+    const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
-    const { addProject } = useProjects();
+    const { projects: allProjects, addProject } = useProjects();
     const { organizations: realOrgs, addOrganization, updateOrganization } = useOrganizations(); // Use the hook
 
     // Merge mock organizations with real Firestore organizations
@@ -128,8 +130,12 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
     };
 
     const handleViewProjects = (org: Organization) => {
-        // In real app, fetch projects by IDs. Here mocked.
-        setSelectedOrgProjects(org.projects.map(pid => ({ id: pid, name: 'Mock Project ' + pid })));
+        // Map project IDs to actual project objects from useProjects
+        const projects = org.projects
+            .map(pid => allProjects.find(p => p.id === pid))
+            .filter((p): p is Project => !!p);
+
+        setSelectedOrgProjects(projects);
         setIsProjectsModalOpen(true);
     };
 
@@ -142,8 +148,8 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
         <div className="space-y-6 p-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Organization Management</h1>
-                    <p className="text-gray-500 dark:text-gray-400">Manage client organizations and their projects</p>
+                    <h1 className="text-2xl font-bold text-text-primary">Organization Management</h1>
+                    <p className="text-text-secondary">Manage client organizations and their projects</p>
                 </div>
                 <button
                     onClick={() => setIsCreateModalOpen(true)}
@@ -155,15 +161,15 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
             </div>
 
             {/* Search and Filter */}
-            <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+            <div className="bg-surface p-4 rounded-xl shadow-sm border border-border">
                 <div className="relative max-w-md">
-                    <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-tertiary" />
                     <input
                         type="text"
                         placeholder="Search organizations..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary dark:bg-slate-700 dark:text-white"
+                        className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary bg-background text-text-primary placeholder:text-text-tertiary"
                     />
                 </div>
             </div>
@@ -175,23 +181,23 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                         key={org.id}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow p-6 group cursor-pointer"
+                        className="bg-surface rounded-xl shadow-sm border border-border hover:shadow-md transition-shadow p-6 group cursor-pointer"
                         onClick={() => handleViewProjects(org)}
                     >
                         <div className="flex justify-between items-start mb-4">
-                            <div className="p-3 bg-primary/10 dark:bg-primary/20 rounded-lg">
+                            <div className="p-3 bg-primary/10 rounded-lg">
                                 <BuildingOfficeIcon className="w-8 h-8 text-primary" />
                             </div>
-                            <span className="text-xs font-medium px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-600 dark:text-gray-300">
+                            <span className="text-xs font-medium px-2 py-1 bg-subtle-background rounded-full text-text-secondary">
                                 {org.projects.length} Projects
                             </span>
                         </div>
 
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 group-hover:text-primary transition-colors">
+                        <h3 className="text-xl font-bold text-text-primary mb-2 group-hover:text-primary transition-colors">
                             {org.name}
                         </h3>
 
-                        <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
+                        <div className="space-y-3 text-sm text-text-secondary">
                             <div className="flex items-center gap-2">
                                 <UserIcon className="w-4 h-4" />
                                 <span>{org.contactPerson}</span>
@@ -202,7 +208,7 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                             </div>
                         </div>
 
-                        <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                        <div className="mt-6 pt-4 border-t border-border flex justify-between items-center">
                             <div className="text-xs text-gray-500">
                                 Since {new Date(org.createdAt).toLocaleDateString()}
                             </div>
@@ -235,25 +241,49 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                 organizations={organizations}
             />
 
-            {/* Simple Project List Modal */}
+            {/* Project List Modal */}
             {isProjectsModalOpen && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setIsProjectsModalOpen(false)}>
-                    <div className="bg-white rounded-xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
-                        <h3 className="text-xl font-bold mb-4">Ongoing Projects</h3>
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setIsProjectsModalOpen(false)}>
+                    <div className="bg-surface rounded-2xl p-6 w-full max-w-md shadow-2xl border border-border" onClick={e => e.stopPropagation()}>
+                        <h3 className="text-xl font-bold text-text-primary mb-6">Ongoing Projects</h3>
                         {selectedOrgProjects.length > 0 ? (
-                            <ul className="space-y-2">
-                                {selectedOrgProjects.map((p, i) => (
-                                    <li key={i} className="p-3 bg-gray-50 rounded-lg text-sm font-medium">
-                                        {p.name || 'Project ' + p.id}
+                            <ul className="space-y-3">
+                                {selectedOrgProjects.map((p) => (
+                                    <li
+                                        key={p.id}
+                                        onClick={() => {
+                                            setSelectedProject(p);
+                                            setIsProjectsModalOpen(false);
+                                        }}
+                                        className="p-4 bg-background border border-border rounded-xl cursor-pointer hover:border-primary hover:bg-primary/5 transition-all group flex items-center justify-between"
+                                    >
+                                        <div>
+                                            <p className="text-sm font-bold text-text-primary group-hover:text-primary transition-colors">{p.projectName}</p>
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary mt-1">{p.status}</p>
+                                        </div>
+                                        <ChevronRightIcon className="w-4 h-4 text-text-tertiary group-hover:text-primary transition-all" />
                                     </li>
                                 ))}
                             </ul>
                         ) : (
-                            <p className="text-gray-500">No active projects linked to this organization.</p>
+                            <p className="text-text-secondary text-center py-8">No active projects linked to this organization.</p>
                         )}
-                        <button onClick={() => setIsProjectsModalOpen(false)} className="mt-6 w-full py-2 bg-gray-100 rounded-lg font-bold">Close</button>
+                        <button
+                            onClick={() => setIsProjectsModalOpen(false)}
+                            className="mt-8 w-full py-4 bg-subtle-background text-text-primary rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-border transition-colors outline-none"
+                        >
+                            Close
+                        </button>
                     </div>
                 </div>
+            )}
+
+            {selectedProject && (
+                <ProjectDetailModal
+                    project={selectedProject}
+                    isOpen={!!selectedProject}
+                    onClose={() => setSelectedProject(null)}
+                />
             )}
         </div>
     );

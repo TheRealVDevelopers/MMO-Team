@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, onSnapshot, query, addDoc, updateDoc, doc, Timestamp, orderBy, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, addDoc, updateDoc, doc, deleteDoc, Timestamp, orderBy, where } from 'firebase/firestore';
 import { Invoice } from '../types';
 
 type FirestoreInvoice = Omit<Invoice, 'issueDate' | 'dueDate'> & {
@@ -51,10 +51,37 @@ export const useInvoices = (projectId?: string) => {
 };
 
 export const addInvoice = async (invoiceData: Omit<Invoice, 'id'>) => {
-    await addDoc(collection(db, 'invoices'), invoiceData);
+    // Import dynamically to avoid circular dependencies
+    const { recordInvoiceCreation } = await import('../services/financeService');
+
+    const docRef = await addDoc(collection(db, 'invoices'), invoiceData);
+
+    // Auto-record P&L transaction for this invoice
+    if (invoiceData.projectId) {
+        await recordInvoiceCreation(
+            docRef.id,
+            invoiceData.projectId,
+            invoiceData.total,
+            invoiceData.invoiceNumber || 'Unknown'
+        );
+    }
 };
 
 export const updateInvoice = async (invoiceId: string, updatedData: Partial<Invoice>) => {
     const invoiceRef = doc(db, 'invoices', invoiceId);
     await updateDoc(invoiceRef, updatedData);
+};
+
+export const updateInvoiceStatus = async (invoiceId: string, projectId: string, amount: number, status: any) => {
+    // Import dynamically to avoid circular dependencies if any, or standard import
+    const { markInvoiceAsPaid } = await import('../services/financeService');
+    if (status === 'Paid') {
+        await markInvoiceAsPaid(invoiceId, projectId, amount);
+    } else {
+        await updateInvoice(invoiceId, { status });
+    }
+};
+
+export const deleteInvoice = async (invoiceId: string) => {
+    await deleteDoc(doc(db, 'invoices', invoiceId));
 };

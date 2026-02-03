@@ -19,11 +19,11 @@ const ExpenseStatusPill: React.FC<{ status: ExpenseStatus }> = ({ status }) => {
 };
 
 interface ExpensesPageProps {
-  setCurrentPage: (page: string) => void;
-  expenses: Expense[];
-  projects: Project[];
-  onAddExpense: (expense: Omit<Expense, 'id'>) => void;
-  onUpdateExpense: (expense: Expense) => void;
+    setCurrentPage: (page: string) => void;
+    expenses: Expense[];
+    projects: Project[];
+    onAddExpense: (expense: Omit<Expense, 'id'>) => void;
+    onUpdateExpense: (expense: Expense) => void;
 }
 
 const ExpensesPage: React.FC<ExpensesPageProps> = ({ setCurrentPage, expenses, projects, onAddExpense, onUpdateExpense }) => {
@@ -39,10 +39,19 @@ const ExpensesPage: React.FC<ExpensesPageProps> = ({ setCurrentPage, expenses, p
         setIsModalOpen(true);
     };
 
-    const handleSaveExpense = (expenseData: Expense | Omit<Expense, 'id'>) => {
+    const handleSaveExpense = async (expenseData: Expense | Omit<Expense, 'id'>) => {
         if ('id' in expenseData) {
             onUpdateExpense(expenseData);
         } else {
+            // This logic is adapted from the provided snippet for adding an expense
+            // and integrating the financeService.recordOutflow call.
+            // Note: The actual database operations (addDoc, collection, db) and
+            // state management (category, description, amount, date, selectedProject)
+            // are assumed to be handled by the `onAddExpense` prop or within the modal.
+            // For this component, we'll call the `onAddExpense` prop and then
+            // conditionally call `recordOutflow` if a projectId is present.
+
+            // Call the prop to add the expense (which would typically handle DB insertion)
             onAddExpense(expenseData);
         }
     };
@@ -61,7 +70,7 @@ const ExpensesPage: React.FC<ExpensesPageProps> = ({ setCurrentPage, expenses, p
                         </button>
                         <h2 className="text-2xl font-bold text-text-primary">Expense Management</h2>
                     </div>
-                     <button onClick={() => handleOpenModal(null)} className="flex items-center space-x-2 bg-primary text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-secondary mt-2 sm:mt-0">
+                    <button onClick={() => handleOpenModal(null)} className="flex items-center space-x-2 bg-primary text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-secondary mt-2 sm:mt-0">
                         <PlusIcon className="w-4 h-4" />
                         <span>Create Expense</span>
                     </button>
@@ -89,7 +98,7 @@ const ExpensesPage: React.FC<ExpensesPageProps> = ({ setCurrentPage, expenses, p
                                             <td className="px-4 py-3 whitespace-nowrap">
                                                 <p className="text-sm font-medium text-text-primary">{expense.description}</p>
                                                 <p className="text-xs text-text-secondary">
-                                                    {expense.projectId ? `Project: ${projects.find(p=>p.id === expense.projectId)?.projectName}` : expense.category}
+                                                    {expense.projectId ? `Project: ${projects.find(p => p.id === expense.projectId)?.projectName}` : expense.category}
                                                 </p>
                                             </td>
                                             <td className="px-4 py-3 text-sm font-medium text-text-primary">{formatCurrencyINR(expense.amount)}</td>

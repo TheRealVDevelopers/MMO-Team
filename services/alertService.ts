@@ -16,12 +16,14 @@ export const alertService = {
 
         for (const alert of criticalAlerts) {
             try {
+                if (!alert.taskId || !alert.type) {
+                    console.warn('[alertService] Skipping red flag log due to missing taskId or type', alert);
+                    continue;
+                }
+
                 // Check if this specific red flag has already been logged
                 const redFlagsRef = collection(db, 'redFlags');
 
-                // We use a composite ID or query to check existence
-                // For simplicity, let's query by taskId and type
-                // Ideally we'd validte timestamp too, but unique by task+type is a good start for "Red Flag"
                 const q = query(
                     redFlagsRef,
                     where('taskId', '==', alert.taskId),
@@ -62,7 +64,8 @@ export const alertService = {
      * For now, we'll implement marking Stored Red Flags as resolved.
      */
     dismissAlert: async (alert: CriticalAlert, userId: string) => {
-        // 1. Try to find the StoredRedFlag for this alert
+        if (!alert.taskId || !alert.type) return;
+
         const redFlagsRef = collection(db, 'redFlags');
         const q = query(
             redFlagsRef,

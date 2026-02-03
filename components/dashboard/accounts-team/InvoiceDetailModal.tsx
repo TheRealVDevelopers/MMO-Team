@@ -4,15 +4,18 @@ import Modal from '../../shared/Modal';
 import { Invoice, PaymentStatus } from '../../../types';
 import { formatCurrencyINR } from '../../../constants';
 import InvoicePreview from './InvoicePreview';
+import { updateInvoiceStatus } from '../../../hooks/useInvoices';
+import { PencilSquareIcon } from '@heroicons/react/24/outline';
 
 interface InvoiceDetailModalProps {
     isOpen: boolean;
     onClose: () => void;
     invoice: Invoice | null;
     onUpdateInvoice: (invoice: Invoice) => void;
+    onEditInvoice?: (invoice: Invoice) => void;
 }
 
-const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({ isOpen, onClose, invoice, onUpdateInvoice }) => {
+const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({ isOpen, onClose, invoice, onUpdateInvoice, onEditInvoice }) => {
     const [status, setStatus] = useState<PaymentStatus>(PaymentStatus.DRAFT);
     const [paidAmount, setPaidAmount] = useState(0);
 
@@ -25,9 +28,22 @@ const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({ isOpen, onClose
 
     if (!invoice) return null;
 
-    const handleUpdate = () => {
-        onUpdateInvoice({ ...invoice, status, paidAmount: Number(paidAmount) });
+    const handleUpdate = async () => {
+        // If marking as Paid, use the special P&L integration
+        if (status === PaymentStatus.PAID && status !== invoice.status) {
+            await updateInvoiceStatus(invoice.id, invoice.projectId, Number(paidAmount), status);
+        } else {
+            // Otherwise, just update the invoice normally
+            onUpdateInvoice({ ...invoice, status, paidAmount: Number(paidAmount) });
+        }
         onClose();
+    };
+
+    const handleEdit = () => {
+        onClose();
+        if (onEditInvoice) {
+            onEditInvoice(invoice);
+        }
     };
 
     return (
@@ -36,21 +52,21 @@ const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({ isOpen, onClose
                 <div className="flex-grow overflow-y-auto border border-border rounded-lg">
                     <InvoicePreview invoice={invoice} />
                 </div>
-                
+
                 <div className="mt-4 pt-4 border-t border-border">
                     <h3 className="text-lg font-bold mb-4">Manage Invoice</h3>
-                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                         <div>
                             <label className="block text-sm font-medium text-text-primary">Payment Status</label>
                             <select
                                 value={status}
                                 onChange={e => setStatus(e.target.value as PaymentStatus)}
-                                 className="mt-1 block w-full p-2 border border-border bg-surface rounded-md"
+                                className="mt-1 block w-full p-2 border border-border bg-surface rounded-md"
                             >
                                 {Object.values(PaymentStatus).map(s => <option key={s} value={s}>{s}</option>)}
                             </select>
                         </div>
-                         <div>
+                        <div>
                             <label className="block text-sm font-medium text-text-primary">Amount Paid</label>
                             <input
                                 type="number"
@@ -60,8 +76,18 @@ const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({ isOpen, onClose
                             />
                         </div>
                         <div className="flex justify-end space-x-2">
-                             <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-text-primary bg-surface border border-border rounded-md hover:bg-subtle-background">Cancel</button>
-                             <button onClick={handleUpdate} className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-secondary">Save Changes</button>
+                            {onEditInvoice && (
+                                <button
+                                    type="button"
+                                    onClick={handleEdit}
+                                    className="px-4 py-2 text-sm font-medium text-text-primary bg-surface border border-border rounded-md hover:bg-subtle-background flex items-center gap-2"
+                                >
+                                    <PencilSquareIcon className="w-4 h-4" />
+                                    Edit
+                                </button>
+                            )}
+                            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-text-primary bg-surface border border-border rounded-md hover:bg-subtle-background">Cancel</button>
+                            <button onClick={handleUpdate} className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-secondary">Save Changes</button>
                         </div>
                     </div>
                 </div>

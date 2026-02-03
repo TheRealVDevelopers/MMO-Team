@@ -5,12 +5,6 @@ import {
     updatePassword,
     User as FirebaseUser,
     EmailAuthProvider,
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword,
-    signOut,
-    updatePassword,
-    User as FirebaseUser,
-    EmailAuthProvider,
     reauthenticateWithCredential,
     getAuth
 } from 'firebase/auth';
@@ -253,11 +247,11 @@ export const createStaffAccount = async (
                 DEFAULT_STAFF_PASSWORD
             );
             newUserUid = userCredential.user.uid;
-            
-             // Immediately sign out from secondary
+
+            // Immediately sign out from secondary
             await signOut(secondaryAuth);
         } catch (authError) {
-             throw authError;
+            throw authError;
         } finally {
             if (secondaryApp) {
                 await deleteApp(secondaryApp);
@@ -265,7 +259,7 @@ export const createStaffAccount = async (
         }
 
         // Create Firestore document
-        await setDoc(doc(db, 'staffUsers', userCredential.user.uid), {
+        await setDoc(doc(db, 'staffUsers', newUserUid), {
             email,
             name,
             role,
@@ -329,7 +323,7 @@ export const submitStaffRegistrationRequest = async (
         const existingAccountCheck = await getDocs(
             query(collection(db, 'staffUsers'), where('email', '==', email))
         );
-        
+
         if (!existingAccountCheck.empty) {
             throw new Error('An account with this email already exists.');
         }

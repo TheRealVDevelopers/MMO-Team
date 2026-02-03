@@ -487,6 +487,8 @@ export interface Project {
   deadline?: string;
   priority: 'High' | 'Medium' | 'Low';
   budget: number;
+  totalCollected?: number;
+  totalExpenses?: number;
   advancePaid: number;
   clientAddress: string;
   clientContact: { name: string; phone: string; };
@@ -507,7 +509,6 @@ export interface Project {
   communication?: CommunicationMessage[];
   issues?: ExecutionIssue[];
   stages?: ExecutionStage[];
-  totalExpenses?: number;
   documents?: Document[];
   salespersonId?: string; // User ID of the salesperson who won the deal
   history?: LeadHistory[];
@@ -729,6 +730,131 @@ export enum MaterialRequestStatus {
   PO_READY = "PO Ready",
 }
 
+// COST CENTER MODULE
+export interface CostCenter {
+  id: string; // Same as projectId
+  projectId: string;
+  totalBudget: number;
+  totalPayIn: number;
+  totalPayOut: number;
+  remainingBudget: number; // calculated
+  profit: number; // calculated
+  lastUpdated: Date;
+  status: 'Active' | 'Closed' | 'Archived';
+}
+
+// TRANSACTION MODULE (Pay In / Pay Out)
+export type TransactionType = 'PAY_IN' | 'PAY_OUT';
+export type TransactionCategory =
+  | 'ADVANCE'
+  | 'INSTALLMENT'
+  | 'CLIENT_TRANSFER'
+  | 'VENDOR_PAYMENT'
+  | 'SITE_EXPENSE'
+  | 'SALARY_ALLOCATION'
+  | 'REIMBURSEMENT'
+  | 'OTHER';
+
+export interface Transaction {
+  id: string;
+  projectId: string;
+  amount: number;
+  type: TransactionType;
+  category: TransactionCategory;
+  date: Date;
+  description: string;
+  status: 'PENDING' | 'COMPLETED' | 'CANCELLED';
+  createdBy: string; // User ID
+  createdByName?: string;
+
+  // Optional links
+  vendorId?: string;
+  userId?: string; // For salary/reimbursement
+  requestId?: string; // Linked approval request
+  invoiceId?: string; // Linked invoice
+
+  paymentMode?: 'CASH' | 'ONLINE' | 'CHEQUE' | 'UPI';
+  referenceNumber?: string; // UTR / Cheque No
+  attachmentUrl?: string;
+}
+
+// INVENTORY & GR MODULE
+export interface InventoryItem {
+  id: string;
+  name: string;
+  sku?: string;
+  category: string;
+  totalQuantity: number;
+  unit: string; // pcs, kg, m, etc.
+  linkedProjects: string[]; // Project IDs using this item
+  lastUpdated: Date;
+}
+
+export type GRType = 'IN' | 'OUT';
+
+export interface GREntry {
+  id: string;
+  type: GRType;
+  projectId: string;
+  date: Date;
+  vendorId?: string; // For GR IN
+  items: GRItem[];
+  totalValue: number;
+  createdBy: string;
+  status: 'DRAFT' | 'COMPLETED';
+}
+
+export interface GRItem {
+  itemId: string;
+  itemName: string;
+  quantity: number;
+  unitPrice?: number;
+  totalPrice?: number;
+  notes?: string;
+}
+
+// SALARY MODULE
+export interface SalaryRecord {
+  id: string;
+  userId: string;
+  month: string; // YYYY-MM
+  baseSalary: number;
+  extraClaims: number;
+  advances: number;
+  totalPayable: number;
+  status: 'PENDING' | 'PAID';
+  paidAt?: Date;
+  transactions: string[]; // IDs of transactions linked to claims/advances
+}
+
+// INVOICE MODULE (Tally Style)
+export interface TaxInvoice {
+  id: string;
+  invoiceNumber: string;
+  date: Date;
+  projectId: string;
+  clientId: string; // User ID or Client ID
+  clientName: string;
+  clientGst?: string;
+  items: TaxInvoiceItem[];
+  subTotal: number;
+  cgst: number;
+  sgst: number;
+  igst: number;
+  totalAmount: number;
+  status: 'DRAFT' | 'SENT' | 'PAID' | 'CANCELLED';
+  createdBy: string;
+}
+
+export interface TaxInvoiceItem {
+  description: string;
+  hsnCode?: string;
+  quantity: number;
+  unit: string;
+  rate: number;
+  amount: number;
+}
+
 
 
 // Enhanced Item Interface for Catalog
@@ -948,12 +1074,15 @@ export interface InvoiceItem {
 
 export interface Invoice {
   id: string;
-  invoiceNumber: string;
+  invoiceNumber?: string; // Optional for manual entry, auto-generated if missing
   projectId: string;
   projectName: string;
   clientName: string;
   clientAddress: string;
-  clientGstin: string;
+
+  // Tally-like Fields
+  clientGstin?: string;
+  clientPhone?: string;
 
   issueDate: Date;
   dueDate: Date;
@@ -972,12 +1101,19 @@ export interface Invoice {
   terms: string;
   notes: string;
   attachments?: Document[];
+
+  // Logistics & Banking
   bankDetails: {
     name: string;
     bank: string;
     accountNo: string;
     ifsc: string;
-  }
+  };
+
+  transportMode?: 'Road' | 'Rail' | 'Air' | 'Ship';
+  vehicleNumber?: string;
+  placeOfSupply?: string;
+  poReference?: string;
 }
 
 export type VendorBillStatus = 'Pending Approval' | 'Approved' | 'Scheduled' | 'Paid' | 'Overdue';
@@ -1402,4 +1538,30 @@ export interface PaymentRequest {
   reviewedAt?: Date;
   reviewedBy?: string; // Accounts Team Member ID
   notes?: string;
+}
+
+export interface FinanceRequest {
+  id: string;
+  requesterId: string;
+  requesterName: string;
+  requesterRole: string;
+  type: 'Vendor Payment' | 'Reimbursement' | 'Material Purchase' | 'Other';
+  amount: number;
+  description: string;
+  vendorId?: string;
+  projectId?: string; // Optional, proposed by requester
+  status: 'Pending Admin' | 'Pending Accounts' | 'Approved' | 'Rejected';
+  createdAt: Date;
+  attachmentUrl?: string;
+  adminApproval?: {
+    approvedBy: string;
+    approvedAt: Date;
+    notes?: string;
+  };
+  accountsApproval?: {
+    approvedBy: string;
+    approvedAt: Date;
+    assignedProjectId: string; // The project selected by Accounts
+    transactionId?: string;
+  };
 }

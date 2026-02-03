@@ -214,3 +214,17 @@ export const raiseProjectIssue = async (projectId: string, issue: any, userName:
         throw error;
     }
 };
+
+export const addProject = async (projectData: Omit<Project, 'id'>) => {
+    try {
+        const docRef = await addDoc(collection(db, 'projects'), {
+            ...projectData,
+            startDate: Timestamp.fromDate(projectData.startDate),
+            endDate: Timestamp.fromDate(projectData.endDate),
+        });
+        return docRef.id;
+    } catch (err) {
+        console.error("Error adding project:", err);
+        throw err;
+    }
+};

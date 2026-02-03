@@ -64,7 +64,7 @@ const PurchaseInvoicesPage: React.FC<PurchaseInvoicesPageProps> = ({ setCurrentP
                         </button>
                         <div>
                             <h2 className="text-2xl font-bold text-text-primary flex items-center gap-2">
-                                Purchase Invoices <span className="text-sm font-normal text-text-secondary bg-surface px-2 py-0.5 rounded-full border border-border">(In)</span>
+                                GROUT <span className="text-sm font-normal text-text-secondary bg-surface px-2 py-0.5 rounded-full border border-border">(In)</span>
                             </h2>
                             <p className="text-sm text-text-secondary">Manage incoming bills from vendors and payroll</p>
                         </div>
