@@ -54,6 +54,15 @@ const ExecutionProjectDetail: React.FC<ExecutionProjectDetailProps> = ({ project
 
     const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
 
+    // ✅ Keep local tasks in sync with Firestore updates
+    React.useEffect(() => {
+        setTasks((project.ganttData || []).map(t => ({
+            ...t,
+            start: new Date(t.start),
+            end: new Date(t.end)
+        })));
+    }, [project.ganttData]);
+
     const tabs = [
         { id: 'overview', label: 'Overview', icon: ChartBarIcon },
         { id: 'timeline', label: 'Timeline & Plan', icon: CalendarIcon },

@@ -6,7 +6,6 @@ import {
     CheckCircleIcon,
     ChatBubbleLeftRightIcon,
     ExclamationTriangleIcon,
-    KeyIcon,
     UserCircleIcon,
     CalendarIcon,
     PencilIcon,
@@ -14,28 +13,11 @@ import {
 } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid';
 import {
-    useClientProjects,
-    generatePassword,
-    setProjectPassword,
-    updateClientProject,
-    addProjectUpdate
-} from '../../../hooks/useClientProjects';
-
-interface ClientProject {
-    id: string;
-    projectId: string;
-    clientName: string;
-    projectType: string;
-    currentStage: number;
-    expectedCompletion: string;
-    consultant: string;
-    hasPassword: boolean;
-    unreadMessages: number;
-    openIssues: number;
-    createdAt: Date;
-    area: string;
-    budget: string;
-}
+    useProjects,
+    updateProject
+} from '../../../hooks/useProjects';
+import { Project } from '../../../types';
+import { formatDate, formatCurrencyINR } from '../../../constants';
 
 interface ProjectStage {
     id: number;
@@ -45,13 +27,11 @@ interface ProjectStage {
 const ClientProjectsPage: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStage, setFilterStage] = useState('all');
-    const [selectedProject, setSelectedProject] = useState<ClientProject | null>(null);
-    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [selectedProject, setSelectedProject] = useState<Project | null>(null);
     const [showStageUpdateModal, setShowStageUpdateModal] = useState(false);
-    const [generatedPassword, setGeneratedPassword] = useState('');
 
-    // Get projects from Firebase
-    const { projects, loading, error } = useClientProjects();
+    // Get projects from unified Firestore collection
+    const { projects, loading, error } = useProjects();
 
     const stages: ProjectStage[] = [
         { id: 1, name: 'Consultation' },
@@ -65,67 +45,52 @@ const ClientProjectsPage: React.FC = () => {
         { id: 9, name: 'Final Handover' }
     ];
 
-    const getStageProgress = (currentStage: number) => {
-        return Math.round((currentStage / stages.length) * 100);
+    const getCurrentStageIndex = (p: Project) => {
+        if (p.stages && p.stages.length > 0) {
+            const completedCount = p.stages.filter(s => s.status === 'Completed').length;
+            return Math.min(stages.length, Math.max(1, completedCount + 1));
+        }
+        const idx = Math.round((p.progress || 0) / 100 * stages.length);
+        return Math.min(stages.length, Math.max(1, idx));
+    };
+
+    const getStageProgress = (p: Project) => {
+        return Math.max(0, Math.min(100, p.progress || Math.round((getCurrentStageIndex(p) / stages.length) * 100)));
     };
 
     const filteredProjects = projects.filter(project => {
         const matchesSearch =
-            project.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            project.projectId.toLowerCase().includes(searchTerm.toLowerCase());
+            (project.clientName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (project.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (project.projectName || '').toLowerCase().includes(searchTerm.toLowerCase());
 
         const matchesFilter =
             filterStage === 'all' ||
-            project.currentStage === parseInt(filterStage);
+            getCurrentStageIndex(project) === parseInt(filterStage);
 
         return matchesSearch && matchesFilter;
     });
 
-    const handleGeneratePassword = (project: ClientProject) => {
-        setSelectedProject(project);
-        setShowPasswordModal(true);
-    };
-
-    const handleUpdateStage = (project: ClientProject) => {
+    const handleUpdateStage = (project: Project) => {
         setSelectedProject(project);
         setShowStageUpdateModal(true);
-    };
-
-    const confirmGeneratePassword = async () => {
-        if (selectedProject) {
-            // Generate random password
-            const password = generatePassword();
-            setGeneratedPassword(password);
-
-            // Update project in Firebase
-            try {
-                await setProjectPassword(selectedProject.id, password);
-                alert(`Password generated for ${selectedProject.projectId}: ${password}\n\nPlease share this with the client via WhatsApp or Email.`);
-                setShowPasswordModal(false);
-                setSelectedProject(null);
-                setGeneratedPassword('');
-            } catch (error) {
-                console.error('Error generating password:', error);
-                alert('Failed to generate password. Please try again.');
-            }
-        }
     };
 
     const confirmUpdateStage = async (newStage: number) => {
         if (selectedProject) {
             try {
-                // Update project stage in Firebase
-                await updateClientProject(selectedProject.id, {
-                    currentStage: newStage
-                });
-
-                // Add project update log
-                await addProjectUpdate({
-                    projectId: selectedProject.projectId,
-                    stage: newStage,
-                    stageName: stages[newStage - 1].name,
-                    notes: `Stage updated from ${stages[selectedProject.currentStage - 1].name} to ${stages[newStage - 1].name}`,
-                    updatedBy: 'Sales Team',
+                const newProgress = Math.round((newStage / stages.length) * 100);
+                await updateProject(selectedProject.id, {
+                    progress: newProgress,
+                    history: [
+                        ...((selectedProject.history || [])),
+                        {
+                            action: 'Stage Progress Updated',
+                            user: 'Sales Team',
+                            timestamp: new Date(),
+                            notes: `Stage updated to ${stages[newStage - 1].name} (${newProgress}%)`
+                        }
+                    ]
                 });
 
                 setShowStageUpdateModal(false);
@@ -175,7 +140,7 @@ const ClientProjectsPage: React.FC = () => {
                                 <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-text-secondary" />
                                 <input
                                     type="text"
-                                    placeholder="Search by client name or project ID..."
+                                    placeholder="Search by client name, project name or project ID..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
@@ -217,24 +182,18 @@ const ClientProjectsPage: React.FC = () => {
                                                 <div className="flex items-center space-x-3 mb-2">
                                                     <h3 className="text-lg font-bold text-text-primary">{project.clientName}</h3>
                                                     <span className="px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full">
-                                                        {project.projectId}
+                                                        {project.id}
                                                     </span>
                                                 </div>
-                                                <p className="text-sm text-text-secondary">{project.projectType} • {project.area}</p>
+                                                <p className="text-sm text-text-secondary">{project.projectName} • {project.clientAddress}</p>
                                             </div>
 
                                             {/* Notification Badges */}
                                             <div className="flex items-center space-x-2">
-                                                {project.unreadMessages > 0 && (
-                                                    <div className="flex items-center space-x-1 px-3 py-1 bg-accent-subtle-background rounded-full">
-                                                        <ChatBubbleLeftRightIcon className="w-4 h-4 text-accent-subtle-text" />
-                                                        <span className="text-xs font-bold text-accent-subtle-text">{project.unreadMessages}</span>
-                                                    </div>
-                                                )}
-                                                {project.openIssues > 0 && (
+                                                {Array.isArray(project.issues) && project.issues.length > 0 && (
                                                     <div className="flex items-center space-x-1 px-3 py-1 bg-red-50 rounded-full">
                                                         <ExclamationTriangleIcon className="w-4 h-4 text-red-600" />
-                                                        <span className="text-xs font-bold text-red-600">{project.openIssues}</span>
+                                                        <span className="text-xs font-bold text-red-600">{project.issues.length}</span>
                                                     </div>
                                                 )}
                                             </div>
@@ -244,14 +203,14 @@ const ClientProjectsPage: React.FC = () => {
                                         <div className="mb-4">
                                             <div className="flex items-center justify-between mb-2">
                                                 <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">
-                                                    Current Stage: {stages[project.currentStage - 1].name}
+                                                    Current Stage: {stages[getCurrentStageIndex(project) - 1]?.name || 'N/A'}
                                                 </span>
-                                                <span className="text-xs font-bold text-primary">{getStageProgress(project.currentStage)}%</span>
+                                                <span className="text-xs font-bold text-primary">{getStageProgress(project)}%</span>
                                             </div>
                                             <div className="w-full bg-gray-200 rounded-full h-2">
                                                 <div
                                                     className="bg-primary h-2 rounded-full transition-all duration-500"
-                                                    style={{ width: `${getStageProgress(project.currentStage)}%` }}
+                                                    style={{ width: `${getStageProgress(project)}%` }}
                                                 ></div>
                                             </div>
                                         </div>
@@ -262,47 +221,31 @@ const ClientProjectsPage: React.FC = () => {
                                                 <p className="text-xs text-text-secondary mb-1">Consultant</p>
                                                 <div className="flex items-center space-x-1">
                                                     <UserCircleIcon className="w-4 h-4 text-primary" />
-                                                    <p className="text-sm font-medium text-text-primary">{project.consultant}</p>
+                                                    <p className="text-sm font-medium text-text-primary">{project.assignedTeam?.drawing || 'Unassigned'}</p>
                                                 </div>
                                             </div>
                                             <div>
                                                 <p className="text-xs text-text-secondary mb-1">Budget</p>
-                                                <p className="text-sm font-medium text-text-primary">{project.budget}</p>
+                                                <p className="text-sm font-medium text-text-primary">{formatCurrencyINR(project.budget || 0)}</p>
                                             </div>
                                             <div>
                                                 <p className="text-xs text-text-secondary mb-1">Expected Completion</p>
                                                 <div className="flex items-center space-x-1">
                                                     <CalendarIcon className="w-4 h-4 text-primary" />
-                                                    <p className="text-sm font-medium text-text-primary">{project.expectedCompletion}</p>
+                                                    <p className="text-sm font-medium text-text-primary">{formatDate(project.endDate)}</p>
                                                 </div>
                                             </div>
                                             <div>
-                                                <p className="text-xs text-text-secondary mb-1">Client Access</p>
-                                                {project.hasPassword ? (
-                                                    <div className="flex items-center space-x-1 text-green-600">
-                                                        <CheckCircleSolid className="w-4 h-4" />
-                                                        <p className="text-sm font-medium">Active</p>
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex items-center space-x-1 text-orange-600">
-                                                        <ClockIcon className="w-4 h-4" />
-                                                        <p className="text-sm font-medium">Pending</p>
-                                                    </div>
-                                                )}
+                                                <p className="text-xs text-text-secondary mb-1">Status</p>
+                                                <div className="flex items-center space-x-1 text-primary">
+                                                    <CheckCircleSolid className="w-4 h-4" />
+                                                    <p className="text-sm font-medium">{project.status}</p>
+                                                </div>
                                             </div>
                                         </div>
 
                                         {/* Action Buttons */}
                                         <div className="flex flex-wrap gap-2 pt-4 border-t border-border">
-                                            {!project.hasPassword && (
-                                                <button
-                                                    onClick={() => handleGeneratePassword(project)}
-                                                    className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-dark transition-colors flex items-center space-x-2"
-                                                >
-                                                    <KeyIcon className="w-4 h-4" />
-                                                    <span>Generate Password</span>
-                                                </button>
-                                            )}
                                             <button
                                                 onClick={() => handleUpdateStage(project)}
                                                 className="px-4 py-2 bg-gray-100 text-text-primary text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors flex items-center space-x-2"
@@ -329,61 +272,27 @@ const ClientProjectsPage: React.FC = () => {
                         )}
                     </div>
 
-                    {/* Password Generation Modal */}
-                    {showPasswordModal && selectedProject && (
-                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-6">
-                            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
-                                <h3 className="text-2xl font-bold text-text-primary mb-4">Generate Client Password</h3>
-                                <p className="text-text-secondary mb-6">
-                                    Generate a secure password for <span className="font-bold text-text-primary">{selectedProject.clientName}</span> to access their project dashboard?
-                                </p>
-                                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
-                                    <p className="text-sm text-yellow-800">
-                                        <span className="font-bold">Important:</span> You must share this password with the client via WhatsApp or Email immediately after generation.
-                                    </p>
-                                </div>
-                                <div className="flex space-x-3">
-                                    <button
-                                        onClick={() => {
-                                            setShowPasswordModal(false);
-                                            setSelectedProject(null);
-                                        }}
-                                        className="flex-1 px-4 py-3 bg-gray-100 text-text-primary font-medium rounded-xl hover:bg-gray-200 transition-colors"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={confirmGeneratePassword}
-                                        className="flex-1 px-4 py-3 bg-primary text-white font-medium rounded-xl hover:bg-primary-dark transition-colors"
-                                    >
-                                        Generate Password
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
                     {/* Stage Update Modal */}
                     {showStageUpdateModal && selectedProject && (
                         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-6">
                             <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
                                 <h3 className="text-2xl font-bold text-text-primary mb-4">Update Project Stage</h3>
                                 <p className="text-text-secondary mb-6">
-                                    Current stage: <span className="font-bold text-text-primary">{stages[selectedProject.currentStage - 1].name}</span>
+                                    Current stage: <span className="font-bold text-text-primary">{stages[getCurrentStageIndex(selectedProject) - 1]?.name || 'N/A'}</span>
                                 </p>
                                 <div className="space-y-2 mb-6 max-h-80 overflow-y-auto">
                                     {stages.map((stage) => (
                                         <button
                                             key={stage.id}
                                             onClick={() => confirmUpdateStage(stage.id)}
-                                            className={`w-full px-4 py-3 text-left rounded-xl transition-colors ${stage.id === selectedProject.currentStage
+                                            className={`w-full px-4 py-3 text-left rounded-xl transition-colors ${stage.id === getCurrentStageIndex(selectedProject)
                                                 ? 'bg-primary text-white'
                                                 : 'bg-gray-50 text-text-primary hover:bg-gray-100'
                                                 }`}
                                         >
                                             <div className="flex items-center justify-between">
                                                 <span className="font-medium">{stage.name}</span>
-                                                {stage.id === selectedProject.currentStage && (
+                                                {stage.id === getCurrentStageIndex(selectedProject) && (
                                                     <CheckCircleSolid className="w-5 h-5" />
                                                 )}
                                             </div>

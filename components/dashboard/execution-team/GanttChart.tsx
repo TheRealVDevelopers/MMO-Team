@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { format, differenceInDays, addDays, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from 'date-fns';
 import { GanttTask } from '../../../types';
@@ -11,6 +11,8 @@ interface GanttChartProps {
 const CELL_WIDTH = 40;
 const HEADER_HEIGHT = 60;
 const ROW_HEIGHT = 40;
+const MIN_CELL_WIDTH = 20;
+const MAX_CELL_WIDTH = 100;
 
 const isValidDate = (date: any): boolean => {
     return date instanceof Date && !isNaN(date.getTime());
@@ -28,6 +30,44 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, onTaskClick }) => {
             progress: t.progress
         }))
     });
+
+    // Zoom & Pan state/handlers
+    const [cellWidth, setCellWidth] = useState(CELL_WIDTH);
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragStartX, setDragStartX] = useState<number | null>(null);
+    const [scrollStartLeft, setScrollStartLeft] = useState<number>(0);
+
+    const handleZoom = (direction: 'in' | 'out' | 'reset' = 'in') => {
+        setCellWidth(prev => direction === 'reset'
+            ? CELL_WIDTH
+            : Math.min(MAX_CELL_WIDTH, Math.max(MIN_CELL_WIDTH, prev + (direction === 'in' ? 10 : -10))));
+    };
+
+    const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+        setIsDragging(true);
+        setDragStartX(e.clientX);
+        setScrollStartLeft(scrollRef.current?.scrollLeft || 0);
+    };
+
+    const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!isDragging || dragStartX === null || !scrollRef.current) return;
+        const delta = e.clientX - dragStartX;
+        scrollRef.current.scrollLeft = scrollStartLeft - delta;
+    };
+
+    const endDrag = () => {
+        setIsDragging(false);
+        setDragStartX(null);
+    };
+
+    const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+        if (e.ctrlKey) {
+            e.preventDefault();
+            const direction = e.deltaY < 0 ? 'in' : 'out';
+            handleZoom(direction);
+        }
+    };
 
     // ✅ Show empty state if no tasks
     if (!tasks || tasks.length === 0) {
@@ -73,16 +113,32 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, onTaskClick }) => {
         const durationDays = differenceInDays(endDate, startDate) + 1;
 
         return {
-            left: offsetDays * CELL_WIDTH,
-            width: durationDays * CELL_WIDTH,
+            left: offsetDays * cellWidth,
+            width: durationDays * cellWidth,
         };
     };
 
     return (
-        <div className="flex flex-col h-full bg-surface rounded-xl overflow-hidden border border-border">
+        <div className="flex flex-col h-full bg-surface rounded-xl overflow-hidden border border-border relative">
+            {/* Zoom Controls */}
+            <div className="absolute right-4 top-4 z-30 flex items-center gap-2 bg-surface/80 backdrop-blur px-2 py-1 rounded border border-border">
+                <button onClick={() => handleZoom('out')} className="px-2 py-1 rounded bg-subtle-background hover:bg-subtle-background/80 border border-border text-sm">−</button>
+                <button onClick={() => handleZoom('in')} className="px-2 py-1 rounded bg-subtle-background hover:bg-subtle-background/80 border border-border text-sm">+</button>
+                <span className="text-xs text-text-secondary">{Math.round((cellWidth / CELL_WIDTH) * 100)}%</span>
+                <button onClick={() => handleZoom('reset')} className="px-2 py-1 rounded bg-subtle-background hover:bg-subtle-background/80 border border-border text-xs">Reset</button>
+            </div>
             {/* Scrollable Container */}
-            <div className="flex-1 overflow-auto relative">
-                <div style={{ width: range.days.length * CELL_WIDTH, minWidth: '100%' }}>
+            <div
+                ref={scrollRef}
+                onMouseDown={onMouseDown}
+                onMouseMove={onMouseMove}
+                onMouseUp={endDrag}
+                onMouseLeave={endDrag}
+                onWheel={onWheel}
+                className="flex-1 overflow-auto relative select-none"
+                style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+            >
+                <div style={{ width: range.days.length * cellWidth, minWidth: '100%' }}>
 
                     {/* Header: Months & Days */}
                     <div className="sticky top-0 z-20 bg-surface border-b border-border h-[60px]">
@@ -92,7 +148,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, onTaskClick }) => {
                                 {range.days.map((day, i) => {
                                     const isFirstDay = day.getDate() === 1 || i === 0;
                                     return isFirstDay ? (
-                                        <div key={`month-${i}`} className="px-2 text-xs font-semibold text-text-secondary absolute" style={{ left: i * CELL_WIDTH }}>
+                                        <div key={`month-${i}`} className="px-2 text-xs font-semibold text-text-secondary absolute" style={{ left: i * cellWidth }}>
                                             {format(day, 'MMMM yyyy')}
                                         </div>
                                     ) : null;
@@ -104,10 +160,8 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, onTaskClick }) => {
                                 {range.days.map((day, i) => (
                                     <div
                                         key={`day-${i}`}
-                                        className={`w-[40px] flex items-center justify-center text-xs border-r border-border/50
-                                            ${[0, 6].includes(day.getDay()) ? 'bg-subtle-background/50' : ''}
-                                            ${isSameDay(day, new Date()) ? 'bg-primary/10 text-primary font-bold' : 'text-text-tertiary'}
-                                        `}
+                                        className={`${[0, 6].includes(day.getDay()) ? 'bg-subtle-background/50' : ''} ${isSameDay(day, new Date()) ? 'bg-primary/10 text-primary font-bold' : 'text-text-tertiary'} flex items-center justify-center text-xs border-r border-border/50`}
+                                        style={{ width: cellWidth }}
                                     >
                                         {format(day, 'd')}
                                     </div>
@@ -121,16 +175,15 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, onTaskClick }) => {
                         {range.days.map((day, i) => (
                             <div
                                 key={`grid-${i}`}
-                                className={`w-[40px] h-full border-r border-border/30 
-                                    ${[0, 6].includes(day.getDay()) ? 'bg-subtle-background/30' : ''}
-                                `}
+                                className={`${[0, 6].includes(day.getDay()) ? 'bg-subtle-background/30' : ''} h-full border-r border-border/30`}
+                                style={{ width: cellWidth }}
                             />
                         ))}
                         {/* Today Line */}
                         {range.days.some(d => isSameDay(d, new Date())) && (
                             <div
                                 className="absolute top-0 bottom-0 border-l-2 border-primary z-10 opacity-50 dashed"
-                                style={{ left: differenceInDays(new Date(), range.start) * CELL_WIDTH + (CELL_WIDTH / 2) }}
+                                style={{ left: differenceInDays(new Date(), range.start) * cellWidth + (cellWidth / 2) }}
                             />
                         )}
                     </div>

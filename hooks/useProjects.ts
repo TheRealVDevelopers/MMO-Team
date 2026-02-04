@@ -57,6 +57,17 @@ const fromFirestore = (docData: FirestoreProject, id: string): Project => {
             ...h,
             timestamp: safeToDate(h.timestamp) || new Date(),
         })) || [],
+        // ✅ Ensure ganttData dates are proper Date objects
+        ganttData: (docData as any).ganttData?.map((t: any) => ({
+            ...t,
+            start: safeToDate(t.start) || new Date(),
+            end: safeToDate(t.end) || new Date(),
+            resources: t.resources?.map((r: any) => ({
+                ...r,
+                requiredDate: safeToDate(r.requiredDate) || new Date(),
+                deliveredDate: safeToDate(r.deliveredDate),
+            })) || [],
+        })) || [],
     } as Project;
 };
 
