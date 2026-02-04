@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { PlusIcon, BuildingOfficeIcon, MagnifyingGlassIcon, UserIcon, MapPinIcon, XMarkIcon, CurrencyRupeeIcon, UserCircleIcon, MapIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, BuildingOfficeIcon, MagnifyingGlassIcon, UserIcon, MapPinIcon, XMarkIcon, CurrencyRupeeIcon, UserCircleIcon, MapIcon, CheckCircleIcon, PencilIcon } from '@heroicons/react/24/outline';
 // import { ORGANIZATIONS } from '../../../constants';
 import { Organization, ProjectStatus, Project, ExecutionStage, PaymentTerm } from '../../../types';
 import { useProjects } from '../../../hooks/useProjects';
@@ -23,6 +23,7 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
     const [isProjectWizardOpen, setIsProjectWizardOpen] = useState(false);
     const [selectedOrgId, setSelectedOrgId] = useState<string>('');
     const [searchQuery, setSearchQuery] = useState('');
+    const [organizationToEdit, setOrganizationToEdit] = useState<Organization | null>(null);
 
     const [isProjectsModalOpen, setIsProjectsModalOpen] = useState(false);
     const [selectedOrgProjects, setSelectedOrgProjects] = useState<Project[]>([]);
@@ -39,19 +40,29 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
 
     const handleCreateOrganization = async (orgData: Omit<Organization, 'id' | 'createdAt' | 'createdBy' | 'projects'>) => {
         try {
-            await addOrganization({
-                ...orgData,
-                projects: [],
-                createdAt: new Date(),
-                createdBy: 'current-user-id', // TODO: Use real user ID
-                is_demo: false
-            });
+            if (organizationToEdit) {
+                await updateOrganization(organizationToEdit.id, orgData);
+            } else {
+                await addOrganization({
+                    ...orgData,
+                    projects: [],
+                    createdAt: new Date(),
+                    createdBy: 'current-user-id', // TODO: Use real user ID
+                    is_demo: false
+                });
+            }
             // No need to manually update state, the hook will do it via snapshot listener
         } catch (error) {
-            console.error("Failed to add organization", error);
-            alert("Failed to add organization.");
+            console.error("Failed to add/update organization", error);
+            alert("Failed to save organization.");
         }
         setIsCreateModalOpen(false);
+        setOrganizationToEdit(null);
+    };
+
+    const handleOpenCreateModal = () => {
+        setOrganizationToEdit(null);
+        setIsCreateModalOpen(true);
     };
 
     const handleCreateProject = async (projectData: any) => {
@@ -208,7 +219,7 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                     <p className="text-gray-500 dark:text-gray-400">Manage client organizations and their projects</p>
                 </div>
                 <button
-                    onClick={() => setIsCreateModalOpen(true)}
+                    onClick={handleOpenCreateModal}
                     className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors shadow-sm"
                 >
                     <PlusIcon className="w-5 h-5" />
@@ -244,9 +255,22 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                             <div className="p-3 bg-primary/10 rounded-lg">
                                 <BuildingOfficeIcon className="w-8 h-8 text-primary" />
                             </div>
-                            <span className="text-xs font-medium px-2 py-1 bg-subtle-background rounded-full text-text-secondary">
-                                {org.projects.length} Projects
-                            </span>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOrganizationToEdit(org);
+                                        setIsCreateModalOpen(true);
+                                    }}
+                                    className="p-1.5 text-text-tertiary hover:text-primary hover:bg-primary/10 rounded-lg transition-colors bg-subtle-background"
+                                    title="Edit Organization"
+                                >
+                                    <PencilIcon className="w-4 h-4" />
+                                </button>
+                                <span className="text-xs font-medium px-2 py-1 bg-subtle-background rounded-full text-text-secondary">
+                                    {org.projects.length} Projects
+                                </span>
+                            </div>
                         </div>
 
                         <h3 className="text-xl font-bold text-text-primary mb-2 group-hover:text-primary transition-colors">
@@ -285,8 +309,12 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
 
             <CreateOrganizationModal
                 isOpen={isCreateModalOpen}
-                onClose={() => setIsCreateModalOpen(false)}
+                onClose={() => {
+                    setIsCreateModalOpen(false);
+                    setOrganizationToEdit(null);
+                }}
                 onSubmit={handleCreateOrganization}
+                initialData={organizationToEdit}
             />
 
             <CreateProjectWizard

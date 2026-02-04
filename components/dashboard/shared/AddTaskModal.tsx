@@ -56,7 +56,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onClose, onAddTask,
             const fetchUsers = async () => {
                 setIsLoadingUsers(true);
                 try {
-                    const q = query(collection(db, 'users'));
+                    const q = query(collection(db, 'staffUsers'));
                     const snapshot = await getDocs(q);
                     const userData = snapshot.docs.map(doc => ({
                         id: doc.id,

@@ -14,9 +14,11 @@ import {
 import { useAuth } from '../../../context/AuthContext';
 import { useApprovalRequests, approveRequest, rejectRequest, getApprovalStats } from '../../../hooks/useApprovalSystem';
 import { addTask } from '../../../hooks/useMyDayTasks';
-import { ApprovalRequest, ApprovalStatus, ApprovalRequestType, UserRole } from '../../../types';
+import { ApprovalRequest, ApprovalStatus, ApprovalRequestType, UserRole, ProjectStatus, LeadPipelineStatus } from '../../../types';
 import { formatDateTime } from '../../../constants';
 import { useUsers } from '../../../hooks/useUsers';
+import { useProjects } from '../../../hooks/useProjects';
+import { updateLead } from '../../../hooks/useLeads';
 import { ContentCard, StatCard, SectionHeader, cn, staggerContainer, PrimaryButton } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -39,6 +41,7 @@ const ApprovalsPage: React.FC = () => {
   const { requests, loading } = useApprovalRequests(filterStatus === 'All' ? undefined : filterStatus);
   const { requests: allRequests } = useApprovalRequests(); // For stats or full list if needed
   const { users } = useUsers();
+  const { updateProject } = useProjects();
 
   // Fallback mapping from request type to target role (for requests without targetRole set)
   const derivedTargetRole = useMemo(() => {
@@ -152,7 +155,64 @@ const ApprovalsPage: React.FC = () => {
 
   const handleDirectAssign = async (taskData: any) => {
     if (!currentUser) return;
-    await addTask(taskData, currentUser.id);
+    
+    try {
+      // Create the task
+      await addTask(taskData, currentUser.id);
+      
+      // Update Lead/Project status based on task type
+      if (taskData.contextId && taskData.contextType) {
+        console.log('[ApprovalsPage] Updating status for:', taskData.contextType, taskData.contextId, 'Task:', taskData.title);
+        
+        // Determine the appropriate status based on task title
+        const title = taskData.title.toLowerCase();
+        
+        if (taskData.contextType === 'lead') {
+          // Update Lead status
+          if (title.includes('site inspection') || title.includes('site visit')) {
+            console.log('[ApprovalsPage] Setting lead status to SITE_VISIT_SCHEDULED');
+            await updateLead(taskData.contextId, {
+              status: LeadPipelineStatus.SITE_VISIT_SCHEDULED
+            });
+          } else if (title.includes('drawing') || title.includes('design')) {
+            console.log('[ApprovalsPage] Setting lead status to WAITING_FOR_DRAWING');
+            await updateLead(taskData.contextId, {
+              status: LeadPipelineStatus.WAITING_FOR_DRAWING
+            });
+          } else if (title.includes('quotation')) {
+            console.log('[ApprovalsPage] Setting lead status to WAITING_FOR_QUOTATION');
+            await updateLead(taskData.contextId, {
+              status: LeadPipelineStatus.WAITING_FOR_QUOTATION
+            });
+          }
+        } else if (taskData.contextType === 'project') {
+          // Update Project status
+          if (title.includes('site inspection') || title.includes('site visit')) {
+            console.log('[ApprovalsPage] Setting project status to SITE_VISIT_PENDING');
+            await updateProject(taskData.contextId, {
+              status: ProjectStatus.SITE_VISIT_PENDING
+            });
+          } else if (title.includes('drawing') || title.includes('design')) {
+            console.log('[ApprovalsPage] Setting project status to DRAWING_PENDING');
+            await updateProject(taskData.contextId, {
+              status: ProjectStatus.DRAWING_PENDING
+            });
+          } else if (title.includes('quotation')) {
+            console.log('[ApprovalsPage] Setting project status to AWAITING_QUOTATION');
+            await updateProject(taskData.contextId, {
+              status: ProjectStatus.AWAITING_QUOTATION
+            });
+          }
+        }
+        
+        console.log('[ApprovalsPage] Task assigned and status updated successfully');
+      } else {
+        console.log('[ApprovalsPage] Task created without context (standalone task)');
+      }
+    } catch (error) {
+      console.error('[ApprovalsPage] Error in handleDirectAssign:', error);
+      throw error; // Re-throw so the modal can handle the error
+    }
   };
 
   const getRequestTypeIcon = (type: ApprovalRequestType) => {

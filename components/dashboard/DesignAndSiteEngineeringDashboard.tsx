@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { DrawingTask, SiteVisit, Project, LeadPipelineStatus, DesignSiteProjectStatus, UserRole } from '../../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { DrawingTask, SiteVisit, Project, Lead, LeadPipelineStatus, DesignSiteProjectStatus, UserRole, ProjectStatus } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useProjects } from '../../hooks/useProjects';
+import { useLeads, updateLead } from '../../hooks/useLeads';
 import { useAutomatedTaskCreation } from '../../hooks/useAutomatedTaskCreation';
 import MyDayPage from './shared/MyDayPage';
 import CommunicationDashboard from '../communication/CommunicationDashboard';
@@ -9,19 +10,241 @@ import EscalateIssuePage from '../escalation/EscalateIssuePage';
 import ProjectsWorkflowPage from './design-site-team/ProjectsWorkflowPage';
 import MyPerformancePage from './drawing-team/MyPerformancePage';
 
+// Status values relevant for Design & Site Engineering workflow
+const DESIGN_SITE_WORKFLOW_STATUSES = [
+    ProjectStatus.SITE_VISIT_PENDING,
+    ProjectStatus.SITE_VISIT_RESCHEDULED,
+    ProjectStatus.DRAWING_PENDING,
+    ProjectStatus.DESIGN_IN_PROGRESS,
+    ProjectStatus.REVISIONS_IN_PROGRESS,
+    ProjectStatus.AWAITING_DESIGN,
+    ProjectStatus.AWAITING_QUOTATION,
+    ProjectStatus.BOQ_PENDING,
+    'Site Visit Pending',
+    'Site Visit Rescheduled',
+    'Drawing Pending',
+    'Design In Progress',
+    'Revisions In Progress',
+    'Awaiting Design',
+    'Awaiting Quotation',
+    'BOQ Pending'
+];
+
 const DesignAndSiteEngineeringDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
     const { currentUser } = useAuth();
-    const { projects, loading, updateProject } = useProjects();
+    const { projects, loading: projectsLoading, updateProject } = useProjects();
+    const { leads, loading: leadsLoading } = useLeads();
+    
+    const loading = projectsLoading || leadsLoading;
+
+    // Convert leads with site visit status to Project-like objects
+    const leadsAsProjects: Project[] = useMemo(() => {
+        // Early return if no leads available
+        if (!leads || leads.length === 0) {
+            console.log('[DesignAndSiteEngineeringDashboard] No leads available for conversion');
+            return [];
+        }
+        
+        const siteVisitLeadStatuses = [
+            LeadPipelineStatus.SITE_VISIT_SCHEDULED,
+            LeadPipelineStatus.SITE_VISIT_RESCHEDULED,
+            'Site Visit Scheduled',
+            'Site Visit Rescheduled'
+        ];
+        
+        const drawingLeadStatuses = [
+            LeadPipelineStatus.WAITING_FOR_DRAWING,
+            LeadPipelineStatus.DRAWING_IN_PROGRESS,
+            LeadPipelineStatus.DRAWING_REVISIONS,
+            'Waiting for Drawing',
+            'Drawing In Progress',
+            'Drawing Revisions'
+        ];
+        
+        const converted = leads
+            .filter(lead => {
+                // Only include leads in relevant statuses for this workflow
+                const isInSiteVisitStatus = siteVisitLeadStatuses.includes(lead.status as any);
+                const isInDrawingStatus = drawingLeadStatuses.includes(lead.status as any);
+                return isInSiteVisitStatus || isInDrawingStatus;
+            })
+            .map(lead => {
+                // Convert Lead to Project-compatible format
+                // Map lead status to project status
+                const leadStatus = lead.status as string;
+                let projectStatus: ProjectStatus;
+                if (leadStatus === LeadPipelineStatus.SITE_VISIT_SCHEDULED) {
+                    projectStatus = ProjectStatus.SITE_VISIT_PENDING;
+                } else if (leadStatus === LeadPipelineStatus.SITE_VISIT_RESCHEDULED) {
+                    projectStatus = ProjectStatus.SITE_VISIT_RESCHEDULED;
+                } else if (leadStatus === LeadPipelineStatus.WAITING_FOR_DRAWING) {
+                    projectStatus = ProjectStatus.DRAWING_PENDING;
+                } else if (leadStatus === LeadPipelineStatus.DRAWING_IN_PROGRESS) {
+                    projectStatus = ProjectStatus.DESIGN_IN_PROGRESS;
+                } else if (leadStatus === LeadPipelineStatus.DRAWING_REVISIONS) {
+                    projectStatus = ProjectStatus.REVISIONS_IN_PROGRESS;
+                } else {
+                    projectStatus = ProjectStatus.SITE_VISIT_PENDING; // Default fallback
+                }
+                
+                const convertedProject: Project = {
+                    id: `lead-${lead.id}`, // Prefix to distinguish from regular projects
+                    clientName: lead.clientName,
+                    projectName: lead.projectName,
+                    status: projectStatus,
+                    priority: lead.priority,
+                    budget: lead.value || 0,
+                    advancePaid: 0,
+                    clientAddress: '',
+                    clientContact: {
+                        name: lead.clientName,
+                        phone: lead.clientMobile || ''
+                    },
+                    progress: 0,
+                    assignedTeam: {
+                        site_engineer: lead.assignedTo,
+                    },
+                    milestones: [],
+                    startDate: lead.inquiryDate || new Date(),
+                    endDate: lead.deadline || new Date(),
+                    createdAt: lead.inquiryDate,
+                    is_demo: lead.is_demo,
+                    // Mark this as originating from a lead
+                    convertedFromLeadId: lead.id,
+                };
+                
+                console.log(`[DesignAndSiteEngineeringDashboard] Converted Lead to Project: ${lead.projectName}, LeadStatus: ${lead.status} -> ProjectStatus: ${projectStatus}`);
+                return convertedProject;
+            });
+        
+        console.log(`[DesignAndSiteEngineeringDashboard] Converted ${converted.length} leads to projects`);
+        return converted;
+    }, [leads]);
 
     // Filter projects assigned to this team member or all if manager
-    const myProjects = projects.filter(p =>
-        p.assignedEngineerId === currentUser?.id ||
-        p.drawingTeamMemberId === currentUser?.id ||
-        p.assignedTeam?.execution?.includes(currentUser?.id || '') ||
-        p.assignedTeam?.site_engineer === currentUser?.id ||
-        p.assignedTeam?.drawing === currentUser?.id ||
-        ['Super Admin', 'Admin', 'admin', 'Manager', 'manager', UserRole.SUPER_ADMIN, UserRole.SALES_GENERAL_MANAGER].includes(currentUser?.role || '')
-    );
+    // Also include projects in Design/Site workflow statuses for relevant roles
+    const myProjects = useMemo(() => {
+        // Defensive check: ensure arrays exist
+        const safeProjects = projects || [];
+        const safeLeadsAsProjects = leadsAsProjects || [];
+        
+        // Combine real projects with converted leads
+        const allProjects = [...safeProjects, ...safeLeadsAsProjects];
+        
+        console.log('[DesignAndSiteEngineeringDashboard] Total projects from Firebase:', safeProjects.length);
+        console.log('[DesignAndSiteEngineeringDashboard] Total leads converted to projects:', safeLeadsAsProjects.length);
+        console.log('[DesignAndSiteEngineeringDashboard] Combined total:', allProjects.length);
+        console.log('[DesignAndSiteEngineeringDashboard] Current user:', currentUser?.id, currentUser?.role);
+        
+        // Early return if no projects available
+        if (allProjects.length === 0) {
+            console.log('[DesignAndSiteEngineeringDashboard] No projects available to filter');
+            return [];
+        }
+        
+        const filtered = allProjects.filter(p => {
+            // Check if user is assigned to this project in any role
+            const isAssignedEngineer = p.assignedEngineerId === currentUser?.id;
+            const isDrawingTeamMember = p.drawingTeamMemberId === currentUser?.id;
+            const isInExecutionTeam = p.assignedTeam?.execution?.includes(currentUser?.id || '');
+            const isSiteEngineer = p.assignedTeam?.site_engineer === currentUser?.id;
+            const isDrawingAssigned = p.assignedTeam?.drawing === currentUser?.id;
+            
+            // Check if user is a manager/admin
+            const isManager = ['Super Admin', 'Admin', 'admin', 'Manager', 'manager', UserRole.SUPER_ADMIN, UserRole.SALES_GENERAL_MANAGER].includes(currentUser?.role || '');
+            
+            // Check if project is in a relevant workflow status for this dashboard
+            const isRelevantStatus = DESIGN_SITE_WORKFLOW_STATUSES.includes(p.status as any);
+            
+            // Site Engineers should see ALL projects in site visit statuses
+            const userRole = currentUser?.role as string;
+            const isSiteEngineerRole = userRole === UserRole.SITE_ENGINEER;
+            const isInSiteVisitStatus = [
+                ProjectStatus.SITE_VISIT_PENDING, 
+                ProjectStatus.SITE_VISIT_RESCHEDULED,
+                'Site Visit Pending',
+                'Site Visit Rescheduled'
+            ].includes(p.status as any);
+            
+            // Drawing Team should see ALL projects in drawing statuses
+            const isDrawingRole = userRole === UserRole.DRAWING_TEAM || userRole === UserRole.DESIGNER;
+            const isInDrawingStatus = [
+                ProjectStatus.DRAWING_PENDING,
+                ProjectStatus.DESIGN_IN_PROGRESS,
+                ProjectStatus.REVISIONS_IN_PROGRESS,
+                ProjectStatus.AWAITING_DESIGN,
+                'Drawing Pending',
+                'Design In Progress',
+                'Revisions In Progress',
+                'Awaiting Design',
+                'Waiting for Drawing' // Add this for lead-sourced projects
+            ].includes(p.status as any);
+            
+            // Include project if:
+            // 1. User is explicitly assigned
+            // 2. User is a manager/admin
+            // 3. User is a Site Engineer and project is in site visit OR drawing status (so they can see workflow progression)
+            // 4. User is in Drawing Team and project is in drawing status
+            const shouldInclude = 
+                isAssignedEngineer || 
+                isDrawingTeamMember || 
+                isInExecutionTeam || 
+                isSiteEngineer || 
+                isDrawingAssigned || 
+                isManager ||
+                (isSiteEngineerRole && (isInSiteVisitStatus || isInDrawingStatus)) || // Site Engineers see both stages
+                (isDrawingRole && isInDrawingStatus);
+            
+            if (shouldInclude) {
+                console.log(`[DesignAndSiteEngineeringDashboard] INCLUDED: ${p.projectName}, Status: ${p.status}, IsFromLead: ${p.id.startsWith('lead-')}`);
+            }
+            
+            return shouldInclude;
+        });
+        
+        console.log('[DesignAndSiteEngineeringDashboard] Filtered projects for user:', filtered.length);
+        return filtered;
+    }, [projects, leadsAsProjects, currentUser?.id, currentUser?.role]);
+
+    // Unified update handler that handles both projects and leads
+    const handleUpdateProjectOrLead = async (id: string, updates: Partial<Project>) => {
+        // Check if this is a lead-sourced project (prefixed with 'lead-')
+        if (id.startsWith('lead-')) {
+            const actualLeadId = id.replace('lead-', '');
+            console.log(`[DesignAndSiteEngineeringDashboard] Updating LEAD: ${actualLeadId}`, updates);
+            
+            // Map project status back to lead status
+            let leadUpdates: Partial<Lead> = {};
+            
+            if (updates.status) {
+                switch (updates.status) {
+                    case ProjectStatus.DRAWING_PENDING:
+                        leadUpdates.status = LeadPipelineStatus.WAITING_FOR_DRAWING;
+                        console.log('[DesignAndSiteEngineeringDashboard] Mapped status to WAITING_FOR_DRAWING');
+                        break;
+                    case ProjectStatus.DESIGN_IN_PROGRESS:
+                        leadUpdates.status = LeadPipelineStatus.DRAWING_IN_PROGRESS;
+                        break;
+                    case ProjectStatus.REVISIONS_IN_PROGRESS:
+                        leadUpdates.status = LeadPipelineStatus.DRAWING_REVISIONS;
+                        break;
+                    case ProjectStatus.AWAITING_QUOTATION:
+                        leadUpdates.status = LeadPipelineStatus.WAITING_FOR_QUOTATION;
+                        break;
+                    default:
+                        // Keep original status for unmapped statuses
+                        console.log('[DesignAndSiteEngineeringDashboard] No status mapping for:', updates.status);
+                        break;
+                }
+            }
+            
+            console.log('[DesignAndSiteEngineeringDashboard] Updating lead with:', leadUpdates);
+            await updateLead(actualLeadId, leadUpdates);
+        } else {
+            console.log(`[DesignAndSiteEngineeringDashboard] Updating PROJECT: ${id}`, updates);
+            await updateProject(id, updates);
+        }
+    };
 
     const renderPage = () => {
         switch (currentPage) {
@@ -32,7 +255,7 @@ const DesignAndSiteEngineeringDashboard: React.FC<{ currentPage: string, setCurr
                     <ProjectsWorkflowPage
                         projects={myProjects}
                         loading={loading}
-                        onUpdateProject={updateProject}
+                        onUpdateProject={handleUpdateProjectOrLead}
                         setCurrentPage={setCurrentPage}
                     />
                 );
@@ -42,14 +265,13 @@ const DesignAndSiteEngineeringDashboard: React.FC<{ currentPage: string, setCurr
                 return <CommunicationDashboard />;
             case 'escalate-issue':
                 return <EscalateIssuePage setCurrentPage={setCurrentPage} />;
-            case 'create-quotation': // FIXED: Added routing for Create Quotation
+            case 'create-quotation':
                 return (
                     <ProjectsWorkflowPage
                         projects={myProjects}
                         loading={loading}
-                        onUpdateProject={updateProject}
+                        onUpdateProject={handleUpdateProjectOrLead}
                         setCurrentPage={setCurrentPage}
-                    // Optionally pass a prop to auto-open quotation modal if supported
                     />
                 );
             default:

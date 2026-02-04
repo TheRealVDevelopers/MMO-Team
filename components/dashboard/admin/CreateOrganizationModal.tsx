@@ -7,9 +7,10 @@ interface CreateOrganizationModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSubmit: (org: Omit<Organization, 'id' | 'createdAt' | 'createdBy' | 'projects'>) => void;
+    initialData?: Organization | null;
 }
 
-const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = ({ isOpen, onClose, onSubmit }) => {
+const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = ({ isOpen, onClose, onSubmit, initialData }) => {
     const [formData, setFormData] = useState({
         name: '',
         contactPerson: '',
@@ -19,18 +20,34 @@ const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = ({ isOpe
         gstin: ''
     });
 
+    React.useEffect(() => {
+        if (isOpen) {
+            if (initialData) {
+                setFormData({
+                    name: initialData.name,
+                    contactPerson: initialData.contactPerson,
+                    contactEmail: initialData.contactEmail,
+                    contactPhone: initialData.contactPhone,
+                    address: initialData.address,
+                    gstin: initialData.gstin || ''
+                });
+            } else {
+                setFormData({
+                    name: '',
+                    contactPerson: '',
+                    contactEmail: '',
+                    contactPhone: '',
+                    address: '',
+                    gstin: ''
+                });
+            }
+        }
+    }, [initialData, isOpen]);
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         onSubmit(formData);
         onClose();
-        setFormData({
-            name: '',
-            contactPerson: '',
-            contactEmail: '',
-            contactPhone: '',
-            address: '',
-            gstin: ''
-        });
     };
 
     return (
@@ -54,7 +71,7 @@ const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = ({ isOpe
                             <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white dark:bg-slate-800 z-10">
                                 <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                     <BuildingOfficeIcon className="w-6 h-6 text-blue-600" />
-                                    Create New Organization
+                                    {initialData ? 'Edit Organization' : 'Create New Organization'}
                                 </h2>
                                 <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
                                     <XMarkIcon className="w-6 h-6 text-gray-500" />
@@ -72,7 +89,7 @@ const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = ({ isOpe
                                             required
                                             value={formData.name}
                                             onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
+                                            className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary bg-background text-text-primary"
                                             placeholder="e.g. Innovate Corp"
                                         />
                                     </div>
@@ -89,7 +106,7 @@ const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = ({ isOpe
                                                 required
                                                 value={formData.contactPerson}
                                                 onChange={e => setFormData({ ...formData, contactPerson: e.target.value })}
-                                                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
+                                                className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary bg-background text-text-primary"
                                                 placeholder="Full Name"
                                             />
                                         </div>
@@ -105,7 +122,7 @@ const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = ({ isOpe
                                                 required
                                                 value={formData.contactPhone}
                                                 onChange={e => setFormData({ ...formData, contactPhone: e.target.value })}
-                                                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
+                                                className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary bg-background text-text-primary"
                                                 placeholder="+91 98765 43210"
                                             />
                                         </div>
@@ -121,7 +138,7 @@ const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = ({ isOpe
                                                 required
                                                 value={formData.contactEmail}
                                                 onChange={e => setFormData({ ...formData, contactEmail: e.target.value })}
-                                                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
+                                                className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary bg-background text-text-primary"
                                                 placeholder="admin@organization.com"
                                             />
                                         </div>
@@ -137,7 +154,7 @@ const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = ({ isOpe
                                                 value={formData.address}
                                                 onChange={e => setFormData({ ...formData, address: e.target.value })}
                                                 rows={3}
-                                                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
+                                                className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary bg-background text-text-primary"
                                                 placeholder="Full office address..."
                                             />
                                         </div>
@@ -152,7 +169,7 @@ const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = ({ isOpe
                                                 type="text"
                                                 value={formData.gstin}
                                                 onChange={e => setFormData({ ...formData, gstin: e.target.value })}
-                                                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
+                                                className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary bg-background text-text-primary"
                                                 placeholder="29AAAAA0000A1Z5"
                                             />
                                         </div>
@@ -172,7 +189,7 @@ const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = ({ isOpe
                                         className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
                                     >
                                         <BuildingOfficeIcon className="w-5 h-5" />
-                                        Create Organization
+                                        {initialData ? 'Update Organization' : 'Create Organization'}
                                     </button>
                                 </div>
                             </form>

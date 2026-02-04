@@ -15,6 +15,7 @@ import { Lead, LeadPipelineStatus } from '../../../types';
 import { formatCurrencyINR, formatDateTime } from '../../../constants';
 import PaymentVerificationRequest from '../sales-team/PaymentVerificationRequest';
 import ScheduleVisitModal from '../sales-manager/ScheduleVisitModal';
+import AddNewLeadModal from '../sales-manager/AddNewLeadModal';
 import { User } from '../../../types';
 
 interface LeadDetailModalProps {
@@ -28,11 +29,12 @@ interface LeadDetailModalProps {
 const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead, onUpdate, users }) => {
     const [isPaymentRequestOpen, setIsPaymentRequestOpen] = useState(false);
     const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     if (!lead) return null;
 
     const handlePaymentSubmit = (data: any) => {
-        // In a real app, this would make an API call to save the request
+        // ... (existing logic)
         console.log('Payment Verification Requested:', data);
 
         // Add to lead history locally for demo
@@ -51,6 +53,11 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
         onUpdate(updatedLead);
         setIsPaymentRequestOpen(false);
         // showToast('Verification request sent to Accounts team');
+    };
+
+    const handleLeadUpdate = (updatedLead: Lead) => {
+        onUpdate(updatedLead);
+        setIsEditModalOpen(false);
     };
 
     return (
@@ -185,7 +192,10 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
                                                     Schedule Visit
                                                 </button>
 
-                                                <button className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-all">
+                                                <button
+                                                    onClick={() => setIsEditModalOpen(true)}
+                                                    className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-all"
+                                                >
                                                     <PencilSquareIcon className="w-5 h-5" />
                                                     Edit Details
                                                 </button>
@@ -224,6 +234,15 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
                                             </div>
                                         </Dialog>
                                     </Transition>
+
+                                    <AddNewLeadModal
+                                        isOpen={isEditModalOpen}
+                                        onClose={() => setIsEditModalOpen(false)}
+                                        users={users}
+                                        onAddLead={() => { }} // Not used in edit mode
+                                        onUpdateLead={handleLeadUpdate}
+                                        initialData={lead}
+                                    />
 
                                     <ScheduleVisitModal
                                         isOpen={isScheduleModalOpen}

@@ -78,7 +78,7 @@ const CreateProjectWizard: React.FC<CreateProjectWizardProps> = ({ isOpen, onClo
         const budgetValue = Number(budget);
         const gstAmount = (budgetValue * formData.gstPercentage / 100).toFixed(2);
         const totalWithGST = (budgetValue + Number(gstAmount)).toFixed(2);
-        
+
         setFormData({
             ...formData,
             budget,
@@ -87,7 +87,7 @@ const CreateProjectWizard: React.FC<CreateProjectWizardProps> = ({ isOpen, onClo
             // Also update payment terms if they exist
             paymentTerms: formData.paymentTerms.map(term => ({
                 ...term,
-                amount: budgetValue && term.percentage ? 
+                amount: budgetValue && term.percentage ?
                     (budgetValue * term.percentage / 100).toFixed(2) : term.amount
             }))
         });
@@ -97,7 +97,7 @@ const CreateProjectWizard: React.FC<CreateProjectWizardProps> = ({ isOpen, onClo
         const budgetValue = Number(formData.budget);
         const gstAmount = (budgetValue * gstPercentage / 100).toFixed(2);
         const totalWithGST = (budgetValue + Number(gstAmount)).toFixed(2);
-        
+
         setFormData({
             ...formData,
             gstPercentage,
@@ -256,18 +256,18 @@ const CreateProjectWizard: React.FC<CreateProjectWizardProps> = ({ isOpen, onClo
                                         >
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project Head (Execution Lead)</label>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Execution Team Member</label>
                                                     <select
                                                         value={formData.projectHeadId}
                                                         onChange={(e) => setFormData({ ...formData, projectHeadId: e.target.value })}
                                                         className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500"
                                                     >
-                                                        <option value="">Select Project Head</option>
+                                                        <option value="">Select Execution Team Member</option>
                                                         {executionUsers.map(u => (
                                                             <option key={u.id} value={u.id}>{u.name}</option>
                                                         ))}
                                                     </select>
-                                                    <p className="text-xs text-gray-500 mt-1">Responsible for end-to-end delivery.</p>
+                                                    <p className="text-xs text-gray-500 mt-1">Responsible for project execution and delivery.</p>
                                                 </div>
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Site Engineer</label>

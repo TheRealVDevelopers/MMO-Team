@@ -87,8 +87,9 @@ export const useProjects = (userId?: string) => {
 
     const updateProject = async (id: string, data: Partial<Project>) => {
         try {
+            const cleanData = removeUndefinedValues(data);
             const docRef = doc(db, 'projects', id);
-            await updateDoc(docRef, data);
+            await updateDoc(docRef, cleanData);
         } catch (err) {
             console.error("Error updating project:", err);
             throw err;
@@ -99,7 +100,7 @@ export const useProjects = (userId?: string) => {
         try {
             // Remove undefined values from the object to prevent Firebase errors
             const cleanData = removeUndefinedValues(projectData);
-            
+
             const docRef = await addDoc(collection(db, 'projects'), {
                 ...cleanData,
                 startDate: Timestamp.fromDate(projectData.startDate),
@@ -151,13 +152,14 @@ export const useAssignedProjects = (userId: string) => {
 
 export const updateProject = async (projectId: string, updatedData: Partial<Project>, updatedBy?: string) => {
     try {
+        const cleanData = removeUndefinedValues(updatedData);
         const projectRef = doc(db, 'projects', projectId);
-        await updateDoc(projectRef, updatedData);
+        await updateDoc(projectRef, cleanData);
 
         if (updatedData.status) {
             await createNotification({
                 title: 'Project Status Updated',
-                message: `Project "${projectId}" status changed to ${updatedData.status}.`,
+                message: `Project status changed to ${updatedData.status}.`,
                 user_id: 'user-2', // Sarah Manager
                 entity_type: 'project',
                 entity_id: projectId,
@@ -240,7 +242,7 @@ export const addProject = async (projectData: Omit<Project, 'id'>) => {
     try {
         // Remove undefined values from the object to prevent Firebase errors
         const cleanData = removeUndefinedValues(projectData);
-        
+
         const docRef = await addDoc(collection(db, 'projects'), {
             ...cleanData,
             startDate: Timestamp.fromDate(projectData.startDate),

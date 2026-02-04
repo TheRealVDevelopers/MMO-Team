@@ -60,14 +60,96 @@ interface ProjectsWorkflowPageProps {
     setCurrentPage: (page: string) => void;
 }
 
+// Status values for site inspection stage (handle both enum and string values from Firebase)
+const SITE_INSPECTION_STATUSES = [
+    ProjectStatus.SITE_VISIT_PENDING,
+    ProjectStatus.SITE_VISIT_RESCHEDULED,
+    'Site Visit Pending',
+    'Site Visit Rescheduled',
+    'SITE_VISIT_PENDING',
+    'SITE_VISIT_RESCHEDULED'
+];
+
+// Status values for drawing stage
+const DRAWING_STATUSES = [
+    ProjectStatus.DRAWING_PENDING,
+    ProjectStatus.DESIGN_IN_PROGRESS,
+    ProjectStatus.REVISIONS_IN_PROGRESS,
+    ProjectStatus.AWAITING_DESIGN,
+    'Drawing Pending',
+    'Design In Progress',
+    'Revisions In Progress',
+    'Awaiting Design',
+    'DRAWING_PENDING',
+    'DESIGN_IN_PROGRESS',
+    'REVISIONS_IN_PROGRESS',
+    'AWAITING_DESIGN',
+    'Waiting for Drawing',
+    'WAITING_FOR_DRAWING'
+];
+
+// Status values for completed stage
+const COMPLETED_STATUSES = [
+    ProjectStatus.AWAITING_QUOTATION,
+    ProjectStatus.BOQ_PENDING,
+    ProjectStatus.COMPLETED,
+    ProjectStatus.QUOTATION_SENT,
+    ProjectStatus.NEGOTIATING,
+    ProjectStatus.APPROVED,
+    ProjectStatus.PROCUREMENT,
+    ProjectStatus.IN_EXECUTION,
+    'Awaiting Quotation',
+    'BOQ Pending',
+    'Completed',
+    'Quotation Sent',
+    'Negotiating',
+    'Approved',
+    'Procurement',
+    'In Execution',
+    'AWAITING_QUOTATION',
+    'BOQ_PENDING',
+    'COMPLETED'
+];
+
 // Helper to determine which stage a project is in
 const getProjectStage = (project: Project): string => {
-    // Check if site inspection is done
+    const status = project.status;
+    
+    // Debug logging for troubleshooting
+    console.log(`[getProjectStage] Project: ${project.projectName}, Status: "${status}", Type: ${typeof status}`);
+    
+    // First check project status for explicit workflow stages
+    // Use includes() for robust string matching
+    if (status && SITE_INSPECTION_STATUSES.includes(status as any)) {
+        console.log(`[getProjectStage] -> site-inspection (matched status)`);
+        return 'site-inspection';
+    }
+    
+    if (status && DRAWING_STATUSES.includes(status as any)) {
+        console.log(`[getProjectStage] -> drawing (matched status)`);
+        return 'drawing';
+    }
+    
+    if (status && COMPLETED_STATUSES.includes(status as any)) {
+        console.log(`[getProjectStage] -> completed (matched status)`);
+        return 'completed';
+    }
+    
+    // Fallback to date-based checks for backward compatibility
     const hasSiteInspection = project.siteInspectionDate != null;
     const hasDrawing = project.drawingSubmittedAt != null;
 
-    if (hasDrawing) return 'completed';
-    if (hasSiteInspection) return 'drawing';
+    if (hasDrawing) {
+        console.log(`[getProjectStage] -> completed (has drawing date)`);
+        return 'completed';
+    }
+    if (hasSiteInspection) {
+        console.log(`[getProjectStage] -> drawing (has inspection date)`);
+        return 'drawing';
+    }
+    
+    // Default fallback - new projects go to site-inspection
+    console.log(`[getProjectStage] -> site-inspection (fallback default)`);
     return 'site-inspection';
 };
 
@@ -78,6 +160,9 @@ const ProjectCard: React.FC<{
 }> = ({ project, stage, onAction }) => {
     const stageConfig = WORKFLOW_STAGES.find(s => s.id === stage);
     const Icon = stageConfig?.icon || ClipboardDocumentListIcon;
+    
+    // Check if this is a lead-sourced project
+    const isFromLead = project.id.startsWith('lead-');
 
     // Check if drawing deadline is approaching (24 hours)
     const isDrawingUrgent = stage === 'drawing' && project.siteInspectionDate &&
@@ -92,7 +177,7 @@ const ProjectCard: React.FC<{
             )}>
                 <div className="flex items-start justify-between">
                     <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
                             <Icon className={cn("w-5 h-5", stageConfig?.color)} />
                             <span className={cn(
                                 "text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full",
@@ -101,6 +186,11 @@ const ProjectCard: React.FC<{
                             )}>
                                 {stageConfig?.label}
                             </span>
+                            {isFromLead && (
+                                <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-500">
+                                    From Lead
+                                </span>
+                            )}
                             {isDrawingUrgent && (
                                 <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-error/10 text-error flex items-center gap-1">
                                     <ExclamationTriangleIcon className="w-3 h-3" />
@@ -203,29 +293,41 @@ const ProjectsWorkflowPage: React.FC<ProjectsWorkflowPageProps> = ({
     // Handle project actions
     const handleProjectAction = async (project: Project, action: string) => {
         if (action === 'complete-inspection') {
-            // Mark site inspection as complete
-            await onUpdateProject(project.id, {
-                siteInspectionDate: new Date(),
-            });
+            try {
+                console.log('[ProjectsWorkflowPage] Completing inspection for:', project.projectName, 'ID:', project.id);
+                
+                // Mark site inspection as complete and update status
+                await onUpdateProject(project.id, {
+                    siteInspectionDate: new Date(),
+                    status: ProjectStatus.DRAWING_PENDING, // Move to drawing stage
+                });
+                
+                console.log('[ProjectsWorkflowPage] Update completed successfully');
 
-            // Auto-create "Start Drawing" task with 24-hour deadline
-            const deadline = new Date();
-            deadline.setHours(deadline.getHours() + 24);
+                // Auto-create "Start Drawing" task with 24-hour deadline
+                const deadline = new Date();
+                deadline.setHours(deadline.getHours() + 24);
 
-            await addTask({
-                title: `Start Drawing - ${project.projectName}`,
-                description: `Complete the drawing for ${project.clientName}'s project. This task will become a red flag if not completed within 24 hours.`,
-                status: TaskStatus.PENDING,
-                priority: 'High',
-                date: new Date().toISOString().split('T')[0],
-                userId: currentUser?.id || '',
-                contextId: project.id,
-                contextType: 'project',
-                deadline: deadline.toISOString(),
-                timeSpent: 0,
-                isPaused: false,
-                createdAt: new Date(),
-            });
+                await addTask({
+                    title: `Start Drawing - ${project.projectName}`,
+                    description: `Complete the drawing for ${project.clientName}'s project. This task will become a red flag if not completed within 24 hours.`,
+                    status: TaskStatus.PENDING,
+                    priority: 'High',
+                    date: new Date().toISOString().split('T')[0],
+                    userId: currentUser?.id || '',
+                    contextId: project.id,
+                    contextType: 'project',
+                    deadline: deadline.toISOString(),
+                    timeSpent: 0,
+                    isPaused: false,
+                    createdAt: new Date(),
+                });
+                
+                console.log('[ProjectsWorkflowPage] Task created successfully');
+            } catch (error) {
+                console.error('[ProjectsWorkflowPage] Error completing inspection:', error);
+                alert('Failed to complete inspection. Please try again.');
+            }
         } else if (action === 'submit-drawing') {
             setSelectedProjectForUpload(project);
             setIsUploadModalOpen(true);

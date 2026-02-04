@@ -48,16 +48,17 @@ const Dashboard: React.FC<{ currentPage: string; setCurrentPage: (page: string) 
       case UserRole.SALES_GENERAL_MANAGER:
         return <SalesGeneralManagerDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.DRAWING_TEAM:
-      case UserRole.DESIGNER: // Designers go to Drawing Team dashboard
+      case UserRole.DESIGNER:
+      case UserRole.SITE_ENGINEER:
+        // Drawing Designers and Site Engineers see the Site Engineer dashboard
         return <DesignAndSiteEngineeringDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.QUOTATION_TEAM:
         return <QuotationTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
-      case UserRole.SITE_ENGINEER:
-        return <DesignAndSiteEngineeringDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.PROCUREMENT_TEAM:
         return <ProcurementTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.EXECUTION_TEAM:
-      case UserRole.PROJECT_HEAD: // Project Heads go to Execution Team dashboard
+      case UserRole.PROJECT_HEAD:
+        // Project Heads and Execution Team members see the Execution Team dashboard
         return <ExecutionTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.ACCOUNTS_TEAM:
         return <AccountsTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;

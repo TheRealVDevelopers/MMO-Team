@@ -17,17 +17,17 @@ interface ExecutionDashboardProps {
 const ExecutionDashboard: React.FC<ExecutionDashboardProps> = ({ currentPage, setCurrentPage }) => {
     const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
     const { currentUser } = useAuth();
-    
+
     // Fetch real projects from Firestore
     const { projects: allProjects, loading } = useProjects();
-    
+
     // Filter projects assigned to current execution team member
     const userProjects = useMemo(() => {
         if (!currentUser) return [];
         return allProjects.filter(project => {
-            // Check if user is in execution team array
+            // Check if user is in execution team array or is the project head
             const executionTeam = project.assignedTeam?.execution || [];
-            return executionTeam.includes(currentUser.id);
+            return executionTeam.includes(currentUser.id) || project.projectHeadId === currentUser.id;
         });
     }, [allProjects, currentUser]);
 
@@ -52,7 +52,7 @@ const ExecutionDashboard: React.FC<ExecutionDashboardProps> = ({ currentPage, se
                 );
             case 'board':
                 return (
-                    <div className="h-[calc(100vh-64px)] overflow-hidden bg-gray-50 dark:bg-slate-900">
+                    <div className="h-[calc(100vh-64px)] overflow-hidden bg-subtle-background">
                         {loading ? (
                             <div className="flex items-center justify-center h-full">
                                 <div className="text-center">
@@ -63,13 +63,13 @@ const ExecutionDashboard: React.FC<ExecutionDashboardProps> = ({ currentPage, se
                         ) : userProjects.length === 0 ? (
                             <div className="flex items-center justify-center h-full">
                                 <div className="text-center max-w-md p-8">
-                                    <div className="w-20 h-20 bg-gray-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <svg className="w-10 h-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <div className="w-20 h-20 bg-subtle-background rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <svg className="w-10 h-10 text-text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                                         </svg>
                                     </div>
-                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No Projects Assigned</h3>
-                                    <p className="text-gray-500 dark:text-gray-400">You don't have any projects assigned to you yet. Please contact your project manager for assignments.</p>
+                                    <h3 className="text-xl font-bold text-text-primary mb-2">No Projects Assigned</h3>
+                                    <p className="text-text-secondary">You don't have any projects assigned to you yet. Please contact your project manager for assignments.</p>
                                 </div>
                             </div>
                         ) : (
@@ -82,7 +82,7 @@ const ExecutionDashboard: React.FC<ExecutionDashboardProps> = ({ currentPage, se
                                         exit={{ opacity: 0, x: -20 }}
                                         className="h-full overflow-y-auto"
                                     >
-                                        <ExecutionProjectsPage 
+                                        <ExecutionProjectsPage
                                             onProjectSelect={handleProjectSelect}
                                             projects={userProjects}
                                         />

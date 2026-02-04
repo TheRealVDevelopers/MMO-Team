@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
+import {
     XMarkIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon, TrashIcon,
     CalendarIcon, ClockIcon, CurrencyRupeeIcon, UserIcon, DocumentIcon
 } from '@heroicons/react/24/outline';
@@ -29,10 +29,10 @@ const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, isOpen, on
 
     // Gantt Tasks State
     const [ganttTasks, setGanttTasks] = useState<GanttTask[]>(project.ganttData || []);
-    
+
     // Payment Terms State
     const [paymentTerms, setPaymentTerms] = useState<PaymentTerm[]>(project.paymentTerms || []);
-    
+
     // Execution Stages State
     const [executionStages, setExecutionStages] = useState<ExecutionStage[]>(project.stages || []);
 
@@ -162,7 +162,7 @@ const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, isOpen, on
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[1100] flex items-center justify-center p-4"
                 onClick={onClose}
             >
                 <motion.div
@@ -193,11 +193,10 @@ const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, isOpen, on
                                 <button
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
-                                    className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                                        activeTab === tab.id
-                                            ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-                                            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
-                                    }`}
+                                    className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.id
+                                        ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                                        }`}
                                 >
                                     <tab.icon className="w-4 h-4" />
                                     {tab.name}
@@ -211,7 +210,7 @@ const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, isOpen, on
                         {activeTab === 'basic' && (
                             <div className="space-y-6">
                                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">Basic Information</h3>
-                                
+
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project Name</label>
@@ -370,7 +369,7 @@ const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, isOpen, on
                                                     <TrashIcon className="w-4 h-4" />
                                                 </button>
                                             </div>
-                                            
+
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                 <div className="md:col-span-2">
                                                     <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Task Name</label>
@@ -450,7 +449,7 @@ const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, isOpen, on
                                             </div>
                                         </div>
                                     ))}
-                                    
+
                                     {ganttTasks.length === 0 && (
                                         <div className="text-center py-12 text-gray-500">
                                             <CalendarIcon className="w-12 h-12 mx-auto mb-3 opacity-20" />
@@ -464,17 +463,17 @@ const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, isOpen, on
                         {activeTab === 'team' && (
                             <div className="space-y-6">
                                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">Team Composition</h3>
-                                
+
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project Head</label>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Execution Team Member</label>
                                         <select
                                             value={formData.projectHeadId || ''}
                                             onChange={(e) => setFormData({ ...formData, projectHeadId: e.target.value })}
                                             className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-700 dark:text-white"
                                         >
-                                            <option value="">Select Project Head</option>
-                                            {users.filter(u => u.role === 'Project Head').map(user => (
+                                            <option value="">Select Execution Team Member</option>
+                                            {users.filter(u => u.role === 'Execution Team').map(user => (
                                                 <option key={user.id} value={user.id}>{user.name}</option>
                                             ))}
                                         </select>
@@ -483,8 +482,8 @@ const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, isOpen, on
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Site Engineer</label>
                                         <select
                                             value={formData.assignedTeam?.site_engineer || ''}
-                                            onChange={(e) => setFormData({ 
-                                                ...formData, 
+                                            onChange={(e) => setFormData({
+                                                ...formData,
                                                 assignedTeam: { ...formData.assignedTeam, site_engineer: e.target.value }
                                             })}
                                             className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-700 dark:text-white"
@@ -499,8 +498,8 @@ const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, isOpen, on
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Drawing Team</label>
                                         <select
                                             value={formData.assignedTeam?.drawing || ''}
-                                            onChange={(e) => setFormData({ 
-                                                ...formData, 
+                                            onChange={(e) => setFormData({
+                                                ...formData,
                                                 assignedTeam: { ...formData.assignedTeam, drawing: e.target.value }
                                             })}
                                             className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-700 dark:text-white"
@@ -515,8 +514,8 @@ const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, isOpen, on
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Quotation Team</label>
                                         <select
                                             value={formData.assignedTeam?.quotation || ''}
-                                            onChange={(e) => setFormData({ 
-                                                ...formData, 
+                                            onChange={(e) => setFormData({
+                                                ...formData,
                                                 assignedTeam: { ...formData.assignedTeam, quotation: e.target.value }
                                             })}
                                             className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-700 dark:text-white"
@@ -534,7 +533,7 @@ const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, isOpen, on
                         {activeTab === 'budget' && (
                             <div className="space-y-6">
                                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">Budget & Financial Details</h3>
-                                
+
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Total Budget</label>
@@ -653,7 +652,7 @@ const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, isOpen, on
                                                     <TrashIcon className="w-4 h-4" />
                                                 </button>
                                             </div>
-                                            
+
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                 <div className="md:col-span-2">
                                                     <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Stage Name</label>

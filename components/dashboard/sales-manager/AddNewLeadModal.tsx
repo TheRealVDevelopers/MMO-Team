@@ -13,9 +13,11 @@ interface AddNewLeadModalProps {
         newLeadData: Omit<Lead, 'id' | 'status' | 'inquiryDate' | 'history' | 'lastContacted'>,
         reminder?: { date: string; notes: string }
     ) => void;
+    initialData?: Lead;
+    onUpdateLead?: (lead: Lead) => void;
 }
 
-const AddNewLeadModal: React.FC<AddNewLeadModalProps> = ({ isOpen, onClose, users, onAddLead }) => {
+const AddNewLeadModal: React.FC<AddNewLeadModalProps> = ({ isOpen, onClose, users, onAddLead, initialData, onUpdateLead }) => {
     const { currentUser } = useAuth();
     const salesTeam = useMemo(() => users.filter(u => u.role === UserRole.SALES_TEAM_MEMBER), [users]);
 
@@ -36,14 +38,32 @@ const AddNewLeadModal: React.FC<AddNewLeadModalProps> = ({ isOpen, onClose, user
 
     // Set default assignedTo when modal opens or user changes
     useEffect(() => {
-        if (isOpen && currentUser) {
-            if (currentUser.role === UserRole.SALES_TEAM_MEMBER) {
-                setFormData(prev => ({ ...prev, assignedTo: currentUser.id }));
-            } else {
-                setFormData(prev => ({ ...prev, assignedTo: salesTeam[0]?.id || '' }));
+        if (isOpen) {
+            if (initialData) {
+                setFormData({
+                    clientName: initialData.clientName,
+                    clientEmail: initialData.clientEmail,
+                    clientMobile: initialData.clientMobile,
+                    projectName: initialData.projectName,
+                    value: initialData.value ? String(initialData.value) : '',
+                    source: initialData.source || '',
+                    assignedTo: initialData.assignedTo || '',
+                    priority: initialData.priority || 'Medium',
+                    reminderDate: '', // Reminders are usually separate actions for existing leads
+                    reminderNotes: '',
+                });
+            } else if (currentUser) {
+                // Default logic only for new leads
+                if (currentUser.role === UserRole.SALES_TEAM_MEMBER) {
+                    setFormData(prev => ({ ...prev, assignedTo: currentUser.id }));
+                } else {
+                    setFormData(prev => ({ ...prev, assignedTo: salesTeam[0]?.id || '' }));
+                }
             }
+        } else {
+            setFormData(initialFormData);
         }
-    }, [isOpen, currentUser, salesTeam]);
+    }, [isOpen, initialData, currentUser, salesTeam]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -60,15 +80,34 @@ const AddNewLeadModal: React.FC<AddNewLeadModalProps> = ({ isOpen, onClose, user
             return;
         }
 
-        // separate reminder data
-        const { reminderDate: rd, reminderNotes: rn, ...leadData } = formData;
+        if (initialData && onUpdateLead) {
+            // Handle Update
+            const updatedLead: Lead = {
+                ...initialData,
+                clientName,
+                clientEmail,
+                clientMobile,
+                projectName,
+                value: Number(value),
+                source: formData.source,
+                assignedTo,
+                priority: formData.priority,
+                // Note: Reminders are not updated here for existing leads to avoid complexity, or could be added logic
+            };
+            onUpdateLead(updatedLead);
+        } else {
+            // Handle Create
+            // separate reminder data
+            const { reminderDate: rd, reminderNotes: rn, ...leadData } = formData;
 
-        let reminder;
-        if (reminderDate && reminderNotes) {
-            reminder = { date: reminderDate, notes: reminderNotes };
+            let reminder;
+            if (reminderDate && reminderNotes) {
+                reminder = { date: reminderDate, notes: reminderNotes };
+            }
+
+            onAddLead({ ...leadData, value: Number(value) } as any, reminder);
         }
 
-        onAddLead({ ...leadData, value: Number(value) } as any, reminder);
         setFormData(initialFormData);
         onClose();
     };
@@ -86,7 +125,7 @@ const AddNewLeadModal: React.FC<AddNewLeadModalProps> = ({ isOpen, onClose, user
         : salesTeam; // Manager can assign to anyone
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Create a New Lead" size="lg">
+        <Modal isOpen={isOpen} onClose={onClose} title={initialData ? "Edit Lead Details" : "Create a New Lead"} size="lg">
             <form onSubmit={handleSubmit} className="space-y-6">
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -154,26 +193,28 @@ const AddNewLeadModal: React.FC<AddNewLeadModalProps> = ({ isOpen, onClose, user
                     </div>
                 </div>
 
-                <div className="pt-4 border-t border-border">
-                    <label className="block text-sm font-medium text-text-primary mb-2">Add a Reminder (Optional)</label>
-                    <div className="space-y-4">
-                        <div className="relative">
-                            <SmartDateTimePicker
-                                value={formData.reminderDate}
-                                onChange={(val) => setFormData(prev => ({ ...prev, reminderDate: val }))}
-                                placeholder="Select Reminder Date & Time"
-                            />
-                        </div>
-                        <div className="relative">
-                            <PencilSquareIcon className="w-5 h-5 absolute left-3 top-3 text-text-secondary" />
-                            <textarea name="reminderNotes" value={formData.reminderNotes} onChange={handleInputChange} placeholder="Reminder notes..." rows={2} className="pl-10 w-full p-2 border border-border bg-subtle-background rounded-md shadow-sm" />
+                {!initialData && (
+                    <div className="pt-4 border-t border-border">
+                        <label className="block text-sm font-medium text-text-primary mb-2">Add a Reminder (Optional)</label>
+                        <div className="space-y-4">
+                            <div className="relative">
+                                <SmartDateTimePicker
+                                    value={formData.reminderDate}
+                                    onChange={(val) => setFormData(prev => ({ ...prev, reminderDate: val }))}
+                                    placeholder="Select Reminder Date & Time"
+                                />
+                            </div>
+                            <div className="relative">
+                                <PencilSquareIcon className="w-5 h-5 absolute left-3 top-3 text-text-secondary" />
+                                <textarea name="reminderNotes" value={formData.reminderNotes} onChange={handleInputChange} placeholder="Reminder notes..." rows={2} className="pl-10 w-full p-2 border border-border bg-subtle-background rounded-md shadow-sm" />
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
 
                 <div className="pt-4 flex justify-end space-x-2">
                     <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-text-primary bg-surface border border-border rounded-md hover:bg-subtle-background">Cancel</button>
-                    <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-secondary">Add Lead</button>
+                    <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-secondary">{initialData ? 'Update Lead' : 'Add Lead'}</button>
                 </div>
             </form>
         </Modal>

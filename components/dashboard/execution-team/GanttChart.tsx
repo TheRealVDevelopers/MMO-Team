@@ -12,6 +12,10 @@ const CELL_WIDTH = 40;
 const HEADER_HEIGHT = 60;
 const ROW_HEIGHT = 40;
 
+const isValidDate = (date: any): boolean => {
+    return date instanceof Date && !isNaN(date.getTime());
+};
+
 const GanttChart: React.FC<GanttChartProps> = ({ tasks, onTaskClick }) => {
     // Determine timeline range
     const range = useMemo(() => {
@@ -142,7 +146,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, onTaskClick }) => {
                                     <div className="absolute opacity-0 group-hover:opacity-100 transition-opacity bottom-full left-0 mb-2 z-50 bg-gray-900 text-white text-xs p-2 rounded whitespace-nowrap pointer-events-none" style={{ left: style.left }}>
                                         {task.name} ({task.progress}%)
                                         <div className="text-gray-400 text-[10px]">
-                                            {format(new Date(task.start), 'MMM d')} - {format(new Date(task.end), 'MMM d')}
+                                            {isValidDate(new Date(task.start)) ? format(new Date(task.start), 'MMM d') : 'N/A'} - {isValidDate(new Date(task.end)) ? format(new Date(task.end), 'MMM d') : 'N/A'}
                                         </div>
                                     </div>
                                 </motion.div>
