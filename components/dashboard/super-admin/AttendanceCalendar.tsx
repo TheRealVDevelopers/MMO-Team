@@ -2,15 +2,21 @@ import React, { useMemo } from 'react';
 import { Attendance, AttendanceStatus } from '../../../types';
 import { cn } from '../shared/DashboardUI';
 import { motion } from 'framer-motion';
+import { CalendarIcon } from '@heroicons/react/24/outline'; // Missing import
 
 const statusConfig: Record<AttendanceStatus, { bg: string, text: string, dot: string }> = {
-    [AttendanceStatus.PRESENT]: { bg: 'bg-secondary/10', text: 'text-secondary', dot: 'bg-secondary' },
-    [AttendanceStatus.ABSENT]: { bg: 'bg-error/10', text: 'text-error', dot: 'bg-error' },
-    [AttendanceStatus.HALF_DAY]: { bg: 'bg-accent/10', text: 'text-accent', dot: 'bg-accent' },
-    [AttendanceStatus.LEAVE]: { bg: 'bg-primary/10', text: 'text-primary', dot: 'bg-primary' },
+    [AttendanceStatus.PRESENT]: { bg: 'bg-emerald-500/10', text: 'text-emerald-600', dot: 'bg-emerald-500' },
+    [AttendanceStatus.ABSENT]: { bg: 'bg-rose-500/10', text: 'text-rose-600', dot: 'bg-rose-500' },
+    [AttendanceStatus.HALF_DAY]: { bg: 'bg-amber-500/10', text: 'text-amber-600', dot: 'bg-amber-500' },
+    [AttendanceStatus.LEAVE]: { bg: 'bg-blue-500/10', text: 'text-blue-600', dot: 'bg-blue-500' },
 };
 
-const AttendanceCalendar: React.FC<{ attendanceData: Attendance[] }> = ({ attendanceData }) => {
+interface AttendanceCalendarProps {
+    attendanceData: Attendance[];
+    onDateClick?: (date: string) => void;
+}
+
+const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({ attendanceData, onDateClick }) => {
     const today = new Date();
     const year = today.getFullYear();
     const month = today.getMonth();
@@ -19,7 +25,7 @@ const AttendanceCalendar: React.FC<{ attendanceData: Attendance[] }> = ({ attend
     const firstDayOfMonth = new Date(year, month, 1).getDay();
 
     const attendanceMap = useMemo(() =>
-        new Map<number, AttendanceStatus>(attendanceData.map(a => [new Date(a.date).getDate(), a.status])),
+        new Map<number, Attendance>(attendanceData.map(a => [new Date(a.date).getDate(), a])),
         [attendanceData]);
 
     const summary = useMemo(() =>
@@ -32,7 +38,8 @@ const AttendanceCalendar: React.FC<{ attendanceData: Attendance[] }> = ({ attend
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm font-black uppercase tracking-widest text-text-tertiary">
+                <h4 className="text-sm font-black uppercase tracking-widest text-text-tertiary flex items-center gap-2">
+                    <CalendarIcon className="w-4 h-4 text-primary" />
                     Presence Log: {today.toLocaleString('default', { month: 'long', year: 'numeric' })}
                 </h4>
             </div>
@@ -53,21 +60,24 @@ const AttendanceCalendar: React.FC<{ attendanceData: Attendance[] }> = ({ attend
 
                     {Array.from({ length: daysInMonth }).map((_, i) => {
                         const day = i + 1;
-                        const status = attendanceMap.get(day);
+                        const record = attendanceMap.get(day);
+                        const status = record?.status;
                         const date = new Date(year, month, day);
+                        const dateString = date.toLocaleDateString('en-CA');
                         const isWeekend = date.getDay() === 0 || date.getDay() === 6;
                         const isToday = day === today.getDate();
                         const config = status ? statusConfig[status] : null;
 
                         return (
-                            <motion.div
+                            <motion.button
                                 key={day}
+                                onClick={() => onDateClick?.(dateString)}
                                 whileHover={{ scale: 1.05 }}
                                 className={cn(
-                                    "aspect-square rounded-xl flex flex-col items-center justify-center relative transition-all border group", // Added group class
+                                    "aspect-square rounded-xl flex flex-col items-center justify-center relative transition-all border group w-full",
                                     isToday ? "ring-2 ring-primary ring-offset-2 ring-offset-surface" : "",
                                     isWeekend ? "bg-subtle-background/50 border-border/20 opacity-40" : "bg-surface border-border shadow-sm",
-                                    config ? cn(config.bg, "border-transparent shadow-none") : ""
+                                    config ? cn(config.bg, "border-transparent shadow-none") : "hover:bg-primary/5 hover:border-primary/30"
                                 )}
                             >
                                 <span className={cn(
@@ -82,19 +92,19 @@ const AttendanceCalendar: React.FC<{ attendanceData: Attendance[] }> = ({ attend
                                 )}
 
                                 {/* Hover Tooltip for Times */}
-                                {status && ((attendanceData.find(a => new Date(a.date).getDate() === day)?.clockIn) || (attendanceData.find(a => new Date(a.date).getDate() === day)?.clockOut)) && (
+                                {(record?.clockIn || record?.clockOut) && (
                                     <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-max px-2 py-1 bg-surface border border-border/60 shadow-lg rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
                                         <div className="flex flex-col gap-0.5 text-[9px] font-bold text-text-secondary leading-tight">
-                                            {attendanceData.find(a => new Date(a.date).getDate() === day)?.clockIn && (
-                                                <span className="text-emerald-500">In: {attendanceData.find(a => new Date(a.date).getDate() === day)?.clockIn}</span>
+                                            {record.clockIn && (
+                                                <span className="text-emerald-500">In: {record.clockIn}</span>
                                             )}
-                                            {attendanceData.find(a => new Date(a.date).getDate() === day)?.clockOut && (
-                                                <span className="text-error">Out: {attendanceData.find(a => new Date(a.date).getDate() === day)?.clockOut}</span>
+                                            {record.clockOut && (
+                                                <span className="text-error">Out: {record.clockOut}</span>
                                             )}
                                         </div>
                                     </div>
                                 )}
-                            </motion.div>
+                            </motion.button>
                         );
                     })}
                 </div>

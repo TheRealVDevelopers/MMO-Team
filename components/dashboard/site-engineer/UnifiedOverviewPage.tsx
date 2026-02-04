@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ClipboardList, Pencil, FileText, Calendar } from 'lucide-react';
-import { DrawingTask, SiteVisit } from '../../../types';
+import { DrawingTask, SiteVisit, SiteVisitStatus } from '../../../types';
 import Card from '../../shared/Card';
 import { useAuth } from '../../../context/AuthContext';
 import { useAutomatedTaskCreation } from '../../../hooks/useAutomatedTaskCreation';
@@ -24,8 +24,8 @@ const UnifiedOverviewPage: React.FC<UnifiedOverviewPageProps> = ({
 
     // Derived lists based on status
     const siteVisitProjects = visits.filter(v =>
-        v.status === 'Site Visit Scheduled' ||
-        v.status === 'Site Visit Rescheduled'
+        v.status === SiteVisitStatus.SCHEDULED ||
+        v.status === 'Site Visit Rescheduled' as any // Allow rescheduled status
     );
 
     // For drawing tasks, we might need to filter from a combined list or rely on the passed drawingTasks which we derived in the parent

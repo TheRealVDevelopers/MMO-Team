@@ -14,7 +14,7 @@ import TeamMemberDetailView from './TeamMemberDetailView';
 import { ContentCard, cn, staggerContainer } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const TeamManagementPage: React.FC<{ setCurrentPage: (page: string) => void; initialMemberId?: string }> = ({ setCurrentPage, initialMemberId }) => {
+const TeamManagementPage: React.FC<{ setCurrentPage: (page: string) => void; initialMemberId?: string; initialTab?: 'history'; initialDate?: string }> = ({ setCurrentPage, initialMemberId, initialTab, initialDate }) => {
     const { staff, loading } = useStaffPerformance();
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
@@ -199,7 +199,7 @@ const TeamManagementPage: React.FC<{ setCurrentPage: (page: string) => void; ini
                                 transition={{ duration: 0.2 }}
                                 className="h-full"
                             >
-                                <TeamMemberDetailView user={selectedUser} />
+                                <TeamMemberDetailView user={selectedUser} initialTab={initialTab} initialDate={initialDate} />
                             </motion.div>
                         ) : (
                             <div className="h-full flex items-center justify-center border-2 border-dashed border-border/40 rounded-[2.5rem] bg-subtle-background/30">

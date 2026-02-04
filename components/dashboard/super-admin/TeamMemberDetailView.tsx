@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { User, UserRole, LeadPipelineStatus, ActivityStatus, ProjectStatus } from '../../../types';
 import { formatCurrencyINR, formatDateTime } from '../../../constants';
 import { useProjects } from '../../../hooks/useProjects';
@@ -14,7 +14,9 @@ import {
     ArrowTrendingUpIcon,
     ClockIcon,
     BriefcaseIcon,
-    MapPinIcon
+    MapPinIcon,
+    ArrowDownTrayIcon,
+    PauseCircleIcon
 } from '@heroicons/react/24/outline';
 import AttendanceCalendar from './AttendanceCalendar';
 import { ContentCard, cn, staggerContainer } from '../shared/DashboardUI';
@@ -22,6 +24,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTeamTasks } from '../../../hooks/useTeamTasks';
 import { TaskStatus, Attendance, AttendanceStatus, TimeTrackingStatus } from '../../../types';
 import { useTimeEntries } from '../../../hooks/useTimeTracking';
+import DailyDeploymentTimeline from './DailyDeploymentTimeline';
+import ExportDeploymentReportModal from '../shared/ExportDeploymentReportModal'; // Import Modal // Import Timeline Component
 
 const TabButton: React.FC<{
     icon: React.ElementType;
@@ -62,8 +66,29 @@ const UserMetric: React.FC<{ title: string; value: string | number; icon: React.
 );
 
 
-const TeamMemberDetailView: React.FC<{ user: User }> = ({ user }) => {
-    const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'attendance'>('overview');
+const TeamMemberDetailView: React.FC<{ user: User; initialTab?: 'history'; initialDate?: string }> = ({ user, initialTab, initialDate }) => {
+    const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'attendance'>(initialTab || 'overview');
+    const [selectedDate, setSelectedDate] = useState<string>(initialDate || new Date().toLocaleDateString('en-CA'));
+    const [isExportOpen, setIsExportOpen] = useState(false); // Export State
+
+    // Sync state with props
+    useEffect(() => {
+        if (initialTab) {
+            setActiveTab(initialTab);
+        }
+    }, [initialTab]);
+
+    useEffect(() => {
+        if (initialDate) {
+            setSelectedDate(initialDate);
+        }
+    }, [initialDate]);
+
+    // Date range filter state
+    const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'custom'>('month');
+    const [customStartDate, setCustomStartDate] = useState('');
+    const [customEndDate, setCustomEndDate] = useState('');
+
     const { tasks, loading } = useTeamTasks();
     const { projects } = useProjects();
     const { leads } = useLeads();
@@ -108,12 +133,101 @@ const TeamMemberDetailView: React.FC<{ user: User }> = ({ user }) => {
         return [];
     }, [user.id, user.role, leads, projects]);
 
-    // Attendance Data Fetching
-    const today = new Date();
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toLocaleDateString('en-CA');
-    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toLocaleDateString('en-CA');
+    // Date range bounds calculation
+    const getDateRangeBounds = useMemo(() => {
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        let startDate: string;
+        let endDate: string = now.toLocaleDateString('en-CA');
 
-    const { entries: timeEntries } = useTimeEntries(user.id, startOfMonth, endOfMonth);
+        switch (dateRange) {
+            case 'today':
+                startDate = startOfToday.toLocaleDateString('en-CA');
+                break;
+            case 'week':
+                const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                startDate = lastWeek.toLocaleDateString('en-CA');
+                break;
+            case 'month':
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString('en-CA');
+                break;
+            case 'custom':
+                startDate = customStartDate || now.toLocaleDateString('en-CA');
+                endDate = customEndDate || now.toLocaleDateString('en-CA');
+                break;
+            default:
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString('en-CA');
+        }
+
+        return { startDate, endDate };
+    }, [dateRange, customStartDate, customEndDate]);
+
+    const { entries: timeEntries } = useTimeEntries(user.id, getDateRangeBounds.startDate, getDateRangeBounds.endDate);
+
+    // Calculate time tracking metrics
+    const timeMetrics = useMemo(() => {
+        let totalLoggedMins = 0;
+        let totalActiveMins = 0;
+        let totalBreakMins = 0;
+
+        const now = new Date();
+        const todayStr = now.toLocaleDateString('en-CA');
+
+        timeEntries.forEach(entry => {
+            const isToday = entry.date === todayStr;
+
+            // Logged time: From clock-in to clock-out (or now if clocked in)
+            if (entry.clockIn) {
+                const clockIn = entry.clockIn instanceof Date ? entry.clockIn : new Date(entry.clockIn);
+                const clockOut = entry.clockOut
+                    ? (entry.clockOut instanceof Date ? entry.clockOut : new Date(entry.clockOut))
+                    : (isToday ? now : clockIn);
+
+                if (clockOut > clockIn) {
+                    totalLoggedMins += (clockOut.getTime() - clockIn.getTime()) / (1000 * 60);
+                }
+            }
+
+            // Active time: Sum of all activities
+            (entry.activities || []).forEach(a => {
+                if (a.startTime) {
+                    const start = a.startTime instanceof Date ? a.startTime : new Date(a.startTime);
+                    const end = a.endTime
+                        ? (a.endTime instanceof Date ? a.endTime : new Date(a.endTime))
+                        : (isToday ? now : start);
+
+                    if (end > start) {
+                        totalActiveMins += (end.getTime() - start.getTime()) / (1000 * 60);
+                    }
+                }
+            });
+
+            // Break time: Sum of all breaks
+            (entry.breaks || []).forEach(b => {
+                if (b.startTime) {
+                    const start = b.startTime instanceof Date ? b.startTime : new Date(b.startTime);
+                    const end = b.endTime
+                        ? (b.endTime instanceof Date ? b.endTime : new Date(b.endTime))
+                        : (isToday ? now : start);
+
+                    if (end > start) {
+                        totalBreakMins += (end.getTime() - start.getTime()) / (1000 * 60);
+                    }
+                }
+            });
+        });
+
+        const loggedHours = (totalLoggedMins / 60).toFixed(1);
+        const activeHours = (totalActiveMins / 60).toFixed(1);
+        const idleHours = Math.max(0, (totalLoggedMins - totalActiveMins - totalBreakMins) / 60).toFixed(1);
+
+        return { loggedHours, activeHours, idleHours };
+    }, [timeEntries]);
+
+    // Find entry for selected date in History tab
+    const selectedDateEntry = useMemo(() => {
+        return timeEntries.find(e => e.date === selectedDate);
+    }, [timeEntries, selectedDate]);
 
     const attendanceForMonth: Attendance[] = useMemo(() => {
         return timeEntries.map(entry => {
@@ -166,6 +280,13 @@ const TeamMemberDetailView: React.FC<{ user: User }> = ({ user }) => {
                             </span>
                         </div>
                         <div className="flex items-center gap-4">
+                            <button
+                                onClick={() => setIsExportOpen(true)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-surface text-text-secondary hover:text-primary hover:border-primary transition-all text-[10px] font-bold uppercase tracking-widest"
+                            >
+                                <ArrowDownTrayIcon className="w-3.5 h-3.5" />
+                                Export Report
+                            </button>
                             <div className="flex items-center gap-1.5 text-text-tertiary">
                                 <PhoneIcon className="w-3.5 h-3.5" />
                                 <span className="text-xs font-semibold">{user.phone}</span>
@@ -215,6 +336,66 @@ const TeamMemberDetailView: React.FC<{ user: User }> = ({ user }) => {
                             exit={{ opacity: 0, y: -10 }}
                             className="space-y-8"
                         >
+                            <section>
+                                <div className="flex justify-between items-center mb-4">
+                                    <div className="flex items-center gap-2">
+                                        <ClockIcon className="w-4 h-4 text-primary" />
+                                        <h4 className="text-sm font-black uppercase tracking-widest text-text-primary">Time Tracking Analysis</h4>
+                                    </div>
+
+                                    {/* Date Range Filter */}
+                                    <div className="flex items-center gap-1 bg-subtle-background p-1 rounded-xl border border-border/40">
+                                        {(['today', 'week', 'month', 'custom'] as const).map((range) => (
+                                            <button
+                                                key={range}
+                                                onClick={() => setDateRange(range)}
+                                                className={cn(
+                                                    "px-3 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
+                                                    dateRange === range
+                                                        ? "bg-primary text-white shadow-lg shadow-primary/20"
+                                                        : "text-text-tertiary hover:text-text-primary hover:bg-primary/5"
+                                                )}
+                                            >
+                                                {range === 'week' ? '7 Days' : range}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {dateRange === 'custom' && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        className="flex gap-4 mb-4 p-4 bg-surface border border-border/40 rounded-2xl"
+                                    >
+                                        <div className="flex-1">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-1 block">Start Date</label>
+                                            <input
+                                                type="date"
+                                                value={customStartDate}
+                                                onChange={(e) => setCustomStartDate(e.target.value)}
+                                                className="w-full px-4 py-2 rounded-xl border border-border/40 bg-subtle-background text-xs font-bold focus:border-primary/40 focus:ring-0 transition-colors"
+                                            />
+                                        </div>
+                                        <div className="flex-1">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-1 block">End Date</label>
+                                            <input
+                                                type="date"
+                                                value={customEndDate}
+                                                onChange={(e) => setCustomEndDate(e.target.value)}
+                                                className="w-full px-4 py-2 rounded-xl border border-border/40 bg-subtle-background text-xs font-bold focus:border-primary/40 focus:ring-0 transition-colors"
+                                            />
+                                        </div>
+                                    </motion.div>
+                                )}
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <UserMetric title="Logged Hours" value={timeMetrics.loggedHours} icon={ClockIcon} />
+                                    <UserMetric title="Active Task Hours" value={timeMetrics.activeHours} icon={CheckCircleIcon} />
+                                    <UserMetric title="Idle Analysis" value={timeMetrics.idleHours} icon={PauseCircleIcon} />
+                                </div>
+                            </section>
+
                             <section>
                                 <div className="flex items-center gap-2 mb-4">
                                     <BriefcaseIcon className="w-4 h-4 text-primary" />
@@ -280,35 +461,70 @@ const TeamMemberDetailView: React.FC<{ user: User }> = ({ user }) => {
                             exit={{ opacity: 0, y: -10 }}
                             className="space-y-6"
                         >
-                            <div className="space-y-4 relative">
-                                <div className="absolute left-[15px] top-2 bottom-2 w-px bg-border/40" />
-                                {userActivities.length > 0 ? (
-                                    userActivities.map((activity, idx) => (
-                                        <div key={activity.id} className="relative pl-10">
-                                            <div className={cn(
-                                                "absolute left-0 top-1.5 w-8 h-8 rounded-xl border-4 border-surface shadow-sm flex items-center justify-center",
-                                                activity.status === TaskStatus.COMPLETED ? "bg-secondary text-white" : "bg-accent/20 text-accent"
-                                            )}>
-                                                <CheckCircleIcon className="w-4 h-4" />
-                                            </div>
-                                            <div className="bg-subtle-background/40 p-4 rounded-2xl border border-border/20 group hover:border-primary/20 transition-all">
-                                                <div className="flex justify-between items-start gap-4">
-                                                    <div>
-                                                        <p className="text-sm font-semibold text-text-primary leading-snug">{activity.title}</p>
-                                                        {activity.description && <p className="text-xs text-text-tertiary mt-1 line-clamp-1">{activity.description}</p>}
-                                                    </div>
-                                                    <span className="text-[10px] font-black uppercase tracking-tighter text-text-tertiary whitespace-nowrap">
-                                                        {activity.createdAt && formatDateTime(activity.createdAt instanceof Date ? activity.createdAt : new Date(activity.createdAt))}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))
+                            {/* Date Picker Header */}
+                            <div className="flex items-center justify-between mb-4">
+                                <h4 className="text-sm font-black uppercase tracking-widest text-text-primary flex items-center gap-2">
+                                    <ClockIcon className="w-4 h-4 text-primary" />
+                                    Daily Timeline
+                                </h4>
+                                <input
+                                    type="date"
+                                    value={selectedDate}
+                                    onChange={(e) => setSelectedDate(e.target.value)}
+                                    className="bg-surface border border-border rounded-lg px-3 py-1.5 text-sm font-medium text-text-primary focus:ring-2 focus:ring-primary/20 outline-none"
+                                />
+                            </div>
+
+                            {/* Timeline Component */}
+                            <div className="bg-subtle-background/30 rounded-2xl border border-border/40 p-4 min-h-[400px]">
+                                {selectedDateEntry ? (
+                                    <DailyDeploymentTimeline timeEntry={selectedDateEntry} />
                                 ) : (
-                                    <div className="text-center py-12 text-text-tertiary">
-                                        No historical tasks recorded.
+                                    <div className="flex flex-col items-center justify-center py-20 text-center opacity-60">
+                                        <div className="w-16 h-16 rounded-full bg-surface border-2 border-dashed border-border mb-4 flex items-center justify-center">
+                                            <ClockIcon className="w-8 h-8 text-text-tertiary" />
+                                        </div>
+                                        <p className="text-text-primary font-bold">No Activity Recorded</p>
+                                        <p className="text-xs text-text-tertiary mt-1">
+                                            {new Date(selectedDate).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                        </p>
                                     </div>
                                 )}
+                            </div>
+
+                            {/* Historical Tasks Summary (Keeping existing list as secondary view) */}
+                            <div className="pt-6 border-t border-border/40">
+                                <h5 className="text-xs font-bold text-text-tertiary uppercase tracking-wider mb-4">Task Completion Log</h5>
+                                <div className="space-y-4 relative">
+                                    <div className="absolute left-[15px] top-2 bottom-2 w-px bg-border/40" />
+                                    {userActivities.length > 0 ? (
+                                        userActivities.slice(0, 5).map((activity, idx) => (
+                                            <div key={activity.id} className="relative pl-10">
+                                                <div className={cn(
+                                                    "absolute left-0 top-1.5 w-8 h-8 rounded-xl border-4 border-surface shadow-sm flex items-center justify-center",
+                                                    activity.status === TaskStatus.COMPLETED ? "bg-secondary text-white" : "bg-accent/20 text-accent"
+                                                )}>
+                                                    <CheckCircleIcon className="w-4 h-4" />
+                                                </div>
+                                                <div className="bg-subtle-background/40 p-4 rounded-2xl border border-border/20 group hover:border-primary/20 transition-all">
+                                                    <div className="flex justify-between items-start gap-4">
+                                                        <div>
+                                                            <p className="text-sm font-semibold text-text-primary leading-snug">{activity.title}</p>
+                                                            {activity.description && <p className="text-xs text-text-tertiary mt-1 line-clamp-1">{activity.description}</p>}
+                                                        </div>
+                                                        <span className="text-[10px] font-black uppercase tracking-tighter text-text-tertiary whitespace-nowrap">
+                                                            {activity.createdAt && formatDateTime(activity.createdAt instanceof Date ? activity.createdAt : new Date(activity.createdAt))}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="text-center py-4 text-text-tertiary text-xs">
+                                            No historical tasks recorded.
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </motion.div>
                     )}
@@ -320,11 +536,24 @@ const TeamMemberDetailView: React.FC<{ user: User }> = ({ user }) => {
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
                         >
-                            <AttendanceCalendar attendanceData={attendanceForMonth} />
+                            <AttendanceCalendar
+                                attendanceData={attendanceForMonth}
+                                onDateClick={(date) => {
+                                    setSelectedDate(date);
+                                    setActiveTab('history');
+                                }}
+                            />
                         </motion.div>
                     )}
                 </AnimatePresence>
             </div>
+
+            {/* Export Modal */}
+            <ExportDeploymentReportModal
+                isOpen={isExportOpen}
+                onClose={() => setIsExportOpen(false)}
+                users={[user]}
+            />
         </ContentCard>
     );
 };

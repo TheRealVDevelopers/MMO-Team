@@ -8,12 +8,16 @@ import {
     ChartBarIcon,
     WalletIcon,
     BoltIcon,
-    ChevronRightIcon
+    ChevronRightIcon,
+    ArrowDownTrayIcon,
+    ArrowLeftIcon
 } from '@heroicons/react/24/outline';
 import { ContentCard, cn, staggerContainer } from '../shared/DashboardUI';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import TeamMemberDetailView from '../super-admin/TeamMemberDetailView'; // Reusing Super Admin Component
+import ExportDeploymentReportModal from '../shared/ExportDeploymentReportModal';
 
-const TeamMemberCard: React.FC<{ member: User; leads: Lead[] }> = ({ member, leads }) => {
+const TeamMemberCard: React.FC<{ member: User; leads: Lead[]; onClick: () => void }> = ({ member, leads, onClick }) => {
     const memberLeads = leads.filter(l => l.assignedTo === member.id);
     const activeLeads = memberLeads.filter(l => ![LeadPipelineStatus.WON, LeadPipelineStatus.LOST].includes(l.status)).length;
     const wonLeads = memberLeads.filter(l => l.status === LeadPipelineStatus.WON).length;
@@ -61,7 +65,10 @@ const TeamMemberCard: React.FC<{ member: User; leads: Lead[] }> = ({ member, lea
                 </div>
             </div>
 
-            <button className="mt-6 w-full py-3 bg-background border border-border text-text-secondary text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-primary hover:text-white hover:border-primary transition-all flex items-center justify-center gap-2 group/btn">
+            <button
+                onClick={onClick}
+                className="mt-6 w-full py-3 bg-background border border-border text-text-secondary text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-primary hover:text-white hover:border-primary transition-all flex items-center justify-center gap-2 group/btn"
+            >
                 Analysis Details
                 <ChevronRightIcon className="w-3 h-3 group-hover/btn:translate-x-1 transition-transform" />
             </button>
@@ -71,6 +78,8 @@ const TeamMemberCard: React.FC<{ member: User; leads: Lead[] }> = ({ member, lea
 
 const TeamManagementPage: React.FC<{ leads: Lead[]; users: User[] }> = ({ leads, users }) => {
     const [regionFilter, setRegionFilter] = useState<'all' | string>('all');
+    const [selectedMember, setSelectedMember] = useState<User | null>(null);
+    const [isExportOpen, setIsExportOpen] = useState(false);
 
     // Filter to get only sales team members from real data
     const salesTeam = useMemo(() => {
@@ -84,6 +93,27 @@ const TeamManagementPage: React.FC<{ leads: Lead[]; users: User[] }> = ({ leads,
 
     const regions = [...new Set(salesTeam.map(m => m.region).filter(Boolean))] as string[];
 
+    // If a member is selected, show detail view
+    if (selectedMember) {
+        return (
+            <div className="h-full flex flex-col gap-4">
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => setSelectedMember(null)}
+                        className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors text-sm font-bold"
+                    >
+                        <ArrowLeftIcon className="w-4 h-4" />
+                        Back to Team
+                    </button>
+                    <div className="h-4 w-px bg-border" />
+                    <h3 className="text-lg font-bold text-text-primary">Member Details</h3>
+                </div>
+                <div className="flex-1 overflow-hidden rounded-3xl border border-border shadow-sm">
+                    <TeamMemberDetailView user={selectedMember} />
+                </div>
+            </div>
+        );
+    }
 
     if (salesTeam.length === 0) {
         return (
@@ -100,7 +130,15 @@ const TeamManagementPage: React.FC<{ leads: Lead[]; users: User[] }> = ({ leads,
             animate="visible"
             className="space-y-6"
         >
-            <div className="flex justify-end items-center mb-8">
+            <div className="flex justify-between items-center mb-8">
+                <button
+                    onClick={() => setIsExportOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface border border-border text-text-primary hover:bg-subtle-background hover:border-primary/50 transition-all shadow-sm text-xs font-bold uppercase tracking-wide"
+                >
+                    <ArrowDownTrayIcon className="w-4 h-4" />
+                    Export Team Report
+                </button>
+
                 <div className="relative group">
                     <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                         <FunnelIcon className="w-4 h-4 text-text-secondary group-hover:text-primary transition-colors" />
@@ -122,10 +160,21 @@ const TeamManagementPage: React.FC<{ leads: Lead[]; users: User[] }> = ({ leads,
             >
                 {filteredTeam.map(member => (
                     <motion.div layout key={member.id}>
-                        <TeamMemberCard member={member} leads={leads} />
+                        <TeamMemberCard
+                            member={member}
+                            leads={leads}
+                            onClick={() => setSelectedMember(member)}
+                        />
                     </motion.div>
                 ))}
             </motion.div>
+
+            {/* Bulk Export Modal */}
+            <ExportDeploymentReportModal
+                isOpen={isExportOpen}
+                onClose={() => setIsExportOpen(false)}
+                users={filteredTeam} // Export data for all filtered team members
+            />
         </motion.div>
     );
 };

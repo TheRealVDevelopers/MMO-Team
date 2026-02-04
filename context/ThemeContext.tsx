@@ -45,7 +45,7 @@ export const themes: Record<string, Theme> = {
 
       // Backgrounds
       background: '#FFFFFF',    // White
-      surface: '#F9FAFB',       // Gray-50 (very light)
+      surface: '#FFFFFF',       // Force White for clarity
       'subtle-background': '#F3F4F6', // Gray-100
 
       // Text
@@ -133,21 +133,16 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     // Apply theme to document
     const root = document.documentElement;
 
-    // Add or remove dark class
+    // Add or remove dark class - CSS file handles the color variables
     if (isDark) {
       root.classList.add('dark');
     } else {
       root.classList.remove('dark');
     }
 
-    // Apply all color variables
-    Object.entries(currentTheme.colors).forEach(([key, value]) => {
-      root.style.setProperty(`--color-${key}`, value);
-    });
-
     // Save preference
     localStorage.setItem('theme-preference', currentThemeName);
-  }, [currentThemeName, currentTheme, isDark]);
+  }, [currentThemeName, isDark]);
 
   const toggleTheme = () => {
     console.log('Toggle theme called, current:', currentThemeName);

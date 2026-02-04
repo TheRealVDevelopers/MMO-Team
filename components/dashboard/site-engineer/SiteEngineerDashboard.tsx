@@ -4,8 +4,8 @@ import SiteEngineerSidebar from './SiteEngineerSidebar';
 import UnifiedOverviewPage from './UnifiedOverviewPage';
 import EngineerOverviewPage from './EngineerOverviewPage';
 import DrawingTasksPage from './DrawingTasksPage';
-import { SiteVisit, ExpenseClaim, SiteReport, DrawingTask } from '../../../types';
-import { SITE_VISITS, EXPENSE_CLAIMS } from '../../../constants';
+import { SiteVisit, ExpenseClaim, SiteReport, DrawingTask, ProjectStatus, SiteVisitStatus, LeadPipelineStatus } from '../../../types';
+import { EXPENSE_CLAIMS } from '../../../constants';
 import { useAuth } from '../../../context/AuthContext';
 import ExpenseClaimsPage from './ExpenseClaimsPage';
 import SiteEngineerKPIPage from './SiteEngineerKPIPage';
@@ -14,19 +14,62 @@ import MyDayPage from '../shared/MyDayPage';
 import CommunicationDashboard from '../../communication/CommunicationDashboard';
 import EscalateIssuePage from '../../escalation/EscalateIssuePage';
 import { useProjects } from '../../../hooks/useProjects';
+import { useLeads } from '../../../hooks/useLeads';
 import { useAutomatedTaskCreation } from '../../../hooks/useAutomatedTaskCreation';
 
 const SiteEngineerDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
   const { projects } = useProjects(); // Fetch global projects
+  const { leads } = useLeads();
   // Removed duplicate local state for currentPage, using props instead
   const [selectedVisit, setSelectedVisit] = useState<SiteVisit | null>(null);
   const [selectedDrawingTask, setSelectedDrawingTask] = useState<DrawingTask | null>(null);
   const { handleSiteVisitCompletion } = useAutomatedTaskCreation();
 
-  const [siteVisits, setSiteVisits] = useState<SiteVisit[]>(() =>
-    SITE_VISITS.filter(sv => sv.assigneeId === currentUser?.id)
-  );
+  // Derived site visits from LEADs (Primary source)
+  const leadVisits: SiteVisit[] = leads
+    .filter(l =>
+      (l.status === LeadPipelineStatus.SITE_VISIT_SCHEDULED || l.status === LeadPipelineStatus.SITE_VISIT_RESCHEDULED) &&
+      l.assignedTo === currentUser?.id
+    )
+    .map(l => ({
+      id: l.id,
+      projectId: l.id, // Using lead ID as project ID pre-conversion
+      projectName: l.projectName,
+      clientName: l.clientName,
+      siteAddress: '', // Address not available in Lead type
+      leadId: l.id,
+      assigneeId: l.assignedTo,
+      requesterId: 'system',
+      date: l.inquiryDate || new Date(),
+      scheduledDate: l.inquiryDate || new Date(),
+      status: SiteVisitStatus.SCHEDULED,
+      priority: l.priority || 'Medium',
+    } as SiteVisit));
+
+  // Derived site visits from PROJECTS (Secondary source)
+  const projectVisits: SiteVisit[] = projects
+    .filter(p =>
+      (p.status === ProjectStatus.SITE_VISIT_PENDING || p.status === ProjectStatus.SITE_VISIT_RESCHEDULED) &&
+      (p.assignedEngineerId === currentUser?.id || p.assignedTeam?.site_engineer === currentUser?.id)
+    )
+    .map(p => ({
+      id: p.id,
+      projectId: p.id,
+      projectName: p.projectName,
+      clientName: p.clientName,
+      siteAddress: p.clientAddress || '',
+      leadId: p.id,
+      assigneeId: currentUser?.id || '',
+      requesterId: p.salespersonId || 'system',
+      date: p.startDate || new Date(),
+      scheduledDate: p.startDate || new Date(),
+      status: SiteVisitStatus.SCHEDULED,
+      priority: p.priority || 'Medium',
+    } as SiteVisit));
+
+  const siteVisits = [...leadVisits, ...projectVisits];
+
   const [expenseClaims, setExpenseClaims] = useState<ExpenseClaim[]>(() =>
     EXPENSE_CLAIMS.filter(ec => ec.engineerId === currentUser?.id)
   );
@@ -34,30 +77,31 @@ const SiteEngineerDashboard: React.FC<{ currentPage: string, setCurrentPage: (pa
   // Derive drawing tasks from global projects
   const drawingTasks: DrawingTask[] = projects
     .filter(p =>
-      (p.status as any) === 'Waiting for Drawing' ||
-      (p.status as any) === 'Drawing In Progress' ||
-      (p.status as any) === 'Drawing Revisions'
+      p.status === ProjectStatus.DRAWING_PENDING ||
+      p.status === ProjectStatus.DESIGN_IN_PROGRESS ||
+      p.status === ProjectStatus.REVISIONS_IN_PROGRESS
     )
     .map(p => ({
       id: p.id,
       projectName: p.projectName,
       clientName: p.clientName,
-      deadline: new Date(p.deadline),
-      status: p.status === 'Waiting for Drawing' ? 'Pending' :
-        p.status === 'Drawing In Progress' ? 'In Progress' : 'Completed', // Simplified mapping
+      deadline: p.endDate || new Date(),
+      status: p.status === ProjectStatus.DRAWING_PENDING ? 'Pending' :
+        p.status === ProjectStatus.DESIGN_IN_PROGRESS ? 'In Progress' : 'Completed',
       priority: p.priority,
-      taskType: 'Start Drawing', // Matches DrawingTask type
+      taskType: 'Start Drawing',
       assignedTo: p.assignedTeam?.execution?.find(id => id === currentUser?.id) || 'Unassigned',
       metadata: {
         siteAddress: p.clientAddress
       },
-      leadId: p.id, // Using project ID as lead ID fallback
+      leadId: p.id,
       requestedBy: 'System',
       createdAt: new Date()
     } as DrawingTask));
 
   const handleUpdateVisit = (updatedVisit: SiteVisit) => {
-    setSiteVisits(prev => prev.map(v => v.id === updatedVisit.id ? updatedVisit : v));
+    // Note: Since siteVisits is now derived from projects, we need to update the project
+    // For now, just update the selected visit state
     if (selectedVisit) {
       setSelectedVisit(updatedVisit);
     }

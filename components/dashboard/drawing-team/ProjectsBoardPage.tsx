@@ -4,6 +4,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useProjects } from '../../../hooks/useProjects';
 import { ClockIcon, FireIcon, PaperClipIcon, ArrowLeftIcon, EllipsisVerticalIcon, CheckCircleIcon, ArrowUpIcon, DocumentTextIcon, ExclamationTriangleIcon } from '../../icons/IconComponents';
 import BOQSubmissionModal from './BOQSubmissionModal';
+import DrawingUploadModal from './DrawingUploadModal';
 
 const KANBAN_COLUMNS: { id: string, title: string, statuses: any[] }[] = [
     { id: 'site-audit', title: 'Site Inspection', statuses: [ProjectStatus.SITE_VISIT_PENDING, 'Site Visit Scheduled'] },
@@ -107,6 +108,10 @@ const ProjectsBoardPage: React.FC<{ onProjectSelect: (project: Project) => void;
     const [isBOQModalOpen, setIsBOQModalOpen] = useState(false);
     const [selectedProjectForBOQ, setSelectedProjectForBOQ] = useState<Project | null>(null);
 
+    // Drawing Upload Modal State
+    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const [selectedProjectForUpload, setSelectedProjectForUpload] = useState<Project | null>(null);
+
     // Debug: Log projects and user info
     React.useEffect(() => {
         console.log('Drawing Team User ID:', currentUser?.id);
@@ -154,70 +159,9 @@ const ProjectsBoardPage: React.FC<{ onProjectSelect: (project: Project) => void;
                     });
                 }
             } else if (action === 'upload_drawing') {
-                // ✅ Create file input and trigger file picker
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = '.pdf,.dwg,.dxf,.png,.jpg,.jpeg'; // Accept drawing file formats
-                input.multiple = false;
-
-                input.onchange = async (e) => {
-                    const file = (e.target as HTMLInputElement).files?.[0];
-                    if (!file) return;
-
-                    try {
-                        // Show loading state
-                        const loadingMessage = `Uploading ${file.name}...`;
-                        console.log(loadingMessage);
-
-                        // TODO: Upload to Firebase Storage
-                        // For now, just simulate upload and update project
-                        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate upload delay
-
-                        // Determine file type
-                        const fileExt = file.name.split('.').pop()?.toLowerCase();
-                        let docType: 'pdf' | 'docx' | 'jpg' | 'zip' = 'pdf';
-                        if (fileExt === 'jpg' || fileExt === 'jpeg' || fileExt === 'png') {
-                            docType = 'jpg';
-                        } else if (fileExt === 'docx' || fileExt === 'dwg' || fileExt === 'dxf') {
-                            docType = 'docx';
-                        } else if (fileExt === 'zip') {
-                            docType = 'zip';
-                        }
-
-                        // Format file size
-                        const fileSizeKB = file.size / 1024;
-                        const fileSizeMB = fileSizeKB / 1024;
-                        const formattedSize = fileSizeMB > 1
-                            ? `${fileSizeMB.toFixed(2)} MB`
-                            : `${fileSizeKB.toFixed(2)} KB`;
-
-                        // Update project with drawing info
-                        await updateProject(project.id, {
-                            status: ProjectStatus.BOQ_PENDING,
-                            drawingSubmittedAt: new Date(),
-                            drawingRedFlagged: false,
-                            documents: [
-                                ...(project.documents || []),
-                                {
-                                    id: `doc_${Date.now()}`,
-                                    name: file.name,
-                                    type: docType,
-                                    url: URL.createObjectURL(file), // Temporary URL
-                                    uploaded: new Date(),
-                                    size: formattedSize
-                                }
-                            ]
-                        });
-
-                        alert(`Drawing "${file.name}" uploaded successfully! Project moved to BOQ Pending.`);
-                    } catch (error) {
-                        console.error('Upload error:', error);
-                        alert('Failed to upload drawing. Please try again.');
-                    }
-                };
-
-                // Trigger file picker
-                input.click();
+                setSelectedProjectForUpload(project);
+                setIsUploadModalOpen(true);
+            } else if (action === 'submit_boq') {
             } else if (action === 'submit_boq') {
                 if (project && project.projectName) {
                     console.log('Submit BOQ clicked for project:', project.projectName);
@@ -249,6 +193,52 @@ const ProjectsBoardPage: React.FC<{ onProjectSelect: (project: Project) => void;
             alert("BOQ Submitted! Project marked as Completed.");
         } catch (error) {
             console.error("BOQ Submit Error:", error);
+        }
+    };
+
+    const handleDrawingUpload = async (file: File, type: 'pdf' | 'cad') => {
+        if (!selectedProjectForUpload) return;
+        const project = selectedProjectForUpload;
+
+        try {
+            // Show loading state
+            console.log(`Uploading ${type} drawing: ${file.name}...`);
+
+            // TODO: Upload to Firebase Storage
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate upload delay
+
+            // Format file size
+            const fileSizeKB = file.size / 1024;
+            const fileSizeMB = fileSizeKB / 1024;
+            const formattedSize = fileSizeMB > 1
+                ? `${fileSizeMB.toFixed(2)} MB`
+                : `${fileSizeKB.toFixed(2)} KB`;
+
+            // Update project with drawing info
+            await updateProject(project.id, {
+                status: ProjectStatus.BOQ_PENDING,
+                drawingSubmittedAt: new Date(),
+                drawingRedFlagged: false,
+                documents: [
+                    ...(project.documents || []),
+                    {
+                        id: `doc_${Date.now()}`,
+                        name: file.name,
+                        type: type === 'cad' ? 'zip' : 'pdf', // Map CAD to ZIP generic type if needed or keep mapping
+                        url: URL.createObjectURL(file), // Temporary URL
+                        uploaded: new Date(),
+                        size: formattedSize
+                    }
+                ]
+            });
+
+            setIsUploadModalOpen(false);
+            setSelectedProjectForUpload(null);
+            alert(`Drawing "${file.name}" uploaded successfully! Project moved to BOQ Pending.`);
+
+        } catch (error) {
+            console.error('Upload error:', error);
+            alert('Failed to upload drawing. Please try again.');
         }
     };
 
@@ -304,6 +294,12 @@ const ProjectsBoardPage: React.FC<{ onProjectSelect: (project: Project) => void;
                 }}
                 onSubmit={handleBOQSubmit}
                 projectName={selectedProjectForBOQ?.projectName}
+            />
+
+            <DrawingUploadModal
+                isOpen={isUploadModalOpen}
+                onClose={() => setIsUploadModalOpen(false)}
+                onUpload={handleDrawingUpload}
             />
         </div>
     );

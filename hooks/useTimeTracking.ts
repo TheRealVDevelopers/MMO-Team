@@ -155,6 +155,75 @@ export const useTimeEntries = (userId: string, startDate?: string, endDate?: str
   return { entries, loading };
 };
 
+// Get time entries for multiple users or whole team (with date range)
+export const useTeamTimeEntries = (startDate?: string, endDate?: string, userIds?: string[]) => {
+  const [entries, setEntries] = useState<TimeEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let q;
+
+    // Fetch by date range for all users
+    const entriesRef = collection(db, 'timeEntries');
+
+    if (startDate && endDate) {
+      if (startDate === endDate) {
+        q = query(entriesRef, where('date', '==', startDate));
+      } else {
+        q = query(
+          entriesRef,
+          where('date', '>=', startDate),
+          where('date', '<=', endDate)
+        );
+      }
+    } else {
+      q = query(entriesRef, orderBy('date', 'desc'));
+    }
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      let timeEntries: TimeEntry[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+
+        // Filter by userIds if provided
+        if (userIds && !userIds.includes(data.userId)) return;
+
+        timeEntries.push({
+          id: doc.id,
+          userId: data.userId,
+          userName: data.userName,
+          clockIn: data.clockIn && typeof (data.clockIn as any).toDate === 'function' ? (data.clockIn as any).toDate() : (data.clockIn ? new Date((data.clockIn as any).seconds * 1000) : undefined),
+          clockOut: data.clockOut && typeof (data.clockOut as any).toDate === 'function' ? (data.clockOut as any).toDate() : (data.clockOut ? new Date((data.clockOut as any).seconds * 1000) : undefined),
+          breaks: data.breaks?.map((b: any) => ({
+            id: b.id,
+            startTime: b.startTime && typeof b.startTime.toDate === 'function' ? b.startTime.toDate() : new Date(b.startTime?.seconds * 1000 || Date.now()),
+            endTime: b.endTime ? (typeof b.endTime.toDate === 'function' ? b.endTime.toDate() : new Date(b.endTime.seconds * 1000)) : undefined,
+            durationMinutes: b.durationMinutes,
+          })) || [],
+          activities: data.activities?.map((a: any) => ({
+            id: a.id,
+            name: a.name,
+            startTime: a.startTime && typeof a.startTime.toDate === 'function' ? a.startTime.toDate() : new Date(a.startTime?.seconds * 1000 || Date.now()),
+            endTime: a.endTime ? (typeof a.endTime.toDate === 'function' ? a.endTime.toDate() : new Date(a.endTime.seconds * 1000)) : undefined,
+            durationMinutes: a.durationMinutes,
+            tags: a.tags
+          })) || [],
+          totalWorkHours: data.totalWorkHours,
+          totalBreakMinutes: data.totalBreakMinutes,
+          date: data.date,
+          status: data.status,
+        });
+      });
+      setEntries(timeEntries);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [startDate, endDate, JSON.stringify(userIds)]);
+
+  return { entries, loading };
+};
+
 // Clock In
 export const clockIn = async (userId: string, userName: string) => {
   try {
@@ -183,6 +252,16 @@ export const clockIn = async (userId: string, userName: string) => {
     };
 
     const docRef = await addDoc(collection(db, 'timeEntries'), timeEntry);
+
+    // SYNC: Update User Status
+    const userRef = doc(db, 'staffUsers', userId);
+    await updateDoc(userRef, {
+      attendanceStatus: 'CLOCKED_IN',
+      isOnline: true,
+      lastUpdateTimestamp: serverTimestamp()
+    });
+
+
     return docRef.id;
   } catch (error) {
     console.error('Error clocking in:', error);
@@ -204,6 +283,7 @@ export const clockOut = async (entryId: string) => {
     }
 
     const data = docSnapshot.data();
+    const userId = data.userId; // Get userId from entry
     const clockInTime = (data.clockIn as Timestamp).toDate();
     const clockOutTime = new Date();
 
@@ -226,6 +306,19 @@ export const clockOut = async (entryId: string) => {
       totalBreakMinutes: Math.round(totalBreakMinutes),
       status: TimeTrackingStatus.CLOCKED_OUT,
     });
+
+    // SYNC: Update User Status
+    if (userId) {
+      const userRef = doc(db, 'staffUsers', userId);
+      await updateDoc(userRef, {
+        attendanceStatus: 'CLOCKED_OUT',
+        isOnline: false,
+        lastUpdateTimestamp: serverTimestamp(),
+        currentTask: '', // Clear current task
+        currentTaskDetails: null
+      });
+    }
+
   } catch (error) {
     console.error('Error clocking out:', error);
     throw error;
@@ -245,6 +338,7 @@ export const startBreak = async (entryId: string) => {
     }
 
     const data = docSnapshot.data();
+    const userId = data.userId;
     const breaks = data.breaks || [];
 
     // Check if already on break
@@ -262,6 +356,17 @@ export const startBreak = async (entryId: string) => {
       breaks,
       status: TimeTrackingStatus.ON_BREAK,
     });
+
+    // SYNC: Update User Status
+    if (userId) {
+      const userRef = doc(db, 'staffUsers', userId);
+      await updateDoc(userRef, {
+        attendanceStatus: 'ON_BREAK',
+        currentTask: 'On Break',
+        lastUpdateTimestamp: serverTimestamp()
+      });
+    }
+
   } catch (error) {
     console.error('Error starting break:', error);
     throw error;
@@ -281,6 +386,7 @@ export const endBreak = async (entryId: string) => {
     }
 
     const data = docSnapshot.data();
+    const userId = data.userId;
     const breaks = data.breaks || [];
 
     // Find active break
@@ -304,6 +410,17 @@ export const endBreak = async (entryId: string) => {
       breaks,
       status: TimeTrackingStatus.CLOCKED_IN,
     });
+
+    // SYNC: Update User Status
+    if (userId) {
+      const userRef = doc(db, 'staffUsers', userId);
+      await updateDoc(userRef, {
+        attendanceStatus: 'CLOCKED_IN', // Back to work
+        currentTask: 'Available', // Or retain previous? Defaulting to Available
+        lastUpdateTimestamp: serverTimestamp()
+      });
+    }
+
   } catch (error) {
     console.error('Error ending break:', error);
     throw error;
@@ -371,6 +488,15 @@ export const addActivity = async (userId: string, userName: string, activityName
       };
       const docRef = await addDoc(collection(db, 'timeEntries'), newEntry);
       entryId = docRef.id;
+
+      // SYNC: Update User Status for Auto Clock-in
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, {
+        attendanceStatus: 'CLOCKED_IN',
+        isOnline: true,
+        lastUpdateTimestamp: serverTimestamp()
+      });
+
       console.log('Auto clocked in for', userName);
     } else {
       entryId = snapshot.docs[0].id;
@@ -386,6 +512,15 @@ export const addActivity = async (userId: string, userName: string, activityName
           endTime: new Date(),
         };
       }
+
+      // SYNC: Status when complete
+      const userRef = doc(db, 'staffUsers', userId);
+      await updateDoc(userRef, {
+        currentTask: 'Available', // Or 'Task Completed'
+        currentTaskDetails: null,
+        lastUpdateTimestamp: serverTimestamp()
+      });
+
     } else {
       // Add new activity (task started)
       activities.push({
@@ -393,6 +528,19 @@ export const addActivity = async (userId: string, userName: string, activityName
         name: activityName,
         startTime: new Date(),
         tags: ['task'],
+      });
+
+      // SYNC: Status when started
+      const userRef = doc(db, 'staffUsers', userId);
+      await updateDoc(userRef, {
+        currentTask: activityName,
+        currentTaskDetails: {
+          title: activityName,
+          status: 'In Progress',
+          type: 'Desk Work', // Detailed type can be passed if needed
+          startTime: new Date()
+        },
+        lastUpdateTimestamp: serverTimestamp()
       });
     }
 

@@ -7,6 +7,8 @@ import SmartDateTimePicker from '../../shared/SmartDateTimePicker';
 import { db } from '../../../firebase';
 import { collection, query, getDocs } from 'firebase/firestore';
 import { UserRole } from '../../../types';
+import { useProjects } from '../../../hooks/useProjects';
+import { useLeads } from '../../../hooks/useLeads';
 
 interface AddTaskModalProps {
     isOpen: boolean;
@@ -33,6 +35,11 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onClose, onAddTask,
     const [priorityOrder, setPriorityOrder] = useState(existingTaskCount + 1);
     const [priority, setPriority] = useState<'High' | 'Medium' | 'Low'>('Medium');
     const [deadline, setDeadline] = useState('');
+
+    // Target Selection State
+    const { projects } = useProjects();
+    const { leads } = useLeads();
+    const [selectedTarget, setSelectedTarget] = useState<string>('');
 
     // Assignment State
     const [assignedTo, setAssignedTo] = useState<string>('');
@@ -71,13 +78,40 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onClose, onAddTask,
         e.preventDefault();
         if (!title.trim()) return;
 
+        // Parse Target
+        let targetId: string | undefined = undefined;
+        let targetType: 'Lead' | 'Project' | undefined = undefined;
+        let targetName: string | undefined = undefined;
+
+        if (selectedTarget) {
+            const [type, id] = selectedTarget.split(':');
+            if (type === 'project') {
+                const project = projects.find(p => p.id === id);
+                if (project) {
+                    targetId = project.id;
+                    targetType = 'Project';
+                    targetName = project.projectName;
+                }
+            } else if (type === 'lead') {
+                const lead = leads.find(l => l.id === id);
+                if (lead) {
+                    targetId = lead.id;
+                    targetType = 'Lead';
+                    targetName = lead.clientName; // Or project name if available
+                }
+            }
+        }
+
         onAddTask({
             title: title.trim(),
             priorityOrder,
             priority,
             deadline: deadline || undefined,
-            assignedTo: canAssign && assignedTo ? assignedTo : undefined
-        });
+            assignedTo: canAssign && assignedTo ? assignedTo : undefined,
+            targetId,
+            targetType,
+            targetName
+        } as any); // Type cast for now, will update interface in next step if needed
 
         // Reset form
         setTitle('');
@@ -85,6 +119,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onClose, onAddTask,
         setPriority('Medium');
         setDeadline('');
         setAssignedTo('');
+        setSelectedTarget('');
         onClose();
     };
 
@@ -111,6 +146,47 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onClose, onAddTask,
                         className="w-full px-5 py-4 bg-background border border-border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-text-primary placeholder:text-text-tertiary"
                         autoFocus
                     />
+                </div>
+
+                {/* Target Selection (Dynamic) */}
+                <div>
+                    <label className="block text-xs font-bold text-text-secondary uppercase tracking-widest mb-2">
+                        Select Target (Optional)
+                    </label>
+                    <div className="relative">
+                        <select
+                            value={selectedTarget}
+                            onChange={(e) => setSelectedTarget(e.target.value)}
+                            className="w-full px-5 py-4 bg-background border border-border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-text-primary appearance-none cursor-pointer"
+                        >
+                            <option value="">General Task (No specific target)</option>
+
+                            {projects.length > 0 && (
+                                <optgroup label="Active Projects">
+                                    {projects.map(project => (
+                                        <option key={`project:${project.id}`} value={`project:${project.id}`}>
+                                            Project: {project.projectName} ({project.clientName})
+                                        </option>
+                                    ))}
+                                </optgroup>
+                            )}
+
+                            {leads.length > 0 && (
+                                <optgroup label="Active Leads">
+                                    {leads.map(lead => (
+                                        <option key={`lead:${lead.id}`} value={`lead:${lead.id}`}>
+                                            Lead: {lead.clientName} - {lead.projectName}
+                                        </option>
+                                    ))}
+                                </optgroup>
+                            )}
+                        </select>
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-text-tertiary">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                            </svg>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Assignment Dropdown (Privileged) */}

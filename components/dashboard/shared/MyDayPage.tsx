@@ -175,28 +175,33 @@ const MyDayPage: React.FC = () => {
     }, [currentUser, leads, leadsLoading]);
 
     const handleUpdateStatus = async (taskId: string, newStatus: TaskStatus) => {
-        const task = tasks.find(t => t.id === taskId);
-        if (!task || !currentUser) return;
+        try {
+            const task = tasks.find(t => t.id === taskId);
+            if (!task || !currentUser) return;
 
-        const now = Date.now();
-        const updates: Partial<Task> = { status: newStatus };
+            const now = Date.now();
+            const updates: Partial<Task> = { status: newStatus };
 
-        if (newStatus === TaskStatus.IN_PROGRESS) {
-            updates.startTime = now;
-            updates.isPaused = false;
-            await addActivity(currentUser.id, currentUser.name, `Task: ${task.title}`);
+            if (newStatus === TaskStatus.IN_PROGRESS) {
+                updates.startTime = now;
+                updates.isPaused = false;
+                await addActivity(currentUser.id, currentUser.name, `Task: ${task.title}`);
+            }
+
+            if (newStatus === TaskStatus.COMPLETED) {
+                const startTime = task.startTime || now;
+                const timeSpent = task.timeSpent + Math.floor((now - startTime) / 1000);
+                updates.endTime = now;
+                updates.timeSpent = timeSpent;
+                updates.isPaused = true;
+                await addActivity(currentUser.id, currentUser.name, `Task: ${task.title}`, true);
+            }
+
+            await updateTask(taskId, updates);
+        } catch (error) {
+            console.error("Failed to update task status:", error);
+            alert("Failed to update task status. Please try again.");
         }
-
-        if (newStatus === TaskStatus.COMPLETED) {
-            const startTime = task.startTime || now;
-            const timeSpent = task.timeSpent + Math.floor((now - startTime) / 1000);
-            updates.endTime = now;
-            updates.timeSpent = timeSpent;
-            updates.isPaused = true;
-            await addActivity(currentUser.id, currentUser.name, `Task: ${task.title}`, true);
-        }
-
-        await updateTask(taskId, updates);
     };
 
     const handleToggleReminder = (reminderId: string) => {

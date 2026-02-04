@@ -81,7 +81,7 @@ const navConfig = {
     ]
   },
   [UserRole.DRAWING_TEAM]: {
-    title: 'Drawing & Site Engineering',
+    title: 'Site Engineer',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
       { id: 'projects', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
@@ -102,7 +102,7 @@ const navConfig = {
     ]
   },
   [UserRole.SITE_ENGINEER]: {
-    title: 'Drawing & Site Engineering',
+    title: 'Site Engineer',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
       { id: 'projects', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
@@ -130,6 +130,15 @@ const navConfig = {
       { id: 'board', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
       // { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
+      { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
+    ]
+  },
+  [UserRole.PROJECT_HEAD]: {
+    title: 'Execution Hub',
+    navItems: [
+      { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
+      { id: 'board', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
+      { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
       { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
     ]
   },

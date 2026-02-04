@@ -1398,6 +1398,12 @@ export interface Task {
   // Context for automated logging and notifications
   contextId?: string; // ID of Lead or Project
   contextType?: 'lead' | 'project';
+
+  // Target linking (Dynamic Assignment)
+  targetId?: string;
+  targetType?: 'Lead' | 'Project';
+  targetName?: string;
+
   requesterId?: string; // Sales user who raised the request
 }
 

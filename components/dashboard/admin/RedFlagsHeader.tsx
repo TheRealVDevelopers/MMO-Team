@@ -19,7 +19,11 @@ export interface RedFlag {
     assigneeName?: string;
 }
 
-const RedFlagsHeader: React.FC = () => {
+interface RedFlagsHeaderProps {
+    onNavigateToMember?: (userId: string, tab?: 'history', date?: string) => void;
+}
+
+const RedFlagsHeader: React.FC<RedFlagsHeaderProps> = ({ onNavigateToMember }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [pulseAnimation, setPulseAnimation] = useState(false);
     const [dismissedKeys, setDismissedKeys] = useState<Set<string>>(new Set());
@@ -84,6 +88,19 @@ const RedFlagsHeader: React.FC = () => {
 
         // Call service
         await alertService.dismissAlert(alert, currentUserId);
+    };
+
+    const handleActNow = (e: React.MouseEvent, alert: CriticalAlert) => {
+        e.stopPropagation();
+
+        if (alert.userId && onNavigateToMember) {
+            // Navigate to team member's detail view with History tab open and the specific date
+            const dateStr = alert.timestamp instanceof Date
+                ? alert.timestamp.toLocaleDateString('en-CA')
+                : new Date(alert.timestamp).toLocaleDateString('en-CA');
+
+            onNavigateToMember(alert.userId, 'history', dateStr);
+        }
     };
 
     if (loading) return (
@@ -223,7 +240,10 @@ const RedFlagsHeader: React.FC = () => {
                                         </div>
 
                                         <div className="flex flex-col items-end gap-2">
-                                            <button className="px-3 py-1.5 text-xs font-bold bg-subtle-background hover:bg-primary hover:text-white rounded-lg transition-colors whitespace-nowrap">
+                                            <button
+                                                onClick={(e) => handleActNow(e, alert)}
+                                                className="px-3 py-1.5 text-xs font-bold bg-subtle-background hover:bg-primary hover:text-white rounded-lg transition-colors whitespace-nowrap"
+                                            >
                                                 ACT NOW
                                             </button>
                                             <button

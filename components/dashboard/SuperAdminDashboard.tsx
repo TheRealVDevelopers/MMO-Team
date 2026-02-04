@@ -20,9 +20,13 @@ interface SuperAdminDashboardProps {
 
 const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ currentPage, setCurrentPage }) => {
     const [selectedMemberId, setSelectedMemberId] = React.useState<string | undefined>(undefined);
+    const [selectedTab, setSelectedTab] = React.useState<'history' | undefined>(undefined);
+    const [selectedDate, setSelectedDate] = React.useState<string | undefined>(undefined);
 
-    const handleNavigateToMember = (userId: string) => {
+    const handleNavigateToMember = (userId: string, tab?: 'history', date?: string) => {
         setSelectedMemberId(userId);
+        setSelectedTab(tab);
+        setSelectedDate(date);
         setCurrentPage('team');
     };
 
@@ -39,6 +43,8 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ currentPage, 
                 <TeamManagementPage
                     setCurrentPage={setCurrentPage}
                     initialMemberId={selectedMemberId}
+                    initialTab={selectedTab}
+                    initialDate={selectedDate}
                 />
             );
         case 'projects':

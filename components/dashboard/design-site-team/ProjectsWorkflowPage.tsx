@@ -17,6 +17,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { formatDateTime, USERS } from '../../../constants';
 import BOQSubmissionModal from '../drawing-team/BOQSubmissionModal';
+import DrawingUploadModal from '../drawing-team/DrawingUploadModal';
 
 // Animation variant
 const fadeInUp: Variants = {
@@ -179,6 +180,10 @@ const ProjectsWorkflowPage: React.FC<ProjectsWorkflowPageProps> = ({
     const [isBOQModalOpen, setIsBOQModalOpen] = useState(false);
     const [selectedProjectForBOQ, setSelectedProjectForBOQ] = useState<Project | null>(null);
 
+    // Drawing Upload Modal State
+    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const [selectedProjectForUpload, setSelectedProjectForUpload] = useState<Project | null>(null);
+
     // Group projects by stage
     const projectsByStage = useMemo(() => {
         const grouped: Record<string, Project[]> = {
@@ -222,15 +227,8 @@ const ProjectsWorkflowPage: React.FC<ProjectsWorkflowPageProps> = ({
                 createdAt: new Date(),
             });
         } else if (action === 'submit-drawing') {
-            // Mock file upload interaction as requested by user
-            const mockFile = window.prompt("Enter drawing filename/details to upload (e.g. 'FloorPlan_v1.pdf'):");
-
-            if (mockFile) {
-                // Do NOT mark as submitted/completed yet.
-                // Open BOQ Modal for the final step.
-                setSelectedProjectForBOQ(project);
-                setIsBOQModalOpen(true);
-            }
+            setSelectedProjectForUpload(project);
+            setIsUploadModalOpen(true);
         } else if (action === 'submit-boq') {
             setSelectedProjectForBOQ(project);
             setIsBOQModalOpen(true);
@@ -279,6 +277,26 @@ const ProjectsWorkflowPage: React.FC<ProjectsWorkflowPageProps> = ({
         }
     };
 
+    const handleDrawingUpload = async (file: File, type: 'pdf' | 'cad') => {
+        if (!selectedProjectForUpload) return;
+
+        // After upload, we immediately open the BOQ modal as per previous workflow logic
+        // but now we have the file.
+        console.log(`Uploaded ${type} file:`, file.name);
+
+        setIsUploadModalOpen(false);
+        // Important: Close upload modal first, then set BOQ project and open BOQ modal
+        // to maintain the flow: Upload Drawing -> Submit BOQ
+        const project = selectedProjectForUpload;
+        setSelectedProjectForUpload(null);
+
+        // Simulate upload delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        setSelectedProjectForBOQ(project);
+        setIsBOQModalOpen(true);
+    };
+
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center h-64">
@@ -300,7 +318,7 @@ const ProjectsWorkflowPage: React.FC<ProjectsWorkflowPageProps> = ({
                 {WORKFLOW_STAGES.map(stage => (
                     <StatCard
                         key={stage.id}
-                        title={stage.label}
+                        title={stage.id === 'site-inspection' ? 'Site Engineer' : stage.label}
                         value={projectsByStage[stage.id].length.toString()}
                         icon={<stage.icon className="w-6 h-6" />}
                         color={stage.id === 'site-inspection' ? 'accent' : stage.id === 'drawing' ? 'primary' : 'secondary'}
@@ -360,6 +378,12 @@ const ProjectsWorkflowPage: React.FC<ProjectsWorkflowPageProps> = ({
                 onClose={() => setIsBOQModalOpen(false)}
                 onSubmit={handleBOQSubmit}
                 projectName={selectedProjectForBOQ?.projectName}
+            />
+
+            <DrawingUploadModal
+                isOpen={isUploadModalOpen}
+                onClose={() => setIsUploadModalOpen(false)}
+                onUpload={handleDrawingUpload}
             />
         </motion.div>
     );

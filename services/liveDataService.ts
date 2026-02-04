@@ -72,7 +72,8 @@ export const seedDemoData = async () => {
             await setDoc(doc(db, 'staffUsers', user.id), {
                 ...user,
                 lastUpdateTimestamp: serverTimestamp(),
-                performanceFlag: ['green', 'yellow', 'red'][Math.floor(Math.random() * 3)], // Mock performance
+                performanceFlag: undefined, // Real performance flags are set by performanceService, not mock data
+
                 activeTaskCount: Math.floor(Math.random() * 5),
                 is_demo: true
             });

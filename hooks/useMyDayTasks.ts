@@ -139,60 +139,68 @@ export const updateTask = async (taskId: string, updates: Partial<Task>) => {
 
         // Logic for Task Completion (Notifications & Logging)
         if (updates.status === TaskStatus.COMPLETED) {
-            const { getDoc } = await import('firebase/firestore');
-            const taskSnap = await getDoc(taskRef);
-            if (taskSnap.exists()) {
-                const taskData = taskSnap.data() as Task;
+            try {
+                const { getDoc } = await import('firebase/firestore');
+                const taskSnap = await getDoc(taskRef);
+                if (taskSnap.exists()) {
+                    const taskData = taskSnap.data() as Task;
 
-                // 1. Notify the requester (Sales Member)
-                if (taskData.requesterId) {
-                    await createNotification({
-                        title: 'Mission Task Completed',
-                        message: `Strategic Update: The task "${taskData.title}" has been completed by the specialist. You can now update the client.`,
-                        user_id: taskData.requesterId,
-                        entity_type: 'task',
-                        entity_id: taskId,
-                        type: 'success'
-                    });
-                }
-
-                // 2. Log to Lead/Project History
-                if (taskData.contextId && taskData.contextType) {
-                    const contextRef = doc(db, taskData.contextType === 'lead' ? 'leads' : 'projects', taskData.contextId);
-                    const contextSnap = await getDoc(contextRef);
-                    if (contextSnap.exists()) {
-                        const contextData = contextSnap.data();
-                        await updateDoc(contextRef, {
-                            history: [
-                                ...(contextData.history || []),
-                                {
-                                    action: 'Mission Task Completed',
-                                    user: 'Specialist System',
-                                    timestamp: new Date(),
-                                    notes: `Task "${taskData.title}" completed. Audit trail updated.`
-                                }
-                            ]
-                        });
+                    // 1. Notify the requester (Sales Member)
+                    if (taskData.requesterId) {
+                        await createNotification({
+                            title: 'Mission Task Completed',
+                            message: `Strategic Update: The task "${taskData.title}" has been completed by the specialist. You can now update the client.`,
+                            user_id: taskData.requesterId,
+                            entity_type: 'task',
+                            entity_id: taskId,
+                            type: 'success'
+                        }).catch(e => console.error("Notification failed", e));
                     }
 
-                    // 3. Log to Global Activity Registry
-                    await logActivity({
-                        description: `MISSION COMPLETE: Task "${taskData.title}" finished. Registry synchronized.`,
-                        team: UserRole.SUPER_ADMIN, // Logged as system/admin event
-                        userId: taskData.userId,
-                        status: ActivityStatus.DONE,
-                        projectId: taskData.contextId
-                    });
+                    // 2. Log to Lead/Project History
+                    if (taskData.contextId && taskData.contextType) {
+                        const contextRef = doc(db, taskData.contextType === 'lead' ? 'leads' : 'projects', taskData.contextId);
+                        const contextSnap = await getDoc(contextRef);
+                        if (contextSnap.exists()) {
+                            const contextData = contextSnap.data();
+                            await updateDoc(contextRef, {
+                                history: [
+                                    ...(contextData.history || []),
+                                    {
+                                        action: 'Mission Task Completed',
+                                        user: 'Specialist System',
+                                        timestamp: new Date(),
+                                        notes: `Task "${taskData.title}" completed. Audit trail updated.`
+                                    }
+                                ]
+                            }).catch(e => console.error("History log failed", e));
+                        }
+
+                        // 3. Log to Global Activity Registry
+                        await logActivity({
+                            description: `MISSION COMPLETE: Task "${taskData.title}" finished. Registry synchronized.`,
+                            team: UserRole.SUPER_ADMIN,
+                            userId: taskData.userId,
+                            status: ActivityStatus.DONE,
+                            projectId: taskData.contextId
+                        }).catch(e => console.error("Activity log failed", e));
+                    }
                 }
+            } catch (err) {
+                console.error("Side effect error in task completion:", err);
             }
         }
 
         // Get task to know whose flag to update
-        const { getDoc } = await import('firebase/firestore');
-        const taskSnap = await getDoc(taskRef);
-        if (taskSnap.exists()) {
-            const userId = taskSnap.data().userId;
-            await updateUserPerformanceFlag(userId);
+        try {
+            const { getDoc } = await import('firebase/firestore');
+            const taskSnap = await getDoc(taskRef);
+            if (taskSnap.exists()) {
+                const userId = taskSnap.data().userId;
+                await updateUserPerformanceFlag(userId);
+            }
+        } catch (err) {
+            console.error("Performance flag update failed:", err);
         }
     } catch (error) {
         console.error('Error updating task:', error);

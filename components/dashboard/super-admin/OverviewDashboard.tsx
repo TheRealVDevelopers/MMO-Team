@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     BanknotesIcon,
     PresentationChartLineIcon,
@@ -6,7 +6,10 @@ import {
     ExclamationTriangleIcon,
     RectangleStackIcon,
     CalendarIcon,
-    CreditCardIcon
+    CreditCardIcon,
+    ClockIcon,
+    CheckCircleIcon,
+    PauseCircleIcon
 } from '@heroicons/react/24/outline';
 import { formatLargeNumberINR } from '../../../constants';
 import { useProjects } from '../../../hooks/useProjects';
@@ -24,6 +27,7 @@ import DashboardCalendar from './DashboardCalendar';
 import PerformanceFlagSummary from './PerformanceFlagSummary';
 import { usePerformanceMonitor } from '../../../hooks/usePerformanceMonitor';
 import FinanceOverview from './FinanceOverview';
+import { useTeamTimeEntries } from '../../../hooks/useTimeTracking';
 
 import RedFlagsHeader from '../admin/RedFlagsHeader';
 import ProjectDetailModal from '../admin/ProjectDetailModal';
@@ -84,7 +88,7 @@ const AlertCard: React.FC<{ title: string; count: number; items: string[]; type?
 
 interface OverviewDashboardProps {
     setCurrentPage: (page: string) => void;
-    onNavigateToMember?: (userId: string) => void;
+    onNavigateToMember?: (userId: string, tab?: 'history', date?: string) => void;
 }
 
 const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage, onNavigateToMember }) => {
@@ -98,6 +102,97 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage, o
     // Funnel/Lead Modal State
     const [isFunnelModalOpen, setIsFunnelModalOpen] = useState(false);
     const [funnelStage, setFunnelStage] = useState('All Active Opportunities');
+
+    // Team Time Tracking State
+    const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'custom'>('month');
+    const [customStartDate, setCustomStartDate] = useState('');
+    const [customEndDate, setCustomEndDate] = useState('');
+
+    const getDateRangeBounds = useMemo(() => {
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        let startDate: string;
+        let endDate: string = now.toLocaleDateString('en-CA');
+
+        switch (dateRange) {
+            case 'today':
+                startDate = startOfToday.toLocaleDateString('en-CA');
+                break;
+            case 'week':
+                const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                startDate = lastWeek.toLocaleDateString('en-CA');
+                break;
+            case 'month':
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString('en-CA');
+                break;
+            case 'custom':
+                startDate = customStartDate || now.toLocaleDateString('en-CA');
+                endDate = customEndDate || now.toLocaleDateString('en-CA');
+                break;
+            default:
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString('en-CA');
+        }
+
+        return { startDate, endDate };
+    }, [dateRange, customStartDate, customEndDate]);
+
+    const { entries: teamEntries } = useTeamTimeEntries(getDateRangeBounds.startDate, getDateRangeBounds.endDate);
+
+    const teamMetrics = useMemo(() => {
+        let totalLoggedMins = 0;
+        let totalActiveMins = 0;
+        let totalBreakMins = 0;
+
+        const now = new Date();
+        const todayStr = now.toLocaleDateString('en-CA');
+
+        teamEntries.forEach(entry => {
+            const isToday = entry.date === todayStr;
+
+            if (entry.clockIn) {
+                const clockIn = entry.clockIn instanceof Date ? entry.clockIn : new Date(entry.clockIn);
+                const clockOut = entry.clockOut
+                    ? (entry.clockOut instanceof Date ? entry.clockOut : new Date(entry.clockOut))
+                    : (isToday ? now : clockIn);
+
+                if (clockOut > clockIn) {
+                    totalLoggedMins += (clockOut.getTime() - clockIn.getTime()) / (1000 * 60);
+                }
+            }
+
+            (entry.activities || []).forEach(a => {
+                if (a.startTime) {
+                    const start = a.startTime instanceof Date ? a.startTime : new Date(a.startTime);
+                    const end = a.endTime
+                        ? (a.endTime instanceof Date ? a.endTime : new Date(a.endTime))
+                        : (isToday ? now : start);
+
+                    if (end > start) {
+                        totalActiveMins += (end.getTime() - start.getTime()) / (1000 * 60);
+                    }
+                }
+            });
+
+            (entry.breaks || []).forEach(b => {
+                if (b.startTime) {
+                    const start = b.startTime instanceof Date ? b.startTime : new Date(b.startTime);
+                    const end = b.endTime
+                        ? (b.endTime instanceof Date ? b.endTime : new Date(b.endTime))
+                        : (isToday ? now : start);
+
+                    if (end > start) {
+                        totalBreakMins += (end.getTime() - start.getTime()) / (1000 * 60);
+                    }
+                }
+            });
+        });
+
+        const loggedHours = (totalLoggedMins / 60).toFixed(1);
+        const activeHours = (totalActiveMins / 60).toFixed(1);
+        const idleHours = Math.max(0, (totalLoggedMins - totalActiveMins - totalBreakMins) / 60).toFixed(1);
+
+        return { loggedHours, activeHours, idleHours };
+    }, [teamEntries]);
     const [funnelLeads, setFunnelLeads] = useState<Project[]>([]);
 
     // KPI Calculations
@@ -166,10 +261,91 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage, o
                     />
 
                     {/* Critical Alerts Header */}
-                    <RedFlagsHeader />
+                    <RedFlagsHeader onNavigateToMember={onNavigateToMember} />
+
 
                     {/* Primary Calendar View - Moved to Top */}
                     <DashboardCalendar />
+
+                    {/* Team Time Tracking Analysis */}
+                    <section className="mt-8">
+                        <div className="flex justify-between items-center mb-6">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
+                                    <ClockIcon className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-serif font-bold text-text-primary tracking-tight">Team Operational Velocity</h3>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Real-time engagement metrics</p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-1 bg-subtle-background p-1 rounded-xl border border-border/40">
+                                {(['today', 'week', 'month', 'custom'] as const).map((range) => (
+                                    <button
+                                        key={range}
+                                        onClick={() => setDateRange(range)}
+                                        className={cn(
+                                            "px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
+                                            dateRange === range
+                                                ? "bg-primary text-white shadow-lg shadow-primary/20"
+                                                : "text-text-tertiary hover:text-text-primary hover:bg-primary/5"
+                                        )}
+                                    >
+                                        {range === 'week' ? '7 Days' : range}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {dateRange === 'custom' && (
+                            <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                className="flex gap-4 mb-6 p-4 bg-surface border border-border/40 rounded-2xl"
+                            >
+                                <div className="flex-1">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-1 block">Start Date</label>
+                                    <input
+                                        type="date"
+                                        value={customStartDate}
+                                        onChange={(e) => setCustomStartDate(e.target.value)}
+                                        className="w-full px-4 py-2 rounded-xl border border-border/40 bg-subtle-background text-xs font-bold focus:border-primary/40 focus:ring-0 transition-colors"
+                                    />
+                                </div>
+                                <div className="flex-1">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-1 block">End Date</label>
+                                    <input
+                                        type="date"
+                                        value={customEndDate}
+                                        onChange={(e) => setCustomEndDate(e.target.value)}
+                                        className="w-full px-4 py-2 rounded-xl border border-border/40 bg-subtle-background text-xs font-bold focus:border-primary/40 focus:ring-0 transition-colors"
+                                    />
+                                </div>
+                            </motion.div>
+                        )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                            <StatCard
+                                title="Team Logged Hours"
+                                value={teamMetrics.loggedHours}
+                                icon={<ClockIcon className="w-6 h-6" />}
+                                color="primary"
+                            />
+                            <StatCard
+                                title="Task Execution Time"
+                                value={teamMetrics.activeHours}
+                                icon={<CheckCircleIcon className="w-6 h-6" />}
+                                color="accent"
+                            />
+                            <StatCard
+                                title="Idle Analysis"
+                                value={teamMetrics.idleHours}
+                                icon={<PauseCircleIcon className="w-6 h-6" />}
+                                color="secondary"
+                            />
+                        </div>
+                    </section>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         {/* ... existing stats cards ... */}
                         <StatCard

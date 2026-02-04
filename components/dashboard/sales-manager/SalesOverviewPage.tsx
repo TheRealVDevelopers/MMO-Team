@@ -8,7 +8,10 @@ import {
     BanknotesIcon,
     ExclamationTriangleIcon,
     ArrowUpRightIcon,
-    FunnelIcon
+    FunnelIcon,
+    ClockIcon,
+    CheckCircleIcon,
+    PauseCircleIcon
 } from '@heroicons/react/24/outline';
 import { StatCard, ContentCard, cn, staggerContainer } from '../shared/DashboardUI';
 import { motion } from 'framer-motion';
@@ -19,6 +22,7 @@ import { useTeamTasks } from '../../../hooks/useTeamTasks';
 import { updateLead } from '../../../hooks/useLeads';
 import LeadDetailModal from '../../shared/LeadDetailModal';
 import { useDashboardStats } from '../../../hooks/useDashboardStats';
+import { useTeamTimeEntries } from '../../../hooks/useTimeTracking';
 
 const pipelineOrder = Object.values(LeadPipelineStatus);
 
@@ -31,6 +35,99 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; lead
     const [isPipelineModalOpen, setIsPipelineModalOpen] = useState(false);
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
     const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
+
+    // Sales Team Time Tracking State
+    const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'custom'>('month');
+    const [customStartDate, setCustomStartDate] = useState('');
+    const [customEndDate, setCustomEndDate] = useState('');
+
+    const salesTeamUserIds = useMemo(() => salesTeam.map(u => u.id), [salesTeam]);
+
+    const getDateRangeBounds = useMemo(() => {
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        let startDate: string;
+        let endDate: string = now.toLocaleDateString('en-CA');
+
+        switch (dateRange) {
+            case 'today':
+                startDate = startOfToday.toLocaleDateString('en-CA');
+                break;
+            case 'week':
+                const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                startDate = lastWeek.toLocaleDateString('en-CA');
+                break;
+            case 'month':
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString('en-CA');
+                break;
+            case 'custom':
+                startDate = customStartDate || now.toLocaleDateString('en-CA');
+                endDate = customEndDate || now.toLocaleDateString('en-CA');
+                break;
+            default:
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString('en-CA');
+        }
+
+        return { startDate, endDate };
+    }, [dateRange, customStartDate, customEndDate]);
+
+    const { entries: teamEntries } = useTeamTimeEntries(getDateRangeBounds.startDate, getDateRangeBounds.endDate, salesTeamUserIds);
+
+    const teamMetrics = useMemo(() => {
+        let totalLoggedMins = 0;
+        let totalActiveMins = 0;
+        let totalBreakMins = 0;
+
+        const now = new Date();
+        const todayStr = now.toLocaleDateString('en-CA');
+
+        teamEntries.forEach(entry => {
+            const isToday = entry.date === todayStr;
+
+            if (entry.clockIn) {
+                const clockIn = entry.clockIn instanceof Date ? entry.clockIn : new Date(entry.clockIn);
+                const clockOut = entry.clockOut
+                    ? (entry.clockOut instanceof Date ? entry.clockOut : new Date(entry.clockOut))
+                    : (isToday ? now : clockIn);
+
+                if (clockOut > clockIn) {
+                    totalLoggedMins += (clockOut.getTime() - clockIn.getTime()) / (1000 * 60);
+                }
+            }
+
+            (entry.activities || []).forEach(a => {
+                if (a.startTime) {
+                    const start = a.startTime instanceof Date ? a.startTime : new Date(a.startTime);
+                    const end = a.endTime
+                        ? (a.endTime instanceof Date ? a.endTime : new Date(a.endTime))
+                        : (isToday ? now : start);
+
+                    if (end > start) {
+                        totalActiveMins += (end.getTime() - start.getTime()) / (1000 * 60);
+                    }
+                }
+            });
+
+            (entry.breaks || []).forEach(b => {
+                if (b.startTime) {
+                    const start = b.startTime instanceof Date ? b.startTime : new Date(b.startTime);
+                    const end = b.endTime
+                        ? (b.endTime instanceof Date ? b.endTime : new Date(b.endTime))
+                        : (isToday ? now : start);
+
+                    if (end > start) {
+                        totalBreakMins += (end.getTime() - start.getTime()) / (1000 * 60);
+                    }
+                }
+            });
+        });
+
+        const loggedHours = (totalLoggedMins / 60).toFixed(1);
+        const activeHours = (totalActiveMins / 60).toFixed(1);
+        const idleHours = Math.max(0, (totalLoggedMins - totalActiveMins - totalBreakMins) / 60).toFixed(1);
+
+        return { loggedHours, activeHours, idleHours };
+    }, [teamEntries]);
 
     // --- LIVE DATA CALCULATIONS ---
     const startOfMonth = new Date();
@@ -95,6 +192,97 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; lead
             animate="visible"
             className="space-y-8"
         >
+            {/* Sales Team Time Tracking Analysis */}
+            <section className="bg-surface p-6 rounded-3xl border border-border/40 shadow-sm">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
+                            <ClockIcon className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-serif font-bold text-text-primary tracking-tight">Sales Team Operational Velocity</h3>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Real-time engagement metrics for sales representatives</p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 bg-subtle-background p-1 rounded-xl border border-border/40 self-end md:self-auto">
+                        {(['today', 'week', 'month', 'custom'] as const).map((range) => (
+                            <button
+                                key={range}
+                                onClick={() => setDateRange(range)}
+                                className={cn(
+                                    "px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
+                                    dateRange === range
+                                        ? "bg-primary text-white shadow-lg shadow-primary/20"
+                                        : "text-text-tertiary hover:text-text-primary hover:bg-primary/5"
+                                )}
+                            >
+                                {range === 'week' ? '7 Days' : range}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {dateRange === 'custom' && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        className="flex gap-4 mb-8 p-4 bg-subtle-background border border-border/20 rounded-2xl"
+                    >
+                        <div className="flex-1">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-1 block">Start Date</label>
+                            <input
+                                type="date"
+                                value={customStartDate}
+                                onChange={(e) => setCustomStartDate(e.target.value)}
+                                className="w-full px-4 py-2 rounded-xl border border-border/40 bg-white text-xs font-bold focus:border-primary/40 focus:ring-0 transition-colors"
+                            />
+                        </div>
+                        <div className="flex-1">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-1 block">End Date</label>
+                            <input
+                                type="date"
+                                value={customEndDate}
+                                onChange={(e) => setCustomEndDate(e.target.value)}
+                                className="w-full px-4 py-2 rounded-xl border border-border/40 bg-white text-xs font-bold focus:border-primary/40 focus:ring-0 transition-colors"
+                            />
+                        </div>
+                    </motion.div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-subtle-background p-6 rounded-2xl border border-border/20 group hover:border-primary/20 transition-all">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                                <ClockIcon className="w-5 h-5" />
+                            </div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Logged Hours</p>
+                        </div>
+                        <p className="text-3xl font-serif font-black text-text-primary tracking-tight">{teamMetrics.loggedHours}<span className="text-sm font-sans font-medium text-text-tertiary ml-2">hrs</span></p>
+                    </div>
+
+                    <div className="bg-subtle-background p-6 rounded-2xl border border-border/20 group hover:border-accent/20 transition-all">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
+                                <CheckCircleIcon className="w-5 h-5" />
+                            </div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Sales Activity Time</p>
+                        </div>
+                        <p className="text-3xl font-serif font-black text-text-primary tracking-tight">{teamMetrics.activeHours}<span className="text-sm font-sans font-medium text-text-tertiary ml-2">hrs</span></p>
+                    </div>
+
+                    <div className="bg-subtle-background p-6 rounded-2xl border border-border/20 group hover:border-secondary/20 transition-all">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary group-hover:scale-110 transition-transform">
+                                <PauseCircleIcon className="w-5 h-5" />
+                            </div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Idle Analysis</p>
+                        </div>
+                        <p className="text-3xl font-serif font-black text-text-primary tracking-tight">{teamMetrics.idleHours}<span className="text-sm font-sans font-medium text-text-tertiary ml-2">hrs</span></p>
+                    </div>
+                </div>
+            </section>
+
             {/* KPI Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard
