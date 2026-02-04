@@ -163,7 +163,7 @@ const BOQSubmissionModal: React.FC<BOQSubmissionModalProps> = ({ isOpen, onClose
                                                 type="text"
                                                 required
                                                 list={`catalog-items-${row.id}`}
-                                                className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-slate-700 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                                                className="w-full rounded-md shadow-sm sm:text-sm focus:ring-primary focus:border-primary bg-[var(--color-surface)] text-[var(--color-text-primary)] border-[var(--color-border)] placeholder-[var(--color-text-tertiary)]"
                                                 placeholder="Select or type item..."
                                                 value={row.item}
                                                 onChange={(e) => handleItemChange(row.id, 'item', e.target.value)}
@@ -184,7 +184,7 @@ const BOQSubmissionModal: React.FC<BOQSubmissionModalProps> = ({ isOpen, onClose
                                                 type="number"
                                                 required
                                                 step="0.01"
-                                                className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-slate-700 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                                                className="w-full rounded-md shadow-sm sm:text-sm focus:ring-primary focus:border-primary bg-[var(--color-surface)] text-[var(--color-text-primary)] border-[var(--color-border)] placeholder-[var(--color-text-tertiary)]"
                                                 placeholder="0.00"
                                                 value={row.quantity}
                                                 onChange={(e) => handleItemChange(row.id, 'quantity', e.target.value)}
@@ -192,7 +192,7 @@ const BOQSubmissionModal: React.FC<BOQSubmissionModalProps> = ({ isOpen, onClose
                                         </div>
                                         <div className="col-span-2">
                                             <select
-                                                className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-slate-700 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                                                className="w-full rounded-md shadow-sm sm:text-sm focus:ring-primary focus:border-primary bg-[var(--color-surface)] text-[var(--color-text-primary)] border-[var(--color-border)]"
                                                 value={row.unit}
                                                 onChange={(e) => handleItemChange(row.id, 'unit', e.target.value)}
                                             >
@@ -208,7 +208,7 @@ const BOQSubmissionModal: React.FC<BOQSubmissionModalProps> = ({ isOpen, onClose
                                         <div className="col-span-3">
                                             <input
                                                 type="text"
-                                                className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-slate-700 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                                                className="w-full rounded-md shadow-sm sm:text-sm focus:ring-primary focus:border-primary bg-[var(--color-surface)] text-[var(--color-text-primary)] border-[var(--color-border)] placeholder-[var(--color-text-tertiary)]"
                                                 placeholder="Notes..."
                                                 value={row.description}
                                                 onChange={(e) => handleItemChange(row.id, 'description', e.target.value)}
