@@ -4,7 +4,7 @@ import { collection, onSnapshot, query, orderBy, Timestamp, doc, updateDoc, wher
 import { Project, LeadHistory, ExecutionStage } from '../types';
 import { createNotification } from '../services/liveDataService';
 
-type FirestoreProject = Omit<Project, 'startDate' | 'endDate' | 'documents' | 'history' | 'siteInspectionDate' | 'drawingDeadline' | 'drawingSubmittedAt'> & {
+type FirestoreProject = Omit<Project, 'startDate' | 'endDate' | 'documents' | 'history' | 'siteInspectionDate' | 'drawingDeadline' | 'drawingSubmittedAt' | 'boqSubmission'> & {
     startDate: Timestamp | Date | string;
     endDate: Timestamp | Date | string;
     siteInspectionDate?: Timestamp | Date | string;
@@ -12,6 +12,7 @@ type FirestoreProject = Omit<Project, 'startDate' | 'endDate' | 'documents' | 'h
     drawingSubmittedAt?: Timestamp | Date | string;
     documents?: (Omit<Project['documents'][0], 'uploaded'> & { uploaded: Timestamp | Date | string })[];
     history?: (Omit<LeadHistory, 'timestamp'> & { timestamp: Timestamp | Date | string })[];
+    boqSubmission?: Omit<Project['boqSubmission'], 'submittedAt'> & { submittedAt: Timestamp | Date | string };
 };
 
 // ✅ SAFE TIMESTAMP CONVERSION - Handles Timestamp, Date, string, or null/undefined
@@ -57,6 +58,12 @@ const fromFirestore = (docData: FirestoreProject, id: string): Project => {
             ...h,
             timestamp: safeToDate(h.timestamp) || new Date(),
         })) || [],
+        boqSubmission: docData.boqSubmission
+            ? {
+                ...docData.boqSubmission,
+                submittedAt: safeToDate(docData.boqSubmission.submittedAt) || new Date(),
+            }
+            : undefined,
         // ✅ Ensure ganttData dates are proper Date objects
         ganttData: (docData as any).ganttData?.map((t: any) => ({
             ...t,

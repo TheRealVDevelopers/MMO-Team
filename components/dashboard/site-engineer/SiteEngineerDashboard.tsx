@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import SiteEngineerSidebar from './SiteEngineerSidebar';
 import UnifiedOverviewPage from './UnifiedOverviewPage';
 import EngineerOverviewPage from './EngineerOverviewPage';
@@ -19,12 +19,20 @@ import { useAutomatedTaskCreation } from '../../../hooks/useAutomatedTaskCreatio
 
 const SiteEngineerDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
-  const { projects } = useProjects(); // Fetch global projects
+  const { projects: allProjects } = useProjects(); // Fetch global projects
   const { leads } = useLeads();
   // Removed duplicate local state for currentPage, using props instead
   const [selectedVisit, setSelectedVisit] = useState<SiteVisit | null>(null);
   const [selectedDrawingTask, setSelectedDrawingTask] = useState<DrawingTask | null>(null);
   const { handleSiteVisitCompletion } = useAutomatedTaskCreation();
+
+  const assignedProjects = useMemo(() => {
+    if (!currentUser) return [];
+    return allProjects.filter(project =>
+      project.assignedEngineerId === currentUser.id ||
+      project.assignedTeam?.site_engineer === currentUser.id
+    );
+  }, [allProjects, currentUser]);
 
   // Derived site visits from LEADs (Primary source)
   const leadVisits: SiteVisit[] = leads
@@ -48,7 +56,7 @@ const SiteEngineerDashboard: React.FC<{ currentPage: string, setCurrentPage: (pa
     } as SiteVisit));
 
   // Derived site visits from PROJECTS (Secondary source)
-  const projectVisits: SiteVisit[] = projects
+  const projectVisits: SiteVisit[] = assignedProjects
     .filter(p =>
       (p.status === ProjectStatus.SITE_VISIT_PENDING || p.status === ProjectStatus.SITE_VISIT_RESCHEDULED) &&
       (p.assignedEngineerId === currentUser?.id || p.assignedTeam?.site_engineer === currentUser?.id)
@@ -75,7 +83,7 @@ const SiteEngineerDashboard: React.FC<{ currentPage: string, setCurrentPage: (pa
   );
 
   // Derive drawing tasks from global projects
-  const drawingTasks: DrawingTask[] = projects
+  const drawingTasks: DrawingTask[] = assignedProjects
     .filter(p =>
       p.status === ProjectStatus.DRAWING_PENDING ||
       p.status === ProjectStatus.DESIGN_IN_PROGRESS ||
@@ -90,7 +98,7 @@ const SiteEngineerDashboard: React.FC<{ currentPage: string, setCurrentPage: (pa
         p.status === ProjectStatus.DESIGN_IN_PROGRESS ? 'In Progress' : 'Completed',
       priority: p.priority,
       taskType: 'Start Drawing',
-      assignedTo: p.assignedTeam?.execution?.find(id => id === currentUser?.id) || 'Unassigned',
+      assignedTo: currentUser?.id || 'Unassigned',
       metadata: {
         siteAddress: p.clientAddress
       },

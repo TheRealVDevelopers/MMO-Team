@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { GanttTask, UserRole } from '../../../types';
 import { useProjects } from '../../../hooks/useProjects'; // ✅ Remove standalone import
 import { useAuth } from '../../../context/AuthContext';
@@ -11,11 +11,19 @@ import {
 } from '@heroicons/react/24/outline';
 
 const ExecutionGanttPage: React.FC = () => {
-    const { projects, updateProject: updateProjectHook } = useProjects(); // ✅ Use hook's updateProject
+    const { projects: allProjects, updateProject: updateProjectHook } = useProjects(); // ✅ Use hook's updateProject
     const { currentUser } = useAuth();
     const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
     const [tasks, setTasks] = useState<GanttTask[]>([]);
     const [isEditing, setIsEditing] = useState(false);
+
+    const projects = useMemo(() => {
+        if (!currentUser) return [];
+        return allProjects.filter(project => {
+            const executionTeam = project.assignedTeam?.execution || [];
+            return executionTeam.includes(currentUser.id) || project.projectHeadId === currentUser.id;
+        });
+    }, [allProjects, currentUser]);
 
     const selectedProject = projects.find(p => p.id === selectedProjectId);
 

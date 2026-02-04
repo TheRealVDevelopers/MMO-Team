@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Project, ProjectStatus } from '../../../types';
+import { BOQ, BOQItem, Project, ProjectStatus, UserRole } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { useProjects } from '../../../hooks/useProjects';
+import { useUsers } from '../../../hooks/useUsers';
 import { ClockIcon, FireIcon, PaperClipIcon, ArrowLeftIcon, EllipsisVerticalIcon, CheckCircleIcon, ArrowUpIcon, DocumentTextIcon, ExclamationTriangleIcon } from '../../icons/IconComponents';
 import BOQSubmissionModal from './BOQSubmissionModal';
 import DrawingUploadModal from './DrawingUploadModal';
+import { createNotification } from '../../../services/liveDataService';
 
 const KANBAN_COLUMNS: { id: string, title: string, statuses: any[] }[] = [
     { id: 'site-audit', title: 'Site Inspection', statuses: [ProjectStatus.SITE_VISIT_PENDING, 'Site Visit Scheduled'] },
@@ -103,6 +105,7 @@ const ProjectCard: React.FC<{ project: Project; onSelect: () => void; onAction: 
 const ProjectsBoardPage: React.FC<{ onProjectSelect: (project: Project) => void; setCurrentPage: (page: string) => void; }> = ({ onProjectSelect, setCurrentPage }) => {
     const { currentUser } = useAuth();
     const { projects, loading, updateProject } = useProjects(currentUser?.id);
+    const { users } = useUsers();
 
     // BOQ Modal State
     const [isBOQModalOpen, setIsBOQModalOpen] = useState(false);
@@ -162,7 +165,6 @@ const ProjectsBoardPage: React.FC<{ onProjectSelect: (project: Project) => void;
                 setSelectedProjectForUpload(project);
                 setIsUploadModalOpen(true);
             } else if (action === 'submit_boq') {
-            } else if (action === 'submit_boq') {
                 if (project && project.projectName) {
                     console.log('Submit BOQ clicked for project:', project.projectName);
                     setSelectedProjectForBOQ(project);
@@ -178,19 +180,55 @@ const ProjectsBoardPage: React.FC<{ onProjectSelect: (project: Project) => void;
         }
     };
 
-    const handleBOQSubmit = async (data: any) => {
+    const handleBOQSubmit = async (data: any[]) => {
         if (!selectedProjectForBOQ) return;
         try {
             // In a real app, save BOQ data to sub-collection
             console.log("Submitting BOQ:", data);
 
+            const boqItems: BOQItem[] = data.map((item, index) => ({
+                id: `boq-item-${Date.now()}-${index}`,
+                description: item.item || item.description || 'BOQ Item',
+                quantity: Number(item.quantity) || 0,
+                unit: item.unit || 'pcs',
+                specifications: item.description ? item.description : undefined
+            }));
+
+            const boqSubmission: BOQ = {
+                id: `boq-${Date.now()}`,
+                leadId: selectedProjectForBOQ.id,
+                projectName: selectedProjectForBOQ.projectName,
+                items: boqItems,
+                submittedBy: currentUser?.id || 'unknown',
+                submittedAt: new Date(),
+                status: 'Submitted'
+            };
+
             await updateProject(selectedProjectForBOQ.id, {
-                status: ProjectStatus.COMPLETED
+                status: ProjectStatus.AWAITING_QUOTATION,
+                boqSubmission
             });
+
+            const assignedQuotationId = selectedProjectForBOQ.assignedTeam?.quotation;
+            const quotationTeamUsers = users.filter(u => u.role === UserRole.QUOTATION_TEAM);
+            const notificationTargets = assignedQuotationId
+                ? [assignedQuotationId]
+                : quotationTeamUsers.map(u => u.id);
+
+            await Promise.all(notificationTargets.map((userId) =>
+                createNotification({
+                    title: 'BOQ Submitted',
+                    message: `${selectedProjectForBOQ.projectName}: BOQ submitted and ready for quotation.`,
+                    user_id: userId,
+                    entity_type: 'project',
+                    entity_id: selectedProjectForBOQ.id,
+                    type: 'info'
+                })
+            ));
 
             setIsBOQModalOpen(false);
             setSelectedProjectForBOQ(null);
-            alert("BOQ Submitted! Project marked as Completed.");
+            alert("BOQ Submitted! Project sent to quotation team.");
         } catch (error) {
             console.error("BOQ Submit Error:", error);
         }

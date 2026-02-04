@@ -44,7 +44,6 @@ const QuotationDetailModal: React.FC<{
     const [counterOfferAmount, setCounterOfferAmount] = useState('');
     const [counterOfferNotes, setCounterOfferNotes] = useState('');
 
-
     const materialCost = useMemo(() => selectedItems.reduce((sum, item) => sum + item.price, 0), [selectedItems]);
     const calculatedQuote = useMemo(() => {
         const base = (materialCost + laborCost) / (1 - (margin / 100));
@@ -143,6 +142,35 @@ const QuotationDetailModal: React.FC<{
                     {/* Main Content Area: Document View */}
                     <div className="col-span-8 overflow-y-auto p-8 bg-subtle-background/30 border-r border-border">
                         <div className="bg-white rounded-xl shadow-xl border border-border p-10 max-w-4xl mx-auto space-y-10 min-h-full">
+                            {project.boqSubmission && project.boqSubmission.items.length > 0 && (
+                                <div className="bg-subtle-background/60 border border-border rounded-xl p-5">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div>
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary">BOQ Submission</p>
+                                            <p className="text-sm font-bold text-text-primary">Submitted items from Drawing Team</p>
+                                        </div>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">
+                                            {new Date(project.boqSubmission.submittedAt).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                    <div className="space-y-3">
+                                        {project.boqSubmission.items.map((item, index) => (
+                                            <div key={item.id || `${item.description}-${index}`} className="flex items-start justify-between gap-4 bg-white rounded-lg border border-border/60 p-3">
+                                                <div>
+                                                    <p className="text-sm font-bold text-text-primary">{item.description}</p>
+                                                    {item.specifications && (
+                                                        <p className="text-[11px] text-text-secondary mt-1">{item.specifications}</p>
+                                                    )}
+                                                </div>
+                                                <div className="text-right text-xs font-semibold text-text-secondary">
+                                                    {item.quantity} {item.unit}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Document Header */}
                             <div className="flex justify-between items-start">
                                 <div>

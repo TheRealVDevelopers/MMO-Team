@@ -571,6 +571,9 @@ export interface Project {
   drawings?: LeadFile[]; // Required for blueprint submission
   quotations?: LeadFile[]; // Required for blueprint submission
 
+  // BOQ submission payload for quotation team
+  boqSubmission?: BOQ;
+
   // Blueprint & Budget Definition Fields
   location?: string; // Project location/site address
   executionBlueprint?: {
