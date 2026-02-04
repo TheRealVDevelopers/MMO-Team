@@ -7,7 +7,8 @@ import {
     ClipboardDocumentCheckIcon,
     DocumentChartBarIcon,
     ArrowLeftIcon,
-    PlusIcon
+    PlusIcon,
+    ClockIcon
 } from '@heroicons/react/24/outline';
 import { Project, GanttTask, Issue, DailyUpdate, MaterialRequest } from '../../../types';
 import GanttChart from './GanttChart';
@@ -19,6 +20,10 @@ import CompletionAndHandover from './CompletionAndHandover';
 import AddTaskModal from './AddTaskModal';
 import ExecutionProjectOverview from './ExecutionProjectOverview';
 import { MOCK_GANTT_DATA } from '../../../constants';
+import { useDailyUpdates } from '../../../hooks/useDailyUpdates';
+import { useMaterialRequests } from '../../../hooks/useMaterialRequests';
+import { useEditApproval } from '../../../hooks/useEditApproval';
+import { useAuth } from '../../../context/AuthContext';
 
 // Mock Items for JMS
 const MOCK_ITEMS = [
@@ -27,7 +32,7 @@ const MOCK_ITEMS = [
     { id: 'item-3', name: 'Emulsion Paint', quantity: 5000, unit: 'sqft', category: 'Painting', price: 25, specifications: 'Asian Paints Royal' },
 ];
 
-// Initial Mock Data to seed the state
+// Initial Mock Data for issues (will be replaced with Firestore later)
 const INITIAL_ISSUES: Issue[] = [
     {
         id: '1',
@@ -51,37 +56,6 @@ const INITIAL_ISSUES: Issue[] = [
     }
 ];
 
-const INITIAL_UPDATES: DailyUpdate[] = [
-    {
-        id: 'du-1',
-        projectId: 'p-1',
-        date: new Date().toISOString(),
-        workDescription: 'Completed false ceiling framing in Living Room. Started electrical conduit laying in Master Bedroom.',
-        weather: 'Sunny',
-        manpowerCount: 8,
-        photos: [],
-        createdBy: 'u-5',
-        createdAt: new Date()
-    }
-];
-
-const INITIAL_REQUESTS: MaterialRequest[] = [
-    {
-        id: 'mr-1',
-        projectId: 'p-1',
-        itemId: 'item-2',
-        itemName: 'Cement Bags (Ultratech)',
-        quantityRequested: 20,
-        unit: 'bags',
-        requiredDate: new Date(Date.now() + 86400000 * 2).toISOString(),
-        status: 'Ordered',
-        requestedBy: 'u-5',
-        createdAt: new Date(),
-        notes: 'Urgent for flooring work'
-    }
-];
-
-
 interface ExecutionProjectDetailProps {
     project: Project;
     onBack: () => void;
@@ -92,12 +66,16 @@ type Tab = 'overview' | 'timeline' | 'updates' | 'materials' | 'issues' | 'compl
 const ExecutionProjectDetail: React.FC<ExecutionProjectDetailProps> = ({ project, onBack }) => {
     const [activeTab, setActiveTab] = useState<Tab>('overview');
     const [showJMS, setShowJMS] = useState(false);
+    const { currentUser } = useAuth();
 
-    // Centralized State
+    // Use Firestore hooks for real data persistence
+    const { updates: dailyUpdates, loading: updatesLoading, addUpdate } = useDailyUpdates(project.id);
+    const { requests: materialRequests, loading: materialsLoading, addRequest } = useMaterialRequests(project.id);
+    const { pendingRequests, submitEditRequest, getUserPendingCount } = useEditApproval(project.id);
+
+    // Local state for Gantt tasks and issues (will be migrated later)
     const [tasks, setTasks] = useState<GanttTask[]>(project.ganttData || MOCK_GANTT_DATA);
     const [issues, setIssues] = useState<Issue[]>(INITIAL_ISSUES);
-    const [dailyUpdates, setDailyUpdates] = useState<DailyUpdate[]>(INITIAL_UPDATES);
-    const [materialRequests, setMaterialRequests] = useState<MaterialRequest[]>(INITIAL_REQUESTS);
 
     const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
 
@@ -110,8 +88,8 @@ const ExecutionProjectDetail: React.FC<ExecutionProjectDetailProps> = ({ project
         { id: 'completion', label: 'Completion & Handover', icon: DocumentChartBarIcon },
     ];
 
-    // Handlers
-    const handleAddTask = (taskDetails: Partial<GanttTask>) => {
+    // Handler for adding task - now goes through approval workflow
+    const handleAddTask = async (taskDetails: Partial<GanttTask>) => {
         const newTask: GanttTask = {
             id: `task-${Date.now()}`,
             name: taskDetails.name || 'New Task',
@@ -124,7 +102,26 @@ const ExecutionProjectDetail: React.FC<ExecutionProjectDetailProps> = ({ project
             assignedTo: taskDetails.assignedTo || 'Me',
             notes: taskDetails.notes
         };
-        setTasks([...tasks, newTask]);
+
+        // Submit for admin approval instead of direct save
+        try {
+            await submitEditRequest({
+                projectId: project.id,
+                requesterId: currentUser?.id || '',
+                requesterName: currentUser?.name || 'Unknown User',
+                editType: 'task',
+                targetName: newTask.name,
+                originalData: null,
+                proposedData: newTask,
+                description: `Add new task: ${newTask.name}`
+            });
+            alert('Task submitted for admin approval!');
+        } catch (err) {
+            // Fallback to local state if Firestore fails
+            setTasks([...tasks, newTask]);
+            console.error('Edit approval failed, using local state:', err);
+        }
+
         setIsAddTaskModalOpen(false);
     };
 
@@ -136,67 +133,84 @@ const ExecutionProjectDetail: React.FC<ExecutionProjectDetailProps> = ({ project
         setIssues(issues.map(i => i.id === issueId ? { ...i, status: newStatus } : i));
     };
 
-    const handleAddDailyUpdate = (update: DailyUpdate) => {
-        setDailyUpdates([update, ...dailyUpdates]);
+    // Use Firestore hook for daily updates
+    const handleAddDailyUpdate = async (update: DailyUpdate) => {
+        try {
+            await addUpdate(update);
+        } catch (err) {
+            console.error('Failed to add daily update:', err);
+        }
     };
 
-    const handleAddMaterialRequest = (request: MaterialRequest) => {
-        setMaterialRequests([request, ...materialRequests]);
+    // Use Firestore hook for material requests
+    const handleAddMaterialRequest = async (request: MaterialRequest) => {
+        try {
+            await addRequest(request);
+        } catch (err) {
+            console.error('Failed to add material request:', err);
+        }
     };
 
-    // Derived State for Overview
-    // Ensure we pass the latest issues count and updates
+    const pendingCount = getUserPendingCount();
 
     return (
-        <div className="flex flex-col h-full bg-gray-50 dark:bg-slate-900">
+        <div className="flex flex-col h-full bg-subtle-background">
             {/* Header */}
-            <div className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-gray-700 p-4 flex justify-between items-center shadow-sm z-10 sticky top-0">
+            <div className="bg-surface border-b border-border p-4 flex justify-between items-center shadow-sm z-10 sticky top-0">
                 <div className="flex items-center gap-4">
                     <button
                         onClick={onBack}
-                        className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                        className="p-2 hover:bg-subtle-background rounded-lg transition-colors"
                     >
-                        <ArrowLeftIcon className="w-5 h-5 text-gray-500" />
+                        <ArrowLeftIcon className="w-5 h-5 text-text-secondary" />
                     </button>
                     <div>
-                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">{project.projectName}</h2>
-                        <div className="flex items-center gap-3 text-sm text-gray-500">
+                        <h2 className="text-xl font-bold text-text-primary">{project.projectName}</h2>
+                        <div className="flex items-center gap-3 text-sm text-text-secondary">
                             <span>{project.clientName}</span>
-                            <span className="w-1 h-1 bg-gray-300 rounded-full" />
-                            <span className={project.status === 'In Execution' ? 'text-green-600 font-medium' : ''}>{project.status}</span>
+                            <span className="w-1 h-1 bg-border rounded-full" />
+                            <span className={project.status === 'In Execution' ? 'text-success font-medium' : ''}>{project.status}</span>
                         </div>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-6">
+                    {/* Pending Edits Badge */}
+                    {pendingCount > 0 && (
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-warning-subtle text-warning rounded-lg text-sm font-medium">
+                            <ClockIcon className="w-4 h-4" />
+                            {pendingCount} Pending Approval
+                        </div>
+                    )}
+
                     <button
                         onClick={() => setShowJMS(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
+                        className="flex items-center gap-2 px-4 py-2 bg-success text-white rounded-xl font-bold hover:bg-success/90 transition-all shadow-lg"
                     >
                         <ClipboardDocumentCheckIcon className="w-5 h-5" />
                         Launch JMS
                     </button>
                     <div className="text-right hidden sm:block">
-                        <div className="text-xs text-gray-500">Timeline</div>
-                        <div className="text-sm font-semibold">{new Date(project.startDate).toLocaleDateString()} - {new Date(project.endDate).toLocaleDateString()}</div>
+                        <div className="text-xs text-text-secondary">Timeline</div>
+                        <div className="text-sm font-semibold text-text-primary">{new Date(project.startDate).toLocaleDateString()} - {new Date(project.endDate).toLocaleDateString()}</div>
                     </div>
                     <div className="text-right">
-                        <div className="text-xs text-gray-500">Progress</div>
-                        <div className="text-lg font-bold text-blue-600">{project.progress}%</div>
+                        <div className="text-xs text-text-secondary">Progress</div>
+                        <div className="text-lg font-bold text-primary">{project.progress}%</div>
                     </div>
                 </div>
             </div>
 
             {/* Navigation Tabs */}
-            <div className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-gray-700 px-4 sticky top-[72px] z-10">
+            <div className="bg-surface border-b border-border px-4 sticky top-[72px] z-10">
                 <div className="flex space-x-6 overflow-x-auto">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as Tab)}
                             className={`flex items-center gap-2 py-4 px-2 border-b-2 transition-colors text-sm font-medium whitespace-nowrap ${activeTab === tab.id
-                                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                                ? 'border-primary text-primary'
+                                : 'border-transparent text-text-secondary hover:text-text-primary'
                                 }`}
                         >
                             <tab.icon className="w-4 h-4" />
@@ -211,16 +225,17 @@ const ExecutionProjectDetail: React.FC<ExecutionProjectDetailProps> = ({ project
                 {activeTab === 'timeline' && (
                     <div className="h-full flex flex-col space-y-4">
                         <div className="flex justify-between items-center">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Project Schedule</h3>
+                            <h3 className="text-lg font-semibold text-text-primary">Project Schedule</h3>
                             <button
                                 onClick={() => setIsAddTaskModalOpen(true)}
-                                className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                                className="px-3 py-1.5 bg-primary text-white text-sm rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
                             >
                                 <PlusIcon className="w-4 h-4" />
                                 Add Task
                             </button>
                         </div>
-                        <div className="flex-1 min-h-[500px] bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        <p className="text-xs text-text-tertiary">Note: Task additions require admin approval.</p>
+                        <div className="flex-1 min-h-[500px] bg-surface rounded-xl shadow-sm border border-border overflow-hidden">
                             <GanttChart tasks={tasks} />
                         </div>
                     </div>

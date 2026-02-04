@@ -1,6 +1,11 @@
 import React, { useState, useMemo } from 'react';
+import ExecutionGanttPage from './ExecutionGanttPage';
 import ExecutionProjectsPage from './ExecutionProjectsPage';
 import ExecutionProjectDetail from './ExecutionProjectDetail';
+import ExecutionTeamManagementPage from './ExecutionTeamManagementPage';
+import ExecutionApprovalQueue from './ExecutionApprovalQueue';
+import TaskAssignmentPage from './TaskAssignmentPage';
+import BudgetManagementPage from './BudgetManagementPage';
 import { AnimatePresence, motion } from 'framer-motion';
 import MyDayPage from '../shared/MyDayPage';
 import CommunicationDashboard from '../../communication/CommunicationDashboard';
@@ -48,6 +53,12 @@ const ExecutionDashboard: React.FC<ExecutionDashboardProps> = ({ currentPage, se
                 return (
                     <div className="h-full overflow-y-auto">
                         <MyDayPage />
+                    </div>
+                );
+            case 'gantt':
+                return (
+                    <div className="h-full overflow-y-auto">
+                        <ExecutionGanttPage />
                     </div>
                 );
             case 'board':
@@ -107,6 +118,30 @@ const ExecutionDashboard: React.FC<ExecutionDashboardProps> = ({ currentPage, se
                                 )}
                             </AnimatePresence>
                         )}
+                    </div>
+                );
+            case 'team':
+                return (
+                    <div className="h-full overflow-y-auto">
+                        <ExecutionTeamManagementPage />
+                    </div>
+                );
+            case 'approvals':
+                return (
+                    <div className="h-full overflow-y-auto">
+                        <ExecutionApprovalQueue />
+                    </div>
+                );
+            case 'tasks':
+                return (
+                    <div className="h-full overflow-y-auto">
+                        <TaskAssignmentPage />
+                    </div>
+                );
+            case 'budget':
+                return (
+                    <div className="h-full overflow-y-auto">
+                        <BudgetManagementPage />
                     </div>
                 );
             case 'communication':

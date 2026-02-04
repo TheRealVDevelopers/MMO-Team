@@ -6,7 +6,7 @@ import { formatCurrencyINR } from '../../../constants';
 import { doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import { CostCenter, Project } from '../../../types';
-import ProjectLedgerPage from './ProjectLedgerPage';
+import ProjectFinancials from '../shared/ProjectFinancials';
 
 const ProjectPnLPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
     const { projects, loading: projectsLoading } = useProjects();
@@ -63,7 +63,15 @@ const ProjectPnLPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ 
     };
 
     if (selectedProject) {
-        return <ProjectLedgerPage project={selectedProject} onBack={() => setSelectedProject(null)} />;
+        return (
+            <div className="p-6 bg-subtle-background min-h-full">
+                <ProjectFinancials
+                    project={selectedProject}
+                    userRole="ACCOUNTS"
+                    onBack={() => setSelectedProject(null)}
+                />
+            </div>
+        );
     }
 
     if (loading) {

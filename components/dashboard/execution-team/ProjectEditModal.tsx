@@ -466,14 +466,14 @@ const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, isOpen, on
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Execution Team Member</label>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Execution Lead</label>
                                         <select
                                             value={formData.projectHeadId || ''}
                                             onChange={(e) => setFormData({ ...formData, projectHeadId: e.target.value })}
                                             className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-slate-700 dark:text-white"
                                         >
-                                            <option value="">Select Execution Team Member</option>
-                                            {users.filter(u => u.role === 'Execution Team').map(user => (
+                                            <option value="">Select Execution Lead</option>
+                                            {users.filter(u => u.role === 'Execution Team' || u.role === 'Project Head').map(user => (
                                                 <option key={user.id} value={user.id}>{user.name}</option>
                                             ))}
                                         </select>

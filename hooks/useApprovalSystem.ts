@@ -239,6 +239,75 @@ export const useAssignedApprovalRequests = (userId: string) => {
   return { assignedRequests, loading };
 };
 
+// Get approval requests targeting a specific role
+export const useTargetedApprovalRequests = (targetRole: UserRole) => {
+  const [requests, setRequests] = useState<ApprovalRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!targetRole) {
+      setLoading(false);
+      return;
+    }
+
+    // Use only the where clause to avoid composite index requirement
+    // Sort client-side instead
+    const q = query(
+      collection(db, 'approvalRequests'),
+      where('targetRole', '==', targetRole)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const approvalRequests: ApprovalRequest[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        approvalRequests.push({
+          id: doc.id,
+          requestType: data.requestType,
+          requesterId: data.requesterId,
+          requesterName: data.requesterName,
+          requesterRole: data.requesterRole,
+          title: data.title,
+          description: data.description,
+          startDate: data.startDate && (data.startDate as any).toDate ? (data.startDate as Timestamp).toDate() : undefined,
+          endDate: data.endDate && (data.endDate as any).toDate ? (data.endDate as Timestamp).toDate() : undefined,
+          duration: data.duration,
+          status: data.status,
+          requestedAt: data.requestedAt && (data.requestedAt as any).toDate ? (data.requestedAt as Timestamp).toDate() : new Date(),
+          reviewedAt: data.reviewedAt && (data.reviewedAt as any).toDate ? (data.reviewedAt as Timestamp).toDate() : undefined,
+          reviewedBy: data.reviewedBy,
+          reviewerName: data.reviewerName,
+          reviewerComments: data.reviewerComments,
+          attachments: data.attachments || [],
+          priority: data.priority || 'Medium',
+          contextId: data.contextId,
+          clientName: data.clientName,
+          targetRole: data.targetRole,
+          assigneeId: data.assigneeId,
+          stages: data.stages || [],
+          email: data.email,
+          password: data.password,
+          phone: data.phone,
+          region: data.region,
+          requestedRole: data.requestedRole,
+        });
+      });
+      // Sort client-side by requestedAt descending
+      approvalRequests.sort((a, b) => b.requestedAt.getTime() - a.requestedAt.getTime());
+      setRequests(approvalRequests);
+      setLoading(false);
+    }, (error) => {
+      console.error('Error fetching targeted approval requests:', error);
+      setRequests([]);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [targetRole]);
+
+  return { requests, loading };
+};
+
 // Get pending approvals count (for notifications)
 export const usePendingApprovalsCount = () => {
   const [count, setCount] = useState(0);

@@ -26,6 +26,7 @@ const MaterialTracker: React.FC<MaterialTrackerProps> = ({ projectId, requests, 
     const [quantity, setQuantity] = useState(0);
     const [date, setDate] = useState('');
     const [notes, setNotes] = useState('');
+    const [urgency, setUrgency] = useState<MaterialRequest['urgency']>('Normal');
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -41,9 +42,13 @@ const MaterialTracker: React.FC<MaterialTrackerProps> = ({ projectId, requests, 
             unit: item.unit,
             requiredDate: new Date(date).toISOString(),
             status: 'Requested',
-            requestedBy: 'u-5',
+            requestedBy: 'u-5', // TODO: Get current user
             createdAt: new Date(),
-            notes
+            notes,
+            urgency,
+            targetRole: 'execution',
+            executionApproval: 'pending',
+            accountsStatus: 'pending'
         };
 
         onAddRequest(newRequest);
@@ -51,16 +56,17 @@ const MaterialTracker: React.FC<MaterialTrackerProps> = ({ projectId, requests, 
         setQuantity(0);
         setNotes('');
         setDate('');
+        setUrgency('Normal');
     };
 
     const getStatusColor = (status: MaterialRequest['status']) => {
         switch (status) {
-            case 'Requested': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
-            case 'Approved': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
-            case 'Ordered': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400';
-            case 'Delivered': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
-            case 'Rejected': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
-            default: return 'bg-gray-100 text-gray-800';
+            case 'Requested': return 'bg-warning-subtle text-warning';
+            case 'Approved': return 'bg-primary-subtle text-primary';
+            case 'Ordered': return 'bg-purple-100 text-purple-800';
+            case 'Delivered': return 'bg-success-subtle text-success';
+            case 'Rejected': return 'bg-error-subtle text-error';
+            default: return 'bg-subtle-background text-text-secondary';
         }
     };
 
@@ -68,12 +74,12 @@ const MaterialTracker: React.FC<MaterialTrackerProps> = ({ projectId, requests, 
         <div className="h-full flex flex-col gap-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Material Logistics</h3>
-                    <p className="text-xs text-gray-500">Track site inventory and requests</p>
+                    <h3 className="text-lg font-bold text-text-primary">Material Logistics</h3>
+                    <p className="text-xs text-text-secondary">Track site inventory and requests</p>
                 </div>
                 <button
                     onClick={() => setIsFormOpen(!isFormOpen)}
-                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
+                    className="flex items-center gap-2 px-4 py-2 bg-success text-white rounded-lg hover:bg-success/90 transition-colors shadow-sm"
                 >
                     <PlusIcon className="w-5 h-5" />
                     Request Material
@@ -81,16 +87,16 @@ const MaterialTracker: React.FC<MaterialTrackerProps> = ({ projectId, requests, 
             </div>
 
             {isFormOpen && (
-                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md animate-in slide-in-from-top-4">
-                    <h4 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-4">Material Requisition Form</h4>
+                <div className="bg-surface p-6 rounded-xl border border-border shadow-md animate-in slide-in-from-top-4">
+                    <h4 className="text-sm font-bold text-text-primary uppercase tracking-wider mb-4">Material Requisition Form</h4>
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-xs font-medium text-gray-500 mb-1">Select Item (from BOQ)</label>
+                                <label className="block text-xs font-medium text-text-secondary mb-1">Select Item (from BOQ)</label>
                                 <select
                                     value={selectedItem}
                                     onChange={e => setSelectedItem(e.target.value)}
-                                    className="w-full p-2 border border-gray-300 rounded-lg dark:bg-slate-700 dark:border-gray-600"
+                                    className="w-full p-2 border border-border rounded-lg bg-surface text-text-primary"
                                 >
                                     {BOQ_ITEMS.map(item => (
                                         <option key={item.id} value={item.id}>
@@ -101,32 +107,44 @@ const MaterialTracker: React.FC<MaterialTrackerProps> = ({ projectId, requests, 
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">Quantity</label>
+                                    <label className="block text-xs font-medium text-text-secondary mb-1">Quantity</label>
                                     <input
                                         type="number"
                                         value={quantity}
                                         onChange={e => setQuantity(parseFloat(e.target.value))}
-                                        className="w-full p-2 border border-gray-300 rounded-lg dark:bg-slate-700 dark:border-gray-600"
+                                        className="w-full p-2 border border-border rounded-lg bg-surface text-text-primary"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">Required By</label>
+                                    <label className="block text-xs font-medium text-text-secondary mb-1">Required By</label>
                                     <input
                                         type="date"
                                         value={date}
                                         onChange={e => setDate(e.target.value)}
-                                        className="w-full p-2 border border-gray-300 rounded-lg dark:bg-slate-700 dark:border-gray-600"
+                                        className="w-full p-2 border border-border rounded-lg bg-surface text-text-primary"
                                     />
                                 </div>
                             </div>
                         </div>
                         <div>
-                            <label className="block text-xs font-medium text-gray-500 mb-1">Notes / Specifications</label>
+                            <label className="block text-xs font-medium text-text-secondary mb-1">Urgency</label>
+                            <select
+                                value={urgency}
+                                onChange={e => setUrgency(e.target.value as any)}
+                                className="w-full p-2 border border-border rounded-lg bg-surface text-text-primary"
+                            >
+                                <option value="Normal">Normal</option>
+                                <option value="Urgent">Urgent</option>
+                                <option value="Critical">Critical</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-text-secondary mb-1">Notes / Specifications</label>
                             <textarea
                                 value={notes}
                                 onChange={e => setNotes(e.target.value)}
                                 rows={2}
-                                className="w-full p-2 border border-gray-300 rounded-lg dark:bg-slate-700 dark:border-gray-600"
+                                className="w-full p-2 border border-border rounded-lg bg-surface text-text-primary"
                                 placeholder="E.g. Deliver to back gate..."
                             />
                         </div>
@@ -135,56 +153,70 @@ const MaterialTracker: React.FC<MaterialTrackerProps> = ({ projectId, requests, 
                             <button
                                 type="button"
                                 onClick={() => setIsFormOpen(false)}
-                                className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
+                                className="px-3 py-1.5 text-sm text-text-secondary hover:bg-subtle-background rounded-lg"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
-                                className="px-3 py-1.5 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                                className="px-3 py-1.5 text-sm bg-success text-white rounded-lg hover:bg-success/90"
                             >
                                 Submit Request
                             </button>
                         </div>
-                    </form>
-                </div>
+                    </form >
+                </div >
             )}
 
-            <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="bg-surface rounded-xl border border-border overflow-hidden">
                 <table className="w-full text-left text-sm">
-                    <thead className="bg-gray-50 dark:bg-slate-900 border-b border-gray-200 dark:border-gray-700">
+                    <thead className="bg-subtle-background border-b border-border">
                         <tr>
-                            <th className="px-6 py-3 font-medium text-gray-500">Item</th>
-                            <th className="px-6 py-3 font-medium text-gray-500">Qty</th>
-                            <th className="px-6 py-3 font-medium text-gray-500">Required Date</th>
-                            <th className="px-6 py-3 font-medium text-gray-500">Status</th>
-                            <th className="px-6 py-3 font-medium text-gray-500">Requestor</th>
+                            <th className="px-6 py-3 font-medium text-text-secondary">Item</th>
+                            <th className="px-6 py-3 font-medium text-text-secondary">Qty</th>
+                            <th className="px-6 py-3 font-medium text-text-secondary">Urgency</th>
+                            <th className="px-6 py-3 font-medium text-text-secondary">Required Date</th>
+                            <th className="px-6 py-3 font-medium text-text-secondary">Status</th>
+                            <th className="px-6 py-3 font-medium text-text-secondary">Requestor</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                    <tbody className="divide-y divide-border">
                         {requests.map(req => {
                             const user = USERS.find(u => u.id === req.requestedBy);
                             return (
-                                <tr key={req.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
-                                    <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
+                                <tr key={req.id} className="hover:bg-subtle-background/50 transition-colors">
+                                    <td className="px-6 py-4 font-medium text-text-primary">
                                         {req.itemName}
-                                        {req.notes && <p className="text-xs text-gray-500 font-normal mt-0.5">{req.notes}</p>}
+                                        {req.notes && <p className="text-xs text-text-tertiary font-normal mt-0.5">{req.notes}</p>}
                                     </td>
-                                    <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
+                                    <td className="px-6 py-4 text-text-secondary">
                                         {req.quantityRequested} {req.unit}
                                     </td>
-                                    <td className="px-6 py-4 text-gray-600 dark:text-gray-300 flex items-center gap-2">
-                                        <ClockIcon className="w-4 h-4 text-gray-400" />
+                                    <td className="px-6 py-4">
+                                        <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${req.urgency === 'Critical' ? 'bg-error-subtle text-error' :
+                                            req.urgency === 'Urgent' ? 'bg-warning-subtle text-warning' :
+                                                'bg-info-subtle text-info'
+                                            }`}>
+                                            {req.urgency || 'Normal'}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 text-text-secondary flex items-center gap-2">
+                                        <ClockIcon className="w-4 h-4 text-text-tertiary" />
                                         {format(new Date(req.requiredDate), 'dd MMM')}
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusColor(req.status)}`}>
-                                            {req.status}
-                                        </span>
+                                        <div className="flex flex-col gap-1">
+                                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold w-fit ${getStatusColor(req.status)}`}>
+                                                {req.status}
+                                            </span>
+                                            {req.executionApproval === 'pending' && (
+                                                <span className="text-[10px] text-text-tertiary">Awaiting Exec.</span>
+                                            )}
+                                        </div>
                                     </td>
-                                    <td className="px-6 py-4 text-gray-500">
+                                    <td className="px-6 py-4 text-text-tertiary">
                                         <div className="flex items-center gap-2">
-                                            <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold">
+                                            <div className="w-6 h-6 rounded-full bg-subtle-background flex items-center justify-center text-xs font-bold text-text-primary">
                                                 {user?.name.charAt(0)}
                                             </div>
                                             <span className="text-xs">{user?.name}</span>
@@ -196,10 +228,10 @@ const MaterialTracker: React.FC<MaterialTrackerProps> = ({ projectId, requests, 
                     </tbody>
                 </table>
                 {requests.length === 0 && (
-                    <div className="p-8 text-center text-gray-400 italic">No material requests found.</div>
+                    <div className="p-8 text-center text-text-tertiary italic">No material requests found.</div>
                 )}
             </div>
-        </div>
+        </div >
     );
 };
 

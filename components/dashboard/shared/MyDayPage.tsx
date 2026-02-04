@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { TASKS, formatDateTime, ATTENDANCE_DATA } from '../../../constants';
-import { Task, TaskStatus, AttendanceType, UserRole, Reminder, AttendanceStatus } from '../../../types';
+import { Task, TaskStatus, AttendanceType, UserRole, Reminder, AttendanceStatus, ExecutionTask } from '../../../types';
 import TaskCard from './TaskCard';
 import {
     BoltIcon,
@@ -23,6 +23,7 @@ import { ContentCard, PrimaryButton, SecondaryButton, cn, staggerContainer } fro
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTimeEntries, addActivity } from '../../../hooks/useTimeTracking';
 import { useMyDayTasks, addTask, updateTask } from '../../../hooks/useMyDayTasks';
+import { useExecutionTasks } from '../../../hooks/useExecutionTasks'; // Import Execution Tasks Hook
 import { useLeads } from '../../../hooks/useLeads';
 import { useFinance } from '../../../hooks/useFinance';
 import { ProjectStatus } from '../../../types';
@@ -134,9 +135,16 @@ const ReminderItem: React.FC<{ reminder: EnrichedReminder, onToggle: (id: string
     );
 };
 
+// Augmented Task Interface to include 'source'
+interface UnifiedTask extends Task {
+    source: 'myDay' | 'execution';
+    originalId: string;
+}
+
 const MyDayPage: React.FC = () => {
     const { currentUser } = useAuth();
-    const { tasks, loading: tasksLoading } = useMyDayTasks(currentUser?.id);
+    const { tasks: myDayTasks, loading: tasksLoading } = useMyDayTasks(currentUser?.id);
+    const { tasks: executionTasks, updateTaskStatus: updateExecutionStatus } = useExecutionTasks(); // Fetch execution tasks
     const { leads, loading: leadsLoading } = useLeads();
 
     const [reminders, setReminders] = useState<EnrichedReminder[]>([]);
@@ -173,11 +181,69 @@ const MyDayPage: React.FC = () => {
         }
     }, [currentUser, leads, leadsLoading]);
 
+    // Merge and filter tasks
+    const daysTasks = useMemo(() => {
+        const unifiedMyDayTasks: UnifiedTask[] = myDayTasks.map(t => ({
+            ...t,
+            source: 'myDay',
+            originalId: t.id
+        }));
+
+        // Filter execution tasks for current user
+        const myExecutionTasks = executionTasks.filter(t => t.assignedTo === currentUser?.id);
+
+        const unifiedExecutionTasks: UnifiedTask[] = myExecutionTasks.map(t => ({
+            id: `exec-${t.id}`, // Avoid ID collisions
+            originalId: t.id,
+            title: `[${t.missionType}] ${t.projectName}`,
+            userId: t.assignedTo,
+            status: t.status === 'Completed' ? TaskStatus.COMPLETED :
+                t.status === 'In Progress' ? TaskStatus.IN_PROGRESS : TaskStatus.PENDING,
+            timeSpent: 0, // Not tracked in execution task natively yet
+            priority: t.priority || 'Medium',
+            priorityOrder: 0,
+            deadline: t.deadline, // Ensure this matches string format or Date object handling
+            isPaused: false,
+            date: selectedDate, // Show on selected date (or map to deadline date logic)
+            description: t.instructions,
+            createdAt: new Date(t.createdAt),
+            createdBy: 'System',
+            createdByName: 'Execution Team',
+            source: 'execution'
+        }));
+
+        // combine
+        const all = [...unifiedMyDayTasks, ...unifiedExecutionTasks];
+
+        // Filter by date or show always if execution
+        return all.filter(task => {
+            if (task.source === 'execution') {
+                // Show active tasks always, and completed tasks only if they are somehow relevant (e.g. completed today - simplified for now)
+                if (task.status !== TaskStatus.COMPLETED) return true;
+                return true;
+            }
+            return task.date === selectedDate;
+        }).sort((a, b) => (a.priorityOrder || 99) - (b.priorityOrder || 99));
+
+    }, [myDayTasks, executionTasks, currentUser, selectedDate]);
+
+
     const handleUpdateStatus = async (taskId: string, newStatus: TaskStatus) => {
         try {
-            const task = tasks.find(t => t.id === taskId);
+            // Find task in our unified list
+            const task = daysTasks.find(t => t.id === taskId);
             if (!task || !currentUser) return;
 
+            if (task.source === 'execution') {
+                // Update Execution Task
+                const execStatus = newStatus === TaskStatus.COMPLETED ? 'Completed' :
+                    newStatus === TaskStatus.IN_PROGRESS ? 'In Progress' : 'Pending';
+
+                await updateExecutionStatus(task.originalId, execStatus);
+                return;
+            }
+
+            // Normal 'My Day' Task Update
             const now = Date.now();
             const updates: Partial<Task> = { status: newStatus };
 
@@ -196,7 +262,7 @@ const MyDayPage: React.FC = () => {
                 await addActivity(currentUser.id, currentUser.name, `Task: ${task.title}`, true);
             }
 
-            await updateTask(taskId, updates);
+            await updateTask(task.originalId, updates);
         } catch (error) {
             console.error("Failed to update task status:", error);
             alert("Failed to update task status. Please try again.");
@@ -245,12 +311,6 @@ const MyDayPage: React.FC = () => {
 
         await addTask(newTask, currentUser.id);
     };
-
-    const daysTasks = useMemo(() => {
-        return tasks
-            .filter(task => task.date === selectedDate)
-            .sort((a, b) => (a.priorityOrder || 99) - (b.priorityOrder || 99));
-    }, [tasks, selectedDate]);
 
     const attendanceStats = useMemo(() => {
         if (!currentUser) return null;
@@ -312,7 +372,7 @@ const MyDayPage: React.FC = () => {
                     <PersonalCalendar
                         userId={currentUser.id}
                         onDateSelect={setSelectedDate}
-                        tasks={tasks}
+                        tasks={daysTasks}
                     />
 
                     {attendanceStats && (

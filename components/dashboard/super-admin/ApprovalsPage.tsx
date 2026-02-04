@@ -9,10 +9,12 @@ import {
   ShieldCheckIcon,
   BoltIcon,
   AdjustmentsHorizontalIcon,
-  ArchiveBoxIcon
+  ArchiveBoxIcon,
+  WrenchScrewdriverIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../../context/AuthContext';
 import { useApprovalRequests, approveRequest, rejectRequest, getApprovalStats } from '../../../hooks/useApprovalSystem';
+import { useEditApproval, EditRequest } from '../../../hooks/useEditApproval';
 import { addTask } from '../../../hooks/useMyDayTasks';
 import { ApprovalRequest, ApprovalStatus, ApprovalRequestType, UserRole, ProjectStatus, LeadPipelineStatus } from '../../../types';
 import { formatDateTime } from '../../../constants';
@@ -30,16 +32,20 @@ const ApprovalsPage: React.FC = () => {
   const { currentUser } = useAuth();
   const [filterStatus, setFilterStatus] = useState<ApprovalStatus | 'All'>('All');
   const [selectedRequest, setSelectedRequest] = useState<ApprovalRequest | null>(null);
+  const [selectedEditRequest, setSelectedEditRequest] = useState<EditRequest | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showEditReviewModal, setShowEditReviewModal] = useState(false);
   const [isDirectAssignModalOpen, setIsDirectAssignModalOpen] = useState(false);
   const [reviewAction, setReviewAction] = useState<'approve' | 'reject'>('approve');
   const [reviewComments, setReviewComments] = useState('');
   const [assigneeId, setAssigneeId] = useState('');
   const [deadline, setDeadline] = useState<string>('');
   const [processing, setProcessing] = useState(false);
+  const [activeTab, setActiveTab] = useState<'general' | 'execution'>('general');
 
   const { requests, loading } = useApprovalRequests(filterStatus === 'All' ? undefined : filterStatus);
   const { requests: allRequests } = useApprovalRequests(); // For stats or full list if needed
+  const { pendingRequests: editRequests, loading: editLoading, approveRequest: approveEditRequest, rejectRequest: rejectEditRequest } = useEditApproval();
   const { users } = useUsers();
   const { updateProject } = useProjects();
 
@@ -87,7 +93,7 @@ const ApprovalsPage: React.FC = () => {
   const filteredRequests = useMemo(() => {
     // Filter out staff registration requests - they should only appear in RegistrationsPage
     const operationalRequests = requests.filter(r => r.requestType !== ApprovalRequestType.STAFF_REGISTRATION);
-    
+
     if (filterStatus === 'All') return operationalRequests;
     return operationalRequests.filter(r => r.status === filterStatus);
   }, [requests, filterStatus]);
@@ -155,18 +161,18 @@ const ApprovalsPage: React.FC = () => {
 
   const handleDirectAssign = async (taskData: any) => {
     if (!currentUser) return;
-    
+
     try {
       // Create the task
       await addTask(taskData, currentUser.id);
-      
+
       // Update Lead/Project status based on task type
       if (taskData.contextId && taskData.contextType) {
         console.log('[ApprovalsPage] Updating status for:', taskData.contextType, taskData.contextId, 'Task:', taskData.title);
-        
+
         // Determine the appropriate status based on task title
         const title = taskData.title.toLowerCase();
-        
+
         if (taskData.contextType === 'lead') {
           // Update Lead status
           if (title.includes('site inspection') || title.includes('site visit')) {
@@ -204,7 +210,7 @@ const ApprovalsPage: React.FC = () => {
             });
           }
         }
-        
+
         console.log('[ApprovalsPage] Task assigned and status updated successfully');
       } else {
         console.log('[ApprovalsPage] Task created without context (standalone task)');
@@ -299,13 +305,13 @@ const ApprovalsPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <StatCard
           title="Total Protocols"
-          value={stats.total}
+          value={stats.total + editRequests.length}
           icon={<ArchiveBoxIcon className="w-6 h-6" />}
           trend={{ value: 'Fleet Scale', positive: true }}
         />
         <StatCard
           title="Pending Sync"
-          value={stats.pending}
+          value={stats.pending + editRequests.length}
           icon={<ClockIcon className="w-6 h-6" />}
           trend={{ value: 'Action Required', positive: false }}
           className="ring-1 ring-yellow-500/20"
@@ -318,115 +324,245 @@ const ApprovalsPage: React.FC = () => {
           className="ring-1 ring-green-500/20"
         />
         <StatCard
-          title="Rejected"
-          value={stats.rejected}
-          icon={<XCircleIcon className="w-6 h-6" />}
-          trend={{ value: 'Discontinued', positive: false }}
-          className="ring-1 ring-red-500/20"
+          title="Execution Edits"
+          value={editRequests.length}
+          icon={<WrenchScrewdriverIcon className="w-6 h-6" />}
+          trend={{ value: 'From Execution Team', positive: editRequests.length > 0 }}
+          className="ring-1 ring-blue-500/20"
         />
       </div>
 
-      {/* Requests Registry */}
-      <div className="space-y-4">
-        <AnimatePresence mode="popLayout">
-          {filteredRequests.length > 0 ? (
-            filteredRequests.map((request, idx) => (
-              <motion.div
-                key={request.id}
-                layout
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ delay: idx * 0.05 }}
-              >
-                <ContentCard className="group hover:border-primary/30 transition-all duration-500">
-                  <div className="flex flex-col lg:flex-row lg:items-center gap-6">
-                    {/* Icon & Primary Info */}
-                    <div className="flex items-start gap-4 flex-1">
-                      <div className="w-14 h-14 rounded-2xl bg-subtle-background flex items-center justify-center text-text-tertiary group-hover:bg-primary/10 group-hover:text-primary transition-all duration-500 border border-border/40">
-                        {getRequestTypeIcon(request.requestType)}
-                      </div>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-3">
-                          <h3 className="text-xl font-serif font-black text-text-primary tracking-tight">{request.title}</h3>
-                          <span className={cn(
-                            "px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border",
-                            request.status === ApprovalStatus.PENDING ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20" :
-                              request.status === ApprovalStatus.APPROVED ? "bg-green-500/10 text-green-600 border-green-500/20" :
-                                "bg-red-500/10 text-red-600 border-red-500/20"
-                          )}>
-                            {request.status}
-                          </span>
-                        </div>
-                        <p className="text-xs text-text-tertiary font-bold uppercase tracking-wider">
-                          {request.requesterName} <span className="opacity-40">/</span> {request.requesterRole}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Metadata & Description */}
-                    <div className="lg:w-1/3 space-y-2">
-                      <p className="text-sm text-text-secondary line-clamp-2 italic font-medium">"{request.description}"</p>
-                      <div className="flex items-center gap-4 text-[10px] font-black text-text-tertiary uppercase tracking-widest">
-                        <div className="flex items-center gap-1.5">
-                          <BoltIcon className="w-3 h-3 text-primary" />
-                          <span>{request.priority} Priority</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <CalendarDaysIcon className="w-3 h-3" />
-                          <span>{formatDateTime(request.requestedAt)}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Actions / Review Status */}
-                    <div className="lg:w-1/4 flex items-center justify-end gap-3 min-w-[200px]">
-                      {request.status === ApprovalStatus.PENDING ? (
-                        <>
-                          <button
-                            onClick={() => handleReview(request, 'reject')}
-                            className="flex-1 lg:flex-none px-5 py-3 rounded-2xl border border-border text-[10px] font-black uppercase tracking-widest hover:bg-error hover:text-white hover:border-error transition-all"
-                          >
-                            Deny
-                          </button>
-                          <button
-                            onClick={() => handleReview(request, 'approve')}
-                            className="flex-1 lg:flex-none px-5 py-3 rounded-2xl bg-primary text-white text-[10px] font-black uppercase tracking-widest hover:bg-secondary shadow-lg shadow-primary/20 transition-all"
-                          >
-                            Authorize
-                          </button>
-                        </>
-                      ) : (
-                        <div className="flex flex-col items-end gap-2">
-                          <div className="text-right">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-1">Reviewed By</p>
-                            <p className="text-sm font-bold text-text-primary">{request.reviewerName}</p>
-                          </div>
-                          <button
-                            onClick={() => handleReview(request, request.status === ApprovalStatus.APPROVED ? 'approve' : 'reject')}
-                            className="text-[9px] font-black uppercase tracking-widest text-primary hover:text-secondary transition-colors underline decoration-2 underline-offset-4"
-                          >
-                            Edit Review
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </ContentCard>
-              </motion.div>
-            ))
-          ) : (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex flex-col items-center justify-center py-20 bg-surface/50 border border-dashed border-border/60 rounded-[2rem]"
-            >
-              <ShieldCheckIcon className="w-16 h-16 text-text-tertiary opacity-10 mb-4" />
-              <p className="text-text-tertiary font-serif italic text-lg">"Registry clear. All protocols synchronized."</p>
-            </motion.div>
+      {/* Tab Switcher */}
+      <div className="flex bg-surface border border-border/60 p-1 rounded-2xl shadow-sm w-fit">
+        <button
+          onClick={() => setActiveTab('general')}
+          className={cn(
+            "px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2",
+            activeTab === 'general'
+              ? "bg-primary text-white shadow-lg shadow-primary/20"
+              : "text-text-tertiary hover:text-text-primary hover:bg-subtle-background"
           )}
-        </AnimatePresence>
+        >
+          <DocumentTextIcon className="w-4 h-4" />
+          General Requests ({filteredRequests.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('execution')}
+          className={cn(
+            "px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2",
+            activeTab === 'execution'
+              ? "bg-primary text-white shadow-lg shadow-primary/20"
+              : "text-text-tertiary hover:text-text-primary hover:bg-subtle-background"
+          )}
+        >
+          <WrenchScrewdriverIcon className="w-4 h-4" />
+          Execution Edits ({editRequests.length})
+        </button>
       </div>
+
+      {/* Execution Edit Requests */}
+      {activeTab === 'execution' && (
+        <div className="space-y-4">
+          <AnimatePresence mode="popLayout">
+            {editRequests.length > 0 ? (
+              editRequests.map((req, idx) => (
+                <motion.div
+                  key={req.id}
+                  layout
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ delay: idx * 0.05 }}
+                >
+                  <ContentCard className="group hover:border-primary/30 transition-all duration-500">
+                    <div className="flex flex-col lg:flex-row lg:items-center gap-6">
+                      {/* Icon & Primary Info */}
+                      <div className="flex items-start gap-4 flex-1">
+                        <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                          <WrenchScrewdriverIcon className="w-6 h-6 text-blue-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <h3 className="font-bold text-text-primary text-lg truncate">
+                              {req.editType.charAt(0).toUpperCase() + req.editType.slice(1)} Edit
+                            </h3>
+                            <span className="px-2 py-0.5 bg-yellow-500/10 text-yellow-600 text-[9px] font-black uppercase tracking-wider rounded-full">
+                              Pending
+                            </span>
+                          </div>
+                          <p className="text-sm text-text-secondary mt-1 line-clamp-2">
+                            {req.description || `Proposed changes to ${req.targetName || 'project data'}`}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-4 mt-3 text-[10px] font-bold uppercase tracking-widest text-text-tertiary">
+                            <span className="flex items-center gap-1.5">
+                              <UserIcon className="w-3.5 h-3.5" />
+                              {req.requesterName || 'Execution Team'}
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <CalendarDaysIcon className="w-3.5 h-3.5" />
+                              {formatDateTime(req.createdAt)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <button
+                          onClick={async () => {
+                            setProcessing(true);
+                            try {
+                              await rejectEditRequest(req.id, 'Rejected by Admin');
+                            } catch (e) {
+                              console.error(e);
+                            }
+                            setProcessing(false);
+                          }}
+                          disabled={processing}
+                          className="px-4 py-2 border border-error text-error rounded-xl hover:bg-error-subtle transition-colors flex items-center gap-2 text-xs font-bold uppercase tracking-wider disabled:opacity-50"
+                        >
+                          <XCircleIcon className="w-4 h-4" />
+                          Reject
+                        </button>
+                        <button
+                          onClick={async () => {
+                            setProcessing(true);
+                            try {
+                              await approveEditRequest(req.id, 'Approved by Admin');
+                            } catch (e) {
+                              console.error(e);
+                            }
+                            setProcessing(false);
+                          }}
+                          disabled={processing}
+                          className="px-4 py-2 bg-success text-white rounded-xl hover:bg-success/90 transition-colors flex items-center gap-2 text-xs font-bold uppercase tracking-wider disabled:opacity-50"
+                        >
+                          <CheckCircleIcon className="w-4 h-4" />
+                          Approve
+                        </button>
+                      </div>
+                    </div>
+                  </ContentCard>
+                </motion.div>
+              ))
+            ) : (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-16 bg-surface rounded-3xl border border-border/50"
+              >
+                <WrenchScrewdriverIcon className="w-16 h-16 mx-auto text-text-tertiary/30 mb-4" />
+                <p className="text-text-tertiary font-medium">No pending execution edits</p>
+                <p className="text-text-tertiary/60 text-sm mt-1">All execution team requests have been processed</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {/* General Requests Registry */}
+      {activeTab === 'general' && (
+        <div className="space-y-4">
+          <AnimatePresence mode="popLayout">
+            {filteredRequests.length > 0 ? (
+              filteredRequests.map((request, idx) => (
+                <motion.div
+                  key={request.id}
+                  layout
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ delay: idx * 0.05 }}
+                >
+                  <ContentCard className="group hover:border-primary/30 transition-all duration-500">
+                    <div className="flex flex-col lg:flex-row lg:items-center gap-6">
+                      {/* Icon & Primary Info */}
+                      <div className="flex items-start gap-4 flex-1">
+                        <div className="w-14 h-14 rounded-2xl bg-subtle-background flex items-center justify-center text-text-tertiary group-hover:bg-primary/10 group-hover:text-primary transition-all duration-500 border border-border/40">
+                          {getRequestTypeIcon(request.requestType)}
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-3">
+                            <h3 className="text-xl font-serif font-black text-text-primary tracking-tight">{request.title}</h3>
+                            <span className={cn(
+                              "px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border",
+                              request.status === ApprovalStatus.PENDING ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20" :
+                                request.status === ApprovalStatus.APPROVED ? "bg-green-500/10 text-green-600 border-green-500/20" :
+                                  "bg-red-500/10 text-red-600 border-red-500/20"
+                            )}>
+                              {request.status}
+                            </span>
+                          </div>
+                          <p className="text-xs text-text-tertiary font-bold uppercase tracking-wider">
+                            {request.requesterName} <span className="opacity-40">/</span> {request.requesterRole}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Metadata & Description */}
+                      <div className="lg:w-1/3 space-y-2">
+                        <p className="text-sm text-text-secondary line-clamp-2 italic font-medium">"{request.description}"</p>
+                        <div className="flex items-center gap-4 text-[10px] font-black text-text-tertiary uppercase tracking-widest">
+                          <div className="flex items-center gap-1.5">
+                            <BoltIcon className="w-3 h-3 text-primary" />
+                            <span>{request.priority} Priority</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <CalendarDaysIcon className="w-3 h-3" />
+                            <span>{formatDateTime(request.requestedAt)}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Actions / Review Status */}
+                      <div className="lg:w-1/4 flex items-center justify-end gap-3 min-w-[200px]">
+                        {request.status === ApprovalStatus.PENDING ? (
+                          <>
+                            <button
+                              onClick={() => handleReview(request, 'reject')}
+                              className="flex-1 lg:flex-none px-5 py-3 rounded-2xl border border-border text-[10px] font-black uppercase tracking-widest hover:bg-error hover:text-white hover:border-error transition-all"
+                            >
+                              Deny
+                            </button>
+                            <button
+                              onClick={() => handleReview(request, 'approve')}
+                              className="flex-1 lg:flex-none px-5 py-3 rounded-2xl bg-primary text-white text-[10px] font-black uppercase tracking-widest hover:bg-secondary shadow-lg shadow-primary/20 transition-all"
+                            >
+                              Authorize
+                            </button>
+                          </>
+                        ) : (
+                          <div className="flex flex-col items-end gap-2">
+                            <div className="text-right">
+                              <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-1">Reviewed By</p>
+                              <p className="text-sm font-bold text-text-primary">{request.reviewerName}</p>
+                            </div>
+                            <button
+                              onClick={() => handleReview(request, request.status === ApprovalStatus.APPROVED ? 'approve' : 'reject')}
+                              className="text-[9px] font-black uppercase tracking-widest text-primary hover:text-secondary transition-colors underline decoration-2 underline-offset-4"
+                            >
+                              Edit Review
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </ContentCard>
+                </motion.div>
+              ))
+            ) : (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex flex-col items-center justify-center py-20 bg-surface/50 border border-dashed border-border/60 rounded-[2rem]"
+              >
+                <ShieldCheckIcon className="w-16 h-16 text-text-tertiary opacity-10 mb-4" />
+                <p className="text-text-tertiary font-serif italic text-lg">"Registry clear. All protocols synchronized."</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
 
       {/* Review Modal */}
       <Modal

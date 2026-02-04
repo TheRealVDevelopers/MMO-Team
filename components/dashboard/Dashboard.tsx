@@ -16,6 +16,7 @@ import AccountsTeamDashboard from './AccountsTeamDashboard';
 import SuperAdminDashboard from './SuperAdminDashboard';
 import VendorDashboard from './vendor/VendorDashboard';
 import DesignAndSiteEngineeringDashboard from './DesignAndSiteEngineeringDashboard';
+import WorkflowOverview from './WorkflowOverview';
 
 const Dashboard: React.FC<{ currentPage: string; setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser, currentVendor } = useAuth();
@@ -40,6 +41,11 @@ const Dashboard: React.FC<{ currentPage: string; setCurrentPage: (page: string) 
   }
 
   const renderDashboardContent = () => {
+    // Handle global pages first
+    if (currentPage === 'workflow') {
+      return <WorkflowOverview />;
+    }
+
     switch (currentUser.role) {
       case UserRole.SUPER_ADMIN:
         return <SuperAdminDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;

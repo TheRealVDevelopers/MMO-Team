@@ -39,11 +39,11 @@ const RisksAndIssues: React.FC<RisksAndIssuesProps> = ({ projectId, issues, onAd
 
     const getSeverityColor = (severity: string) => {
         switch (severity) {
-            case 'Critical': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border-red-200';
-            case 'High': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400 border-orange-200';
-            case 'Medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200';
-            case 'Low': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200';
-            default: return 'bg-gray-100 text-gray-800 border-gray-200';
+            case 'Critical': return 'bg-error-subtle text-error border-error/30';
+            case 'High': return 'bg-warning-subtle text-warning border-warning/30';
+            case 'Medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+            case 'Low': return 'bg-success-subtle text-success border-success/30';
+            default: return 'bg-subtle-background text-text-secondary border-border';
         }
     };
 
@@ -51,15 +51,15 @@ const RisksAndIssues: React.FC<RisksAndIssuesProps> = ({ projectId, issues, onAd
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        <ShieldExclamationIcon className="w-6 h-6 text-red-500" />
+                    <h3 className="text-lg font-bold text-text-primary flex items-center gap-2">
+                        <ShieldExclamationIcon className="w-6 h-6 text-error" />
                         Risks & Issues Tracker
                     </h3>
-                    <p className="text-sm text-gray-500">Monitor and resolve project impediments</p>
+                    <p className="text-sm text-text-secondary">Monitor and resolve project impediments</p>
                 </div>
                 <button
                     onClick={() => setIsModalOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-lg shadow-red-200"
+                    className="flex items-center gap-2 px-4 py-2 bg-error text-white rounded-lg hover:bg-error/90 transition-colors shadow-lg"
                 >
                     <PlusIcon className="w-4 h-4" />
                     Report Issue
@@ -68,38 +68,38 @@ const RisksAndIssues: React.FC<RisksAndIssuesProps> = ({ projectId, issues, onAd
 
             <div className="grid gap-4">
                 {issues.map((issue) => (
-                    <div key={issue.id} className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col md:flex-row gap-4 justify-between transition-all hover:shadow-md">
+                    <div key={issue.id} className="bg-surface p-5 rounded-xl border border-border shadow-sm flex flex-col md:flex-row gap-4 justify-between transition-all hover:shadow-md">
                         <div className="space-y-3 flex-1">
                             <div className="flex items-center gap-3">
                                 <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${getSeverityColor(issue.priority)}`}>
                                     {issue.priority} Priority
                                 </span>
-                                <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${issue.status === 'Resolved' ? 'border-green-200 text-green-600 bg-green-50 dark:bg-green-900/20' : 'border-blue-200 text-blue-600 bg-blue-50 dark:bg-blue-900/20'
+                                <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${issue.status === 'Resolved' ? 'border-success/30 text-success bg-success-subtle' : 'border-primary/30 text-primary bg-primary-subtle'
                                     }`}>
                                     {issue.status}
                                 </span>
-                                <span className="text-xs text-gray-400 flex items-center gap-1">
+                                <span className="text-xs text-text-tertiary flex items-center gap-1">
                                     <ClockIconWrapper className="w-3 h-3" /> {new Date(issue.timestamp).toLocaleDateString()}
                                 </span>
                             </div>
                             <div>
-                                <h4 className="font-bold text-gray-900 dark:text-white text-lg">{issue.title}</h4>
-                                <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">{issue.notes}</p>
+                                <h4 className="font-bold text-text-primary text-lg">{issue.title}</h4>
+                                <p className="text-sm text-text-secondary mt-1 leading-relaxed">{issue.notes}</p>
                             </div>
 
-                            <div className="flex items-center gap-2 text-xs text-gray-400">
-                                <span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center font-bold text-gray-600">
+                            <div className="flex items-center gap-2 text-xs text-text-tertiary">
+                                <span className="w-5 h-5 rounded-full bg-subtle-background flex items-center justify-center font-bold text-text-secondary">
                                     {issue.reportedBy.charAt(0)}
                                 </span>
                                 Reported by {issue.reportedBy}
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-3 md:border-l md:pl-6 md:border-gray-100 dark:md:border-gray-700">
+                        <div className="flex items-center gap-3 md:border-l md:pl-6 border-border">
                             {issue.status !== 'Resolved' && (
                                 <button
                                     onClick={() => onUpdateStatus(issue.id, 'Resolved')}
-                                    className="px-4 py-2 text-sm border border-emerald-200 text-emerald-600 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors flex items-center gap-2 font-medium"
+                                    className="px-4 py-2 text-sm border border-success/30 text-success rounded-lg hover:bg-success-subtle transition-colors flex items-center gap-2 font-medium"
                                 >
                                     <CheckCircleIcon className="w-4 h-4" />
                                     Mark Resolved
@@ -110,10 +110,10 @@ const RisksAndIssues: React.FC<RisksAndIssuesProps> = ({ projectId, issues, onAd
                 ))}
 
                 {issues.length === 0 && (
-                    <div className="text-center py-16 bg-gray-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 flex flex-col items-center justify-center">
-                        <CheckCircleIcon className="w-12 h-12 text-gray-300 mb-3" />
-                        <p className="text-gray-500 font-medium">No issues reported yet.</p>
-                        <p className="text-sm text-gray-400">Keep up the good work on site!</p>
+                    <div className="text-center py-16 bg-subtle-background rounded-xl border border-dashed border-border flex flex-col items-center justify-center">
+                        <CheckCircleIcon className="w-12 h-12 text-text-tertiary mb-3" />
+                        <p className="text-text-secondary font-medium">No issues reported yet.</p>
+                        <p className="text-sm text-text-tertiary">Keep up the good work on site!</p>
                     </div>
                 )}
             </div>
@@ -123,33 +123,33 @@ const RisksAndIssues: React.FC<RisksAndIssuesProps> = ({ projectId, issues, onAd
                 <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
 
                 <div className="fixed inset-0 flex items-center justify-center p-4">
-                    <Dialog.Panel className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-800 p-6 shadow-xl border border-gray-200 dark:border-gray-700">
+                    <Dialog.Panel className="w-full max-w-md rounded-2xl bg-surface p-6 shadow-xl border border-border">
                         <div className="flex justify-between items-center mb-6">
-                            <Dialog.Title className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                <ExclamationTriangleIcon className="w-5 h-5 text-red-500" />
+                            <Dialog.Title className="text-lg font-bold text-text-primary flex items-center gap-2">
+                                <ExclamationTriangleIcon className="w-5 h-5 text-error" />
                                 Report New Issue
                             </Dialog.Title>
-                            <button onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                            <button onClick={() => setIsModalOpen(false)} className="text-text-tertiary hover:text-text-primary">
                                 <XMarkIcon className="w-6 h-6" />
                             </button>
                         </div>
 
                         <form onSubmit={handleAddIssue} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Issue Title</label>
+                                <label className="block text-sm font-medium text-text-secondary mb-1">Issue Title</label>
                                 <input
                                     type="text"
                                     required
-                                    className="w-full p-2 rounded-lg border-gray-300 dark:bg-slate-700 dark:border-gray-600 focus:ring-red-500 focus:border-red-500"
+                                    className="w-full p-2 rounded-lg border border-border bg-surface text-text-primary focus:ring-error focus:border-error"
                                     placeholder="e.g. Broken tiles in kitchen"
                                     value={newIssue.title || ''}
                                     onChange={e => setNewIssue({ ...newIssue, title: e.target.value })}
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Severity</label>
+                                <label className="block text-sm font-medium text-text-secondary mb-1">Severity</label>
                                 <select
-                                    className="w-full p-2 rounded-lg border-gray-300 dark:bg-slate-700 dark:border-gray-600 focus:ring-red-500 focus:border-red-500"
+                                    className="w-full p-2 rounded-lg border border-border bg-surface text-text-primary focus:ring-error focus:border-error"
                                     value={newIssue.priority}
                                     onChange={e => setNewIssue({ ...newIssue, priority: e.target.value as any })}
                                 >
@@ -160,10 +160,10 @@ const RisksAndIssues: React.FC<RisksAndIssuesProps> = ({ projectId, issues, onAd
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                                <label className="block text-sm font-medium text-text-secondary mb-1">Description</label>
                                 <textarea
                                     required
-                                    className="w-full p-2 rounded-lg border-gray-300 dark:bg-slate-700 dark:border-gray-600 focus:ring-red-500 focus:border-red-500"
+                                    className="w-full p-2 rounded-lg border border-border bg-surface text-text-primary focus:ring-error focus:border-error"
                                     rows={4}
                                     placeholder="Describe the issue in detail..."
                                     value={newIssue.notes || ''}
@@ -175,13 +175,13 @@ const RisksAndIssues: React.FC<RisksAndIssuesProps> = ({ projectId, issues, onAd
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:bg-slate-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-slate-600"
+                                    className="px-4 py-2 text-sm font-medium text-text-secondary bg-surface border border-border rounded-lg hover:bg-subtle-background"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 shadow-lg shadow-red-200"
+                                    className="px-4 py-2 text-sm font-medium text-white bg-error rounded-lg hover:bg-error/90 shadow-lg"
                                 >
                                     Report Issue
                                 </button>

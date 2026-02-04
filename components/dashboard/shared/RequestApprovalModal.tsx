@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { XMarkIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../../../context/AuthContext';
 import { createApprovalRequest } from '../../../hooks/useApprovalSystem';
-import { ApprovalRequestType } from '../../../types';
+import { ApprovalRequestType, UserRole } from '../../../types';
 import Modal from '../../shared/Modal';
 
 interface RequestApprovalModalProps {
@@ -20,6 +20,33 @@ const RequestApprovalModal: React.FC<RequestApprovalModalProps> = ({ isOpen, onC
   const [duration, setDuration] = useState('');
   const [priority, setPriority] = useState<'High' | 'Medium' | 'Low'>('Medium');
   const [submitting, setSubmitting] = useState(false);
+  const getTargetRole = (type: ApprovalRequestType): UserRole => {
+    switch (type) {
+      case ApprovalRequestType.EXPENSE:
+      case ApprovalRequestType.PAYMENT_QUERY:
+        return UserRole.ACCOUNTS_TEAM;
+      case ApprovalRequestType.SITE_VISIT:
+      case ApprovalRequestType.START_DRAWING:
+      case ApprovalRequestType.EXECUTION_PLAN:
+      case ApprovalRequestType.MATERIAL_CHANGE:
+      case ApprovalRequestType.DESIGN_CHANGE:
+      case ApprovalRequestType.DRAWING_REVISIONS:
+      case ApprovalRequestType.MODIFICATION:
+        return UserRole.EXECUTION_TEAM;
+      case ApprovalRequestType.REQUEST_FOR_QUOTATION:
+      case ApprovalRequestType.QUOTATION_APPROVAL:
+        return UserRole.QUOTATION_TEAM;
+      case ApprovalRequestType.LEAVE:
+      case ApprovalRequestType.EARLY_DEPARTURE:
+      case ApprovalRequestType.LATE_ARRIVAL:
+      case ApprovalRequestType.TIME_OFF:
+      case ApprovalRequestType.WORK_FROM_HOME:
+      case ApprovalRequestType.OVERTIME:
+        return UserRole.SUPER_ADMIN; // Default to Admin for HR stuff
+      default:
+        return UserRole.SUPER_ADMIN;
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +70,7 @@ const RequestApprovalModal: React.FC<RequestApprovalModalProps> = ({ isOpen, onC
         duration: duration.trim() || undefined,
         priority,
         attachments: [],
+        targetRole: getTargetRole(requestType)
       });
 
       // Reset form

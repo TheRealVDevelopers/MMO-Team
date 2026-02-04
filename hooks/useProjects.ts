@@ -183,7 +183,7 @@ export const updateProjectStage = async (projectId: string, stageId: string, com
             s.id === stageId ? { ...s, status: completed ? 'Completed' : 'Pending', completedAt: completed ? new Date() : undefined } : s
         );
 
-        await updateDoc(projectRef, {
+        await updateDoc(projectRef, removeUndefinedValues({
             stages: updatedStages,
             updatedAt: serverTimestamp(),
             history: [
@@ -195,7 +195,7 @@ export const updateProjectStage = async (projectId: string, stageId: string, com
                     notes: `Stage: ${updatedStages.find(s => s.id === stageId)?.name}`
                 }
             ]
-        });
+        }));
     } catch (error) {
         console.error("Error updating project stage:", error);
         throw error;
@@ -217,10 +217,10 @@ export const raiseProjectIssue = async (projectId: string, issue: any, userName:
             status: 'Open'
         };
 
-        await updateDoc(projectRef, {
+        await updateDoc(projectRef, removeUndefinedValues({
             issues: [...(projectData.issues || []), newIssue],
             updatedAt: serverTimestamp()
-        });
+        }));
 
         await createNotification({
             title: 'Critical Project Issue',

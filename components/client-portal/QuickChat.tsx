@@ -140,7 +140,7 @@ const QuickChat: React.FC<QuickChatProps> = ({
                             </button>
                         </div>
                         <p className="text-xs text-gray-400 mt-2">
-                            💡 Your project head will respond within a few hours
+                            💡 Your execution lead will respond within a few hours
                         </p>
                     </div>
                 </div>

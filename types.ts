@@ -250,6 +250,7 @@ export enum ProjectStatus {
   SITE_VISIT_PENDING = "Site Visit Pending", // New - Stage 1
   DRAWING_PENDING = "Drawing Pending",     // New - Stage 2
   BOQ_PENDING = "BOQ Pending",             // New - Stage 3
+  PENDING_EXECUTION_APPROVAL = "Pending Execution Approval", // New - Stage 4 (Gatekeeper)
   AWAITING_DESIGN = "Awaiting Design",
   DESIGN_IN_PROGRESS = "Design In Progress",
   REVISIONS_IN_PROGRESS = "Revisions In Progress",
@@ -534,6 +535,19 @@ export interface Project {
   ganttData?: GanttTask[];
   lifecycleStatus?: ProjectLifecycleStatus;
   jms?: JMS;
+
+  // Execution Approval Fields
+  executionApprovedAt?: string;
+  executionApprovedBy?: string;
+  rejectionReason?: string;
+  rejectedAt?: string;
+  contractValue?: number;
+  advanceReceived?: number;
+
+  // Budget Summary
+  budgetDefined?: boolean;
+  totalBudget?: number;
+  budgetSpent?: number;
 }
 
 // NEW: Organization interface
@@ -662,6 +676,26 @@ export interface MaterialRequest {
   notes?: string;
   materials?: { name: string; spec: string }[]; // Added for compatibility with mock data
   priority?: 'High' | 'Medium' | 'Low'; // Added for compatibility with mock data
+
+  // New fields for Execution Workflow
+  targetRole?: 'admin' | 'accounts' | 'execution';
+  urgency?: 'Normal' | 'Urgent' | 'Critical';
+  executionApproval?: 'pending' | 'approved' | 'rejected';
+  accountsStatus?: 'pending' | 'processed';
+}
+
+export interface ExecutionTask {
+  id: string;
+  projectId: string;
+  projectName?: string;
+  assignedTo: string;
+  assigneeName?: string;
+  missionType: string;
+  instructions: string;
+  deadline: string;
+  status: 'Pending' | 'In Progress' | 'Completed' | 'Blocked';
+  priority?: 'High' | 'Medium' | 'Low';
+  createdAt: Date;
 }
 
 export interface SiteVisit {
@@ -721,6 +755,10 @@ export interface QuotationRequest {
 }
 
 export enum MaterialRequestStatus {
+  REQUESTED = "Requested",
+  APPROVED = "Approved",
+  REJECTED = "Rejected",
+  ORDERED = "Ordered",
   RFQ_PENDING = "RFQ Pending",
   BIDDING_OPEN = "Bidding Open",
   UNDER_EVALUATION = "Under Evaluation",

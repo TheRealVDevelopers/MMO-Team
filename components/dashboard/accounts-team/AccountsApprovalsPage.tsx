@@ -1,23 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useFinanceRequests } from '../../../hooks/useFinanceRequests';
+import { useTargetedApprovalRequests, approveRequest as approveGenericRequest, rejectRequest as rejectGenericRequest } from '../../../hooks/useApprovalSystem';
 import { useProjects } from '../../../hooks/useProjects';
 import Card from '../../shared/Card';
 import StatusPill from '../../shared/StatusPill';
 import { formatCurrencyINR, formatDate } from '../../../constants';
-import { CheckCircleIcon, XCircleIcon, ClockIcon, BuildingOfficeIcon, UserIcon } from '@heroicons/react/24/outline';
-import { FinanceRequest } from '../../../types';
+import { CheckCircleIcon, XCircleIcon, ClockIcon, BuildingOfficeIcon, UserIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline';
+import { FinanceRequest, UserRole, ApprovalRequest, ApprovalStatus } from '../../../types';
+import { useAuth } from '../../../context/AuthContext';
 
 const AccountsApprovalsPage: React.FC = () => {
-    const { requests, approveRequest, rejectRequest, loading } = useFinanceRequests();
+    const { currentUser } = useAuth();
+    const { requests: financeRequests, approveRequest, rejectRequest, loading: financeLoading } = useFinanceRequests();
+    const { requests: generalRequests, loading: generalLoading } = useTargetedApprovalRequests(UserRole.ACCOUNTS_TEAM);
     const { projects } = useProjects();
 
-    // Only show requests waiting for ACCOUNTS approval
-    const pendingRequests = requests.filter(r => r.status === 'Pending Accounts');
-    const historyRequests = requests.filter(r => r.status !== 'Pending Accounts' && r.status !== 'Pending Admin');
+    const loading = financeLoading || generalLoading;
 
-    const [activeTab, setActiveTab] = useState<'pending' | 'history'>('pending');
+    // Only show requests waiting for ACCOUNTS approval
+    const pendingFinanceRequests = financeRequests.filter(r => r.status === 'Pending Accounts');
+    const historyFinanceRequests = financeRequests.filter(r => r.status !== 'Pending Accounts' && r.status !== 'Pending Admin');
+
+    const pendingGeneralRequests = useMemo(() => generalRequests.filter(r => r.status === ApprovalStatus.PENDING), [generalRequests]);
+    const historyGeneralRequests = useMemo(() => generalRequests.filter(r => r.status !== ApprovalStatus.PENDING), [generalRequests]);
+
+    const [activeTab, setActiveTab] = useState<'pending' | 'general' | 'history'>('pending');
     const [selectedRequest, setSelectedRequest] = useState<FinanceRequest | null>(null);
     const [auditProjectId, setAuditProjectId] = useState<string>('');
+    const [processingId, setProcessingId] = useState<string | null>(null);
 
     const handleOpenAudit = (request: FinanceRequest) => {
         setSelectedRequest(request);
@@ -26,11 +36,26 @@ const AccountsApprovalsPage: React.FC = () => {
     };
 
     const handleConfirmApproval = () => {
-        if (!selectedRequest || !auditProjectId) return;
+        if (!selectedRequest || !auditProjectId || !currentUser) return;
 
-        approveRequest(selectedRequest.id, auditProjectId, 'current_user_id'); // Mock User ID
+        approveRequest(selectedRequest.id, auditProjectId, currentUser.id);
         setSelectedRequest(null);
         setAuditProjectId('');
+    };
+
+    const handleGeneralAction = async (request: ApprovalRequest, action: 'approve' | 'reject') => {
+        if (!currentUser) return;
+        setProcessingId(request.id);
+        try {
+            if (action === 'approve') {
+                await approveGenericRequest(request.id, currentUser.id, currentUser.name, currentUser.id, 'Approved by Accounts Team');
+            } else {
+                await rejectGenericRequest(request.id, currentUser.id, currentUser.name, 'Rejected by Accounts Team');
+            }
+        } catch (error) {
+            console.error(`Failed to ${action} general request:`, error);
+        }
+        setProcessingId(null);
     };
 
     if (loading) return <div className="p-8">Loading Requests...</div>;
@@ -48,7 +73,13 @@ const AccountsApprovalsPage: React.FC = () => {
                     onClick={() => setActiveTab('pending')}
                     className={`pb-2 border-b-2 px-4 font-medium transition-colors ${activeTab === 'pending' ? 'border-primary text-primary' : 'border-transparent text-text-secondary'}`}
                 >
-                    Pending Action ({pendingRequests.length})
+                    Pending Finance ({pendingFinanceRequests.length})
+                </button>
+                <button
+                    onClick={() => setActiveTab('general')}
+                    className={`pb-2 border-b-2 px-4 font-medium transition-colors ${activeTab === 'general' ? 'border-primary text-primary' : 'border-transparent text-text-secondary'}`}
+                >
+                    General Approvals ({pendingGeneralRequests.length})
                 </button>
                 <button
                     onClick={() => setActiveTab('history')}
@@ -59,7 +90,7 @@ const AccountsApprovalsPage: React.FC = () => {
             </div>
 
             <div className="grid gap-4">
-                {(activeTab === 'pending' ? pendingRequests : historyRequests).map(request => (
+                {activeTab === 'pending' && pendingFinanceRequests.map(request => (
                     <Card key={request.id} className="hover:shadow-md transition-shadow">
                         <div className="flex justify-between items-start">
                             <div className="flex gap-4">
@@ -99,41 +130,95 @@ const AccountsApprovalsPage: React.FC = () => {
                             </div>
                         </div>
 
-                        {activeTab === 'pending' && (
-                            <div className="mt-6 flex justify-end gap-3 border-t pt-4">
-                                <button
-                                    onClick={() => rejectRequest(request.id, 'Rejected by Accounts')}
-                                    className="px-4 py-2 text-red-600 font-medium hover:bg-red-50 rounded-lg flex items-center gap-2"
-                                >
-                                    <XCircleIcon className="w-5 h-5" />
-                                    Reject
-                                </button>
-                                <button
-                                    onClick={() => handleOpenAudit(request)}
-                                    className="px-6 py-2 bg-primary text-white font-bold rounded-lg hover:bg-primary-dark shadow-sm flex items-center gap-2"
-                                >
-                                    <CheckCircleIcon className="w-5 h-5" />
-                                    Review & Pay
-                                </button>
-                            </div>
-                        )}
-
-                        {activeTab === 'history' && request.accountsApproval && (
-                            <div className="mt-4 pt-4 border-t text-sm">
-                                <span className="text-text-secondary">Debited from Project: </span>
-                                <span className="font-bold text-text-primary">
-                                    {projects.find(p => p.id === request.accountsApproval?.assignedProjectId)?.projectName || 'Unknown Project'}
-                                </span>
-                            </div>
-                        )}
+                        <div className="mt-6 flex justify-end gap-3 border-t pt-4">
+                            <button
+                                onClick={() => rejectRequest(request.id, 'Rejected by Accounts')}
+                                className="px-4 py-2 text-red-600 font-medium hover:bg-red-50 rounded-lg flex items-center gap-2"
+                            >
+                                <XCircleIcon className="w-5 h-5" />
+                                Reject
+                            </button>
+                            <button
+                                onClick={() => handleOpenAudit(request)}
+                                className="px-6 py-2 bg-primary text-white font-bold rounded-lg hover:bg-primary-dark shadow-sm flex items-center gap-2"
+                            >
+                                <CheckCircleIcon className="w-5 h-5" />
+                                Review & Pay
+                            </button>
+                        </div>
                     </Card>
                 ))}
 
-                {((activeTab === 'pending' ? pendingRequests : historyRequests).length === 0) && (
-                    <div className="text-center py-12 text-text-secondary italic">
-                        No {activeTab} requests found.
-                    </div>
-                )}
+                {activeTab === 'general' && pendingGeneralRequests.map(req => (
+                    <Card key={req.id} className="hover:shadow-md transition-shadow">
+                        <div className="flex justify-between items-start">
+                            <div className="flex gap-4">
+                                <div className="bg-info-subtle p-3 rounded-full h-fit text-info">
+                                    <ClipboardDocumentCheckIcon className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <h3 className="font-bold text-text-primary text-lg">{req.title}</h3>
+                                        <span className="px-2 py-0.5 bg-info-subtle text-info text-xs font-medium rounded-full">{req.requestType}</span>
+                                    </div>
+                                    <p className="text-sm text-text-secondary mb-2">{req.description}</p>
+                                    <div className="flex items-center gap-4 text-xs text-text-tertiary">
+                                        <span>Requested by: {req.requesterName}</span>
+                                        <span>Date: {formatDate(req.requestedAt)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => handleGeneralAction(req, 'reject')}
+                                    disabled={processingId === req.id}
+                                    className="px-3 py-1.5 border border-error text-error rounded-lg hover:bg-error-subtle text-sm flex items-center gap-1"
+                                >
+                                    <XCircleIcon className="w-4 h-4" /> Reject
+                                </button>
+                                <button
+                                    onClick={() => handleGeneralAction(req, 'approve')}
+                                    disabled={processingId === req.id}
+                                    className="px-3 py-1.5 bg-success text-white rounded-lg hover:bg-success/90 text-sm flex items-center gap-1"
+                                >
+                                    {processingId === req.id ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <CheckCircleIcon className="w-4 h-4" />} Approve
+                                </button>
+                            </div>
+                        </div>
+                    </Card>
+                ))}
+
+                {activeTab === 'history' && [...historyFinanceRequests, ...historyGeneralRequests].map(request => (
+                    <Card key={request.id} className="hover:shadow-md transition-shadow opacity-75">
+                        <div className="flex justify-between items-start">
+                            <div className="flex gap-4">
+                                <div className="bg-gray-100 p-3 rounded-full h-fit">
+                                    <UserIcon className="w-6 h-6 text-gray-500" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-lg text-text-primary">{(request as any).requesterName || 'Unknown'}</h3>
+                                    <p className="text-sm text-text-secondary">{(request as any).type || (request as any).requestType}</p>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <StatusPill color={
+                                    (request.status as string) === 'Approved' || request.status === ApprovalStatus.APPROVED ? 'green' :
+                                        (request.status as string) === 'Rejected' || request.status === ApprovalStatus.REJECTED ? 'red' : 'amber'
+                                }>
+                                    {request.status}
+                                </StatusPill>
+                            </div>
+                        </div>
+                    </Card>
+                ))}
+
+                {((activeTab === 'pending' && pendingFinanceRequests.length === 0) ||
+                    (activeTab === 'general' && pendingGeneralRequests.length === 0) ||
+                    (activeTab === 'history' && historyFinanceRequests.length === 0 && historyGeneralRequests.length === 0)) && (
+                        <div className="text-center py-12 text-text-secondary italic">
+                            No {activeTab} requests found.
+                        </div>
+                    )}
             </div>
 
             {/* Approval Modal */}

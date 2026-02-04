@@ -49,20 +49,20 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, onTaskClick }) => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-white dark:bg-slate-800 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+        <div className="flex flex-col h-full bg-surface rounded-xl overflow-hidden border border-border">
             {/* Scrollable Container */}
             <div className="flex-1 overflow-auto relative">
                 <div style={{ width: range.days.length * CELL_WIDTH, minWidth: '100%' }}>
 
                     {/* Header: Months & Days */}
-                    <div className="sticky top-0 z-20 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-gray-700 h-[60px]">
+                    <div className="sticky top-0 z-20 bg-surface border-b border-border h-[60px]">
                         <div className="relative h-full">
                             {/* Months (Simplified for now - just showing days) */}
-                            <div className="flex border-b border-gray-100 dark:border-gray-700 h-8">
+                            <div className="flex border-b border-border/50 h-8">
                                 {range.days.map((day, i) => {
                                     const isFirstDay = day.getDate() === 1 || i === 0;
                                     return isFirstDay ? (
-                                        <div key={`month-${i}`} className="px-2 text-xs font-semibold text-gray-500 absolute" style={{ left: i * CELL_WIDTH }}>
+                                        <div key={`month-${i}`} className="px-2 text-xs font-semibold text-text-secondary absolute" style={{ left: i * CELL_WIDTH }}>
                                             {format(day, 'MMMM yyyy')}
                                         </div>
                                     ) : null;
@@ -74,9 +74,9 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, onTaskClick }) => {
                                 {range.days.map((day, i) => (
                                     <div
                                         key={`day-${i}`}
-                                        className={`w-[40px] flex items-center justify-center text-xs border-r border-gray-100 dark:border-gray-700
-                                            ${[0, 6].includes(day.getDay()) ? 'bg-gray-50 dark:bg-slate-700/30' : ''}
-                                            ${isSameDay(day, new Date()) ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 font-bold' : 'text-gray-400'}
+                                        className={`w-[40px] flex items-center justify-center text-xs border-r border-border/50
+                                            ${[0, 6].includes(day.getDay()) ? 'bg-subtle-background/50' : ''}
+                                            ${isSameDay(day, new Date()) ? 'bg-primary/10 text-primary font-bold' : 'text-text-tertiary'}
                                         `}
                                     >
                                         {format(day, 'd')}
@@ -91,15 +91,15 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, onTaskClick }) => {
                         {range.days.map((day, i) => (
                             <div
                                 key={`grid-${i}`}
-                                className={`w-[40px] h-full border-r border-gray-100 dark:border-gray-700 
-                                    ${[0, 6].includes(day.getDay()) ? 'bg-gray-50/50 dark:bg-slate-700/10' : ''}
+                                className={`w-[40px] h-full border-r border-border/30 
+                                    ${[0, 6].includes(day.getDay()) ? 'bg-subtle-background/30' : ''}
                                 `}
                             />
                         ))}
                         {/* Today Line */}
                         {range.days.some(d => isSameDay(d, new Date())) && (
                             <div
-                                className="absolute top-0 bottom-0 border-l-2 border-blue-500 z-10 opacity-50 dashed"
+                                className="absolute top-0 bottom-0 border-l-2 border-primary z-10 opacity-50 dashed"
                                 style={{ left: differenceInDays(new Date(), range.start) * CELL_WIDTH + (CELL_WIDTH / 2) }}
                             />
                         )}
@@ -123,7 +123,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, onTaskClick }) => {
                                     {/* Task Bar */}
                                     <div
                                         className={`absolute h-6 top-1 rounded-md shadow-sm border border-black/10 cursor-pointer overflow-hidden
-                                            ${isDelayed ? 'bg-red-400' : isCompleted ? 'bg-green-500' : 'bg-blue-500'}
+                                            ${isDelayed ? 'bg-error' : isCompleted ? 'bg-success' : 'bg-primary'}
                                         `}
                                         style={{
                                             left: style.left,
@@ -143,9 +143,9 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, onTaskClick }) => {
                                     </div>
 
                                     {/* Task Info Tooltip (on hover) */}
-                                    <div className="absolute opacity-0 group-hover:opacity-100 transition-opacity bottom-full left-0 mb-2 z-50 bg-gray-900 text-white text-xs p-2 rounded whitespace-nowrap pointer-events-none" style={{ left: style.left }}>
+                                    <div className="absolute opacity-0 group-hover:opacity-100 transition-opacity bottom-full left-0 mb-2 z-50 bg-surface-inverse text-text-inverse text-xs p-2 rounded whitespace-nowrap pointer-events-none" style={{ left: style.left }}>
                                         {task.name} ({task.progress}%)
-                                        <div className="text-gray-400 text-[10px]">
+                                        <div className="text-text-inverse/70 text-[10px]">
                                             {isValidDate(new Date(task.start)) ? format(new Date(task.start), 'MMM d') : 'N/A'} - {isValidDate(new Date(task.end)) ? format(new Date(task.end), 'MMM d') : 'N/A'}
                                         </div>
                                     </div>
