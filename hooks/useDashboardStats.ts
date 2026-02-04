@@ -152,9 +152,11 @@ export const useDashboardStats = (userId?: string) => {
             ? ((hoursThisMonth - hoursLastMonth) / hoursLastMonth) * 100
             : hoursThisMonth > 0 ? 100 : 0;
 
-        // Active projects count
+        // Active projects count - all projects that are not completed/rejected/on hold
         const activeProjects = userProjects.filter(p => 
-            [ProjectStatus.IN_EXECUTION, ProjectStatus.PROCUREMENT, ProjectStatus.DESIGN_IN_PROGRESS].includes(p.status)
+            p.status !== ProjectStatus.COMPLETED && 
+            p.status !== ProjectStatus.REJECTED && 
+            p.status !== ProjectStatus.ON_HOLD
         ).length;
 
         return {

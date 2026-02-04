@@ -7,10 +7,10 @@ import { useProjects } from '../../../hooks/useProjects';
 import { useAuth } from '../../../context/AuthContext';
 
 const KANBAN_COLUMNS = {
-  'PLANNING': { title: 'Planning', statuses: [ProjectStatus.ACTIVE, ProjectStatus.PROCUREMENT] },
-  'IN_PROGRESS': { title: 'In Progress', statuses: [ProjectStatus.IN_EXECUTION] },
-  'CLIENT_FEEDBACK': { title: 'Awaiting Client Feedback', statuses: [ProjectStatus.PENDING_REVIEW] },
-  'DONE': { title: 'Done', statuses: [ProjectStatus.COMPLETED] },
+  'PLANNING': { title: 'Planning', statuses: [ProjectStatus.ACTIVE, ProjectStatus.PROCUREMENT, ProjectStatus.READY_TO_START, ProjectStatus.EXECUTION_APPROVED, ProjectStatus.BLUEPRINT_CREATED, ProjectStatus.PENDING_BUDGET_APPROVAL] },
+  'IN_PROGRESS': { title: 'In Progress', statuses: [ProjectStatus.IN_EXECUTION, ProjectStatus.DESIGN_IN_PROGRESS, ProjectStatus.APPROVED] },
+  'CLIENT_FEEDBACK': { title: 'Awaiting Client Feedback', statuses: [ProjectStatus.PENDING_REVIEW, ProjectStatus.REVISIONS_REQUESTED, ProjectStatus.NEGOTIATING, ProjectStatus.QUOTATION_SENT] },
+  'DONE': { title: 'Done', statuses: [ProjectStatus.COMPLETED, ProjectStatus.REJECTED, ProjectStatus.ON_HOLD] },
 };
 
 // ...

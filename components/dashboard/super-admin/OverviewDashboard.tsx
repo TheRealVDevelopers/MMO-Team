@@ -203,7 +203,11 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage, o
 
     // KPI Calculations
     const totalProjects = projects.length;
-    const activeProjects = projects.filter(p => [ProjectStatus.IN_EXECUTION, ProjectStatus.PROCUREMENT, ProjectStatus.DESIGN_IN_PROGRESS].includes(p.status)).length;
+    const activeProjects = projects.filter(p => 
+        p.status !== ProjectStatus.COMPLETED && 
+        p.status !== ProjectStatus.REJECTED && 
+        p.status !== ProjectStatus.ON_HOLD
+    ).length;
 
     const totalLeads = leads.length;
     const conversionRate = stats.conversionRate.toFixed(1);

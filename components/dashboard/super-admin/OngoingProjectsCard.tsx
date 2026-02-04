@@ -20,10 +20,11 @@ interface OngoingProjectsCardProps {
 
 const OngoingProjectsCard: React.FC<OngoingProjectsCardProps> = ({ onProjectSelect }) => {
     const { projects } = useProjects();
+    // Show all projects from Firestore, excluding only completed/cancelled ones
     const ongoingProjects = projects.filter(p =>
-        p.status === ProjectStatus.IN_EXECUTION ||
-        p.status === ProjectStatus.PROCUREMENT ||
-        p.status === ProjectStatus.DESIGN_IN_PROGRESS
+        p.status !== ProjectStatus.COMPLETED &&
+        p.status !== ProjectStatus.REJECTED &&
+        p.status !== ProjectStatus.ON_HOLD
     );
 
     return (
