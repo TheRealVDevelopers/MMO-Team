@@ -198,7 +198,9 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     // Seed demo data once on app start
     // seedDemoData().catch(console.error);
-    migrateUsersToFirestore().catch(console.error);
+    if (import.meta.env.VITE_RUN_USER_MIGRATIONS === 'true') {
+      migrateUsersToFirestore().catch(console.error);
+    }
   }, []);
 
   const handleSetPage = (page: string) => {

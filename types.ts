@@ -1038,7 +1038,6 @@ export interface StoredRedFlag {
   type: string;
 }
 
-
 export interface RFQ {
   id: string;
   rfqNumber: string; // RFQ-2024-001
@@ -1209,7 +1208,6 @@ export interface VendorBill {
   paymentDate?: Date;
 }
 
-
 export enum ActivityStatus {
   DONE = "Done",
   IN_PROGRESS = "In Progress",
@@ -1239,6 +1237,7 @@ export interface Attendance {
   clockIn?: string; // Time string HH:mm
   clockOut?: string; // Time string HH:mm
 }
+
 export enum DrawingRequestStatus {
   REQUESTED = "Requested",
   IN_PROGRESS = "In Progress",
@@ -1324,12 +1323,6 @@ export interface BOQItem {
   isTemplateItem?: boolean; // Flag to identify standard items
   specifications?: string;
 }
-
-// Duplicate DailyUpdate removed
-
-
-// Duplicate MaterialRequest removed
-
 
 export enum DesignSiteProjectStatus {
   PENDING = "Pending",
