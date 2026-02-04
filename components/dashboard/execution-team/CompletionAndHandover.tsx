@@ -1,32 +1,86 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     CheckCircleIcon,
     ClipboardDocumentCheckIcon,
     ArrowTopRightOnSquareIcon,
     DocumentTextIcon
 } from '@heroicons/react/24/outline';
+import { Project, ExecutionStage } from '../../../types';
+import { useProjects } from '../../../hooks/useProjects';
+import { updateProjectStage } from '../../../hooks/useProjects';
+import { useAuth } from '../../../context/AuthContext';
 
-const CHECKLIST_ITEMS = [
-    { id: '1', task: 'Final Site Cleaning', status: 'Pending', category: 'General' },
-    { id: '2', task: 'Plumbing Pressure Test', status: 'Completed', category: 'Plumbing' },
-    { id: '3', task: 'Electrical Circuit Check', status: 'Pending', category: 'Electrical' },
-    { id: '4', task: 'Paint Touch-ups', status: 'In Progress', category: 'Painting' },
-    { id: '5', task: 'Client Walkthrough', status: 'Pending', category: 'Admin' },
-    { id: '6', task: 'Key Handover', status: 'Pending', category: 'Admin' },
-    { id: '7', task: 'Warranty Card Handover', status: 'Pending', category: 'Admin' }
-];
+interface CompletionAndHandoverProps {
+    project: Project;
+}
 
-const CompletionAndHandover: React.FC = () => {
-    const [checklist, setChecklist] = useState(CHECKLIST_ITEMS);
+const CompletionAndHandover: React.FC<CompletionAndHandoverProps> = ({ project }) => {
+    const { updateProject } = useProjects();
+    const { currentUser } = useAuth();
+    const [isGenerating, setIsGenerating] = useState(false);
 
-    const handleToggleStatus = (id: string) => {
-        setChecklist(prev => prev.map(item => {
-            if (item.id === id) {
-                const nextStatus = item.status === 'Pending' ? 'In Progress' : item.status === 'In Progress' ? 'Completed' : 'Pending';
-                return { ...item, status: nextStatus };
-            }
-            return item;
-        }));
+    // ✅ USE REAL PROJECT STAGES - No more demo data
+    const stages = project.stages || [];
+
+    // Calculate overall progress based on completed stages
+    const progress = stages.length > 0 
+        ? Math.round((stages.filter(s => s.status === 'Completed').length / stages.length) * 100)
+        : 0;
+
+    const handleToggleStageStatus = async (stageId: string) => {
+        try {
+            const stage = stages.find(s => s.id === stageId);
+            if (!stage) return;
+
+            // ✅ CYCLE THROUGH 3 STATES: Pending → In Progress → Completed → Pending
+            const nextStatus: 'Pending' | 'In Progress' | 'Completed' = stage.status === 'Pending' ? 'In Progress' : 
+                             stage.status === 'In Progress' ? 'Completed' : 'Pending';
+
+            console.log('✅ [CompletionHandover] Toggling stage status:', {
+                stageId,
+                stageName: stage.name,
+                currentStatus: stage.status,
+                nextStatus
+            });
+
+            // ✅ UPDATE STAGE STATUS DIRECTLY IN FIRESTORE
+            const updatedStages = stages.map(s =>
+                s.id === stageId ? { ...s, status: nextStatus } : s
+            );
+
+            await updateProject(project.id, {
+                stages: updatedStages
+            });
+            
+            console.log('✅ [CompletionHandover] Stage status updated successfully in Firestore');
+        } catch (error) {
+            console.error('❌ [CompletionHandover] Failed to update stage status:', error);
+            alert('Failed to update stage status');
+        }
+    };
+
+    const handleGenerateHandoverDocs = async () => {
+        if (progress < 100) {
+            alert('Please complete all phases before generating handover documents.');
+            return;
+        }
+
+        setIsGenerating(true);
+        try {
+            // Update project status to COMPLETED
+            await updateProject(project.id, {
+                status: 'Completed' as any,
+                completedAt: new Date().toISOString(),
+                completedBy: currentUser?.id || 'unknown'
+            });
+            
+            alert('✅ Handover documents generated!\n\nProject marked as COMPLETED.\n\nDocuments available in project files.');
+        } catch (error) {
+            console.error('Failed to generate handover docs:', error);
+            alert('Failed to generate handover documents');
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
     const getStatusStyle = (status: string) => {
@@ -37,23 +91,21 @@ const CompletionAndHandover: React.FC = () => {
         }
     };
 
-    const progress = Math.round((checklist.filter(i => i.status === 'Completed').length / checklist.length) * 100);
-
     return (
         <div className="space-y-8">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                         <ClipboardDocumentCheckIcon className="w-6 h-6 text-emerald-600" />
-                        Project Completion & Handover
+                        Project Completion & Handover - {project.projectName}
                     </h3>
-                    <p className="text-gray-500">Ensure all tasks are completed before final handover.</p>
+                    <p className="text-gray-500">Track all execution phases before final handover.</p>
                 </div>
 
                 <div className="flex items-center gap-2">
                     <div className="text-right mr-2">
                         <div className="text-sm font-medium text-gray-900 dark:text-white">{progress}% Complete</div>
-                        <div className="text-xs text-gray-500">{checklist.filter(i => i.status === 'Completed').length}/{checklist.length} Tasks</div>
+                        <div className="text-xs text-gray-500">{stages.filter(s => s.status === 'Completed').length}/{stages.length} Phases</div>
                     </div>
                     <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
                         <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${progress}%` }} />
@@ -65,34 +117,56 @@ const CompletionAndHandover: React.FC = () => {
                 <div className="lg:col-span-2 space-y-6">
                     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
                         <div className="p-4 bg-gray-50 dark:bg-slate-700/50 border-b border-gray-200 dark:border-gray-700 font-semibold text-gray-700 dark:text-gray-200">
-                            Handover Checklist
+                            Execution Phases Checklist
                         </div>
-                        <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                            {checklist.map(item => (
-                                <div key={item.id} className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors group">
-                                    <div className="flex items-center gap-4">
-                                        <button
-                                            onClick={() => handleToggleStatus(item.id)}
-                                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${item.status === 'Completed' ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-gray-300 hover:border-emerald-400'
+                        
+                        {stages.length === 0 ? (
+                            <div className="p-8 text-center text-gray-500">
+                                <p>No execution phases defined for this project.</p>
+                                <p className="text-sm mt-2">Create phases in the Timeline tab.</p>
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                                {stages.map((stage, index) => (
+                                    <div key={stage.id} className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors group">
+                                        <div className="flex items-center gap-4">
+                                            <button
+                                                onClick={() => handleToggleStageStatus(stage.id)}
+                                                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                                                    stage.status === 'Completed' ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-gray-300 hover:border-emerald-400'
                                                 }`}
-                                        >
-                                            {item.status === 'Completed' && <CheckCircleIcon className="w-4 h-4" />}
-                                        </button>
-                                        <div>
-                                            <p className={`font-medium ${item.status === 'Completed' ? 'text-gray-400 line-through' : 'text-gray-900 dark:text-white'}`}>
-                                                {item.task}
-                                            </p>
-                                            <span className="text-xs text-gray-400 bg-gray-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">
-                                                {item.category}
-                                            </span>
+                                            >
+                                                {stage.status === 'Completed' && <CheckCircleIcon className="w-4 h-4" />}
+                                            </button>
+                                            <div>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="w-8 h-8 bg-primary/20 text-primary rounded-full flex items-center justify-center font-bold text-sm">
+                                                        {index + 1}
+                                                    </span>
+                                                    <p className={`font-medium ${
+                                                        stage.status === 'Completed' ? 'text-gray-400 line-through' : 'text-gray-900 dark:text-white'
+                                                    }`}>
+                                                        {stage.name}
+                                                    </p>
+                                                </div>
+                                                {stage.description && (
+                                                    <p className="text-xs text-gray-500 mt-1 ml-11">{stage.description}</p>
+                                                )}
+                                                <div className="flex items-center gap-3 text-xs text-gray-400 mt-1 ml-11">
+                                                    <span>Duration: {stage.durationDays || 7} days</span>
+                                                    {stage.completedAt && (
+                                                        <span className="text-emerald-600">• Completed {new Date(stage.completedAt).toLocaleDateString()}</span>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
+                                        <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${getStatusStyle(stage.status || 'Pending')}`}>
+                                            {stage.status || 'Pending'}
+                                        </span>
                                     </div>
-                                    <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${getStatusStyle(item.status)}`}>
-                                        {item.status}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -103,11 +177,18 @@ const CompletionAndHandover: React.FC = () => {
                             Once all checklist items are verified, generate the final handover report and initiate the warranty period.
                         </p>
                         <button
-                            disabled={progress < 100}
+                            onClick={handleGenerateHandoverDocs}
+                            disabled={progress < 100 || isGenerating}
                             className="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl shadow-lg shadow-emerald-200 hover:bg-emerald-700 transition-all disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
-                            <DocumentTextIcon className="w-5 h-5" />
-                            Generate Handover Docs
+                            {isGenerating ? (
+                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            ) : (
+                                <>
+                                    <DocumentTextIcon className="w-5 h-5" />
+                                    Generate Handover Docs
+                                </>
+                            )}
                         </button>
                     </div>
 

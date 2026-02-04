@@ -21,7 +21,7 @@ import AddTaskModal from './AddTaskModal';
 import ExecutionProjectOverview from './ExecutionProjectOverview';
 import { useDailyUpdates } from '../../../hooks/useDailyUpdates';
 import { useMaterialRequests } from '../../../hooks/useMaterialRequests';
-import { useEditApproval } from '../../../hooks/useEditApproval';
+import { useProjects } from '../../../hooks/useProjects'; // ✅ Import useProjects
 import { useAuth } from '../../../context/AuthContext';
 
 // Mock Items for JMS
@@ -46,9 +46,9 @@ const ExecutionProjectDetail: React.FC<ExecutionProjectDetailProps> = ({ project
     // Use Firestore hooks for real data persistence
     const { updates: dailyUpdates, loading: updatesLoading, addUpdate } = useDailyUpdates(project.id);
     const { requests: materialRequests, loading: materialsLoading, addRequest } = useMaterialRequests(project.id);
-    const { pendingRequests, submitEditRequest, getUserPendingCount } = useEditApproval(project.id);
+    const { updateProject: updateProjectHook } = useProjects(); // ✅ Get updateProject from hook
 
-    // Local state for Gantt tasks and issues (will be migrated later)
+    // Local state for Gantt tasks and issues
     const [tasks, setTasks] = useState<GanttTask[]>(project.ganttData || []);
     const [issues, setIssues] = useState<Issue[]>(INITIAL_ISSUES);
 
@@ -63,7 +63,7 @@ const ExecutionProjectDetail: React.FC<ExecutionProjectDetailProps> = ({ project
         { id: 'completion', label: 'Completion & Handover', icon: DocumentChartBarIcon },
     ];
 
-    // Handler for adding task - now goes through approval workflow
+    // ✅ Handler for adding task - DIRECTLY save to Firestore (no approval needed)
     const handleAddTask = async (taskDetails: Partial<GanttTask>) => {
         const newTask: GanttTask = {
             id: `task-${Date.now()}`,
@@ -78,23 +78,19 @@ const ExecutionProjectDetail: React.FC<ExecutionProjectDetailProps> = ({ project
             notes: taskDetails.notes
         };
 
-        // Submit for admin approval instead of direct save
+        const updatedTasks = [...tasks, newTask];
+        setTasks(updatedTasks);
+
+        // ✅ Save directly to Firestore - no admin approval needed
         try {
-            await submitEditRequest({
-                projectId: project.id,
-                requesterId: currentUser?.id || '',
-                requesterName: currentUser?.name || 'Unknown User',
-                editType: 'task',
-                targetName: newTask.name,
-                originalData: null,
-                proposedData: newTask,
-                description: `Add new task: ${newTask.name}`
+            await updateProjectHook(project.id, {
+                ganttData: updatedTasks
             });
-            alert('Task submitted for admin approval!');
+            console.log('✅ [ExecutionProjectDetail] Task added and saved to Firestore:', newTask.name);
+            alert('Task added successfully!');
         } catch (err) {
-            // Fallback to local state if Firestore fails
-            setTasks([...tasks, newTask]);
-            console.error('Edit approval failed, using local state:', err);
+            console.error('❌ [ExecutionProjectDetail] Failed to save task:', err);
+            alert('Failed to save task to project');
         }
 
         setIsAddTaskModalOpen(false);
@@ -126,8 +122,6 @@ const ExecutionProjectDetail: React.FC<ExecutionProjectDetailProps> = ({ project
         }
     };
 
-    const pendingCount = getUserPendingCount();
-
     return (
         <div className="flex flex-col h-full bg-subtle-background">
             {/* Header */}
@@ -150,14 +144,6 @@ const ExecutionProjectDetail: React.FC<ExecutionProjectDetailProps> = ({ project
                 </div>
 
                 <div className="flex items-center gap-6">
-                    {/* Pending Edits Badge */}
-                    {pendingCount > 0 && (
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-warning-subtle text-warning rounded-lg text-sm font-medium">
-                            <ClockIcon className="w-4 h-4" />
-                            {pendingCount} Pending Approval
-                        </div>
-                    )}
-
                     <button
                         onClick={() => setShowJMS(true)}
                         className="flex items-center gap-2 px-4 py-2 bg-success text-white rounded-xl font-bold hover:bg-success/90 transition-all shadow-lg"
@@ -209,7 +195,6 @@ const ExecutionProjectDetail: React.FC<ExecutionProjectDetailProps> = ({ project
                                 Add Task
                             </button>
                         </div>
-                        <p className="text-xs text-text-tertiary">Note: Task additions require admin approval.</p>
                         <div className="flex-1 min-h-[500px] bg-surface rounded-xl shadow-sm border border-border overflow-hidden">
                             <GanttChart tasks={tasks} />
                         </div>
@@ -247,7 +232,7 @@ const ExecutionProjectDetail: React.FC<ExecutionProjectDetailProps> = ({ project
                     />
                 )}
                 {activeTab === 'completion' && (
-                    <CompletionAndHandover />
+                    <CompletionAndHandover project={project} />
                 )}
             </div>
 

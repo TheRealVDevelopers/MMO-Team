@@ -93,7 +93,7 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
             const newProject: Omit<Project, 'id'> = {
                 clientName: projectData.clientName || '',
                 projectName: projectData.projectName || '',
-                status: ProjectStatus.SITE_VISIT_PENDING, // Updated initial status
+                status: ProjectStatus.PENDING_EXECUTION_APPROVAL, // ✅ ENFORCE: All projects start here
                 priority: 'Medium', // Default
                 budget: Number(projectData.budget) || 0,
                 advancePaid: Number(projectData.advanceAmount) || 0,

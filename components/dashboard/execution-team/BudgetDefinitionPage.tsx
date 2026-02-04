@@ -55,6 +55,14 @@ const BudgetDefinitionPage: React.FC = () => {
             return;
         }
 
+        console.log('✅ [BudgetDefinition] Submitting budget:', {
+            projectId: selectedProject.id,
+            projectName: selectedProject.projectName,
+            currentStatus: selectedProject.status,
+            newStatus: ProjectStatus.PENDING_BUDGET_APPROVAL,
+            totalBudget: total
+        });
+
         setIsSubmitting(true);
         try {
             await updateProject(selectedProject.id, {
@@ -71,10 +79,11 @@ const BudgetDefinitionPage: React.FC = () => {
                 budget: total,
             });
 
+            console.log('✅ [BudgetDefinition] Budget submitted successfully, status -> PENDING_BUDGET_APPROVAL');
             setSelectedProject(null);
             resetForm();
         } catch (error) {
-            console.error("Error submitting budget:", error);
+            console.error("❌ [BudgetDefinition] Error submitting budget:", error);
             alert("Failed to submit budget. Please try again.");
         } finally {
             setIsSubmitting(false);

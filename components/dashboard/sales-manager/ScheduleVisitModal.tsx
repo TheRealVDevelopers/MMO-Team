@@ -38,11 +38,11 @@ const ScheduleVisitModal: React.FC<ScheduleVisitModalProps> = ({ isOpen, onClose
             const visitDateTime = new Date(`${visitDate}T${visitTime}`);
             const assignee = users.find(u => u.id === assigneeId);
 
-            // 1. Create Project in SITE_VISIT_PENDING state
+            // 1. Create Project in PENDING_EXECUTION_APPROVAL state (ENFORCE WORKFLOW)
             const newProject = {
                 clientName: lead.clientName,
                 projectName: lead.projectName,
-                status: ProjectStatus.SITE_VISIT_PENDING,
+                status: ProjectStatus.PENDING_EXECUTION_APPROVAL, // ✅ ENFORCE: Must go through execution approval first
                 priority: lead.priority || 'Medium',
                 budget: lead.value,
                 advancePaid: 0,

@@ -17,6 +17,36 @@ const isValidDate = (date: any): boolean => {
 };
 
 const GanttChart: React.FC<GanttChartProps> = ({ tasks, onTaskClick }) => {
+    console.log('📊 [GanttChart] Rendering with tasks:', {
+        taskCount: tasks?.length || 0,
+        tasks: tasks?.map(t => ({ 
+            id: t.id, 
+            name: t.name, 
+            start: t.start, 
+            end: t.end,
+            status: t.status,
+            progress: t.progress
+        }))
+    });
+
+    // ✅ Show empty state if no tasks
+    if (!tasks || tasks.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full bg-surface rounded-xl border border-border p-12 text-center">
+                <div className="w-16 h-16 bg-subtle-background rounded-full flex items-center justify-center mb-4">
+                    <svg className="w-8 h-8 text-text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                </div>
+                <h3 className="text-lg font-bold text-text-primary mb-2">No Tasks Yet</h3>
+                <p className="text-sm text-text-secondary max-w-md">
+                    Tasks configured in the "Edit & Configure" modal will appear here.
+                    You can also add tasks using the "Add Task" button above.
+                </p>
+            </div>
+        );
+    }
+
     // Determine timeline range
     const range = useMemo(() => {
         if (!tasks.length) return { start: new Date(), end: new Date(), days: [] };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { GanttTask, UserRole } from '../../../types';
-import { useProjects, updateProject } from '../../../hooks/useProjects';
+import { useProjects } from '../../../hooks/useProjects'; // ✅ Remove standalone import
 import { useAuth } from '../../../context/AuthContext';
 import { format } from 'date-fns';
 import {
@@ -11,7 +11,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 const ExecutionGanttPage: React.FC = () => {
-    const { projects } = useProjects();
+    const { projects, updateProject: updateProjectHook } = useProjects(); // ✅ Use hook's updateProject
     const { currentUser } = useAuth();
     const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
     const [tasks, setTasks] = useState<GanttTask[]>([]);
@@ -20,10 +20,19 @@ const ExecutionGanttPage: React.FC = () => {
     const selectedProject = projects.find(p => p.id === selectedProjectId);
 
     useEffect(() => {
+        console.log('🔄 [GanttPage] Project selected/changed:', {
+            selectedProjectId,
+            hasProject: !!selectedProject,
+            ganttDataLength: selectedProject?.ganttData?.length || 0,
+            ganttData: selectedProject?.ganttData
+        });
+
         if (selectedProject?.ganttData) {
             setTasks(selectedProject.ganttData);
+            console.log('✅ [GanttPage] Loaded', selectedProject.ganttData.length, 'tasks from project');
         } else {
             setTasks([]);
+            console.log('⚠️ [GanttPage] No ganttData found for this project');
         }
     }, [selectedProject]);
 
@@ -44,15 +53,25 @@ const ExecutionGanttPage: React.FC = () => {
 
     const handleSaveGantt = async () => {
         if (!selectedProjectId) return;
+        
+        console.log('💾 [GanttSave] Saving tasks to Firestore:', {
+            projectId: selectedProjectId,
+            taskCount: tasks.length,
+            tasks: tasks.map(t => ({ id: t.id, name: t.name, start: t.start, end: t.end }))
+        });
+        
         try {
-            await updateProject(selectedProjectId, {
-                ganttData: tasks,
+            // ✅ Save ganttData to Firestore using hook
+            await updateProjectHook(selectedProjectId, {
+                ganttData: tasks
             });
+            
             setIsEditing(false);
+            console.log('✅ [GanttSave] Tasks saved successfully to Firestore');
             alert('Timeline saved successfully!');
         } catch (err) {
-            console.error(err);
-            alert('Failed to save timeline');
+            console.error('❌ [GanttSave] Failed to save tasks:', err);
+            alert('Failed to save timeline: ' + (err as Error).message);
         }
     };
 

@@ -566,6 +566,11 @@ export interface Project {
   budgetApprovedBy?: string;
   advancePaymentVerified?: boolean;
 
+  // ✅ CRITICAL: Blueprint Attachment Validation Fields
+  boqs?: LeadFile[]; // Required for blueprint submission
+  drawings?: LeadFile[]; // Required for blueprint submission
+  quotations?: LeadFile[]; // Required for blueprint submission
+
   // Blueprint & Budget Definition Fields
   location?: string; // Project location/site address
   executionBlueprint?: {

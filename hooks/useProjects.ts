@@ -5,31 +5,57 @@ import { Project, LeadHistory, ExecutionStage } from '../types';
 import { createNotification } from '../services/liveDataService';
 
 type FirestoreProject = Omit<Project, 'startDate' | 'endDate' | 'documents' | 'history' | 'siteInspectionDate' | 'drawingDeadline' | 'drawingSubmittedAt'> & {
-    startDate: Timestamp;
-    endDate: Timestamp;
-    siteInspectionDate?: Timestamp;
-    drawingDeadline?: Timestamp;
-    drawingSubmittedAt?: Timestamp;
-    documents?: (Omit<Project['documents'][0], 'uploaded'> & { uploaded: Timestamp })[];
-    history?: (Omit<LeadHistory, 'timestamp'> & { timestamp: Timestamp })[];
+    startDate: Timestamp | Date | string;
+    endDate: Timestamp | Date | string;
+    siteInspectionDate?: Timestamp | Date | string;
+    drawingDeadline?: Timestamp | Date | string;
+    drawingSubmittedAt?: Timestamp | Date | string;
+    documents?: (Omit<Project['documents'][0], 'uploaded'> & { uploaded: Timestamp | Date | string })[];
+    history?: (Omit<LeadHistory, 'timestamp'> & { timestamp: Timestamp | Date | string })[];
+};
+
+// ✅ SAFE TIMESTAMP CONVERSION - Handles Timestamp, Date, string, or null/undefined
+const safeToDate = (value: any): Date | undefined => {
+    if (!value) return undefined;
+    
+    // Already a Date object
+    if (value instanceof Date) return value;
+    
+    // Firestore Timestamp object
+    if (typeof value === 'object' && typeof value.toDate === 'function') {
+        return value.toDate();
+    }
+    
+    // String timestamp
+    if (typeof value === 'string') {
+        const parsed = new Date(value);
+        return isNaN(parsed.getTime()) ? undefined : parsed;
+    }
+    
+    // Number timestamp (milliseconds)
+    if (typeof value === 'number') {
+        return new Date(value);
+    }
+    
+    return undefined;
 };
 
 const fromFirestore = (docData: FirestoreProject, id: string): Project => {
     return {
         ...docData,
         id,
-        startDate: docData.startDate?.toDate() || new Date(),
-        endDate: docData.endDate?.toDate() || new Date(),
-        siteInspectionDate: docData.siteInspectionDate?.toDate(),
-        drawingDeadline: docData.drawingDeadline?.toDate(),
-        drawingSubmittedAt: docData.drawingSubmittedAt?.toDate(),
+        startDate: safeToDate(docData.startDate) || new Date(),
+        endDate: safeToDate(docData.endDate) || new Date(),
+        siteInspectionDate: safeToDate(docData.siteInspectionDate),
+        drawingDeadline: safeToDate(docData.drawingDeadline),
+        drawingSubmittedAt: safeToDate(docData.drawingSubmittedAt),
         documents: docData.documents?.map(doc => ({
             ...doc,
-            uploaded: doc.uploaded?.toDate() || new Date(),
+            uploaded: safeToDate(doc.uploaded) || new Date(),
         })) || [],
         history: docData.history?.map(h => ({
             ...h,
-            timestamp: h.timestamp?.toDate() || new Date(),
+            timestamp: safeToDate(h.timestamp) || new Date(),
         })) || [],
     } as Project;
 };
@@ -87,9 +113,20 @@ export const useProjects = (userId?: string) => {
 
     const updateProject = async (id: string, data: Partial<Project>) => {
         try {
+            // ✅ LOG STATUS TRANSITIONS FOR DEBUGGING
+            if (data.status) {
+                console.log(`✅ [useProjects] Status transition for project ${id}:`, {
+                    newStatus: data.status,
+                    timestamp: new Date().toISOString(),
+                    updates: Object.keys(data)
+                });
+            }
+
             const cleanData = removeUndefinedValues(data);
             const docRef = doc(db, 'projects', id);
             await updateDoc(docRef, cleanData);
+
+            console.log(`✅ [useProjects] Project ${id} updated successfully`);
         } catch (err) {
             console.error("Error updating project:", err);
             throw err;
@@ -174,14 +211,30 @@ export const updateProject = async (projectId: string, updatedData: Partial<Proj
 
 export const updateProjectStage = async (projectId: string, stageId: string, completed: boolean, userName: string) => {
     try {
+        console.log('💾 [updateProjectStage] Updating stage:', {
+            projectId,
+            stageId,
+            completed,
+            userName
+        });
+
         const projectRef = doc(db, 'projects', projectId);
         const projectSnap = await getDoc(projectRef);
-        if (!projectSnap.exists()) return;
+        if (!projectSnap.exists()) {
+            console.error('❌ [updateProjectStage] Project not found:', projectId);
+            return;
+        }
 
         const projectData = projectSnap.data() as Project;
         const updatedStages = (projectData.stages || []).map(s =>
             s.id === stageId ? { ...s, status: completed ? 'Completed' : 'Pending', completedAt: completed ? new Date() : undefined } : s
         );
+
+        console.log('💾 [updateProjectStage] Saving updated stages to Firestore:', {
+            stageId,
+            newStatus: completed ? 'Completed' : 'Pending',
+            totalStages: updatedStages.length
+        });
 
         await updateDoc(projectRef, removeUndefinedValues({
             stages: updatedStages,
@@ -196,8 +249,10 @@ export const updateProjectStage = async (projectId: string, stageId: string, com
                 }
             ]
         }));
+
+        console.log('✅ [updateProjectStage] Stage updated successfully in Firestore');
     } catch (error) {
-        console.error("Error updating project stage:", error);
+        console.error("❌ [updateProjectStage] Error updating project stage:", error);
         throw error;
     }
 };

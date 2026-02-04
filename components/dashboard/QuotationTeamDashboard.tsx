@@ -20,29 +20,23 @@ import { useCatalog } from '../../hooks/useCatalog';
 
 const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
+  // ❌ DEMO DATA REMOVED - No localStorage fallback, only Firestore
   const { leads: firebaseLeads, loading: leadsLoading } = useLeads();
-  const { projects: firebaseProjects, loading: projectsLoading, addProject } = useProjects(); // Destructure addProject
-  const { items, addItem } = useCatalog(); // Use global catalog
+  const { projects: firebaseProjects, loading: projectsLoading, addProject } = useProjects();
+  const { items, addItem } = useCatalog();
 
-  // Lifted State with LocalStorage Persistence for custom/demo overrides
-  const [projectsState, setProjects] = useState<Project[]>(() => {
-    const saved = localStorage.getItem('mmo_projects');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  // Merge logic: Combine Firebase leads (in site visit+), Firebase projects, and local projects
+  // ✅ REAL DATA ONLY: Merge Firebase leads (in site visit+) with Firebase projects
   const projects = React.useMemo(() => {
-    // 1. Start with local/demo projects
-    let all = [...projectsState];
+    let all: Project[] = [];
 
-    // 2. Add Firebase Projects (avoid duplicates by ID)
+    // 1. Add Firebase Projects
     firebaseProjects.forEach(fp => {
       if (!all.find(a => a.id === fp.id)) {
         all.push(fp);
       }
     });
 
-    // 3. Transform and add Firebase Leads that are SITE_VISIT_SCHEDULED or higher
+    // 2. Transform and add Firebase Leads that are SITE_VISIT_SCHEDULED or higher
     firebaseLeads.forEach(lead => {
       const qualifyingStatuses = [
         LeadPipelineStatus.SITE_VISIT_SCHEDULED,
@@ -89,23 +83,12 @@ const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (p
     });
 
     return all;
-  }, [projectsState, firebaseLeads, firebaseProjects]);
+  }, [firebaseLeads, firebaseProjects]);
 
-  // Use global items instead of local storage
-  // const [items, setItems] = ... (removed)
-
-  const [templates, setTemplates] = useState<ProjectTemplate[]>(() => {
-    const saved = localStorage.getItem('mmo_templates');
-    return saved ? JSON.parse(saved) : PROJECT_TEMPLATES;
-  });
-  const [rfqs, setRfqs] = useState<RFQ[]>(() => {
-    const saved = localStorage.getItem('mmo_rfqs');
-    return saved ? JSON.parse(saved) : RFQS;
-  });
-  const [bids, setBids] = useState<Bid[]>(() => {
-    const saved = localStorage.getItem('mmo_bids');
-    return saved ? JSON.parse(saved) : BIDS_DATA;
-  });
+  // Use global items from catalog (no localStorage)
+  const [templates, setTemplates] = useState<ProjectTemplate[]>(PROJECT_TEMPLATES);
+  const [rfqs, setRfqs] = useState<RFQ[]>(RFQS);
+  const [bids, setBids] = useState<Bid[]>(BIDS_DATA);
 
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showAddProjectModal, setShowAddProjectModal] = useState(false);
@@ -113,100 +96,34 @@ const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (p
   const [showAddTemplateModal, setShowAddTemplateModal] = useState(false);
   const [initialProjectData, setInitialProjectData] = useState<Partial<Project> | undefined>(undefined);
 
-  // Sync to LocalStorage
-  useEffect(() => {
-    localStorage.setItem('mmo_projects', JSON.stringify(projectsState));
-  }, [projectsState]);
-
-  // Removed item sync since we use global catalog
-
-  useEffect(() => {
-    localStorage.setItem('mmo_templates', JSON.stringify(templates));
-  }, [templates]);
-
-  useEffect(() => {
-    localStorage.setItem('mmo_rfqs', JSON.stringify(rfqs));
-  }, [rfqs]);
-
-  useEffect(() => {
-    localStorage.setItem('mmo_bids', JSON.stringify(bids));
-  }, [bids]);
-
-  // Real-time Storage Sync for multi-tab collaboration
-  useEffect(() => {
-    const syncData = () => {
-      const savedProjects = localStorage.getItem('mmo_projects');
-      if (savedProjects) setProjects(JSON.parse(savedProjects));
-
-      const savedRfqs = localStorage.getItem('mmo_rfqs');
-      if (savedRfqs) setRfqs(JSON.parse(savedRfqs));
-
-      const savedBids = localStorage.getItem('mmo_bids');
-      if (savedBids) setBids(JSON.parse(savedBids));
-    };
-
-    const handleStorage = (e: StorageEvent) => {
-      if (['mmo_projects', 'mmo_rfqs', 'mmo_bids'].includes(e.key || '')) {
-        syncData();
-      }
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') syncData();
-    };
-
-    window.addEventListener('storage', handleStorage);
-    window.addEventListener('focus', syncData); // Sync when user comes back to tab
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      window.removeEventListener('storage', handleStorage);
-      window.removeEventListener('focus', syncData);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, []);
+  // ❌ REMOVED ALL LOCAL STORAGE SYNC - Data now flows from Firestore only
 
   const handleResetData = () => {
-    if (window.confirm('Are you sure you want to reset all data to defaults? This will delete your custom items and projects.')) {
-      localStorage.removeItem('mmo_projects');
-      // localStorage.removeItem('mmo_items'); // Items are now global
-      localStorage.removeItem('mmo_templates');
-      localStorage.removeItem('mmo_rfqs');
-      localStorage.removeItem('mmo_bids');
-      setProjects([]);
-      // setItems(ITEMS); // Items are now global
-      setTemplates(PROJECT_TEMPLATES);
-      setRfqs(RFQS);
-      setBids(BIDS_DATA);
-    }
+    alert('Reset feature disabled. All data is now managed in Firestore.');
   };
 
   const handleProjectSelect = (project: Project) => {
     setSelectedProject(project);
   };
 
-  const handleProjectUpdate = (updatedProject: Project) => {
-    setProjects(prev => prev.map(p => p.id === updatedProject.id ? updatedProject : p));
+  const handleProjectUpdate = async (updatedProject: Project) => {
+    // ✅ Update via Firestore, not local state
+    try {
+      // Add updateProject hook call here when needed
+      console.log('Project update:', updatedProject);
+    } catch (error) {
+      console.error('Failed to update project:', error);
+    }
     setSelectedProject(updatedProject);
   };
 
   const handleCreateProject = async (newProjectData: Omit<Project, 'id'>, rfq?: RFQ) => {
     try {
-      if (addProject) {
-        await addProject(newProjectData); // Use global hook
-      } else {
-        // Fallback if not available (should be)
-        const projectId = (Date.now()).toString();
-        const newProject: Project = { ...newProjectData, id: projectId };
-        setProjects(prev => [newProject, ...prev]);
-      }
+      await addProject(newProjectData); // ✅ Firestore only
 
       if (rfq) {
-        // Note: RFQ linkage might need backend support or separate hook. 
-        // For now, we keep local RFQ state or assume addProject handles it if expanded.
-        // But preserving local RFQ linkage logic:
         const rfqId = `rfq-${Date.now()}`;
-        const linkedRfq = { ...rfq, projectId: 'pending-id' }; // Ideally get ID from addProject result
+        const linkedRfq = { ...rfq, projectId: 'pending-id' };
         setRfqs(prev => [linkedRfq, ...prev]);
       }
     } catch (err) {

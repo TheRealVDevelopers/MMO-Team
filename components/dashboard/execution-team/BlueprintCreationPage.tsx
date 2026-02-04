@@ -64,6 +64,39 @@ const BlueprintCreationPage: React.FC = () => {
             return;
         }
 
+        // ✅ CRITICAL: VALIDATE REQUIRED ATTACHMENTS (Blueprint = BOQ + Drawing + Quotation)
+        const hasBOQ = selectedProject.boqs && selectedProject.boqs.length > 0;
+        const hasDrawing = selectedProject.drawings && selectedProject.drawings.length > 0;
+        const hasQuotation = selectedProject.quotations && selectedProject.quotations.length > 0;
+
+        if (!hasBOQ || !hasDrawing || !hasQuotation) {
+            const missing = [];
+            if (!hasBOQ) missing.push('BOQ');
+            if (!hasDrawing) missing.push('Drawing');
+            if (!hasQuotation) missing.push('Quotation');
+            
+            alert(`❌ BLUEPRINT SUBMISSION BLOCKED
+
+Missing required documents: ${missing.join(', ')}
+
+Execution cannot proceed without:
+• BOQ (Bill of Quantities)
+• Drawing/Design
+• Quotation
+
+Please attach all documents before submitting blueprint.`);
+            return;
+        }
+
+        console.log('✅ [BlueprintCreation] Validation passed:', {
+            projectId: selectedProject.id,
+            projectName: selectedProject.projectName,
+            boqCount: selectedProject.boqs?.length,
+            drawingCount: selectedProject.drawings?.length,
+            quotationCount: selectedProject.quotations?.length,
+            stagesCount: stages.length
+        });
+
         setIsSubmitting(true);
         try {
             const executionStages: ExecutionStage[] = stages.map((s, index) => ({
@@ -84,6 +117,8 @@ const BlueprintCreationPage: React.FC = () => {
                 },
                 stages: executionStages,
             });
+
+            console.log('✅ [BlueprintCreation] Blueprint submitted successfully, status -> BLUEPRINT_CREATED');
 
             setSelectedProject(null);
             setStages([

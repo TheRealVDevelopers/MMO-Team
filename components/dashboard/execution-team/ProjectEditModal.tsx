@@ -28,21 +28,22 @@ const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, isOpen, on
     const [activeTab, setActiveTab] = useState('basic');
     const [formData, setFormData] = useState<Project>(project);
 
-    // Gantt Tasks State
-    const [ganttTasks, setGanttTasks] = useState<GanttTask[]>(project.ganttData || []);
+    // Gantt Tasks State - ✅ Safe null check
+    const [ganttTasks, setGanttTasks] = useState<GanttTask[]>(project?.ganttData || []);
 
-    // Payment Terms State
-    const [paymentTerms, setPaymentTerms] = useState<PaymentTerm[]>(project.paymentTerms || []);
+    // Payment Terms State - ✅ Safe null check
+    const [paymentTerms, setPaymentTerms] = useState<PaymentTerm[]>(project?.paymentTerms || []);
 
-    // Execution Stages State
-    const [executionStages, setExecutionStages] = useState<ExecutionStage[]>(project.stages || []);
+    // Execution Stages State - ✅ Safe null check
+    const [executionStages, setExecutionStages] = useState<ExecutionStage[]>(project?.stages || []);
 
-    // Checklists State
-    const [dailyChecklist, setDailyChecklist] = useState<ChecklistItem[]>(project.checklists?.daily || []);
-    const [qualityChecklist, setQualityChecklist] = useState<ChecklistItem[]>(project.checklists?.quality || []);
+    // Checklists State - ✅ Safe null check
+    const [dailyChecklist, setDailyChecklist] = useState<ChecklistItem[]>(project?.checklists?.daily || []);
+    const [qualityChecklist, setQualityChecklist] = useState<ChecklistItem[]>(project?.checklists?.quality || []);
 
     // ✅ Sync state when project prop changes
     useEffect(() => {
+        if (!project) return;
         setFormData(project);
         setGanttTasks(project.ganttData || []);
         setPaymentTerms(project.paymentTerms || []);
@@ -50,6 +51,9 @@ const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, isOpen, on
         setDailyChecklist(project.checklists?.daily || []);
         setQualityChecklist(project.checklists?.quality || []);
     }, [project]);
+
+    // ✅ Don't render if closed or no project
+    if (!isOpen || !project) return null;
 
     const handleSave = () => {
         const updatedProject: Project = {
@@ -155,7 +159,8 @@ const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, isOpen, on
         }
     };
 
-    if (!isOpen) return null;
+    // ✅ Don't render if closed or no project
+    if (!isOpen || !project) return null;
 
     return (
         <AnimatePresence>

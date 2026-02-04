@@ -6,7 +6,8 @@ import {
     DocumentTextIcon,
     ChevronRightIcon,
     ExclamationTriangleIcon,
-    ClipboardDocumentCheckIcon
+    ClipboardDocumentCheckIcon,
+    PencilIcon
 } from '@heroicons/react/24/outline';
 import { useProjects } from '../../../hooks/useProjects';
 import { useAllExecutionMaterialRequests } from '../../../hooks/useMaterialRequests';
@@ -15,6 +16,7 @@ import { useTargetedApprovalRequests, approveRequest as approveGenericRequest, r
 import { Project, ProjectStatus, UserRole, ApprovalRequest, ApprovalStatus } from '../../../types';
 import { format } from 'date-fns';
 import { useAuth } from '../../../context/AuthContext';
+import ProjectEditModal from './ProjectEditModal';
 
 const ExecutionApprovalQueue: React.FC = () => {
     const { currentUser } = useAuth();
@@ -25,6 +27,7 @@ const ExecutionApprovalQueue: React.FC = () => {
 
     const [processingId, setProcessingId] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'projects' | 'materials' | 'general'>('projects');
+    const [editProject, setEditProject] = useState<Project | null>(null); // ✅ EDIT modal state (replaces review)
 
     const loading = projectsLoading || matRequestsLoading || genRequestsLoading;
 
@@ -39,17 +42,40 @@ const ExecutionApprovalQueue: React.FC = () => {
         return generalRequests.filter(r => r.status === ApprovalStatus.PENDING);
     }, [generalRequests]);
 
-    const handleApproveProject = async (project: Project) => {
-        setProcessingId(project.id);
+    const handleSaveEdits = async (updatedProject: Project) => {
+        setProcessingId(updatedProject.id);
         try {
-            // Set to EXECUTION_APPROVED - project now needs blueprint creation
-            await updateProject(project.id, {
-                status: ProjectStatus.EXECUTION_APPROVED,
+            console.log('✅ [ExecutionApproval] Saving project edits and sending for budget approval:', {
+                projectId: updatedProject.id,
+                projectName: updatedProject.projectName,
+                currentStatus: updatedProject.status,
+                newStatus: ProjectStatus.PENDING_BUDGET_APPROVAL,
+                updates: {
+                    budget: updatedProject.budget,
+                    startDate: updatedProject.startDate,
+                    endDate: updatedProject.endDate,
+                    ganttTasksCount: updatedProject.ganttData?.length || 0,
+                    paymentTermsCount: updatedProject.paymentTerms?.length || 0,
+                    stagesCount: updatedProject.stages?.length || 0
+                }
+            });
+
+            // ✅ NEW WORKFLOW: Execution EDITS and sends to Accounts for budget approval
+            // IMPORTANT: Don't spread updatedProject.status, explicitly set to PENDING_BUDGET_APPROVAL
+            const { status: _, ...projectDataWithoutStatus } = updatedProject;
+            
+            await updateProject(updatedProject.id, {
+                ...projectDataWithoutStatus,
+                status: ProjectStatus.PENDING_BUDGET_APPROVAL, // Force this status
                 executionApprovedAt: new Date().toISOString(),
                 executionApprovedBy: currentUser?.id || 'unknown'
             });
+
+            console.log('✅ [ExecutionApproval] Project configured successfully, status -> PENDING_BUDGET_APPROVAL');
+            setEditProject(null);
         } catch (error) {
-            console.error('Failed to approve project:', error);
+            console.error('❌ [ExecutionApproval] Failed to save project:', error);
+            alert('Failed to save project changes');
         }
         setProcessingId(null);
     };
@@ -217,19 +243,17 @@ const ExecutionApprovalQueue: React.FC = () => {
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <button
+                                            onClick={() => setEditProject(project)}
+                                            className="px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary/10 transition-colors flex items-center gap-2"
+                                        >
+                                            <PencilIcon className="w-4 h-4" /> Edit & Configure
+                                        </button>
+                                        <button
                                             onClick={() => handleRejectProject(project, 'Requires more details')}
                                             disabled={processingId === project.id}
                                             className="px-4 py-2 border border-error text-error rounded-lg hover:bg-error-subtle transition-colors flex items-center gap-2 disabled:opacity-50"
                                         >
                                             <XCircleIcon className="w-4 h-4" /> Send Back
-                                        </button>
-                                        <button
-                                            onClick={() => handleApproveProject(project)}
-                                            disabled={processingId === project.id}
-                                            className="px-4 py-2 bg-success text-white rounded-lg hover:bg-success/90 transition-colors flex items-center gap-2 disabled:opacity-50"
-                                        >
-                                            {processingId === project.id ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <CheckCircleIcon className="w-4 h-4" />}
-                                            Approve Project
                                         </button>
                                     </div>
                                 </div>
@@ -308,6 +332,17 @@ const ExecutionApprovalQueue: React.FC = () => {
                         ))
                     )}
                 </div>
+            )}
+
+            {/* ✅ PROJECT EDIT MODAL - Execution team configures ALL project details */}
+            {editProject && (
+                <ProjectEditModal
+                    project={editProject}
+                    isOpen={true}
+                    onClose={() => setEditProject(null)}
+                    onSave={handleSaveEdits}
+                    submitLabel="Save & Send to Accounts"
+                />
             )}
         </div>
     );
