@@ -15,6 +15,7 @@ import EscalateIssuePage from '../escalation/EscalateIssuePage';
 import MyDayPage from './shared/MyDayPage';
 import ProjectPnLPage from './accounts-team/ProjectPnLPage';
 import AccountsApprovalsPage from './accounts-team/AccountsApprovalsPage';
+import AccountsBudgetApprovalPage from './accounts-team/AccountsBudgetApprovalPage';
 import SalaryPage from './accounts-team/SalaryPage';
 import InventoryPage from './accounts-team/InventoryPage';
 import { Invoice, VendorBill, Expense, Project, LeadPipelineStatus, ProjectStatus, ProjectLifecycleStatus } from '../../types';
@@ -228,7 +229,7 @@ const AccountsTeamDashboard: React.FC<AccountsTeamDashboardProps> = ({ currentPa
       return <ProjectPnLPage setCurrentPage={setCurrentPage} />;
 
     case 'salary':
-      return <SalaryPage title="Salary & Payroll" />;
+      return <SalaryPage />;
 
     case 'inventory':
       return <InventoryPage />;
@@ -236,6 +237,9 @@ const AccountsTeamDashboard: React.FC<AccountsTeamDashboardProps> = ({ currentPa
     // Approvals
     case 'approvals':
       return <AccountsApprovalsPage />;
+
+    case 'budget-approvals':
+      return <AccountsBudgetApprovalPage />;
 
     // Shared / Misc
     case 'reports':

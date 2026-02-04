@@ -166,6 +166,7 @@ const navConfig = {
       { id: 'expenses', label: 'Expenses', icon: <ReceiptPercentIcon className="w-6 h-6" /> },
       { id: 'project-pnl', label: 'Project P&L', icon: <PresentationChartLineIcon className="w-6 h-6" /> },
       { id: 'salary', label: 'Salary', icon: <UsersIcon className="w-6 h-6" /> },
+      { id: 'budget-approvals', label: 'Budget Approvals', icon: <BanknotesIcon className="w-6 h-6" /> },
       { id: 'inventory', label: 'Inventory', icon: <CubeIcon className="w-6 h-6" /> },
       { id: 'approvals', label: 'Payment Requests', icon: <CheckCircleIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },

@@ -31,8 +31,7 @@ const ExecutionApprovalQueue: React.FC = () => {
     // Filter projects pending execution approval
     const pendingProjects = useMemo(() => {
         return projects.filter(p =>
-            p.status === ProjectStatus.PENDING_REVIEW ||
-            p.status === 'Pending Execution Approval' as any
+            p.status === ProjectStatus.PENDING_EXECUTION_APPROVAL
         );
     }, [projects]);
 
@@ -43,8 +42,9 @@ const ExecutionApprovalQueue: React.FC = () => {
     const handleApproveProject = async (project: Project) => {
         setProcessingId(project.id);
         try {
+            // Set to EXECUTION_APPROVED - project now needs blueprint creation
             await updateProject(project.id, {
-                status: ProjectStatus.IN_EXECUTION,
+                status: ProjectStatus.EXECUTION_APPROVED,
                 executionApprovedAt: new Date().toISOString(),
                 executionApprovedBy: currentUser?.id || 'unknown'
             });
@@ -171,7 +171,7 @@ const ExecutionApprovalQueue: React.FC = () => {
                         </div>
                         <div>
                             <div className="text-2xl font-bold text-text-primary">
-                                {projects.filter(p => p.status === ProjectStatus.IN_EXECUTION).length}
+                                {projects.filter(p => p.status === ProjectStatus.ACTIVE || p.status === ProjectStatus.IN_EXECUTION).length}
                             </div>
                             <div className="text-xs text-text-secondary">Active Projects</div>
                         </div>

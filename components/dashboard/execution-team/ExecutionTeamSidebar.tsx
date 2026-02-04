@@ -69,6 +69,7 @@ const ExecutionTeamSidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentP
     // Project Head / Execution Lead exclusive items
     const leaderItems: NavigationItem[] = isProjectHead ? [
         { id: 'approvals', label: 'Approvals', icon: <CheckCircleIcon className="w-6 h-6" />, badge: 3 },
+        { id: 'blueprint', label: 'Blueprints', icon: <ClipboardDocumentCheckIcon className="w-6 h-6" /> },
         { id: 'team', label: 'Team', icon: <UsersIcon className="w-6 h-6" /> },
         { id: 'tasks', label: 'Assign Tasks', icon: <ClipboardDocumentCheckIcon className="w-6 h-6" /> },
         { id: 'budget', label: 'Budgets', icon: <CurrencyDollarIcon className="w-6 h-6" /> },

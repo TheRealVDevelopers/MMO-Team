@@ -10,8 +10,7 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { doc, getDoc, updateDoc, arrayUnion, serverTimestamp, Timestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../../firebase';
+import { db } from '../../firebase';
 import { Lead, LeadCommunicationMessage, LeadFile, ProjectMilestone, LeadPipelineStatus } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 
@@ -139,13 +138,20 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
     const files = event.target.files;
     if (!files || files.length === 0 || !leadId || !currentUser) return;
 
+    const fileToBase64 = (file: File): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = error => reject(error);
+      });
+    };
+
     setUploading(true);
     try {
       for (let i = 0; i < files.length; i++) {
         const file = files[i] as File;
-        const fileRef = ref(storage, `leads/${leadId}/${Date.now()}_${file.name}`);
-        await uploadBytes(fileRef, file);
-        const fileUrl = await getDownloadURL(fileRef);
+        const fileUrl = await fileToBase64(file);
 
         const fileType = file.type.startsWith('image/') ? 'image' :
           file.type.includes('pdf') || file.type.includes('document') ? 'document' : 'other';

@@ -12,6 +12,7 @@ interface ProjectEditModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSave: (project: Project) => void;
+    submitLabel?: string;
 }
 
 const TABS = [
@@ -22,7 +23,7 @@ const TABS = [
     { id: 'stages', name: 'Execution Stages', icon: ClockIcon }
 ];
 
-const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, isOpen, onClose, onSave }) => {
+const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, isOpen, onClose, onSave, submitLabel }) => {
     const { users } = useUsers();
     const [activeTab, setActiveTab] = useState('basic');
     const [formData, setFormData] = useState<Project>(project);
@@ -722,7 +723,7 @@ const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, isOpen, on
                             onClick={handleSave}
                             className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-lg shadow-blue-200 dark:shadow-none"
                         >
-                            Save Changes
+                            {submitLabel || 'Save Changes'}
                         </button>
                     </div>
                 </motion.div>

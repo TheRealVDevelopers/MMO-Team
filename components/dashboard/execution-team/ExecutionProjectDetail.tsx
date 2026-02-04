@@ -19,42 +19,17 @@ import RisksAndIssues from './RisksAndIssues';
 import CompletionAndHandover from './CompletionAndHandover';
 import AddTaskModal from './AddTaskModal';
 import ExecutionProjectOverview from './ExecutionProjectOverview';
-import { MOCK_GANTT_DATA } from '../../../constants';
 import { useDailyUpdates } from '../../../hooks/useDailyUpdates';
 import { useMaterialRequests } from '../../../hooks/useMaterialRequests';
 import { useEditApproval } from '../../../hooks/useEditApproval';
 import { useAuth } from '../../../context/AuthContext';
 
 // Mock Items for JMS
-const MOCK_ITEMS = [
-    { id: 'item-1', name: '2x2 Vitrified Tiles', quantity: 2000, unit: 'sqft', category: 'Flooring', price: 120, specifications: 'Kajaria or equivalent' },
-    { id: 'item-2', name: 'Gypsum Board Ceiling', quantity: 1500, unit: 'sqft', category: 'Ceiling', price: 85, specifications: 'Saint Gobain' },
-    { id: 'item-3', name: 'Emulsion Paint', quantity: 5000, unit: 'sqft', category: 'Painting', price: 25, specifications: 'Asian Paints Royal' },
-];
+// Mock Items for JMS
+const MOCK_ITEMS = [];
 
 // Initial Mock Data for issues (will be replaced with Firestore later)
-const INITIAL_ISSUES: Issue[] = [
-    {
-        id: '1',
-        projectId: 'p-1',
-        title: 'Material Shortage - Cement',
-        notes: 'Delayed delivery of cement bags from vendor.',
-        priority: 'High',
-        status: 'Open',
-        reportedBy: 'Site Engineer',
-        timestamp: new Date('2023-10-25')
-    },
-    {
-        id: '2',
-        projectId: 'p-1',
-        title: 'Plumbing Layout Change',
-        notes: 'Client requested changes in bathroom plumbing layout.',
-        priority: 'Medium',
-        status: 'In Progress',
-        reportedBy: 'Project Manager',
-        timestamp: new Date('2023-10-22')
-    }
-];
+const INITIAL_ISSUES: Issue[] = [];
 
 interface ExecutionProjectDetailProps {
     project: Project;
@@ -74,7 +49,7 @@ const ExecutionProjectDetail: React.FC<ExecutionProjectDetailProps> = ({ project
     const { pendingRequests, submitEditRequest, getUserPendingCount } = useEditApproval(project.id);
 
     // Local state for Gantt tasks and issues (will be migrated later)
-    const [tasks, setTasks] = useState<GanttTask[]>(project.ganttData || MOCK_GANTT_DATA);
+    const [tasks, setTasks] = useState<GanttTask[]>(project.ganttData || []);
     const [issues, setIssues] = useState<Issue[]>(INITIAL_ISSUES);
 
     const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);

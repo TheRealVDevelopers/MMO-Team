@@ -244,13 +244,22 @@ export interface Lead {
   communicationMessages?: LeadCommunicationMessage[];
   files?: LeadFile[];
   is_demo?: boolean;
+  // New Attachment Fields for Strict Workflow
+  boqs?: LeadFile[];
+  drawings?: LeadFile[];
+  quotations?: LeadFile[];
 }
 
 export enum ProjectStatus {
   SITE_VISIT_PENDING = "Site Visit Pending", // New - Stage 1
   DRAWING_PENDING = "Drawing Pending",     // New - Stage 2
   BOQ_PENDING = "BOQ Pending",             // New - Stage 3
-  PENDING_EXECUTION_APPROVAL = "Pending Execution Approval", // New - Stage 4 (Gatekeeper)
+  PENDING_EXECUTION_APPROVAL = "Pending Execution Approval", // Workflow Stage 1
+  EXECUTION_APPROVED = "Execution Approved", // Workflow Stage 2 (After Execution Team Approves)
+  BLUEPRINT_CREATED = "Blueprint Created", // Workflow Stage 3 (After Blueprint Submitted)
+  PENDING_BUDGET_APPROVAL = "Pending Budget Approval", // Workflow Stage 4 (After Budget Defined)
+  ACTIVE = "Active", // Workflow Stage 5 (Final - After Accounts Approves)
+  READY_TO_START = "Ready to Start",       // Legacy - kept for compatibility
   AWAITING_DESIGN = "Awaiting Design",
   DESIGN_IN_PROGRESS = "Design In Progress",
   REVISIONS_IN_PROGRESS = "Revisions In Progress",
@@ -393,7 +402,10 @@ export interface ExecutionStage {
   id: string;
   name: string; // e.g. "Phase 1: Flooring"
   description?: string;
-  deadline: Date;
+  deadline?: Date; // Made optional for blueprint creation
+  durationDays?: number; // Duration in days for Gantt
+  assigneeId?: string; // Assigned team member
+  order?: number; // Stage order in sequence
   status: 'Pending' | 'In Progress' | 'Completed';
   completedAt?: Date;
   completedBy?: string; // User ID
@@ -548,6 +560,28 @@ export interface Project {
   budgetDefined?: boolean;
   totalBudget?: number;
   budgetSpent?: number;
+
+  // Accounts Approval Fields
+  budgetApprovedAt?: Date;
+  budgetApprovedBy?: string;
+  advancePaymentVerified?: boolean;
+
+  // Blueprint & Budget Definition Fields
+  location?: string; // Project location/site address
+  executionBlueprint?: {
+    stages: ExecutionStage[];
+    createdAt: Date;
+    totalDurationDays: number;
+  };
+  projectBudget?: {
+    total: number;
+    materials?: number;
+    labor?: number;
+    overhead?: number;
+    contingency?: number;
+    notes?: string;
+    submittedAt: Date;
+  };
 }
 
 // NEW: Organization interface

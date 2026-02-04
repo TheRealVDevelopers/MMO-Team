@@ -1,5 +1,3 @@
-import { storage } from '../firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { LeadHistoryAttachment } from '../types';
 
 /**
@@ -30,27 +28,17 @@ export const uploadLeadActivityAttachment = async (
     file: File,
     leadId: string
 ): Promise<LeadHistoryAttachment> => {
-    if (!storage) {
-        throw new Error('Firebase Storage is not initialized');
-    }
+    const fileToBase64 = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = error => reject(error);
+        });
+    };
 
     const timestamp = Date.now();
-    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const storagePath = `leads/${leadId}/attachments/${timestamp}_${sanitizedFileName}`;
-
-    const storageRef = ref(storage, storagePath);
-
-    // Upload the file
-    const snapshot = await uploadBytes(storageRef, file, {
-        contentType: file.type,
-        customMetadata: {
-            originalName: file.name,
-            leadId: leadId,
-        },
-    });
-
-    // Get the download URL
-    const downloadUrl = await getDownloadURL(snapshot.ref);
+    const downloadUrl = await fileToBase64(file);
 
     const attachment: LeadHistoryAttachment = {
         id: `att-${timestamp}-${Math.random().toString(36).substr(2, 9)}`,

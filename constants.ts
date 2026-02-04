@@ -158,288 +158,22 @@ export const BANK_DETAILS = {
 const now = new Date();
 
 export const USERS: User[] = [
+    // Admin user required for initial login if auth is skipped, keeping one for safety or migration
     {
         id: 'user-1',
         name: 'Admin',
         role: UserRole.SUPER_ADMIN,
         avatar: 'https://i.pravatar.cc/150?u=user-1',
-        currentTask: 'Reviewing Q3 performance reports.',
-        lastUpdateTimestamp: new Date(now.getTime() - 15 * 60 * 1000),
+        currentTask: 'System Admin',
+        lastUpdateTimestamp: new Date(),
         email: 'admin@makemyoffice.com',
         phone: '+91 98765 43210',
-        currentTaskDetails: { title: 'Strategy Review', type: 'Desk Work', status: 'In Progress', startTime: new Date(now.getTime() - 45 * 60 * 1000) }
-    },
-    {
-        id: 'user-2',
-        name: 'Sarah Manager',
-        role: UserRole.SALES_GENERAL_MANAGER,
-        avatar: 'https://i.pravatar.cc/150?u=user-2',
-        currentTask: 'Finalizing sales strategy for new quarter.',
-        lastUpdateTimestamp: new Date(now.getTime() - 30 * 60 * 1000),
-        email: 'sarah.m@makemyoffice.com',
-        phone: '+91 98765 43211',
-        currentTaskDetails: { title: 'Pipeline Review', type: 'Meeting', status: 'In Progress', startTime: new Date(now.getTime() - 30 * 60 * 1000), location: 'Conference Room A' }
-    },
-    {
-        id: 'user-3',
-        name: 'John Sales',
-        role: UserRole.SALES_TEAM_MEMBER,
-        avatar: 'https://i.pravatar.cc/150?u=user-3',
-        currentTask: 'Client meeting with Innovate Corp.',
-        lastUpdateTimestamp: new Date(now.getTime() - 5 * 60 * 1000),
-        region: 'North',
-        email: 'sales@makemyoffice.com',
-        phone: '+91 98765 43212',
-        currentTaskDetails: { title: 'Client Presentation', type: 'Meeting', status: 'In Progress', startTime: new Date(now.getTime() - 45 * 60 * 1000), location: 'Innovate Corp HQ, Gurgaon', projectId: 'lead-1' }
-    },
-    {
-        id: 'user-4',
-        name: 'Emily Designer',
-        role: UserRole.DRAWING_TEAM,
-        avatar: 'https://i.pravatar.cc/150?u=user-4',
-        currentTask: 'Working on 3D renders for Pantry Renovation.',
-        lastUpdateTimestamp: new Date(now.getTime() - 1 * 60 * 60 * 1000),
-        email: 'emily.d@makemyoffice.com',
-        phone: '+91 98765 43213',
-        currentTaskDetails: { title: '3D Rendering', type: 'Desk Work', status: 'In Progress', startTime: new Date(now.getTime() - 120 * 60 * 1000), projectId: 'proj-101' }
-    },
-    {
-        id: 'user-5',
-        name: 'Mike Quote',
-        role: UserRole.QUOTATION_TEAM,
-        avatar: 'https://i.pravatar.cc/150?u=user-5',
-        currentTask: 'Revising quote for Art Studio Conversion.',
-        lastUpdateTimestamp: new Date(now.getTime() - 2 * 60 * 60 * 1000),
-        email: 'mike.q@makemyoffice.com',
-        phone: '+91 98765 43214',
-        currentTaskDetails: { title: 'Quote Revision', type: 'Desk Work', status: 'Paused', startTime: new Date(now.getTime() - 180 * 60 * 1000), projectId: 'proj-103' }
-    },
-    {
-        id: 'user-6',
-        name: 'David Engineer',
-        role: UserRole.SITE_ENGINEER,
-        avatar: 'https://i.pravatar.cc/150?u=user-6',
-        currentTask: 'On-site visit at Enterprise Suites.',
-        lastUpdateTimestamp: new Date(now.getTime() - 45 * 60 * 1000),
-        email: 'david.e@makemyoffice.com',
-        phone: '+91 98765 43215',
-        currentTaskDetails: { title: 'Site Inspection', type: 'Site Visit', status: 'In Progress', startTime: new Date(now.getTime() - 60 * 60 * 1000), location: 'Enterprise Suites, Gurgaon', projectId: 'proj-104' }
-    },
-    {
-        id: 'user-7',
-        name: 'Anna Procurement',
-        role: UserRole.PROCUREMENT_TEAM,
-        avatar: 'https://i.pravatar.cc/150?u=user-7',
-        currentTask: 'Negotiating with furniture vendors.',
-        lastUpdateTimestamp: new Date(now.getTime() - 2 * 60 * 60 * 1000),
-        email: 'anna.p@makemyoffice.com',
-        phone: '+91 98765 43216',
-        currentTaskDetails: { title: 'Vendor Negotiation', type: 'Meeting', status: 'In Progress', startTime: new Date(now.getTime() - 30 * 60 * 1000) }
-    },
-    {
-        id: 'user-8',
-        name: 'Chris Executor',
-        role: UserRole.EXECUTION_TEAM,
-        avatar: 'https://i.pravatar.cc/150?u=user-8',
-        currentTask: 'Supervising electrical work at Enterprise Suites.',
-        lastUpdateTimestamp: new Date(now.getTime() - 10 * 60 * 1000),
-        email: 'chris.e@makemyoffice.com',
-        phone: '+91 98765 43217',
-        currentTaskDetails: { title: 'Site Supervision', type: 'Site Visit', status: 'In Progress', startTime: new Date(now.getTime() - 4 * 60 * 60 * 1000), location: 'Enterprise Suites, Gurgaon', projectId: 'proj-104' }
-    },
-    {
-        id: 'user-9',
-        name: 'Olivia Accounts',
-        role: UserRole.ACCOUNTS_TEAM,
-        avatar: 'https://i.pravatar.cc/150?u=user-9',
-        currentTask: 'Processing invoices for completed projects.',
-        lastUpdateTimestamp: new Date(now.getTime() - 3 * 60 * 60 * 1000),
-        email: 'olivia.a@makemyoffice.com',
-        phone: '+91 98765 43218',
-        currentTaskDetails: { title: 'Invoice Processing', type: 'Desk Work', status: 'In Progress', startTime: new Date(now.getTime() - 120 * 60 * 1000) }
-    },
-    {
-        id: 'user-10',
-        name: 'Jane Doe',
-        role: UserRole.SALES_TEAM_MEMBER,
-        avatar: 'https://i.pravatar.cc/150?u=user-10',
-        currentTask: 'Driving to Highrise Apartments.',
-        lastUpdateTimestamp: new Date(now.getTime() - 25 * 60 * 1000),
-        region: 'South',
-        email: 'jane.d@makemyoffice.com',
-        phone: '+91 98765 43219',
-        currentTaskDetails: { title: 'Traveling to Client', type: 'Travel', status: 'In Progress', startTime: new Date(now.getTime() - 20 * 60 * 1000), location: 'En route to Sector 42' }
-    },
-];
-
-
-export const LEADS: Lead[] = [
-    {
-        id: 'lead-1',
-        clientName: 'Innovate Corp',
-        projectName: 'HQ Remodel',
-        status: LeadPipelineStatus.NEW_NOT_CONTACTED,
-        lastContacted: '2 hours ago',
-        assignedTo: 'user-3',
-        inquiryDate: new Date(now.getTime() - 2 * 60 * 60 * 1000),
-        value: 12000000,
-        source: 'Website',
-        history: [
-            { action: 'Lead Created', user: 'System', timestamp: new Date(now.getTime() - 2 * 60 * 60 * 1000) }
-        ],
-        priority: 'High',
-        tasks: {
-            siteVisits: ['sv-1'],
-            quotationRequests: ['qr-2'],
-        },
-        clientEmail: 'info@innovatecorp.com',
-        clientMobile: '+91 9999911111'
-    },
-    {
-        id: 'lead-2',
-        clientName: 'Tech Solutions Ltd.',
-        projectName: 'New Office Wing',
-        status: LeadPipelineStatus.CONTACTED_CALL_DONE,
-        lastContacted: '1 day ago',
-        assignedTo: 'user-10',
-        inquiryDate: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000),
-        value: 22000000,
-        source: 'Referral',
-        history: [
-            { action: 'Lead Created', user: 'Sarah Manager', timestamp: new Date(2026, 0, 12, 22, 46), notes: 'Assigned to Jane Doe' },
-            { action: 'Reminder set', user: 'Jane Doe', timestamp: new Date(2026, 0, 12, 22, 49), notes: 'call' },
-            { action: 'Status changed to Contacted - Call Done', user: 'Jane Doe', timestamp: new Date(2026, 0, 12, 22, 59) },
-            { action: 'Note added', user: 'Jane Doe', timestamp: new Date(2026, 0, 12, 22, 59), notes: 'asked for site visit on monday ' }
-        ],
-        priority: 'High',
-        reminders: [
-            { id: 'rem-1', date: new Date(now.getTime() + 2 * 60 * 1000), notes: 'Follow up about the new design mockups.', completed: false },
-            { id: 'rem-2', date: new Date(now.getTime() - 24 * 60 * 60 * 1000), notes: 'Send brochure.', completed: true }
-        ],
-        tasks: {
-            siteVisits: ['sv-4', 'sv-6'],
-            drawingRequests: ['dr-1'],
-        },
-        clientEmail: 'contact@techsolutions.com',
-        clientMobile: '+91 9999922222'
-    },
-    {
-        id: 'lead-3',
-        clientName: 'Global Ventures',
-        projectName: 'Pantry Renovation',
-        status: LeadPipelineStatus.SITE_VISIT_SCHEDULED,
-        lastContacted: '3 days ago',
-        assignedTo: 'user-3',
-        inquiryDate: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000),
-        value: 6000000,
-        source: 'Cold Call',
-        history: [
-            { action: 'Lead Created', user: 'John Sales', timestamp: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000) },
-            { action: 'Initial Call', user: 'John Sales', timestamp: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000) },
-            { action: 'Site Visit Scheduled', user: 'John Sales', timestamp: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000), notes: 'Visit booked for next Tuesday.' }
-        ],
-        priority: 'Medium',
-        reminders: [
-            { id: 'rem-3', date: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000), notes: 'Prepare for site visit on Tuesday.', completed: false }
-        ],
-        tasks: {
-            siteVisits: ['sv-3', 'sv-5'],
-        },
-        clientEmail: 'procure@globalventures.com',
-        clientMobile: '+91 9999933333'
-    },
-    {
-        id: 'lead-4',
-        clientName: 'Startup Hub',
-        projectName: 'Co-working Space Design',
-        status: LeadPipelineStatus.QUOTATION_SENT,
-        lastContacted: '5 hours ago',
-        assignedTo: 'user-10',
-        inquiryDate: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000),
-        value: 36000000,
-        source: 'Website',
-        history: [
-            { action: 'Quotation Sent', user: 'Mike Quote', timestamp: new Date(now.getTime() - 5 * 60 * 60 * 1000), notes: 'Quotation v1 sent.' }
-        ],
-        priority: 'High',
-        clientEmail: 'hello@startuphub.io',
-        clientMobile: '+91 9999944444'
-    },
-    {
-        id: 'lead-5',
-        clientName: 'Marketing Gurus',
-        projectName: 'Creative Studio Setup',
-        status: LeadPipelineStatus.NEGOTIATION,
-        lastContacted: '1 week ago',
-        assignedTo: 'user-3',
-        inquiryDate: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000),
-        value: 9600000,
-        source: 'Event',
-        history: [
-            { action: 'Negotiation Call', user: 'John Sales', timestamp: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000), notes: 'Client is asking for a 10% discount.' }
-        ],
-        priority: 'Medium',
-        clientEmail: 'biz@marketinggurus.com',
-        clientMobile: '+91 9999955555'
-    },
-    {
-        id: 'lead-6',
-        clientName: 'Finance Partners',
-        projectName: 'Executive Floor Interiors',
-        status: LeadPipelineStatus.WON,
-        lastContacted: '2 days ago',
-        assignedTo: 'user-10',
-        inquiryDate: new Date(new Date().setDate(2)), // this month
-        value: 25600000,
-        source: 'Referral',
-        history: [
-            { action: 'Deal Won', user: 'Jane Doe', timestamp: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000) }
-        ],
-        priority: 'High',
-        tasks: {
-            quotationRequests: ['qr-1'],
-            procurementRequests: ['pr-1'],
-            executionRequests: ['er-1'],
-            accountsRequests: ['ar-1'],
-        },
-        clientEmail: 'accounts@financepartners.com',
-        clientMobile: '+91 9999966666'
-    },
-    {
-        id: 'lead-7',
-        clientName: 'Health First Clinic',
-        projectName: 'Reception Redesign',
-        status: LeadPipelineStatus.LOST,
-        lastContacted: '1 month ago',
-        assignedTo: 'user-3',
-        inquiryDate: new Date(now.getTime() - 45 * 24 * 60 * 60 * 1000),
-        value: 7600000,
-        source: 'Website',
-        history: [
-            { action: 'Deal Lost', user: 'John Sales', timestamp: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000), notes: 'Lost to competitor pricing.' }
-        ],
-        priority: 'Low',
-        clientEmail: 'admin@healthfirst.clinic',
-        clientMobile: '+91 9999977777'
-    },
-    {
-        id: 'lead-8',
-        clientName: 'Highrise Apartments',
-        projectName: 'Lobby Interior',
-        status: LeadPipelineStatus.NEW_NOT_CONTACTED,
-        lastContacted: '48 hours ago',
-        assignedTo: 'user-10',
-        inquiryDate: new Date(now.getTime() - 48 * 60 * 60 * 1000),
-        value: 16800000,
-        source: 'Website',
-        history: [
-            { action: 'Lead Created', user: 'System', timestamp: new Date(now.getTime() - 48 * 60 * 60 * 1000) }
-        ],
-        priority: 'Medium',
-        clientEmail: 'manager@highrise.com',
-        clientMobile: '+91 9999988888'
+        currentTaskDetails: { title: 'System Admin', type: 'Desk Work', status: 'In Progress', startTime: new Date() }
     }
 ];
+
+
+export const LEADS: Lead[] = [];
 
 export const ISSUES: Issue[] = [
     { id: 'issue-1', projectId: 'proj-104', title: 'Socket placement incorrect in west wing', status: 'Open', priority: 'High', reportedBy: 'Chris Executor', timestamp: new Date(now.getTime() - 2 * 60 * 60 * 1000) },
@@ -485,13 +219,7 @@ export const COMMUNICATION: Record<string, CommunicationMessage[]> = {
     ]
 };
 
-export const EXPENSES: Expense[] = [
-    { id: 'exp-1', userId: 'user-8', projectId: 'proj-104', category: 'Site', description: 'Emergency purchase of extra wiring', amount: 8500, date: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000), status: 'Pending', paymentMethod: 'Personal Card' },
-    { id: 'exp-2', userId: 'user-6', projectId: 'proj-108', category: 'Travel', description: 'Fuel for client site visit', amount: 1200, date: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000), status: 'Approved', paymentMethod: 'Personal Card' },
-    { id: 'exp-3', userId: 'user-3', category: 'Client Meeting', description: 'Lunch with Innovate Corp team', amount: 4500, date: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000), status: 'Paid', paymentMethod: 'Company Card' },
-    { id: 'exp-4', userId: 'user-9', category: 'Office', description: 'Stationery and office supplies', amount: 2800, date: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000), status: 'Paid', paymentMethod: 'UPI', vendor: 'Office Needs Inc.' },
-    { id: 'exp-5', userId: 'user-6', projectId: 'proj-104', category: 'Travel', description: 'Taxi fare for site inspection', amount: 750, date: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000), status: 'Rejected', paymentMethod: 'Cash' },
-];
+export const EXPENSES: Expense[] = [];
 
 export const DOCUMENTS: Document[] = [
     { id: 'doc-1', name: 'Client_Brief_v1.pdf', type: 'pdf', url: '#', uploaded: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000), size: '1.2MB' },
@@ -500,22 +228,7 @@ export const DOCUMENTS: Document[] = [
     { id: 'doc-4', name: 'Contract_Signed.pdf', type: 'pdf', url: '#', uploaded: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000), size: '800KB' },
 ];
 
-export const PROJECTS: Project[] = [
-    { id: 'proj-101', clientName: 'Global Ventures', projectName: 'Pantry Renovation', status: ProjectStatus.DESIGN_IN_PROGRESS, deadline: '5 days', priority: 'High', budget: 1200000, advancePaid: 600000, clientAddress: '123 Business Bay, Mumbai', clientContact: { name: 'Rohan Sharma', phone: '+91 9820098200' }, progress: 10, assignedTeam: { drawing: 'user-4' }, milestones: [{ name: 'Initial Design', completed: false }], startDate: new Date(2024, 5, 1), endDate: new Date(2024, 6, 15), totalExpenses: 96000, salespersonId: 'user-3', documents: [DOCUMENTS[0], DOCUMENTS[1]] },
-    { id: 'proj-102', clientName: 'Data Systems Inc', projectName: 'Server Room Layout', status: ProjectStatus.AWAITING_QUOTATION, deadline: '3 days', priority: 'Medium', budget: 2800000, advancePaid: 1000000, clientAddress: '456 Tech Park, Bangalore', clientContact: { name: 'Priya Patel', phone: '+91 9988776655' }, progress: 25, assignedTeam: { drawing: 'user-4', quotation: 'user-5' }, milestones: [{ name: 'Initial Design', completed: true }, { name: 'Client Feedback', completed: false }], startDate: new Date(2024, 5, 10), endDate: new Date(2024, 7, 1), totalExpenses: 360000, salespersonId: 'user-10' },
-    { id: 'proj-103', clientName: 'Creative Minds', projectName: 'Art Studio Conversion', status: ProjectStatus.NEGOTIATING, deadline: '3 days', priority: 'High', budget: 6000000, advancePaid: 2500000, clientAddress: '789 Art Lane, Delhi', clientContact: { name: 'Anjali Mehta', phone: '+91 9123456789' }, progress: 40, assignedTeam: { quotation: 'user-5' }, milestones: [], startDate: new Date(2024, 6, 1), endDate: new Date(2024, 8, 30), totalExpenses: 0, salespersonId: 'user-3' },
-    { id: 'proj-104', clientName: 'Enterprise Suites', projectName: 'Full Floor Fit-out', status: ProjectStatus.IN_EXECUTION, priority: 'Medium', budget: 20000000, advancePaid: 10000000, clientAddress: '101 Corporate Towers, Gurgaon', clientContact: { name: 'Vikram Singh', phone: '+91 9876543210' }, progress: 60, assignedTeam: { execution: ['user-8'], site_engineer: 'user-6' }, milestones: [{ name: 'Advance Paid', completed: true }, { name: 'Milestone 1', completed: false }], startDate: new Date(2024, 4, 15), endDate: new Date(2024, 9, 15), issues: ISSUES.filter(i => i.projectId === 'proj-104'), checklists: CHECKLISTS['proj-104'], communication: COMMUNICATION['proj-104'], totalExpenses: 8800000 },
-    { id: 'proj-105', clientName: 'Legal Eagles LLP', projectName: 'Conference Room AV', status: ProjectStatus.COMPLETED, priority: 'Low', budget: 3600000, advancePaid: 3600000, clientAddress: '212 Law Chambers, Pune', clientContact: { name: 'Sunita Rao', phone: '+91 9555512345' }, progress: 100, assignedTeam: { drawing: 'user-4' }, milestones: [{ name: 'Project Handover', completed: true }], startDate: new Date(2024, 3, 1), endDate: new Date(2024, 4, 30), totalExpenses: 2560000 },
-    { id: 'proj-106', clientName: 'Health First Clinic', projectName: 'Reception Area Redesign', status: ProjectStatus.PROCUREMENT, priority: 'Medium', budget: 4800000, advancePaid: 2000000, clientAddress: '333 Wellness Rd, Hyderabad', clientContact: { name: 'Dr. Kumar', phone: '+91 9000011111' }, progress: 50, assignedTeam: {}, milestones: [], startDate: new Date(2024, 6, 20), endDate: new Date(2024, 8, 20), totalExpenses: 1200000, salespersonId: 'user-3' },
-    { id: 'proj-107', clientName: 'Finance Partners', projectName: 'Executive Floor Interiors', status: ProjectStatus.APPROVED, priority: 'High', budget: 25600000, advancePaid: 12800000, clientAddress: '444 Money Street, Mumbai', clientContact: { name: 'Rajesh Gupta', phone: '+91 9820198201' }, progress: 100, assignedTeam: { drawing: 'user-4', quotation: 'user-5' }, milestones: [], startDate: new Date(2024, 2, 1), endDate: new Date(2024, 5, 30), totalExpenses: 20000000, salespersonId: 'user-10', documents: [DOCUMENTS[3]] },
-    { id: 'proj-108', clientName: 'Innovate Corp', projectName: 'HQ Remodel', status: ProjectStatus.PENDING_REVIEW, priority: 'High', budget: 12000000, advancePaid: 6000000, clientAddress: '555 Innovation Dr, Bangalore', clientContact: { name: 'Amit Desai', phone: '+91 9988776650' }, progress: 95, assignedTeam: { execution: ['user-8'], drawing: 'user-4', site_engineer: 'user-6' }, milestones: [], startDate: new Date(2024, 5, 1), endDate: new Date(2024, 10, 1), issues: ISSUES.filter(i => i.projectId === 'proj-108'), checklists: CHECKLISTS['proj-108'], communication: COMMUNICATION['proj-108'], totalExpenses: 7600000, salespersonId: 'user-3' },
-    { id: 'proj-109', clientName: 'Startup Hub', projectName: 'Co-working Space', status: ProjectStatus.REVISIONS_REQUESTED, priority: 'Medium', budget: 36000000, advancePaid: 15000000, clientAddress: '666 Growth Ave, Delhi', clientContact: { name: 'Sneha Reddy', phone: '+91 9123456780' }, progress: 30, assignedTeam: { drawing: 'user-4' }, milestones: [], startDate: new Date(2024, 6, 1), endDate: new Date(2025, 1, 1), totalExpenses: 9600000, salespersonId: 'user-10' },
-    { id: 'proj-110', clientName: 'Alpha Logistics', projectName: 'Warehouse Office', status: ProjectStatus.AWAITING_DESIGN, deadline: '2 days', priority: 'High', budget: 7200000, advancePaid: 3000000, clientAddress: '777 Supply Chain, Chennai', clientContact: { name: 'Karthik Iyer', phone: '+91 9444455555' }, progress: 0, assignedTeam: { drawing: 'user-4' }, milestones: [], startDate: new Date(), endDate: new Date(new Date().setDate(now.getDate() + 30)), totalExpenses: 0 },
-    { id: 'proj-111', clientName: 'Beta Software', projectName: 'Break Room', status: ProjectStatus.DESIGN_IN_PROGRESS, deadline: '10 days', priority: 'Low', budget: 2000000, advancePaid: 1000000, clientAddress: '888 Code Vista, Pune', clientContact: { name: 'Neha Joshi', phone: '+91 9555512346' }, progress: 15, assignedTeam: { drawing: 'user-4' }, milestones: [], startDate: new Date(), endDate: new Date(new Date().setDate(now.getDate() + 45)), totalExpenses: 80000 },
-    { id: 'proj-112', clientName: 'Quantum Solutions', projectName: 'Lab Fit-out', status: ProjectStatus.AWAITING_QUOTATION, deadline: '1 day', priority: 'High', budget: 14400000, advancePaid: 7000000, clientAddress: '999 Research Blvd, Hyderabad', clientContact: { name: 'Dr. Venkat', phone: '+91 9000011112' }, progress: 20, assignedTeam: { drawing: 'user-4', quotation: 'user-5' }, milestones: [], startDate: new Date(), endDate: new Date(new Date().setDate(now.getDate() + 60)), totalExpenses: 2000000 },
-    { id: 'proj-113', clientName: 'Sunrise Cafe', projectName: 'New Cafe Interior', status: ProjectStatus.QUOTATION_SENT, deadline: 'N/A', priority: 'Medium', budget: 4400000, advancePaid: 2200000, clientAddress: '12 Morning Glory, Mumbai', clientContact: { name: 'Aditya Chopra', phone: '+91 9820098202' }, progress: 35, assignedTeam: { quotation: 'user-5' }, milestones: [], startDate: new Date(), endDate: new Date(new Date().setDate(now.getDate() + 40)), totalExpenses: 0 },
-    { id: 'proj-114', clientName: 'Zenith Bank', projectName: 'Branch Office Renovation', status: ProjectStatus.REJECTED, deadline: 'N/A', priority: 'Low', budget: 17600000, advancePaid: 0, clientAddress: '34 Central Plaza, Delhi', clientContact: { name: 'Manish Kumar', phone: '+91 9123456781' }, progress: 40, assignedTeam: { quotation: 'user-5' }, milestones: [], startDate: new Date(), endDate: new Date(new Date().setDate(now.getDate() + 90)), totalExpenses: 0 },
-];
+export const PROJECTS: Project[] = [];
 
 export const VENDORS: Vendor[] = [
     { id: 'ven-1', name: 'Furniture World', category: 'Furniture', email: 'vendor@makemyoffice.com', phone: '+91 9876500001', rating: 4.8, specialization: 'Office Workstations & Chairs', address: '12 IND Estate, Okhla', gstin: '07AAAAA0000A1Z5', paymentTerms: '50% Advance' },
@@ -621,58 +334,7 @@ export const PURCHASE_ORDERS: PurchaseOrder[] = [
 ];
 
 
-export const INVOICES: Invoice[] = [
-    {
-        id: 'inv-001',
-        invoiceNumber: 'INV-2024-001',
-        projectId: 'proj-105',
-        projectName: 'Conference Room AV',
-        clientName: 'Legal Eagles LLP',
-        clientAddress: '212 Law Chambers, Pune',
-        clientGstin: '27AAAAA0000A1Z5',
-        issueDate: new Date(now.getTime() - 45 * 24 * 60 * 60 * 1000),
-        dueDate: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000),
-        items: [
-            { id: 'item-1', description: '85" 4K Display Panel', hsn: '8528', quantity: 1, rate: 250000, taxRate: 18 },
-            { id: 'item-2', description: 'Video Conferencing System', hsn: '8517', quantity: 1, rate: 450000, taxRate: 18 },
-            { id: 'item-3', description: 'Installation & Labor', hsn: '9987', quantity: 20, rate: 2000, taxRate: 18 }
-        ],
-        subTotal: 740000,
-        discountValue: 0,
-        taxAmount: 133200,
-        total: 873200,
-        amountInWords: 'Eight Lakh Seventy-Three Thousand Two Hundred Only',
-        paidAmount: 873200,
-        status: PaymentStatus.PAID,
-        terms: 'Payment due within 30 days.',
-        notes: 'Thank you for your business.',
-        bankDetails: BANK_DETAILS,
-    },
-    {
-        id: 'inv-002',
-        invoiceNumber: 'INV-2024-002',
-        projectId: 'proj-104',
-        projectName: 'Full Floor Fit-out',
-        clientName: 'Enterprise Suites',
-        clientAddress: '101 Corporate Towers, Gurgaon',
-        clientGstin: '06BBBBB1111B1Z2',
-        issueDate: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000),
-        dueDate: new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000),
-        items: [
-            { id: 'item-1', description: 'Phase 2 - Civil Work', hsn: '9954', quantity: 1, rate: 1500000, taxRate: 18 },
-        ],
-        subTotal: 1500000,
-        discountValue: 0,
-        taxAmount: 270000,
-        total: 1770000,
-        amountInWords: 'Seventeen Lakh Seventy Thousand Rupees Only',
-        paidAmount: 1000000,
-        status: PaymentStatus.PARTIALLY_PAID,
-        terms: 'As per contract milestones.',
-        notes: '',
-        bankDetails: BANK_DETAILS,
-    },
-];
+export const INVOICES: Invoice[] = [];
 
 export const VENDOR_BILLS: VendorBill[] = [
     { id: 'vb-001', vendorId: 'ven-3', vendorName: 'Paint Masters', invoiceNumber: 'PM-8372', amount: 200000, issueDate: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000), dueDate: new Date(now.getTime() + 20 * 24 * 60 * 60 * 1000), status: 'Approved', projectId: 'proj-104', poReference: 'PO-00123' },
