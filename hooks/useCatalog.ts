@@ -9,6 +9,11 @@ export const useCatalog = () => {
     const [error, setError] = useState<Error | null>(null);
 
     useEffect(() => {
+        if (!db) {
+            console.warn("Firestore db is not initialized (useCatalog).");
+            setLoading(false);
+            return;
+        }
         const catalogRef = collection(db, 'catalog');
         const q = query(catalogRef, orderBy('name', 'asc'));
 

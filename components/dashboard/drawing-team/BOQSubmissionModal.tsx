@@ -121,22 +121,25 @@ const BOQSubmissionModal: React.FC<BOQSubmissionModalProps> = ({ isOpen, onClose
     };
 
     return (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-            <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                <div className="fixed inset-0 transition-opacity" aria-hidden="true" onClick={onClose}>
-                    <div className="absolute inset-0 bg-gray-900/75 backdrop-blur-sm"></div>
-                </div>
+        <div className="fixed inset-0 z-[100] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            {/* Backdrop */}
+            <div className="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" onClick={onClose} aria-hidden="true" />
 
-                <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-                <div className="inline-block align-bottom bg-white dark:bg-slate-800 rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full border border-gray-200 dark:border-gray-700">
+            {/* Modal Positioning Wrapper */}
+            <div className="flex min-h-screen items-center justify-center p-4 text-center sm:p-0">
+                {/* Modal Panel */}
+                <div className="relative transform overflow-hidden rounded-xl bg-white dark:bg-slate-900 text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-4xl border border-gray-200 dark:border-gray-700 ring-1 ring-white/5">
                     <form onSubmit={handleSubmit}>
-                        <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-slate-800/50">
+                        <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-slate-800/80">
                             <div>
                                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">
                                     Submit Bill of Quantities (BOQ)
                                 </h3>
-                                {projectName && <p className="text-sm text-gray-500 mt-1">Project: {projectName}</p>}
+                                {projectName ? (
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Project: <span className="font-medium text-gray-900 dark:text-gray-200">{projectName}</span></p>
+                                ) : (
+                                    <p className="text-sm text-gray-500 mt-1 animate-pulse">Loading project details...</p>
+                                )}
                             </div>
                             <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-500 transition-colors">
                                 <XMarkIcon className="h-6 w-6" />

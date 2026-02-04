@@ -268,6 +268,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leads, users })
                     isOpen={!!selectedLead}
                     onClose={() => setSelectedLead(null)}
                     onUpdate={handleLeadUpdate}
+                    users={users}
                 />
             )}
         </motion.div>

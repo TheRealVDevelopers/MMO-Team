@@ -14,16 +14,20 @@ import {
 import { Lead, LeadPipelineStatus } from '../../../types';
 import { formatCurrencyINR, formatDateTime } from '../../../constants';
 import PaymentVerificationRequest from '../sales-team/PaymentVerificationRequest';
+import ScheduleVisitModal from '../sales-manager/ScheduleVisitModal';
+import { User } from '../../../types';
 
 interface LeadDetailModalProps {
     isOpen: boolean;
     onClose: () => void;
     lead: Lead;
     onUpdate: (lead: Lead) => void;
+    users: User[]; // Added users prop
 }
 
-const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead, onUpdate }) => {
+const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead, onUpdate, users }) => {
     const [isPaymentRequestOpen, setIsPaymentRequestOpen] = useState(false);
+    const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
 
     if (!lead) return null;
 
@@ -173,7 +177,10 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
                                                     Verify Payment
                                                 </button>
 
-                                                <button className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-all">
+                                                <button
+                                                    onClick={() => setIsScheduleModalOpen(true)}
+                                                    className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-all"
+                                                >
                                                     <CalendarIcon className="w-5 h-5" />
                                                     Schedule Visit
                                                 </button>
@@ -217,6 +224,13 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
                                             </div>
                                         </Dialog>
                                     </Transition>
+
+                                    <ScheduleVisitModal
+                                        isOpen={isScheduleModalOpen}
+                                        onClose={() => setIsScheduleModalOpen(false)}
+                                        lead={lead}
+                                        users={users}
+                                    />
 
                                 </div>
                             </Dialog.Panel>

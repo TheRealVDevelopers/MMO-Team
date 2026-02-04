@@ -7,7 +7,9 @@ import {
     serverTimestamp,
     query,
     where,
-    Timestamp
+    Timestamp,
+    setDoc,
+    doc
 } from 'firebase/firestore';
 import {
     LEADS,
@@ -65,7 +67,7 @@ export const seedDemoData = async () => {
     const usersSnapshot = await getDocs(usersRef);
     if (usersSnapshot.size <= 1) { // Only seed if empty or just one user
         console.log("Seeding users...");
-        const { setDoc, doc } = await import('firebase/firestore');
+        // const { setDoc, doc } = await import('firebase/firestore');
         for (const user of USERS) {
             await setDoc(doc(db, 'staffUsers', user.id), {
                 ...user,

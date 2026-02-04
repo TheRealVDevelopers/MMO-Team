@@ -118,6 +118,15 @@ const ProjectsBoardPage: React.FC<{ onProjectSelect: (project: Project) => void;
         }
     }, [currentUser, projects]);
 
+    // Debug: Log selected project state changes
+    React.useEffect(() => {
+        if (selectedProjectForBOQ) {
+            console.log('UseEffect: selectedProjectForBOQ updated:', selectedProjectForBOQ.projectName);
+        } else {
+            console.log('UseEffect: selectedProjectForBOQ is null');
+        }
+    }, [selectedProjectForBOQ]);
+
     if (!currentUser) return null;
 
     if (loading) {
@@ -150,7 +159,7 @@ const ProjectsBoardPage: React.FC<{ onProjectSelect: (project: Project) => void;
                 input.type = 'file';
                 input.accept = '.pdf,.dwg,.dxf,.png,.jpg,.jpeg'; // Accept drawing file formats
                 input.multiple = false;
-                
+
                 input.onchange = async (e) => {
                     const file = (e.target as HTMLInputElement).files?.[0];
                     if (!file) return;
@@ -178,8 +187,8 @@ const ProjectsBoardPage: React.FC<{ onProjectSelect: (project: Project) => void;
                         // Format file size
                         const fileSizeKB = file.size / 1024;
                         const fileSizeMB = fileSizeKB / 1024;
-                        const formattedSize = fileSizeMB > 1 
-                            ? `${fileSizeMB.toFixed(2)} MB` 
+                        const formattedSize = fileSizeMB > 1
+                            ? `${fileSizeMB.toFixed(2)} MB`
                             : `${fileSizeKB.toFixed(2)} KB`;
 
                         // Update project with drawing info
@@ -210,10 +219,14 @@ const ProjectsBoardPage: React.FC<{ onProjectSelect: (project: Project) => void;
                 // Trigger file picker
                 input.click();
             } else if (action === 'submit_boq') {
-                console.log('Submit BOQ clicked for project:', project.projectName);
-                setSelectedProjectForBOQ(project);
-                setIsBOQModalOpen(true);
-                console.log('BOQ Modal should open now. isOpen:', true);
+                if (project && project.projectName) {
+                    console.log('Submit BOQ clicked for project:', project.projectName);
+                    setSelectedProjectForBOQ(project);
+                    setIsBOQModalOpen(true);
+                    console.log('BOQ Modal state set to open. Project:', project.projectName);
+                } else {
+                    console.error('Submit BOQ clicked but project or projectName is missing!', project);
+                }
             }
         } catch (error) {
             console.error("Action failed:", error);
