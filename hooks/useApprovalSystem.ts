@@ -425,24 +425,21 @@ export const approveRequest = async (
     const assigneeName = assignee ? assignee.name : 'Team Member';
     const assigneeRole = assignee ? assignee.role : 'Specialist';
 
-    // For Execution Requests, we don't mark as APPROVED yet, we go to AWAITING_EXECUTION_ACCEPTANCE
-    // This allows the "Negotiation" phase with the worker.
-    // UNLESS it's already in NEGOTIATION status and we are approving the changes, then we might accept it.
-    // But per requirements: "once the manager or the admin approve... complete request would go to the execution team member"
-
+    // Status Determination
+    // Default to APPROVED, but if assigned, move to ASSIGNED (Task Mode)
     let newStatus = ApprovalStatus.APPROVED;
-    if (data.requestType === ApprovalRequestType.EXECUTION_TOKEN) {
-      // logic:
-      // PENDING -> AWAITING_EXECUTION_ACCEPTANCE (Admin approves)
-      // NEGOTIATION -> AWAITING_EXECUTION_ACCEPTANCE (Admin approves changes)
-      // AWAITING_EXECUTION_ACCEPTANCE -> APPROVED (Execution Team accepts)
 
+    if (assigneeId) {
+      newStatus = ApprovalStatus.ASSIGNED;
+    }
+
+    if (data.requestType === ApprovalRequestType.EXECUTION_TOKEN) {
       if (data.status === ApprovalStatus.PENDING || data.status === 'Negotiation') {
         newStatus = ApprovalStatus.AWAITING_EXECUTION_ACCEPTANCE;
       }
     }
 
-    // update request status
+    // UPDATE THE REQUEST (Single Source of Truth)
     await updateDoc(requestRef, {
       status: newStatus,
       reviewedAt: serverTimestamp(),
@@ -450,20 +447,38 @@ export const approveRequest = async (
       reviewerName: reviewerName,
       reviewerComments: comments || '',
       assigneeId: assigneeId || null,
-      stages: stages || data.stages || []
+      stages: stages || data.stages || [],
+      // Lifecycle Fields
+      authorizedBy: reviewerId,
+      authorizedAt: serverTimestamp(),
+      ...(deadline ? { endDate: Timestamp.fromDate(deadline) } : {})
     });
 
     // 1. Notify Requester (Sales Member)
     await createNotification({
-      title: 'Work Request Approved',
-      message: `Strategic Update: Your request for "${data.title}" has been approved. ${assigneeName} (${assigneeRole}) has been allotted to this task. Please coordinate with the client.`,
+      title: 'Work Request Authorized',
+      message: `Strategic Update: Your request for "${data.title}" has been authorized. ${assigneeName} (${assigneeRole}) has been assigned. Status: ${newStatus}.`,
       user_id: data.requesterId,
       entity_type: 'system',
       entity_id: requestId,
       type: 'success'
     });
 
-    // 3. Pre-fetch Context info for task and status updates
+    // 2. Notify Assignee (if assigned)
+    if (assigneeId) {
+      await createNotification({
+        title: 'New Task Assignment',
+        message: `You have been assigned a new task: ${data.title}. Priority: ${data.priority}.`,
+        user_id: assigneeId,
+        entity_type: 'task', // It acts as a task now
+        entity_id: requestId,
+        type: 'info'
+      });
+    }
+
+    // 3. Update Context (Lead/Project)
+    // Removed duplicate "addTask" call. The ApprovalRequest IS the task now.
+
     let contextType: 'lead' | 'project' | undefined;
     let leadSnap: any;
     let projectSnap: any;
@@ -480,80 +495,11 @@ export const approveRequest = async (
         projectSnap = await getDoc(projectRef);
         if (projectSnap.exists()) {
           contextType = 'project';
-        } else {
-          // Fallback based on request type if not found in Firestore (e.g. demo data)
-          const isLeadRequest = [
-            ApprovalRequestType.SITE_VISIT,
-            ApprovalRequestType.SITE_VISIT_TOKEN,
-            ApprovalRequestType.RESCHEDULE_SITE_VISIT
-          ].includes(data.requestType);
-
-          const isProjectRequest = [
-            ApprovalRequestType.START_DRAWING,
-            ApprovalRequestType.DESIGN_CHANGE,
-            ApprovalRequestType.DRAWING_REVISIONS,
-            ApprovalRequestType.QUOTATION_APPROVAL,
-            ApprovalRequestType.QUOTATION_TOKEN
-          ].includes(data.requestType);
-
-          if (isLeadRequest) contextType = 'lead';
-          else if (isProjectRequest) contextType = 'project';
         }
       }
     }
 
-    // 2. If assigned, create a task (existing logic simplified since we have data)
-    if (assigneeId) {
-      const { addTask } = await import('./useMyDayTasks');
-
-      // If comments were edited/provided, use them. Otherwise fallback to original description.
-      const taskDescription = comments || data.description;
-
-      // Primary task for the request
-      await addTask({
-        title: data.title,
-        description: `Strategic Assignment for ${data.requestType}.\n\nInstructions: ${taskDescription}`,
-        userId: assigneeId,
-        status: 'Pending' as any,
-        priority: data.priority,
-        deadline: deadline ? deadline.toISOString() : (data.endDate ? (data.endDate as any).toDate().toISOString() : undefined),
-        date: deadline ? deadline.toISOString().split('T')[0] : (data.endDate ? (data.endDate as any).toDate().toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
-        timeSpent: 0,
-        isPaused: false,
-        createdAt: new Date(),
-        createdBy: reviewerId,
-        createdByName: reviewerName,
-        // Linkage
-        contextId: data.contextId,
-        contextType: contextType,
-        requesterId: data.requesterId
-      }, reviewerId);
-
-      // Automated Task Creation for Execution Stages
-      if (newStatus === ApprovalStatus.APPROVED && data.requestType === ApprovalRequestType.EXECUTION_TOKEN && stages) {
-        for (const stage of stages) {
-          await addTask({
-            title: `[Project Stage] ${stage.name} - ${data.title}`,
-            description: `Automated Execution Stage Task: ${stage.name}.\nProject: ${data.title}`,
-            userId: assigneeId,
-            status: 'Pending' as any,
-            priority: data.priority || 'High',
-            deadline: stage.deadline ? (stage.deadline instanceof Date ? stage.deadline.toISOString() : new Date(stage.deadline).toISOString()) : undefined,
-            date: stage.deadline ? (stage.deadline instanceof Date ? stage.deadline.toISOString().split('T')[0] : new Date(stage.deadline).toISOString().split('T')[0]) : new Date().toISOString().split('T')[0],
-            timeSpent: 0,
-            isPaused: false,
-            createdAt: new Date(),
-            createdBy: reviewerId,
-            createdByName: reviewerName,
-            contextId: data.contextId,
-            contextType: 'project',
-            requesterId: data.requesterId
-          }, reviewerId);
-        }
-      }
-    }
-
-    // 4. Update Lead/Project if contextId exists
+    // 4. Update Lead/Project history/status
     if (data.contextId && contextType) {
       if (contextType === 'lead' && leadSnap && leadSnap.exists()) {
         const leadData = leadSnap.data();
@@ -566,18 +512,14 @@ export const approveRequest = async (
               action: 'Authorization Initiated',
               user: reviewerName,
               timestamp: new Date(),
-              notes: `${data.requestType} authorized for ${assigneeName} (${assigneeRole}). Scheduled: ${scheduledTime}.${comments ? ` Note: ${comments}` : ''}`
+              notes: `${data.requestType} authorized for ${assigneeName} (${assigneeRole}). Status: ${newStatus}.`
             }
           ]
         };
 
-        // Auto-Status Updates & Task List
+        // Status logic
         if (data.requestType === ApprovalRequestType.SITE_VISIT || data.requestType === ApprovalRequestType.SITE_VISIT_TOKEN) {
           updates.status = LeadPipelineStatus.SITE_VISIT_SCHEDULED;
-          if (!updates.tasks) updates.tasks = leadData.tasks || {};
-          if (!updates.tasks.siteVisits) updates.tasks.siteVisits = [];
-          updates.tasks.siteVisits.push(`${assigneeName} - Assigned ${new Date().toLocaleDateString()}`);
-
           // Automatic Project Conversion
           try {
             const projectsRef = collection(db, 'projects');
@@ -608,11 +550,9 @@ export const approveRequest = async (
                 updatedAt: serverTimestamp()
               };
 
-              // Use setDoc to map lead ID to project ID for predictability
               await setDoc(doc(db, 'projects', leadData.id), projectData);
               updates.isConverted = true;
               updates.convertedProjectId = leadData.id;
-              console.log(`Lead ${leadData.id} converted to Project ${leadData.id}`);
             }
           } catch (projError) {
             console.error('Error creating project during conversion:', projError);
@@ -622,14 +562,8 @@ export const approveRequest = async (
           updates.status = LeadPipelineStatus.SITE_VISIT_RESCHEDULED;
         } else if (data.requestType === ApprovalRequestType.START_DRAWING) {
           updates.status = LeadPipelineStatus.DRAWING_IN_PROGRESS;
-          if (!updates.tasks) updates.tasks = leadData.tasks || {};
-          if (!updates.tasks.drawingRequests) updates.tasks.drawingRequests = [];
-          updates.tasks.drawingRequests.push(`${assigneeName} - Drawing Started ${new Date().toLocaleDateString()}`);
         } else if (data.requestType === ApprovalRequestType.DESIGN_CHANGE || data.requestType === ApprovalRequestType.DESIGN_TOKEN || data.requestType === ApprovalRequestType.DRAWING_REVISIONS) {
           updates.status = LeadPipelineStatus.DRAWING_REVISIONS;
-          if (!updates.tasks) updates.tasks = leadData.tasks || {};
-          if (!updates.tasks.drawingRequests) updates.tasks.drawingRequests = [];
-          updates.tasks.drawingRequests.push(`${assigneeName} - Revision Assigned ${new Date().toLocaleDateString()}`);
         } else if (data.requestType === ApprovalRequestType.REQUEST_FOR_QUOTATION || data.requestType === ApprovalRequestType.QUOTATION_TOKEN) {
           updates.status = LeadPipelineStatus.WAITING_FOR_QUOTATION;
         } else if (data.requestType === ApprovalRequestType.MODIFICATION || data.requestType === ApprovalRequestType.EXECUTION_TOKEN) {
@@ -671,7 +605,7 @@ export const approveRequest = async (
               action: 'Authorization Initiated',
               user: reviewerName,
               timestamp: new Date(),
-              notes: `${data.requestType} approved for ${assigneeName}.`
+              notes: `${data.requestType} approved/assigned to ${assigneeName}.`
             }
           ]
         };
@@ -731,6 +665,77 @@ export const approveRequest = async (
     }
   } catch (error) {
     console.error('Error approving request:', error);
+    throw error;
+  }
+};
+
+// Start a request (Move to ONGOING)
+export const startRequest = async (requestId: string, userId: string) => {
+  try {
+    const requestRef = doc(db, 'approvalRequests', requestId);
+    await updateDoc(requestRef, {
+      status: ApprovalStatus.ONGOING,
+      startedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error('Error starting request:', error);
+    throw error;
+  }
+};
+
+// Complete a request (Move to COMPLETED)
+export const completeRequest = async (requestId: string, userId: string) => {
+  try {
+    const requestRef = doc(db, 'approvalRequests', requestId);
+    const snap = await getDoc(requestRef);
+    const data = snap.data() as ApprovalRequest;
+
+    await updateDoc(requestRef, {
+      status: ApprovalStatus.COMPLETED,
+      completedAt: serverTimestamp(),
+    });
+
+    // Notify Admin/Authorized By
+    if (data.authorizedBy) {
+      await createNotification({
+        title: 'Task Completed',
+        message: `Update: ${data.requesterName} has completed the task "${data.title}". Review & Acknowledge required.`,
+        user_id: data.authorizedBy,
+        entity_type: 'system',
+        entity_id: requestId,
+        type: 'success'
+      });
+    }
+
+    // Notify original requester if different
+    if (data.requesterId && data.requesterId !== data.authorizedBy) {
+      await createNotification({
+        title: 'Request Completed',
+        message: `Good news: Your request "${data.title}" has been marked as completed.`,
+        user_id: data.requesterId,
+        entity_type: 'system',
+        entity_id: requestId,
+        type: 'success'
+      });
+    }
+
+  } catch (error) {
+    console.error('Error completing request:', error);
+    throw error;
+  }
+};
+
+// Acknowledge a completed request (Move to ACKNOWLEDGED - End of Lifecycle)
+export const acknowledgeRequest = async (requestId: string, adminId: string) => {
+  try {
+    const requestRef = doc(db, 'approvalRequests', requestId);
+    await updateDoc(requestRef, {
+      status: ApprovalStatus.ACKNOWLEDGED,
+      acknowledgedAt: serverTimestamp(),
+      acknowledgedBy: adminId
+    });
+  } catch (error) {
+    console.error('Error acknowledging request:', error);
     throw error;
   }
 };

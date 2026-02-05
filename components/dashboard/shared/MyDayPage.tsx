@@ -26,8 +26,9 @@ import { useMyDayTasks, addTask, updateTask } from '../../../hooks/useMyDayTasks
 import { useExecutionTasks } from '../../../hooks/useExecutionTasks'; // Import Execution Tasks Hook
 import { useLeads } from '../../../hooks/useLeads';
 import { useFinance } from '../../../hooks/useFinance';
-import { ProjectStatus } from '../../../types';
+import { ProjectStatus, ApprovalStatus, ApprovalRequestType } from '../../../types';
 import { useProjects } from '../../../hooks/useProjects';
+import { useAssignedApprovalRequests, startRequest, completeRequest } from '../../../hooks/useApprovalSystem';
 
 const SalesStats: React.FC<{ userId: string, leads: any[], timeEntries: any[] }> = ({ userId, leads, timeEntries }) => {
     const myLeads = leads.filter(l => l.assignedTo === userId);
@@ -137,7 +138,7 @@ const ReminderItem: React.FC<{ reminder: EnrichedReminder, onToggle: (id: string
 
 // Augmented Task Interface to include 'source'
 interface UnifiedTask extends Task {
-    source: 'myDay' | 'execution';
+    source: 'myDay' | 'execution' | 'request';
     originalId: string;
 }
 
@@ -145,6 +146,7 @@ const MyDayPage: React.FC = () => {
     const { currentUser } = useAuth();
     const { tasks: myDayTasks, loading: tasksLoading } = useMyDayTasks(currentUser?.id);
     const { tasks: executionTasks, updateTaskStatus: updateExecutionStatus } = useExecutionTasks(); // Fetch execution tasks
+    const { assignedRequests, loading: requestsLoading } = useAssignedApprovalRequests(currentUser?.id || '');
     const { leads, loading: leadsLoading } = useLeads();
 
     const [reminders, setReminders] = useState<EnrichedReminder[]>([]);
@@ -196,7 +198,8 @@ const MyDayPage: React.FC = () => {
             id: `exec-${t.id}`, // Avoid ID collisions
             originalId: t.id,
             title: `[${t.missionType}] ${t.projectName}`,
-            userId: t.assignedTo,
+            assignedTo: t.assignedTo,
+            userId: t.assignedTo, // Keep for compatibility if used elsewhere, but assignedTo is key
             status: t.status === 'Completed' ? TaskStatus.COMPLETED :
                 t.status === 'In Progress' ? TaskStatus.IN_PROGRESS : TaskStatus.PENDING,
             timeSpent: 0, // Not tracked in execution task natively yet
@@ -212,20 +215,66 @@ const MyDayPage: React.FC = () => {
             source: 'execution'
         }));
 
-        // combine
-        const all = [...unifiedMyDayTasks, ...unifiedExecutionTasks];
+        // Filter valid operational requests
+        const myRequests = assignedRequests.filter(r =>
+            r.requestType !== ApprovalRequestType.STAFF_REGISTRATION &&
+            (r.status === ApprovalStatus.ASSIGNED || r.status === ApprovalStatus.ONGOING || r.status === ApprovalStatus.COMPLETED)
+        );
 
-        // Filter by date or show always if execution
+        const unifiedRequests: UnifiedTask[] = myRequests.map(r => {
+            let status = TaskStatus.PENDING;
+            if (r.status === ApprovalStatus.ONGOING) status = TaskStatus.IN_PROGRESS;
+            if (r.status === ApprovalStatus.COMPLETED) status = TaskStatus.COMPLETED;
+
+            return {
+                id: `req-${r.id}`,
+                originalId: r.id,
+                title: `${r.title} (${r.requestType})`,
+                assignedTo: r.assigneeId || '',
+                userId: r.assigneeId || '',
+                status: status,
+                timeSpent: 0, // Todo: track time
+                priority: r.priority,
+                priorityOrder: 0,
+                deadline: r.endDate ? (r.endDate as any).toDate().toISOString() : undefined,
+                isPaused: false,
+                date: selectedDate, // Show today if active
+                description: r.description,
+                createdAt: r.requestedAt ? (r.requestedAt as any).toDate() : new Date(),
+                createdBy: r.requesterId,
+                createdByName: r.requesterName,
+                source: 'request'
+            };
+        });
+
+
+        // combine
+        const all = [...unifiedMyDayTasks, ...unifiedExecutionTasks, ...unifiedRequests];
+
+        // Filter by date or show always if execution/request
         return all.filter(task => {
-            if (task.source === 'execution') {
-                // Show active tasks always, and completed tasks only if they are somehow relevant (e.g. completed today - simplified for now)
-                if (task.status !== TaskStatus.COMPLETED) return true;
+            if (task.source === 'execution' || task.source === 'request') {
+                // Show if Pending/InProgress. If completed, maybe filter out unless done today?
+                // For now, always show if assigned.
+                if (task.status === TaskStatus.COMPLETED) {
+                    // Only show completed if selected date matches today (assumes we want to see what we did today)
+                    // Simplified: Only hide manually. Or show always.
+                    // Let's filter out older completed items if we had a completion date mechanism.
+                    // For now, showing all helps track.
+                }
                 return true;
             }
             return task.date === selectedDate;
-        }).sort((a, b) => (a.priorityOrder || 99) - (b.priorityOrder || 99));
+        }).sort((a, b) => {
+            // Sor by status (Pending/In Progress first) then priority
+            if (a.status !== b.status) {
+                if (a.status === TaskStatus.IN_PROGRESS) return -1;
+                if (b.status === TaskStatus.IN_PROGRESS) return 1;
+            }
+            return (a.priorityOrder || 99) - (b.priorityOrder || 99);
+        });
 
-    }, [myDayTasks, executionTasks, currentUser, selectedDate]);
+    }, [myDayTasks, executionTasks, assignedRequests, currentUser, selectedDate]);
 
 
     const handleUpdateStatus = async (taskId: string, newStatus: TaskStatus) => {
@@ -240,6 +289,34 @@ const MyDayPage: React.FC = () => {
                     newStatus === TaskStatus.IN_PROGRESS ? 'In Progress' : 'Pending';
 
                 await updateExecutionStatus(task.originalId, execStatus);
+                return;
+            }
+
+            if (task.source === 'request') {
+                // Update Approval Request Lifecycle
+                if (newStatus === TaskStatus.IN_PROGRESS) {
+                    await startRequest(task.originalId, currentUser.id);
+                    await addActivity(currentUser.id, currentUser.name, `Started Request: ${task.title}`);
+                } else if (newStatus === TaskStatus.COMPLETED) {
+                    if (confirm("Mark this request as completed? Admins will be notified.")) {
+                        await completeRequest(task.originalId, currentUser.id);
+                        await addActivity(currentUser.id, currentUser.name, `Completed Request: ${task.title}`, true);
+                    }
+                }
+                return;
+            }
+
+            if (task.source === 'request') {
+                // Update Approval Request Lifecycle
+                if (newStatus === TaskStatus.IN_PROGRESS) {
+                    await startRequest(task.originalId, currentUser.id);
+                    await addActivity(currentUser.id, currentUser.name, `Started Request: ${task.title}`);
+                } else if (newStatus === TaskStatus.COMPLETED) {
+                    if (confirm("Mark this request as completed? Admins will be notified.")) {
+                        await completeRequest(task.originalId, currentUser.id);
+                        await addActivity(currentUser.id, currentUser.name, `Completed Request: ${task.title}`, true);
+                    }
+                }
                 return;
             }
 
@@ -295,6 +372,7 @@ const MyDayPage: React.FC = () => {
 
         const newTask: Omit<Task, 'id'> = {
             title: taskData.title,
+            assignedTo: taskData.assignedTo || currentUser.id,
             userId: taskData.assignedTo || currentUser.id,
             status: TaskStatus.PENDING,
             timeSpent: 0,

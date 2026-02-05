@@ -12,6 +12,7 @@ import { formatCurrencyINR } from '../../../constants';
 import Card from '../../shared/Card';
 import { PrimaryButton, SecondaryButton } from '../shared/DashboardUI';
 import { getTabFromUrl, setTabInUrl } from '../../../services/notificationRouting';
+import QuotationPDFTemplate from '../quotation-team/QuotationPDFTemplate';
 
 /**
  * UNIFIED PROJECT DETAILS PAGE
@@ -31,7 +32,7 @@ import { getTabFromUrl, setTabInUrl } from '../../../services/notificationRoutin
 type TabType = 'overview' | 'drawings' | 'boq' | 'quotations' | 'tasks' | 'timeline' | 'materials' | 'documents' | 'payment';
 
 interface ProjectDetailsPageProps {
-  initialTab?: TabType; // Allow external tab control (from notifications)
+    initialTab?: TabType; // Allow external tab control (from notifications)
 }
 
 const ProjectDetailsPage: React.FC<ProjectDetailsPageProps> = ({ initialTab = 'overview' }) => {
@@ -42,7 +43,7 @@ const ProjectDetailsPage: React.FC<ProjectDetailsPageProps> = ({ initialTab = 'o
     const { quotations, loading: quotationsLoading } = useCaseQuotations(caseId || '');
     const { boqs, loading: boqsLoading } = useCaseBOQs(caseId || '');
     const { drawings, loading: drawingsLoading } = useCaseDrawings(caseId || '');
-    
+
     const [activeTab, setActiveTab] = useState<TabType>(initialTab);
     const [projectCase, setProjectCase] = useState<Case | null>(null);
 
@@ -60,7 +61,7 @@ const ProjectDetailsPage: React.FC<ProjectDetailsPageProps> = ({ initialTab = 'o
     useEffect(() => {
         setActiveTab(initialTab);
     }, [initialTab]);
-    
+
     // Check URL for tab parameter (from notifications)
     useEffect(() => {
         const urlTab = getTabFromUrl();
@@ -204,11 +205,10 @@ const ProjectDetailsPage: React.FC<ProjectDetailsPageProps> = ({ initialTab = 'o
                                     setActiveTab(tab);
                                     setTabInUrl(tab); // Update URL for deep linking
                                 }}
-                                className={`py-4 px-2 text-sm font-medium transition-colors relative ${
-                                    activeTab === tab
-                                        ? 'text-primary border-b-2 border-primary'
-                                        : 'text-text-secondary hover:text-text-primary'
-                                }`}
+                                className={`py-4 px-2 text-sm font-medium transition-colors relative ${activeTab === tab
+                                    ? 'text-primary border-b-2 border-primary'
+                                    : 'text-text-secondary hover:text-text-primary'
+                                    }`}
                             >
                                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
                             </button>
@@ -223,10 +223,10 @@ const ProjectDetailsPage: React.FC<ProjectDetailsPageProps> = ({ initialTab = 'o
                 {activeTab === 'drawings' && <DrawingsTab drawings={drawings} loading={drawingsLoading} caseId={caseId!} />}
                 {activeTab === 'boq' && <BOQTab boqs={boqs} loading={boqsLoading} caseId={caseId!} />}
                 {activeTab === 'quotations' && (
-                    <QuotationsTab 
-                        quotations={quotations} 
-                        loading={quotationsLoading} 
-                        caseId={caseId!} 
+                    <QuotationsTab
+                        quotations={quotations}
+                        loading={quotationsLoading}
+                        caseId={caseId!}
                         projectCase={projectCase}
                     />
                 )}
@@ -258,7 +258,7 @@ const OverviewTab: React.FC<{ projectCase: Case }> = ({ projectCase }) => {
                         <div>
                             <p className="text-sm font-medium text-text-tertiary mb-2">Progress</p>
                             <div className="w-full bg-border rounded-full h-2">
-                                <div 
+                                <div
                                     className="bg-primary h-2 rounded-full transition-all"
                                     style={{ width: `${projectCase.progress}%` }}
                                 />
@@ -274,18 +274,18 @@ const OverviewTab: React.FC<{ projectCase: Case }> = ({ projectCase }) => {
 
 const DrawingsTab: React.FC<{ drawings: CaseDrawing[]; loading: boolean; caseId: string }> = ({ drawings, loading }) => {
     const [selectedDrawing, setSelectedDrawing] = useState<CaseDrawing | null>(null);
-    
+
     if (loading) return <Card><div className="p-6">Loading drawings...</div></Card>;
-    
+
     const isImage = (fileName: string) => {
         const ext = fileName.toLowerCase().split('.').pop();
         return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(ext || '');
     };
-    
+
     const isPDF = (fileName: string) => {
         return fileName.toLowerCase().endsWith('.pdf');
     };
-    
+
     return (
         <Card>
             <div className="p-6">
@@ -296,12 +296,12 @@ const DrawingsTab: React.FC<{ drawings: CaseDrawing[]; loading: boolean; caseId:
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {drawings.map(drawing => (
                             <div key={drawing.id} className="border border-border rounded-lg p-4 hover:shadow-lg transition-shadow cursor-pointer"
-                                 onClick={() => setSelectedDrawing(drawing)}>
+                                onClick={() => setSelectedDrawing(drawing)}>
                                 {/* Preview Thumbnail */}
                                 {drawing.fileUrl && isImage(drawing.fileName || '') ? (
                                     <div className="aspect-video bg-subtle-background rounded mb-3 overflow-hidden">
-                                        <img 
-                                            src={drawing.fileUrl} 
+                                        <img
+                                            src={drawing.fileUrl}
                                             alt={drawing.fileName || 'Drawing'}
                                             className="w-full h-full object-cover"
                                         />
@@ -320,7 +320,7 @@ const DrawingsTab: React.FC<{ drawings: CaseDrawing[]; loading: boolean; caseId:
                                         </svg>
                                     </div>
                                 )}
-                                
+
                                 <h3 className="font-semibold text-text-primary truncate">{drawing.fileName || 'Untitled Drawing'}</h3>
                                 <p className="text-sm text-text-secondary">Type: {drawing.fileType}</p>
                                 {drawing.category && <p className="text-sm text-text-secondary">Category: {drawing.category}</p>}
@@ -329,7 +329,7 @@ const DrawingsTab: React.FC<{ drawings: CaseDrawing[]; loading: boolean; caseId:
                         ))}
                     </div>
                 )}
-                
+
                 {/* Drawing Preview Modal */}
                 {selectedDrawing && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setSelectedDrawing(null)}>
@@ -347,13 +347,13 @@ const DrawingsTab: React.FC<{ drawings: CaseDrawing[]; loading: boolean; caseId:
                             </div>
                             <div className="p-4 overflow-auto max-h-[calc(90vh-100px)]">
                                 {selectedDrawing.fileUrl && isImage(selectedDrawing.fileName || '') ? (
-                                    <img 
-                                        src={selectedDrawing.fileUrl} 
+                                    <img
+                                        src={selectedDrawing.fileUrl}
                                         alt={selectedDrawing.fileName || 'Drawing'}
                                         className="w-full h-auto"
                                     />
                                 ) : selectedDrawing.fileUrl && isPDF(selectedDrawing.fileName || '') ? (
-                                    <iframe 
+                                    <iframe
                                         src={selectedDrawing.fileUrl}
                                         className="w-full h-[calc(90vh-150px)]"
                                         title={selectedDrawing.fileName || 'PDF Drawing'}
@@ -362,9 +362,9 @@ const DrawingsTab: React.FC<{ drawings: CaseDrawing[]; loading: boolean; caseId:
                                     <div className="text-center py-12">
                                         <p className="text-text-secondary">Preview not available</p>
                                         {selectedDrawing.fileUrl && (
-                                            <a 
-                                                href={selectedDrawing.fileUrl} 
-                                                target="_blank" 
+                                            <a
+                                                href={selectedDrawing.fileUrl}
+                                                target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="text-primary hover:underline mt-2 inline-block"
                                             >
@@ -384,7 +384,7 @@ const DrawingsTab: React.FC<{ drawings: CaseDrawing[]; loading: boolean; caseId:
 
 const BOQTab: React.FC<{ boqs: CaseBOQ[]; loading: boolean; caseId: string }> = ({ boqs, loading }) => {
     if (loading) return <Card><div className="p-6">Loading BOQs...</div></Card>;
-    
+
     return (
         <Card>
             <div className="p-6">
@@ -407,9 +407,9 @@ const BOQTab: React.FC<{ boqs: CaseBOQ[]; loading: boolean; caseId: string }> = 
     );
 };
 
-const QuotationsTab: React.FC<{ 
-    quotations: CaseQuotation[]; 
-    loading: boolean; 
+const QuotationsTab: React.FC<{
+    quotations: CaseQuotation[];
+    loading: boolean;
     caseId: string;
     projectCase: Case;
 }> = ({ quotations, loading, projectCase, caseId }) => {
@@ -421,16 +421,25 @@ const QuotationsTab: React.FC<{
     const [selectedQuotation, setSelectedQuotation] = useState<CaseQuotation | null>(null);
     const [rejectionReason, setRejectionReason] = useState('');
 
+    // PDF Modal State
+    const [showPDFModal, setShowPDFModal] = useState(false);
+    const [selectedPDFQuotation, setSelectedPDFQuotation] = useState<CaseQuotation | null>(null);
+
+    // Dynamic import for PDF Template to avoid circular dependencies if any
+    // However, since we are in the same project structure, direct import is preferred.
+    // We'll need to make sure the import is added at the top of the file.
+    // Assuming QuotationPDFTemplate is imported at top level.
+
     if (loading) return <Card><div className="p-6">Loading quotations...</div></Card>;
 
-    const canApprove = currentUser?.role === UserRole.SUPER_ADMIN || 
-                       currentUser?.role === UserRole.SALES_GENERAL_MANAGER;
-    
+    const canApprove = currentUser?.role === UserRole.SUPER_ADMIN ||
+        currentUser?.role === UserRole.SALES_GENERAL_MANAGER;
+
     const handleApprove = async (quotation: CaseQuotation) => {
         if (!currentUser || !canApprove) return;
-        
+
         if (!window.confirm(`Approve quotation ${quotation.quotationNumber || 'QT-' + quotation.id.slice(-6)}?`)) return;
-        
+
         setApproving(quotation.id);
         try {
             await approveQuotation(
@@ -447,15 +456,15 @@ const QuotationsTab: React.FC<{
             setApproving(null);
         }
     };
-    
+
     const handleRejectClick = (quotation: CaseQuotation) => {
         setSelectedQuotation(quotation);
         setShowRejectModal(true);
     };
-    
+
     const handleRejectSubmit = async () => {
         if (!currentUser || !canApprove || !selectedQuotation || !rejectionReason.trim()) return;
-        
+
         setRejecting(selectedQuotation.id);
         try {
             await rejectQuotation(
@@ -476,7 +485,12 @@ const QuotationsTab: React.FC<{
             setRejecting(null);
         }
     };
-    
+
+    const handleViewPDF = (quotation: CaseQuotation) => {
+        setSelectedPDFQuotation(quotation);
+        setShowPDFModal(true);
+    };
+
     return (
         <Card>
             <div className="p-6">
@@ -512,30 +526,24 @@ const QuotationsTab: React.FC<{
                                         </span>
                                     )}
                                 </div>
-                                
+
                                 <p className="text-lg font-bold text-primary mb-3">{formatCurrencyINR(quot.finalAmount)}</p>
-                                
+
                                 <div className="flex gap-2 flex-wrap">
-                                    {/* View PDF Button */}
-                                    {quot.pdfUrl ? (
-                                        <SecondaryButton onClick={() => window.open(quot.pdfUrl, '_blank')}>
-                                            📄 View PDF
-                                        </SecondaryButton>
-                                    ) : (
-                                        <SecondaryButton disabled className="opacity-50 cursor-not-allowed">
-                                            📄 No PDF
-                                        </SecondaryButton>
-                                    )}
-                                    
+                                    {/* View PDF Button - Now Dynamic */}
+                                    <SecondaryButton onClick={() => handleViewPDF(quot)}>
+                                        📄 View PDF
+                                    </SecondaryButton>
+
                                     {canApprove && quot.status === 'Pending Approval' && (
                                         <>
-                                            <PrimaryButton 
+                                            <PrimaryButton
                                                 onClick={() => handleApprove(quot)}
                                                 disabled={approving === quot.id}
                                             >
                                                 {approving === quot.id ? 'Approving...' : 'Approve'}
                                             </PrimaryButton>
-                                            <SecondaryButton 
+                                            <SecondaryButton
                                                 onClick={() => handleRejectClick(quot)}
                                                 disabled={rejecting === quot.id}
                                                 className="bg-error/10 text-error hover:bg-error/20"
@@ -544,13 +552,13 @@ const QuotationsTab: React.FC<{
                                             </SecondaryButton>
                                         </>
                                     )}
-                                    
+
                                     {quot.status === 'Approved' && (
                                         <span className="text-xs text-text-tertiary">
                                             Approved by {quot.approvedByName} on {quot.approvedAt && new Date(quot.approvedAt).toLocaleDateString()}
                                         </span>
                                     )}
-                                    
+
                                     {quot.status === 'Rejected' && quot.rejectionReason && (
                                         <p className="text-xs text-error">
                                             Reason: {quot.rejectionReason}
@@ -561,7 +569,7 @@ const QuotationsTab: React.FC<{
                         ))}
                     </div>
                 )}
-                
+
                 {/* Rejection Modal */}
                 {showRejectModal && selectedQuotation && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -583,7 +591,7 @@ const QuotationsTab: React.FC<{
                                 />
                             </div>
                             <div className="flex gap-2 justify-end">
-                                <SecondaryButton 
+                                <SecondaryButton
                                     onClick={() => {
                                         setShowRejectModal(false);
                                         setRejectionReason('');
@@ -604,6 +612,19 @@ const QuotationsTab: React.FC<{
                         </div>
                     </div>
                 )}
+
+                {/* PDF Template Modal */}
+                {showPDFModal && selectedPDFQuotation && (
+                    /* @ts-ignore - Dynamic import component */
+                    <QuotationPDFTemplate
+                        quotation={selectedPDFQuotation}
+                        caseData={projectCase}
+                        onClose={() => {
+                            setShowPDFModal(false);
+                            setSelectedPDFQuotation(null);
+                        }}
+                    />
+                )}
             </div>
         </Card>
     );
@@ -613,9 +634,9 @@ const TasksTab: React.FC<{ caseId: string }> = ({ caseId }) => {
     const { tasks, loading } = useCaseTasks(caseId);
     const { currentUser } = useAuth();
     const [showCreateModal, setShowCreateModal] = useState(false);
-    
+
     if (loading) return <Card><div className="p-6">Loading tasks...</div></Card>;
-    
+
     const getStatusBadge = (status: string) => {
         const statusMap: Record<string, { color: string; label: string }> = {
             'pending': { color: 'bg-warning/10 text-warning', label: 'Pending' },
@@ -626,7 +647,7 @@ const TasksTab: React.FC<{ caseId: string }> = ({ caseId }) => {
         const config = statusMap[status] || statusMap['pending'];
         return <span className={`px-2 py-1 rounded text-xs font-medium ${config.color}`}>{config.label}</span>;
     };
-    
+
     return (
         <Card>
             <div className="p-6">
@@ -638,7 +659,7 @@ const TasksTab: React.FC<{ caseId: string }> = ({ caseId }) => {
                         </PrimaryButton>
                     )}
                 </div>
-                
+
                 {tasks.length === 0 ? (
                     <p className="text-text-secondary">No tasks yet. Create a task to get started.</p>
                 ) : (
@@ -674,7 +695,7 @@ const TasksTab: React.FC<{ caseId: string }> = ({ caseId }) => {
                         ))}
                     </div>
                 )}
-                
+
                 {/* Create Task Modal - Simple version */}
                 {showCreateModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -734,9 +755,9 @@ const MaterialsTab: React.FC<{ caseId: string }> = ({ caseId }) => {
 
 const DocumentsTab: React.FC<{ projectCase: Case }> = ({ projectCase }) => {
     const [selectedDocument, setSelectedDocument] = useState<any>(null);
-    
+
     const documents = projectCase.documents || [];
-    
+
     const getFileIcon = (fileName: string) => {
         const ext = fileName.toLowerCase().split('.').pop();
         if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext || '')) {
@@ -766,7 +787,7 @@ const DocumentsTab: React.FC<{ projectCase: Case }> = ({ projectCase }) => {
             </svg>
         );
     };
-    
+
     return (
         <Card>
             <div className="p-6">
@@ -776,8 +797,8 @@ const DocumentsTab: React.FC<{ projectCase: Case }> = ({ projectCase }) => {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         {documents.map((doc, index) => (
-                            <div 
-                                key={doc.id || index} 
+                            <div
+                                key={doc.id || index}
                                 className="border border-border rounded-lg p-4 hover:shadow-lg transition-shadow cursor-pointer"
                                 onClick={() => setSelectedDocument(doc)}
                             >
@@ -795,7 +816,7 @@ const DocumentsTab: React.FC<{ projectCase: Case }> = ({ projectCase }) => {
                                         {doc.uploaded ? new Date(doc.uploaded).toLocaleDateString() : 'Date unknown'}
                                     </p>
                                     {doc.url && (
-                                        <a 
+                                        <a
                                             href={doc.url}
                                             target="_blank"
                                             rel="noopener noreferrer"
@@ -810,7 +831,7 @@ const DocumentsTab: React.FC<{ projectCase: Case }> = ({ projectCase }) => {
                         ))}
                     </div>
                 )}
-                
+
                 {/* Document Preview Modal */}
                 {selectedDocument && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setSelectedDocument(null)}>
@@ -863,9 +884,9 @@ const PaymentTab: React.FC<{ projectCase: Case; caseId: string }> = ({ projectCa
     const [paymentHistory, setPaymentHistory] = useState<any[]>((projectCase as any)?.paymentHistory || []);
 
     // Check if user can edit (Sales Manager or Sales Team)
-    const canEdit = currentUser?.role === UserRole.SUPER_ADMIN || 
-                    currentUser?.role === UserRole.SALES_GENERAL_MANAGER || 
-                    currentUser?.role === UserRole.SALES_TEAM_MEMBER;
+    const canEdit = currentUser?.role === UserRole.SUPER_ADMIN ||
+        currentUser?.role === UserRole.SALES_GENERAL_MANAGER ||
+        currentUser?.role === UserRole.SALES_TEAM_MEMBER;
 
     const handleAddPayment = async () => {
         if (!paymentAmount || paymentAmount <= 0) {
@@ -942,7 +963,7 @@ const PaymentTab: React.FC<{ projectCase: Case; caseId: string }> = ({ projectCa
                         <span>{paymentProgress.toFixed(1)}%</span>
                     </div>
                     <div className="w-full bg-border rounded-full h-3">
-                        <div 
+                        <div
                             className="bg-success h-3 rounded-full transition-all"
                             style={{ width: `${Math.min(paymentProgress, 100)}%` }}
                         />
@@ -1010,10 +1031,10 @@ const PaymentTab: React.FC<{ projectCase: Case; caseId: string }> = ({ projectCa
                                         <div>
                                             <p className="font-bold text-lg text-success">{formatCurrencyINR(payment.amount)}</p>
                                             <p className="text-sm text-text-secondary mt-1">
-                                                {new Date(payment.date).toLocaleDateString('en-US', { 
-                                                    year: 'numeric', 
-                                                    month: 'long', 
-                                                    day: 'numeric' 
+                                                {new Date(payment.date).toLocaleDateString('en-US', {
+                                                    year: 'numeric',
+                                                    month: 'long',
+                                                    day: 'numeric'
                                                 })}
                                             </p>
                                             {payment.notes && (

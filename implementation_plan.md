@@ -1,53 +1,78 @@
-# Implementation Plan - Drawing Team Workflow Revamp
+# Request Inbox & Tasks Page Implementation Plan
 
-The goal is to implement a strict 3-stage sequential workflow for the Drawing & Site Engineering team:
-**Site Visit (Measurement) -> Drawing (2D) -> BOQ (Bill of Quantities)**
+The goal is to implement a unified Request Inbox and Task system where authorized requests become tasks without duplication, ensuring a single source of truth (`ApprovalRequest` collection).
 
 ## User Review Required
 > [!IMPORTANT]
-> This change introduces new `ProjectStatus` enum values. Any existing projects might need migration or manual status update if they don't fit these new categories.
+> This change modifies the `ApprovalStatus` enum and `ApprovalRequest` interface. Using `ApprovalRequest` as the primary Task object means all "Tasks" that originate from requests will technically be `ApprovalRequests` in the database.
 
 ## Proposed Changes
 
 ### Core Types
 #### [MODIFY] [types.ts](file:///c:/Users/pc/OneDrive/Documents/MMO-Team/types.ts)
-- Update `ProjectStatus` enum to include:
-    - `SITE_VISIT_PENDING`
-    - `DRAWING_PENDING`
-    - `BOQ_PENDING`
+- Update `ApprovalStatus` enum to include:
+    - `ASSIGNED`
+    - `ONGOING`
+    - `COMPLETED`
+    - `ACKNOWLEDGED`
+    - (Keep `PENDING`, `APPROVED` as intermediate if needed, or map `APPROVED` -> `ASSIGNED` via logic)
+- Update `ApprovalRequest` interface:
+    - Add `startedAt?: Date`
+    - Add `completedAt?: Date`
+    - Add `acknowledgedAt?: Date`
+    - Add `authorizedBy?: string` (Admin ID)
+    - Add `authorizedAt?: Date`
 
-### Dashboard UI
-#### [MODIFY] [ProjectsBoardPage.tsx](file:///c:/Users/pc/OneDrive/Documents/MMO-Team/components/dashboard/drawing-team/ProjectsBoardPage.tsx)
-- Redesign the Kanban board to strictly show 4 columns/sections:
-    1.  **Site Inspection** (Status: `SITE_VISIT_PENDING`)
-        - Action: "Mark Visited" button.
-    2.  **Ready for Drawing** (Status: `DRAWING_PENDING`)
-        - Action: "Upload Drawing" button (opens file picker).
-    3.  **BOQ Submission** (Status: `BOQ_PENDING`)
-        - Action: "Submit BOQ" button (opens BOQ modal).
-    4.  **Completed** (Status: `COMPLETED`)
+### Hooks & Logic
+#### [MODIFY] [useApprovalSystem.ts](file:///c:/Users/pc/OneDrive/Documents/MMO-Team/hooks/useApprovalSystem.ts)
+- Update `approveRequest` function:
+    - Instead of just setting status to `APPROVED`, set it to `ASSIGNED` (or `APPROVED` then auto-transition to `ASSIGNED` if assignee exists).
+    - Set `authorizedBy`, `authorizedAt`.
+- Add new functions:
+    - `startRequest(requestId)`: Sets status to `ONGOING`, sets `startedAt`.
+    - `completeRequest(requestId)`: Sets status to `COMPLETED`, sets `completedAt`, sends notifications.
+    - `acknowledgeRequest(requestId)`: Sets status to `ACKNOWLEDGED`, sets `acknowledgedAt`.
 
-#### [NEW] [BOQSubmissionModal.tsx](file:///c:/Users/pc/OneDrive/Documents/MMO-Team/components/dashboard/drawing-team/BOQSubmissionModal.tsx)
-- Simple modal form with:
-    - Item Name
-    - Quantity
-    - Description (Optional)
-- Submits data to Firestore and updates project status to `COMPLETED`.
+### UI Components
+
+#### [MODIFY] [ApprovalsPage.tsx](file:///c:/Users/pc/OneDrive/Documents/MMO-Team/components/dashboard/super-admin/ApprovalsPage.tsx)
+- **Request Inbox (Admin View)**
+- Add "Ongoing Works" Section:
+    - Filters: `ASSIGNED`, `ONGOING`
+    - Display: Task Cards reuse existing UI or new TaskCard.
+- Add "Completed" Section:
+    - Filters: `COMPLETED`
+    - Action: "Acknowledge" button (calls `acknowledgeRequest`).
+
+#### [NEW] [TasksPage.tsx](file:///c:/Users/pc/OneDrive/Documents/MMO-Team/components/dashboard/shared/TasksPage.tsx)
+- New Page available to all users.
+- Fetches `ApprovalRequests` where `assigneeId === currentUser.id`.
+- Columns/Sections:
+    - **Assigned**: Status `ASSIGNED`. Action: "Start".
+    - **Ongoing**: Status `ONGOING`. Action: "Complete".
+    - **Completed**: Status `COMPLETED`. Status text: "Waiting for Admin Acknowledgement".
+
+#### [MODIFY] [MyDayPage.tsx](file:///c:/Users/pc/OneDrive/Documents/MMO-Team/components/dashboard/shared/MyDayPage.tsx)
+- Integrate `ApprovalRequests` (Assignments) into the "Execution Stream".
+- Ensure they appear alongside manual `myDayTasks`.
 
 ## Verification Plan
 
 ### Manual Verification
-1.  **Site Visit Flow:**
-    - Login as Site Engineer.
-    - Go to Projects Board.
-    - Click "Mark Visited" on a project in "Site Inspection".
-    - Verify it moves to "Ready for Drawing".
-2.  **Drawing Flow:**
-    - Click "Upload Drawing" on the same project.
-    - Upload a dummy file.
-    - Verify it moves to "BOQ Submission".
-3.  **BOQ Flow:**
-    - Click "Submit BOQ".
-    - Fill in "Flooring", "100 sqft".
-    - Submit.
-    - Verify project moves to "Completed".
+1.  **Admin Flow:**
+    - Login as Admin.
+    - Go to "Request Inbox" (Approvals Page).
+    - Approve a PENDING request and assign it to a user.
+    - Verify it moves to "Ongoing Works" section in Inbox.
+    - Verify status is `ASSIGNED`.
+2.  **User Flow:**
+    - Login as Assigned User.
+    - Go to new `/tasks` page.
+    - Verify the request appears in "Assigned".
+    - Click "Start". Verify status changes to `ONGOING` and moves to Ongoing column.
+    - Check "My Day" page. Verify it appears there too.
+    - Click "Complete". Verify status changes to `COMPLETED`.
+3.  **Completion Flow:**
+    - Admin: Check "Request Inbox". Verify task is in "Completed" section.
+    - Admin: Click "Acknowledge".
+    - Verify task status becomes `ACKNOWLEDGED` (and potentially disappears from Inbox default view).

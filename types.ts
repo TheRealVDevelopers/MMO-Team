@@ -396,6 +396,11 @@ export enum ApprovalStatus {
   REJECTED = "Rejected",
   AWAITING_EXECUTION_ACCEPTANCE = "Awaiting Execution Acceptance",
   NEGOTIATION = "Negotiation",
+  // Lifecycle Extensions
+  ASSIGNED = "Assigned",
+  ONGOING = "Ongoing",
+  COMPLETED = "Completed",
+  ACKNOWLEDGED = "Acknowledged",
 }
 
 export interface ExecutionStage {
@@ -438,6 +443,14 @@ export interface ApprovalRequest {
   clientName?: string; // Client's name for display in lists
   assigneeId?: string; // Populated by admin during approval
   is_demo?: boolean;
+
+  // Lifecycle Timestamps & Actors
+  authorizedBy?: string; // Admin User ID who authorized (typically same as reviewedBy but explicit)
+  authorizedAt?: Date;   // Timestamp when status moved to ASSIGNED
+  startedAt?: Date;      // Timestamp when assignee moved to ONGOING
+  completedAt?: Date;    // Timestamp when assignee moved to COMPLETED
+  acknowledgedAt?: Date; // Timestamp when Admin acknowledged completion
+  acknowledgedBy?: string; // Admin User ID who acknowledged
 
   // Execution Workflow & Negotiation
   stages?: ExecutionStage[];
@@ -1489,7 +1502,7 @@ export interface Task {
   // Target linking (Dynamic Assignment)
   targetId?: string;
   targetType?: 'Lead' | 'Project';
-  
+
   // Task Feedback Loop
   assignedTo: string; // User ID of assigned person
   assignedToName?: string; // Name of assigned person
@@ -1500,7 +1513,7 @@ export interface Task {
   targetName?: string;
 
   requesterId?: string; // Sales user who raised the request
-  
+
   // Task Lifecycle Tracking
   acknowledgedBy?: string; // Admin who acknowledged completion
   acknowledgedByName?: string; // Name of admin
@@ -1682,7 +1695,7 @@ export interface FinanceRequest {
 export interface Case {
   id: string;
   isProject: boolean; // FALSE = Lead, TRUE = Project
-  
+
   // Core Info (shared by both leads and projects)
   clientName: string;
   projectName: string;
@@ -1692,11 +1705,11 @@ export interface Case {
     phone: string;
     email?: string;
   };
-  
+
   // Status fields
   status: LeadPipelineStatus | ProjectStatus;
   priority: 'Low' | 'Medium' | 'High';
-  
+
   // Lead-specific fields (used when isProject = false)
   value?: number;
   source?: string;
@@ -1717,7 +1730,7 @@ export interface Case {
   deadline?: Date;
   communicationMessages?: LeadCommunicationMessage[];
   files?: LeadFile[];
-  
+
   // Project-specific fields (used when isProject = true)
   budget?: number;
   advancePaid?: number;
@@ -1732,23 +1745,23 @@ export interface Case {
     execution?: string[];
     quotation?: string;
   };
-  milestones?: Array<{name: string; completed: boolean}>;
-  stages?: Array<{id: string; name: string; status: string; deadline?: Date}>;
+  milestones?: Array<{ name: string; completed: boolean }>;
+  stages?: Array<{ id: string; name: string; status: string; deadline?: Date }>;
   currentProjectStage?: 'Lead' | 'Drawing' | 'Quotation' | 'Execution' | 'Completed'; // Current stage for tracking
-  
+
   // Conversion tracking
   convertedToProjectAt?: Date;
   convertedBy?: string;
-  
+
   // Additional status tracking
   quotationStatus?: 'NONE' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
-  
+
   // Metadata
   createdBy: string;
   createdAt: Date;
   updatedAt?: Date;
   history: LeadHistory[];
-  
+
   // Additional fields for compatibility
   clientMobile?: string;
   clientAddress?: string;
@@ -1773,7 +1786,7 @@ export interface Case {
   ganttData?: GanttTask[];
   issues?: any[];
   lifecycleStatus?: ProjectLifecycleStatus;
-  
+
   // Legacy compatibility
   is_demo?: boolean;
 }
@@ -1806,7 +1819,7 @@ export interface CaseQuotation {
   id: string;
   caseId: string;
   quotationNumber?: string;
-  items: Array<{itemId: string; quantity: number; unitPrice: number; discount: number}>;
+  items: Array<{ itemId: string; quantity: number; unitPrice: number; discount: number }>;
   totalAmount: number;
   discountAmount: number;
   taxAmount: number;

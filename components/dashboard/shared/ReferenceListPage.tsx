@@ -24,7 +24,7 @@ const ReferenceListPage: React.FC = () => {
     const references = cases.filter(c => c.isProject === true);
 
     // Filter by search
-    const filteredReferences = references.filter(r => 
+    const filteredReferences = references.filter(r =>
         r.projectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         r.clientName?.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -42,8 +42,8 @@ const ReferenceListPage: React.FC = () => {
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="mb-6">
-                    <h1 className="text-3xl font-bold text-text-primary mb-2">Reference</h1>
-                    <p className="text-text-secondary">View all reference details, drawings, BOQs, and quotations</p>
+                    <h1 className="text-3xl font-bold text-text-primary mb-2">References</h1>
+                    <p className="text-text-secondary">View all project references, drawings, BOQs, and quotations</p>
                 </div>
 
                 {/* Search */}
@@ -101,7 +101,7 @@ const ReferenceListPage: React.FC = () => {
                                                 <span>{reference.progress}%</span>
                                             </div>
                                             <div className="w-full bg-border rounded-full h-2">
-                                                <div 
+                                                <div
                                                     className="bg-primary h-2 rounded-full transition-all"
                                                     style={{ width: `${reference.progress}%` }}
                                                 />

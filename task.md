@@ -1,13 +1,17 @@
-# Drawing & Site Engineering Workflow Revamp
+# Request Inbox & Tasks Page Implementation
 
-- [ ] Update `types.ts` with new `ProjectStatus` enums <!-- id: 1 -->
-    - `SITE_VISIT_PENDING`
-    - `DRAWING_PENDING`
-    - `BOQ_PENDING`
-- [ ] Redesign `ProjectsBoardPage.tsx` <!-- id: 2 -->
-    - Implement 3-column layout
-    - Add "Mark Visited" action
-    - Add "Upload Drawing" action
-    - Add "Submit BOQ" action
-- [ ] Verify `DrawingTeamDashboard.tsx` routing <!-- id: 3 -->
-- [ ] Create/Update BOQ Submission Modal (if needed) <!-- id: 4 -->
+- [ ] Update `types.ts` to support Task lifecycle in `ApprovalRequest` <!-- id: 1 -->
+    - Add `ASSIGNED`, `ONGOING`, `COMPLETED`, `ACKNOWLEDGED` to `ApprovalStatus`
+    - Add lifecycle timestamps (`startedAt`, `completedAt`, `acknowledgedAt`)
+- [ ] Update `useApprovalSystem.ts` <!-- id: 2 -->
+    - Update `approveRequest` to use `ASSIGNED` status
+    - Add `startRequest`, `completeRequest`, `acknowledgeRequest` functions
+- [ ] Create `TasksPage.tsx` <!-- id: 3 -->
+    - Available to all roles
+    - Shows Assigned/Ongoing/Completed tasks (from ApprovalRequests)
+- [ ] Update `ApprovalsPage.tsx` (Request Inbox) <!-- id: 4 -->
+    - Add "Ongoing Works" section (Assigned/Ongoing)
+    - Add "Completed" section with Acknowledge action
+- [ ] Update `MyDayPage.tsx` <!-- id: 5 -->
+    - Integrate assigned `ApprovalRequests` into My Day view
+- [ ] Verify Notifications & Feedback Loop <!-- id: 6 -->

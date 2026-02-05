@@ -13,7 +13,7 @@ import {
   WrenchScrewdriverIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../../context/AuthContext';
-import { useApprovalRequests, approveRequest, rejectRequest, getApprovalStats } from '../../../hooks/useApprovalSystem';
+import { useApprovalRequests, approveRequest, rejectRequest, getApprovalStats, acknowledgeRequest } from '../../../hooks/useApprovalSystem';
 import { useEditApproval, EditRequest } from '../../../hooks/useEditApproval';
 import { addTask } from '../../../hooks/useMyDayTasks';
 import { ApprovalRequest, ApprovalStatus, ApprovalRequestType, UserRole, ProjectStatus, LeadPipelineStatus } from '../../../types';
@@ -30,7 +30,7 @@ import DirectAssignTaskModal from './DirectAssignTaskModal';
 
 const ApprovalsPage: React.FC = () => {
   const { currentUser } = useAuth();
-  const [filterStatus, setFilterStatus] = useState<ApprovalStatus | 'All'>('All');
+  const [filterStatus, setFilterStatus] = useState<ApprovalStatus | 'All' | 'Ongoing' | 'Completed' | 'Inbox'>('Inbox');
   const [selectedRequest, setSelectedRequest] = useState<ApprovalRequest | null>(null);
   const [selectedEditRequest, setSelectedEditRequest] = useState<EditRequest | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -46,8 +46,8 @@ const ApprovalsPage: React.FC = () => {
   const [projectRejectionReason, setProjectRejectionReason] = useState('');
   const [showProjectRejectModal, setShowProjectRejectModal] = useState(false);
 
-  const { requests, loading } = useApprovalRequests(filterStatus === 'All' ? undefined : filterStatus);
-  const { requests: allRequests } = useApprovalRequests(); // For stats or full list if needed
+  // We fetch ALL requests and filter client-side for the complex groupings
+  const { requests, loading } = useApprovalRequests();
   const { pendingRequests: editRequests, loading: editLoading, approveRequest: approveEditRequest, rejectRequest: rejectEditRequest } = useEditApproval();
   const { users } = useUsers();
   const { updateProject } = useProjects();
@@ -99,6 +99,19 @@ const ApprovalsPage: React.FC = () => {
     const operationalRequests = requests.filter(r => r.requestType !== ApprovalRequestType.STAFF_REGISTRATION);
 
     if (filterStatus === 'All') return operationalRequests;
+
+    if (filterStatus === 'Inbox') {
+      return operationalRequests.filter(r => r.status === ApprovalStatus.PENDING || r.status === ApprovalStatus.AWAITING_EXECUTION_ACCEPTANCE);
+    }
+
+    if (filterStatus === 'Ongoing') {
+      return operationalRequests.filter(r => r.status === ApprovalStatus.ASSIGNED || r.status === ApprovalStatus.ONGOING);
+    }
+
+    if (filterStatus === 'Completed') {
+      return operationalRequests.filter(r => r.status === ApprovalStatus.COMPLETED);
+    }
+
     return operationalRequests.filter(r => r.status === filterStatus);
   }, [requests, filterStatus]);
 
@@ -107,6 +120,21 @@ const ApprovalsPage: React.FC = () => {
     const operationalRequests = requests.filter(r => r.requestType !== ApprovalRequestType.STAFF_REGISTRATION);
     return getApprovalStats(operationalRequests);
   }, [requests]);
+
+  const handleAcknowledge = async (request: ApprovalRequest) => {
+    if (!currentUser) return;
+    if (!confirm('Acknowledge completion of this task?')) return;
+
+    setProcessing(true);
+    try {
+      await acknowledgeRequest(request.id, currentUser.id);
+    } catch (error) {
+      console.error(error);
+      alert('Failed to acknowledge request.');
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   const handleReview = (request: ApprovalRequest, action: 'approve' | 'reject') => {
     setSelectedRequest(request);
@@ -287,7 +315,7 @@ const ApprovalsPage: React.FC = () => {
             Assign Task
           </PrimaryButton>
           <div className="flex bg-surface border border-border/60 p-1 rounded-2xl shadow-sm">
-            {(['All', ApprovalStatus.PENDING, ApprovalStatus.APPROVED, ApprovalStatus.REJECTED] as const).map((status) => (
+            {(['Inbox', 'Ongoing', 'Completed', 'All'] as const).map((status) => (
               <button
                 key={status}
                 onClick={() => setFilterStatus(status)}
@@ -639,7 +667,7 @@ const ApprovalsPage: React.FC = () => {
 
                       {/* Actions / Review Status */}
                       <div className="lg:w-1/4 flex items-center justify-end gap-3 min-w-[200px]">
-                        {request.status === ApprovalStatus.PENDING ? (
+                        {request.status === ApprovalStatus.PENDING || request.status === ApprovalStatus.AWAITING_EXECUTION_ACCEPTANCE ? (
                           <>
                             <button
                               onClick={() => handleReview(request, 'reject')}
@@ -654,11 +682,27 @@ const ApprovalsPage: React.FC = () => {
                               Authorize
                             </button>
                           </>
+                        ) : request.status === ApprovalStatus.COMPLETED ? (
+                          <button
+                            onClick={() => handleAcknowledge(request)}
+                            disabled={processing}
+                            className="flex-1 lg:flex-none px-5 py-3 rounded-2xl bg-success text-white text-[10px] font-black uppercase tracking-widest hover:bg-success/90 shadow-lg shadow-success/20 transition-all disabled:opacity-50 flex items-center gap-2"
+                          >
+                            <ShieldCheckIcon className="w-4 h-4" />
+                            Acknowledge
+                          </button>
                         ) : (
                           <div className="flex flex-col items-end gap-2">
                             <div className="text-right">
-                              <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-1">Reviewed By</p>
+                              <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary mb-1">
+                                {request.status === ApprovalStatus.ASSIGNED ? 'Assigned By' : 'Reviewed By'}
+                              </p>
                               <p className="text-sm font-bold text-text-primary">{request.reviewerName}</p>
+                              {request.assigneeId && (
+                                <p className="text-xs text-text-secondary mt-0.5">
+                                  Assignee: {users.find(u => u.id === request.assigneeId)?.name || 'Unknown'}
+                                </p>
+                              )}
                             </div>
                             <button
                               onClick={() => handleReview(request, request.status === ApprovalStatus.APPROVED ? 'approve' : 'reject')}
