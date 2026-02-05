@@ -4,7 +4,6 @@ import SalesOverviewPage from './sales-manager/SalesOverviewPage';
 import LeadManagementPage from './sales-manager/LeadManagementPage';
 import TeamManagementPage from './sales-manager/TeamManagementPage';
 import ReportsPage from './sales-manager/ReportsPage';
-import ProjectTrackingPage from './super-admin/ProjectTrackingPage';
 import { Lead, LeadHistory, LeadPipelineStatus } from '../../types';
 import { USERS } from '../../constants';
 import AddNewLeadModal from './sales-manager/AddNewLeadModal';
@@ -153,8 +152,6 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
         return <SalesOverviewPage setCurrentPage={setCurrentPage} leads={leads} users={users} />;
       case 'leads':
         return <LeadManagementPage leads={leads} users={users} />;
-      case 'projects':
-        return <ProjectTrackingPage setCurrentPage={setCurrentPage} />;
       case 'organizations':
         return <OrganizationsPage setCurrentPage={setCurrentPage} />;
       case 'team':

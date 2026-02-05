@@ -5,6 +5,24 @@
 
 import { User, Lead, UserRole, Project, ProjectStatus, Vendor, Invoice, PaymentStatus, LeadPipelineStatus, Activity, ActivityStatus, SiteVisit, SiteVisitStatus, MaterialRequest, MaterialRequestStatus, Issue, ChecklistItem, CommunicationMessage, Expense, VendorBill, Attendance, AttendanceStatus, Document, QuotationRequest, QuotationRequestStatus, DrawingRequest, DrawingRequestStatus, ProcurementRequest, ProcurementRequestStatus, ExecutionRequest, ExecutionRequestStatus, AccountsRequest, AccountsRequestStatus, Item, ProjectTemplate, ExpenseClaim, ExpenseClaimStatus, Task, TaskStatus, ChatChannel, ChatMessage, Complaint, ComplaintType, ComplaintPriority, ComplaintStatus, SiteReport, RFQ, RFQStatus, Bid, BidStatus, PurchaseOrder, POStatus, Organization, GanttTask, JMS, PaymentRequest } from './types';
 
+// ========================================
+// FIRESTORE COLLECTIONS
+// ========================================
+export const FIRESTORE_COLLECTIONS = {
+  CASES: 'cases',
+  LEADS: 'leads', // Keep for backward compatibility during transition
+  PROJECTS: 'projects', // Keep for backward compatibility during transition
+  USERS: 'users',
+  ORGANIZATIONS: 'organizations',
+  INVOICES: 'invoices',
+  EXPENSES: 'expenses',
+  VENDOR_BILLS: 'vendorBills',
+  ACTIVITIES: 'activities',
+  NOTIFICATIONS: 'notifications',
+  CHAT_CHANNELS: 'chatChannels',
+  CHAT_MESSAGES: 'chatMessages'
+} as const;
+
 // ❌ DEMO DATA REMOVED - ALL DATA NOW FROM FIRESTORE
 // Organizations are managed via useOrganizations hook
 export const ORGANIZATIONS: Organization[] = [];

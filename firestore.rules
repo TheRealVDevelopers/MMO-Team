@@ -6,5 +6,45 @@ service cloud.firestore {
     match /{document=**} {
       allow read, write: if true;
     }
+
+    // ========================================
+    // UNIFIED CASE ARCHITECTURE RULES
+    // ========================================
+    // Cases collection (combines leads and projects)
+    match /cases/{caseId} {
+      // Allow read for authenticated staff
+      allow read: if request.auth != null;
+      
+      // Allow write for appropriate roles
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
+      allow delete: if request.auth != null && 
+        request.auth.token.role in ['SUPER_ADMIN', 'ADMIN'];
+      
+      // Subcollections
+      match /drawings/{drawingId} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null && 
+          request.auth.token.role in ['SUPER_ADMIN', 'ADMIN', 'DRAWING_TEAM', 'SITE_ENGINEER'];
+      }
+      
+      match /boqs/{boqId} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null && 
+          request.auth.token.role in ['SUPER_ADMIN', 'ADMIN', 'DRAWING_TEAM', 'SITE_ENGINEER', 'QUOTATION_TEAM'];
+      }
+      
+      match /quotations/{quotationId} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null && 
+          request.auth.token.role in ['SUPER_ADMIN', 'ADMIN', 'QUOTATION_TEAM', 'SALES_GENERAL_MANAGER'];
+      }
+      
+      match /procurements/{procurementId} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null && 
+          request.auth.token.role in ['SUPER_ADMIN', 'ADMIN', 'EXECUTION_TEAM', 'PROCUREMENT_TEAM', 'SOURCING_TEAM'];
+      }
+    }
   }
 }

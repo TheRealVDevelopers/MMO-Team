@@ -158,6 +158,8 @@ export const useAutomatedTaskCreation = () => {
 
     /**
      * Submits BOQ (Bill of Quantities) after drawing completion
+     * IMPORTANT: This does NOT trigger procurement automatically.
+     * Procurement must be explicitly requested by Execution Team after project approval.
      */
     const submitBOQ = async (
         leadId: string,
@@ -177,7 +179,7 @@ export const useAutomatedTaskCreation = () => {
                 status: 'Submitted'
             });
 
-            // Notify sales member
+            // Notify sales member ONLY - no procurement trigger
             await createNotification({
                 title: 'BOQ Submitted',
                 message: `${projectName}: Bill of Quantities submitted. You can now proceed with quotation.`,

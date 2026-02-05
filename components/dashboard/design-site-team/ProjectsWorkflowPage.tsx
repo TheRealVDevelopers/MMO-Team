@@ -269,10 +269,20 @@ const ProjectsWorkflowPage: React.FC<ProjectsWorkflowPageProps> = ({
     const [activeStage, setActiveStage] = useState<string | null>(null);
     const [isBOQModalOpen, setIsBOQModalOpen] = useState(false);
     const [selectedProjectForBOQ, setSelectedProjectForBOQ] = useState<Project | null>(null);
+    const [showLeads, setShowLeads] = useState(true); // Toggle to show/hide leads
 
     // Drawing Upload Modal State
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [selectedProjectForUpload, setSelectedProjectForUpload] = useState<Project | null>(null);
+
+    // Filter projects based on showLeads toggle
+    const filteredProjects = useMemo(() => {
+        if (showLeads) {
+            return projects; // Show all projects including leads
+        }
+        // Filter out lead-sourced projects (those with IDs starting with 'lead-')
+        return projects.filter(p => !p.id.startsWith('lead-'));
+    }, [projects, showLeads]);
 
     // Group projects by stage
     const projectsByStage = useMemo(() => {
@@ -282,13 +292,13 @@ const ProjectsWorkflowPage: React.FC<ProjectsWorkflowPageProps> = ({
             'completed': []
         };
 
-        projects.forEach(project => {
+        filteredProjects.forEach(project => {
             const stage = getProjectStage(project);
             grouped[stage].push(project);
         });
 
         return grouped;
-    }, [projects]);
+    }, [filteredProjects]);
 
     // Handle project actions
     const handleProjectAction = async (project: Project, action: string) => {
@@ -415,6 +425,28 @@ const ProjectsWorkflowPage: React.FC<ProjectsWorkflowPageProps> = ({
             animate="visible"
             className="space-y-8"
         >
+            {/* Header with Toggle */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold text-text-primary">Projects Workflow</h1>
+                    <p className="text-text-secondary mt-1">Track and manage project stages</p>
+                </div>
+                <button
+                    onClick={() => setShowLeads(!showLeads)}
+                    className={cn(
+                        "px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2",
+                        showLeads
+                            ? "bg-purple-500 text-white shadow-lg shadow-purple-500/20 hover:bg-purple-600"
+                            : "bg-surface border border-border text-text-secondary hover:bg-subtle-background"
+                    )}
+                >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    {showLeads ? 'Showing Leads' : 'Leads Hidden'}
+                </button>
+            </div>
+
             {/* KPI Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {WORKFLOW_STAGES.map(stage => (

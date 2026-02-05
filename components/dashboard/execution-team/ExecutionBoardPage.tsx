@@ -4,6 +4,7 @@ import { PlusIcon } from '../../icons/IconComponents';
 import ProjectCard from './ProjectCard';
 import ProjectDetailPane from './ProjectDetailPane';
 import { useProjects } from '../../../hooks/useProjects';
+import { useCases } from '../../../hooks/useCases';
 import { useAuth } from '../../../context/AuthContext';
 
 const KANBAN_COLUMNS = {
@@ -16,7 +17,10 @@ const KANBAN_COLUMNS = {
 // ...
 
 const ExecutionBoardPage: React.FC = () => {
-  const { projects: allProjects, loading } = useProjects();
+  // Use unified Cases architecture - show only projects (isProject: true)
+  const { cases, loading } = useCases({ isProject: true });
+  // Type assertion: cases with isProject=true are Projects (safe during transition)
+  const allProjects = cases as unknown as Project[];
   const { currentUser } = useAuth();
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 

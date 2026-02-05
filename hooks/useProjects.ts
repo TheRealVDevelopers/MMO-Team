@@ -95,7 +95,7 @@ const removeUndefinedValues = (obj: any): any => {
     return obj;
 };
 
-export const useProjects = (userId?: string) => {
+export const useProjects = (userId?: string, includePending?: boolean) => {
     const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
@@ -115,7 +115,11 @@ export const useProjects = (userId?: string) => {
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const projectsData: Project[] = [];
             querySnapshot.forEach((doc) => {
-                projectsData.push(fromFirestore(doc.data() as FirestoreProject, doc.id));
+                const project = fromFirestore(doc.data() as FirestoreProject, doc.id);
+                // Filter out pending projects unless explicitly requested
+                if (includePending || project.approvalStatus !== 'pending') {
+                    projectsData.push(project);
+                }
             });
 
             setProjects(projectsData.sort((a, b) => b.startDate.getTime() - a.startDate.getTime()));
@@ -127,7 +131,7 @@ export const useProjects = (userId?: string) => {
         });
 
         return () => unsubscribe();
-    }, [userId]);
+    }, [userId, includePending]);
 
     const updateProject = async (id: string, data: Partial<Project>) => {
         try {
@@ -311,19 +315,141 @@ export const raiseProjectIssue = async (projectId: string, issue: any, userName:
     }
 };
 
-export const addProject = async (projectData: Omit<Project, 'id'>) => {
+export const addProject = async (projectData: Omit<Project, 'id'>, requiresApproval: boolean = false, submittedBy?: { id: string; name: string }) => {
     try {
         // Remove undefined values from the object to prevent Firebase errors
         const cleanData = removeUndefinedValues(projectData);
 
-        const docRef = await addDoc(collection(db, 'projects'), {
+        const projectToSave: any = {
             ...cleanData,
             startDate: Timestamp.fromDate(projectData.startDate),
             endDate: Timestamp.fromDate(projectData.endDate),
-        });
+        };
+
+        // If requires approval, set pending status
+        if (requiresApproval && submittedBy) {
+            projectToSave.approvalStatus = 'pending';
+            projectToSave.submittedForApprovalAt = new Date();
+            projectToSave.submittedBy = submittedBy.id;
+            projectToSave.submittedByName = submittedBy.name;
+        } else {
+            // Automatically approved (for admins/managers)
+            projectToSave.approvalStatus = 'approved';
+        }
+
+        const docRef = await addDoc(collection(db, 'projects'), projectToSave);
+
+        // If pending, notify admin
+        if (requiresApproval && submittedBy) {
+            // Notify all admins about the pending project
+            await createNotification({
+                title: 'New Project Pending Approval',
+                message: `${submittedBy.name} submitted a new project "${projectData.projectName}" for approval`,
+                user_id: 'admin', // This should target all admins - adjust based on your notification system
+                entity_type: 'project',
+                entity_id: docRef.id,
+                type: 'info'
+            });
+        }
+
         return docRef.id;
     } catch (err) {
         console.error("Error adding project:", err);
         throw err;
+    }
+};
+
+// Approve a pending project
+export const approveProject = async (projectId: string, approvedBy: string, approvedByName: string) => {
+    try {
+        const projectRef = doc(db, 'projects', projectId);
+        const projectSnap = await getDoc(projectRef);
+        
+        if (!projectSnap.exists()) {
+            throw new Error('Project not found');
+        }
+
+        const projectData = projectSnap.data() as Project;
+
+        await updateDoc(projectRef, removeUndefinedValues({
+            approvalStatus: 'approved',
+            approvedAt: new Date(),
+            approvedBy,
+            approvedByName,
+            history: [
+                ...(projectData.history || []),
+                {
+                    action: 'Project Approved',
+                    user: approvedByName,
+                    timestamp: new Date(),
+                    notes: 'Project approved by administrator'
+                }
+            ]
+        }));
+
+        // Notify the submitter
+        if (projectData.submittedBy) {
+            await createNotification({
+                title: 'Project Approved',
+                message: `Your project "${projectData.projectName}" has been approved by ${approvedByName}`,
+                user_id: projectData.submittedBy,
+                entity_type: 'project',
+                entity_id: projectId,
+                type: 'success'
+            });
+        }
+
+        console.log(`✅ Project ${projectId} approved successfully`);
+    } catch (error) {
+        console.error('Error approving project:', error);
+        throw error;
+    }
+};
+
+// Reject a pending project
+export const rejectProject = async (projectId: string, rejectedBy: string, rejectedByName: string, reason: string) => {
+    try {
+        const projectRef = doc(db, 'projects', projectId);
+        const projectSnap = await getDoc(projectRef);
+        
+        if (!projectSnap.exists()) {
+            throw new Error('Project not found');
+        }
+
+        const projectData = projectSnap.data() as Project;
+
+        await updateDoc(projectRef, removeUndefinedValues({
+            approvalStatus: 'rejected',
+            rejectedAt: new Date(),
+            rejectedBy,
+            rejectedByName,
+            rejectionReason: reason,
+            history: [
+                ...(projectData.history || []),
+                {
+                    action: 'Project Rejected',
+                    user: rejectedByName,
+                    timestamp: new Date(),
+                    notes: `Rejection reason: ${reason}`
+                }
+            ]
+        }));
+
+        // Notify the submitter
+        if (projectData.submittedBy) {
+            await createNotification({
+                title: 'Project Rejected',
+                message: `Your project "${projectData.projectName}" was rejected: ${reason}`,
+                user_id: projectData.submittedBy,
+                entity_type: 'project',
+                entity_id: projectId,
+                type: 'error'
+            });
+        }
+
+        console.log(`✅ Project ${projectId} rejected`);
+    } catch (error) {
+        console.error('Error rejecting project:', error);
+        throw error;
     }
 };

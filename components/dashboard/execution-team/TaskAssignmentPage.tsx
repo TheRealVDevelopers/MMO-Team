@@ -30,12 +30,8 @@ const TaskAssignmentPage: React.FC = () => {
     const [deadline, setDeadline] = useState('');
     const [instructions, setInstructions] = useState('');
 
-    // Filter team members
-    const teamMembers = users.filter(u =>
-        u.role === UserRole.SITE_ENGINEER ||
-        u.role === UserRole.DRAWING_TEAM ||
-        u.role === UserRole.EXECUTION_TEAM
-    );
+    // Filter team members - Show ALL users (all team members can be assigned tasks)
+    const teamMembers = users.filter(u => u.role !== UserRole.SUPER_ADMIN); // Everyone except super admin can receive tasks
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

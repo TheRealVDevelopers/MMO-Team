@@ -2,6 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import QuotationOverviewPage from './quotation-team/QuotationOverviewPage';
 import MyPerformancePage from './quotation-team/MyPerformancePage';
+import CustomerQuotationBuilder from './quotation-team/CustomerQuotationBuilder';
+import UnifiedRequestInbox from './shared/UnifiedRequestInbox';
+import ProjectDetailsPage from './shared/ProjectDetailsPage';
 import { Project, Item, ProjectTemplate, RFQ, Bid, LeadPipelineStatus, ProjectStatus } from '../../types';
 import QuotationDetailModal from './quotation-team/QuotationDetailModal';
 import ItemsCatalogPage from './quotation-team/ItemsCatalogPage';
@@ -18,7 +21,7 @@ import { useProjects } from '../../hooks/useProjects';
 import { useAuth } from '../../context/AuthContext';
 import { useCatalog } from '../../hooks/useCatalog';
 
-const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
+const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string, params?: any) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
   // ❌ DEMO DATA REMOVED - No localStorage fallback, only Firestore
   const { leads: firebaseLeads, loading: leadsLoading } = useLeads();
@@ -163,7 +166,11 @@ const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (p
     switch (currentPage) {
       case 'my-day':
         return <MyDayPage />;
+      case 'requests':
+        return <UnifiedRequestInbox />;
       case 'quotations':
+        // Use new Customer Quotation Builder
+        return <CustomerQuotationBuilder />;
       case 'overview':
         // Pass dynamic projects and handler
         return (
@@ -189,9 +196,7 @@ const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (p
       case 'catalog':
         return (
           <ItemsCatalogPage
-            items={items}
             setCurrentPage={setCurrentPage}
-            onAddItem={() => setShowAddItemModal(true)}
           />
         );
       case 'templates':

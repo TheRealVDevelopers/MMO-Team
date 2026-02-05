@@ -3,6 +3,8 @@ import Modal from '../../shared/Modal';
 import { Project, ProjectStatus, Item, RFQ, Bid, ApprovalRequestType, UserRole } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { useApprovals } from '../../../hooks/useApprovalSystem';
+import { addCaseQuotation } from '../../../hooks/useCases';
+import { createNotification } from '../../../services/liveDataService';
 import { formatCurrencyINR, VENDORS } from '../../../constants';
 import { CalculatorIcon, DocumentCheckIcon, XCircleIcon, PlusIcon, ClockIcon } from '../../icons/IconComponents';
 
@@ -58,41 +60,84 @@ const QuotationDetailModal: React.FC<{
     const handleRequestApproval = async () => {
         if (!currentUser) return;
 
-        // Use L1 bid if available, otherwise fallback to calculated quote or project budget
-        const approvalAmount = l1Bid ? l1Bid.totalAmount : (calculatedQuote || project.budget);
-        const approvalNotes = l1Bid
-            ? `Based on L1 Bid from ${l1Bid.vendorName}`
-            : `Based on internal calculation (${margin}% margin)`;
+        try {
+            // Use L1 bid if available, otherwise fallback to calculated quote or project budget
+            const approvalAmount = l1Bid ? l1Bid.totalAmount : (calculatedQuote || project.budget);
+            const approvalNotes = l1Bid
+                ? `Based on L1 Bid from ${l1Bid.vendorName}`
+                : `Based on internal calculation (${margin}% margin)`;
 
-        // 1. Submit to Approval System (Firebase)
-        await submitRequest({
-            requestType: ApprovalRequestType.QUOTATION_APPROVAL,
-            requesterId: currentUser.id,
-            requesterName: currentUser.name,
-            requesterRole: currentUser.role,
-            title: `Quotation Approval for ${project.projectName}`,
-            description: `Total Value: ${formatCurrencyINR(approvalAmount)}. ${approvalNotes}.`,
-            contextId: project.id,
-            priority: 'High',
-            targetRole: 'Admin' as any
-        });
+            // Calculate tax
+            const taxAmount = approvalAmount * 0.18; // 18% GST
+            const finalAmount = approvalAmount + taxAmount;
 
-        // 2. Update Local State & Project Status
-        const updatedProject: Project = {
-            ...project,
-            status: ProjectStatus.APPROVAL_REQUESTED,
-            budget: approvalAmount, // Update project budget to approved amount
-            history: [
-                ...(project.history || []),
-                {
-                    action: 'Approval Requested',
-                    user: currentUser.name,
-                    timestamp: new Date(),
-                    notes: `Submitted for Admin Approval. Amount: ${formatCurrencyINR(approvalAmount)} (${approvalNotes})`
-                }
-            ]
-        };
-        onUpdate(updatedProject);
+            // ========================================
+            // SAVE QUOTATION TO CASE SUBCOLLECTION
+            // ========================================
+            const quotationId = await addCaseQuotation(project.id, {
+                caseId: project.id,
+                quotationNumber: `QT-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`,
+                items: selectedItems.map(item => ({
+                    itemId: item.id,
+                    quantity: 1,
+                    unitPrice: item.price,
+                    discount: 0
+                })),
+                totalAmount: approvalAmount,
+                discountAmount: 0,
+                taxAmount: taxAmount,
+                finalAmount: finalAmount,
+                submittedBy: currentUser.id,
+                submittedAt: new Date(),
+                status: 'Pending Approval',
+                notes: approvalNotes
+            });
+
+            console.log(`✅ Quotation saved to cases/${project.id}/quotations/${quotationId}`);
+
+            // Submit to Approval System (Firebase)
+            await submitRequest({
+                requestType: ApprovalRequestType.QUOTATION_APPROVAL,
+                requesterId: currentUser.id,
+                requesterName: currentUser.name,
+                requesterRole: currentUser.role,
+                title: `Quotation Approval for ${project.projectName}`,
+                description: `Total Value: ${formatCurrencyINR(approvalAmount)}\nTax (18%): ${formatCurrencyINR(taxAmount)}\nFinal Amount: ${formatCurrencyINR(finalAmount)}\n\n${approvalNotes}`,
+                contextId: project.id,
+                priority: 'High',
+                targetRole: 'Admin' as any
+            });
+
+            // Notify relevant parties
+            await createNotification({
+                title: 'Quotation Created',
+                message: `Quotation ${formatCurrencyINR(finalAmount)} submitted for approval - ${project.projectName}`,
+                user_id: (project as any).assignedTo || (project as any).salespersonId || currentUser.id,
+                entity_type: (project as any).isProject ? 'project' : 'lead',
+                entity_id: project.id,
+                type: 'info'
+            });
+
+            // Update Local State & Project Status
+            const updatedProject: Project = {
+                ...project,
+                status: ProjectStatus.APPROVAL_REQUESTED,
+                budget: approvalAmount,
+                history: [
+                    ...(project.history || []),
+                    {
+                        action: 'Quotation Created & Approval Requested',
+                        user: currentUser.name,
+                        timestamp: new Date(),
+                        notes: `Submitted for Admin Approval. Amount: ${formatCurrencyINR(finalAmount)} (${approvalNotes})`
+                    }
+                ]
+            };
+            onUpdate(updatedProject);
+        } catch (error) {
+            console.error('Error creating quotation:', error);
+            alert('Failed to create quotation. Please try again.');
+        }
     };
 
     const handleAddCounterOffer = () => {

@@ -9,6 +9,7 @@ import MyDayPage from './shared/MyDayPage';
 import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
 import { useLeads, addLead, updateLead } from '../../hooks/useLeads';
+import { useCases, addCase, updateCase } from '../../hooks/useCases';
 import { SectionHeader, PrimaryButton } from './shared/DashboardUI';
 import { ExclamationTriangleIcon, ArrowPathIcon, PlusIcon } from '@heroicons/react/24/outline';
 import AddNewLeadModal from './sales-manager/AddNewLeadModal';
@@ -65,7 +66,10 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
 const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
-  const { leads, loading: leadsLoading, error: leadsError } = useLeads(currentUser?.id);
+  // Use unified Cases architecture - show only leads (isProject: false)
+  const { cases, loading: leadsLoading, error: leadsError } = useCases({ isProject: false, userId: currentUser?.id });
+  // Type assertion: cases with isProject=false are Leads (safe during transition)
+  const leads = cases as unknown as Lead[];
   const { users, loading: usersLoading } = useUsers();
   const [isAddLeadModalOpen, setIsAddLeadModalOpen] = useState(false);
 

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, Timestamp, updateDoc, doc, where } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, Timestamp, updateDoc, doc, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
-import { ExecutionTask } from '../types';
+import { ExecutionTask, UserRole } from '../types';
+import { createNotification } from './useNotifications';
 
 interface UseExecutionTasksReturn {
     tasks: ExecutionTask[];
@@ -68,12 +69,41 @@ export function useExecutionTasks(projectId?: string): UseExecutionTasksReturn {
     const addTask = async (task: Omit<ExecutionTask, 'id' | 'createdAt'>) => {
         try {
             const tasksRef = collection(db, 'executionTasks');
-            await addDoc(tasksRef, {
+            const docRef = await addDoc(tasksRef, {
                 ...task,
                 is_demo: false,
                 createdAt: serverTimestamp()
             });
             console.log('Task added successfully');
+
+            // Notify all admins and sales managers about the new task
+            const usersRef = collection(db, 'users');
+            const usersSnapshot = await getDocs(usersRef);
+            
+            const adminAndManagerIds: string[] = [];
+            usersSnapshot.forEach(doc => {
+                const userData = doc.data();
+                if (userData.role === UserRole.SUPER_ADMIN || 
+                    userData.role === UserRole.SALES_GENERAL_MANAGER ||
+                    userData.role === 'admin' || 
+                    userData.role === 'Admin') {
+                    adminAndManagerIds.push(doc.id);
+                }
+            });
+
+            // Send notification to each admin/manager
+            for (const userId of adminAndManagerIds) {
+                await createNotification({
+                    user_id: userId,
+                    title: 'New Task Request from Execution Team',
+                    message: `Execution Team assigned a ${task.missionType} task: "${task.instructions}" to ${task.assigneeName} for ${task.projectName}`,
+                    type: 'task',
+                    context_id: docRef.id,
+                    context_type: 'executionTask'
+                });
+            }
+
+            console.log(`Notified ${adminAndManagerIds.length} admins/managers about new task`);
         } catch (err) {
             console.error('Error adding task:', err);
             throw err;

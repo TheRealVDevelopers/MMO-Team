@@ -19,7 +19,7 @@ import { addTask } from '../../../hooks/useMyDayTasks';
 import { ApprovalRequest, ApprovalStatus, ApprovalRequestType, UserRole, ProjectStatus, LeadPipelineStatus } from '../../../types';
 import { formatDateTime } from '../../../constants';
 import { useUsers } from '../../../hooks/useUsers';
-import { useProjects } from '../../../hooks/useProjects';
+import { useProjects, approveProject, rejectProject } from '../../../hooks/useProjects';
 import { updateLead } from '../../../hooks/useLeads';
 import { ContentCard, StatCard, SectionHeader, cn, staggerContainer, PrimaryButton } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -41,13 +41,17 @@ const ApprovalsPage: React.FC = () => {
   const [assigneeId, setAssigneeId] = useState('');
   const [deadline, setDeadline] = useState<string>('');
   const [processing, setProcessing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'general' | 'execution'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'execution' | 'projects'>('general');
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [projectRejectionReason, setProjectRejectionReason] = useState('');
+  const [showProjectRejectModal, setShowProjectRejectModal] = useState(false);
 
   const { requests, loading } = useApprovalRequests(filterStatus === 'All' ? undefined : filterStatus);
   const { requests: allRequests } = useApprovalRequests(); // For stats or full list if needed
   const { pendingRequests: editRequests, loading: editLoading, approveRequest: approveEditRequest, rejectRequest: rejectEditRequest } = useEditApproval();
   const { users } = useUsers();
   const { updateProject } = useProjects();
+  const { projects: pendingProjects, loading: projectsLoading } = useProjects(undefined, true); // Include pending projects
 
   // Fallback mapping from request type to target role (for requests without targetRole set)
   const derivedTargetRole = useMemo(() => {
@@ -358,6 +362,18 @@ const ApprovalsPage: React.FC = () => {
           <WrenchScrewdriverIcon className="w-4 h-4" />
           Execution Edits ({editRequests.length})
         </button>
+        <button
+          onClick={() => setActiveTab('projects')}
+          className={cn(
+            "px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2",
+            activeTab === 'projects'
+              ? "bg-primary text-white shadow-lg shadow-primary/20"
+              : "text-text-tertiary hover:text-text-primary hover:bg-subtle-background"
+          )}
+        >
+          <ArchiveBoxIcon className="w-4 h-4" />
+          Project Approvals ({pendingProjects.filter(p => p.approvalStatus === 'pending').length})
+        </button>
       </div>
 
       {/* Execution Edit Requests */}
@@ -454,6 +470,113 @@ const ApprovalsPage: React.FC = () => {
                 <WrenchScrewdriverIcon className="w-16 h-16 mx-auto text-text-tertiary/30 mb-4" />
                 <p className="text-text-tertiary font-medium">No pending execution edits</p>
                 <p className="text-text-tertiary/60 text-sm mt-1">All execution team requests have been processed</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {/* Project Approval Queue */}
+      {activeTab === 'projects' && (
+        <div className="space-y-4">
+          <AnimatePresence mode="popLayout">
+            {pendingProjects.filter(p => p.approvalStatus === 'pending').length > 0 ? (
+              pendingProjects
+                .filter(p => p.approvalStatus === 'pending')
+                .map((project, idx) => (
+                  <motion.div
+                    key={project.id}
+                    layout
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ delay: idx * 0.05 }}
+                  >
+                    <ContentCard className="group hover:border-primary/30 transition-all duration-500">
+                      <div className="flex flex-col lg:flex-row lg:items-center gap-6">
+                        {/* Project Info */}
+                        <div className="flex items-start gap-4 flex-1">
+                          <div className="w-14 h-14 rounded-2xl bg-subtle-background flex items-center justify-center text-text-tertiary group-hover:bg-primary/10 group-hover:text-primary transition-all duration-500 border border-border/40">
+                            <ArchiveBoxIcon className="w-7 h-7" />
+                          </div>
+                          <div className="space-y-1">
+                            <h4 className="text-base font-bold text-text-primary group-hover:text-primary transition-colors duration-300">
+                              {project.projectName}
+                            </h4>
+                            <p className="text-sm text-text-secondary">Client: {project.clientName}</p>
+                            <div className="flex items-center gap-3 text-xs text-text-tertiary mt-2">
+                              <span className="flex items-center gap-1">
+                                <UserIcon className="w-3.5 h-3.5" />
+                                Submitted by: {project.submittedByName || 'Unknown'}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <ClockIcon className="w-3.5 h-3.5" />
+                                {project.submittedForApprovalAt ? formatDateTime(project.submittedForApprovalAt) : 'Recently'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Project Details */}
+                        <div className="flex flex-col gap-2 lg:w-64">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-text-tertiary">Budget:</span>
+                            <span className="font-semibold text-text-primary">₹{project.budget?.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-text-tertiary">Priority:</span>
+                            <span className={`font-medium ${project.priority === 'High' ? 'text-error' : project.priority === 'Medium' ? 'text-warning' : 'text-text-secondary'}`}>
+                              {project.priority}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-text-tertiary">Start Date:</span>
+                            <span className="text-text-primary">{new Date(project.startDate).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex gap-2 lg:w-48">
+                          <button
+                            onClick={async () => {
+                              if (!currentUser) return;
+                              try {
+                                await approveProject(project.id, currentUser.id, currentUser.name);
+                                alert('Project approved successfully!');
+                              } catch (error) {
+                                console.error('Error approving project:', error);
+                                alert('Failed to approve project');
+                              }
+                            }}
+                            className="flex-1 px-4 py-2.5 bg-success/10 text-success hover:bg-success hover:text-white rounded-xl font-semibold text-sm transition-all duration-300 flex items-center justify-center gap-2"
+                          >
+                            <CheckCircleIcon className="w-4 h-4" />
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedProjectId(project.id);
+                              setShowProjectRejectModal(true);
+                            }}
+                            className="flex-1 px-4 py-2.5 bg-error/10 text-error hover:bg-error hover:text-white rounded-xl font-semibold text-sm transition-all duration-300 flex items-center justify-center gap-2"
+                          >
+                            <XCircleIcon className="w-4 h-4" />
+                            Reject
+                          </button>
+                        </div>
+                      </div>
+                    </ContentCard>
+                  </motion.div>
+                ))
+            ) : (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-16 bg-surface rounded-3xl border border-border/50"
+              >
+                <ArchiveBoxIcon className="w-16 h-16 mx-auto text-text-tertiary/30 mb-4" />
+                <p className="text-text-tertiary font-medium">No pending projects</p>
+                <p className="text-text-tertiary/60 text-sm mt-1">All projects have been reviewed</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -743,6 +866,66 @@ const ApprovalsPage: React.FC = () => {
         onClose={() => setIsDirectAssignModalOpen(false)}
         onAssign={handleDirectAssign}
       />
+
+      {/* Project Rejection Modal */}
+      <Modal
+        isOpen={showProjectRejectModal}
+        onClose={() => {
+          setShowProjectRejectModal(false);
+          setProjectRejectionReason('');
+          setSelectedProjectId(null);
+        }}
+        title="Reject Project"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-text-secondary">
+            Please provide a reason for rejecting this project. The submitter will be notified.
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-2">
+              Rejection Reason *
+            </label>
+            <textarea
+              value={projectRejectionReason}
+              onChange={(e) => setProjectRejectionReason(e.target.value)}
+              rows={4}
+              className="w-full px-4 py-3 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+              placeholder="Explain why this project cannot be approved..."
+            />
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                setShowProjectRejectModal(false);
+                setProjectRejectionReason('');
+                setSelectedProjectId(null);
+              }}
+              className="flex-1 px-4 py-2.5 border border-border rounded-xl text-text-primary hover:bg-subtle-background transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={async () => {
+                if (!currentUser || !selectedProjectId || !projectRejectionReason.trim()) return;
+                try {
+                  await rejectProject(selectedProjectId, currentUser.id, currentUser.name, projectRejectionReason);
+                  alert('Project rejected');
+                  setShowProjectRejectModal(false);
+                  setProjectRejectionReason('');
+                  setSelectedProjectId(null);
+                } catch (error) {
+                  console.error('Error rejecting project:', error);
+                  alert('Failed to reject project');
+                }
+              }}
+              disabled={!projectRejectionReason.trim()}
+              className="flex-1 px-4 py-2.5 bg-error text-white hover:bg-red-600 rounded-xl font-semibold transition-all disabled:opacity-50"
+            >
+              Reject Project
+            </button>
+          </div>
+        </div>
+      </Modal>
     </motion.div>
   );
 };

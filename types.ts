@@ -590,6 +590,17 @@ export interface Project {
     notes?: string;
     submittedAt: Date;
   };
+
+  // Project Approval Queue Fields
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
+  submittedForApprovalAt?: Date;
+  submittedBy?: string; // User ID who created/submitted the project
+  submittedByName?: string; // Name of user who submitted
+  approvedAt?: Date;
+  approvedBy?: string; // Admin User ID who approved
+  approvedByName?: string; // Admin name
+  rejectedBy?: string; // Admin User ID who rejected
+  rejectedByName?: string; // Admin name
 }
 
 // NEW: Organization interface
@@ -1444,8 +1455,11 @@ export interface SiteReport {
 export enum TaskStatus {
   PENDING_ACCEPTANCE = "Pending Acceptance",
   PENDING = "Pending",
+  ASSIGNED = "Assigned",
+  ONGOING = "Ongoing",
   IN_PROGRESS = "In Progress",
   COMPLETED = "Completed",
+  ACKNOWLEDGED = "Acknowledged",
   OVERDUE = "Overdue",
 }
 
@@ -1475,9 +1489,23 @@ export interface Task {
   // Target linking (Dynamic Assignment)
   targetId?: string;
   targetType?: 'Lead' | 'Project';
+  
+  // Task Feedback Loop
+  assignedTo: string; // User ID of assigned person
+  assignedToName?: string; // Name of assigned person
+  caseId?: string; // Link to Case (unified lead/project)
+  taskType?: 'BOQ' | 'Drawing' | 'Quotation' | 'Site Visit' | 'Procurement' | 'Execution' | 'General';
+  relatedDocumentId?: string; // ID of related document (quotation, drawing, etc.)
+  notifyOnComplete?: string[]; // Array of user IDs to notify on completion
   targetName?: string;
 
   requesterId?: string; // Sales user who raised the request
+  
+  // Task Lifecycle Tracking
+  acknowledgedBy?: string; // Admin who acknowledged completion
+  acknowledgedByName?: string; // Name of admin
+  acknowledgedAt?: Date; // When task was acknowledged
+  startedAt?: Date; // When task moved to ONGOING
 }
 
 export enum AttendanceType {
@@ -1643,4 +1671,160 @@ export interface FinanceRequest {
     assignedProjectId: string; // The project selected by Accounts
     transactionId?: string;
   };
+}
+
+// ========================================
+// UNIFIED CASE ARCHITECTURE
+// ========================================
+// A CASE represents both Leads and Projects in a single document
+// Controlled by isProject boolean flag
+
+export interface Case {
+  id: string;
+  isProject: boolean; // FALSE = Lead, TRUE = Project
+  
+  // Core Info (shared by both leads and projects)
+  clientName: string;
+  projectName: string;
+  organizationId?: string;
+  contact: {
+    name: string;
+    phone: string;
+    email?: string;
+  };
+  
+  // Status fields
+  status: LeadPipelineStatus | ProjectStatus;
+  priority: 'Low' | 'Medium' | 'High';
+  
+  // Lead-specific fields (used when isProject = false)
+  value?: number;
+  source?: string;
+  assignedTo?: string; // Sales person
+  inquiryDate: Date;
+  lastContacted?: string; // For Lead compatibility
+  clientEmail?: string; // For Lead compatibility
+  reminders?: Reminder[];
+  tasks?: {
+    siteVisits?: string[];
+    drawingRequests?: string[];
+    quotationRequests?: string[];
+    procurementRequests?: string[];
+    executionRequests?: string[];
+    accountsRequests?: string[];
+  };
+  currentStage?: number;
+  deadline?: Date;
+  communicationMessages?: LeadCommunicationMessage[];
+  files?: LeadFile[];
+  
+  // Project-specific fields (used when isProject = true)
+  budget?: number;
+  advancePaid?: number;
+  startDate?: Date;
+  endDate?: Date;
+  progress?: number;
+  projectHead?: string; // User ID of assigned project head (manager)
+  projectHeadName?: string; // Name of project head
+  assignedUsers?: string[]; // Array of all user IDs assigned to this project
+  assignedTeam?: {
+    drawing?: string;
+    execution?: string[];
+    quotation?: string;
+  };
+  milestones?: Array<{name: string; completed: boolean}>;
+  stages?: Array<{id: string; name: string; status: string; deadline?: Date}>;
+  currentProjectStage?: 'Lead' | 'Drawing' | 'Quotation' | 'Execution' | 'Completed'; // Current stage for tracking
+  
+  // Conversion tracking
+  convertedToProjectAt?: Date;
+  convertedBy?: string;
+  
+  // Additional status tracking
+  quotationStatus?: 'NONE' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+  
+  // Metadata
+  createdBy: string;
+  createdAt: Date;
+  updatedAt?: Date;
+  history: LeadHistory[];
+  
+  // Additional fields for compatibility
+  clientMobile?: string;
+  clientAddress?: string;
+  clientContact?: {
+    name: string;
+    phone: string;
+  };
+  salespersonId?: string;
+  totalExpenses?: number;
+  documents?: Array<{
+    id: string;
+    name: string;
+    type: string;
+    url: string;
+    uploaded: Date;
+    size?: string;
+  }>;
+  communication?: any[];
+  items?: any[];
+  counterOffers?: any[];
+  paymentTerms?: PaymentTerm[];
+  ganttData?: GanttTask[];
+  issues?: any[];
+  lifecycleStatus?: ProjectLifecycleStatus;
+  
+  // Legacy compatibility
+  is_demo?: boolean;
+}
+
+export interface CaseDrawing {
+  id: string;
+  caseId: string;
+  fileName: string;
+  fileUrl: string;
+  fileType: 'pdf' | 'cad' | 'image';
+  uploadedBy: string;
+  uploadedAt: Date;
+  category?: '2D' | '3D' | 'RECCE';
+  notes?: string;
+}
+
+export interface CaseBOQ {
+  id: string;
+  caseId: string;
+  items: BOQItem[];
+  submittedBy: string;
+  submittedAt: Date;
+  status: 'Draft' | 'Submitted' | 'Approved';
+  totalCost?: number;
+  notes?: string;
+  drawingId?: string;
+}
+
+export interface CaseQuotation {
+  id: string;
+  caseId: string;
+  quotationNumber?: string;
+  items: Array<{itemId: string; quantity: number; unitPrice: number; discount: number}>;
+  totalAmount: number;
+  discountAmount: number;
+  taxAmount: number;
+  finalAmount: number;
+  submittedBy: string;
+  submittedByName?: string;
+  submittedAt: Date;
+  status: 'Draft' | 'Pending Approval' | 'Approved' | 'Rejected';
+  approvedBy?: string; // User ID who approved
+  approvedByName?: string; // Name of approver
+  approvedAt?: Date; // When it was approved
+  rejectedBy?: string;
+  rejectedByName?: string;
+  rejectedAt?: Date;
+  rejectionReason?: string;
+  versions?: QuotationVersion[];
+  notes?: string;
+  sss?: string; // Special Sales Strategy field
+  pdfUrl?: string; // PDF file URL
+  pdfFileName?: string; // PDF file name
 }

@@ -2,9 +2,13 @@
 import React, { useEffect, useState } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { Routes, Route } from 'react-router-dom';
 import Dashboard from './components/dashboard/Dashboard';
 import SettingsPage from './components/settings/SettingsPage';
 import InternalLayout from './components/dashboard/shared/InternalLayout';
+import ProjectsListPage from './components/dashboard/shared/ProjectsListPage';
+import ProjectDetailsPage from './components/dashboard/shared/ProjectDetailsPage';
+import ReferenceListPage from './components/dashboard/shared/ReferenceListPage';
 import LandingPage from './components/landing/LandingPage';
 import { useAuth } from './context/AuthContext';
 import { User, UserRole, Vendor } from './types';
@@ -18,6 +22,7 @@ import {
 import { USERS } from './constants';
 import { seedDemoData } from './services/liveDataService';
 import { migrateUsersToFirestore } from './services/migrationService';
+import { migrateAllToCases } from './scripts/migrateToCases';
 
 const navConfig = {
   [UserRole.SUPER_ADMIN]: {
@@ -58,6 +63,7 @@ const navConfig = {
     title: 'Sales Manager',
     navItems: [
       { id: 'overview', label: 'Dashboard', icon: <RectangleGroupIcon className="w-6 h-6" /> },
+      { id: 'projects', label: 'Projects', icon: <RectangleStackIcon className="w-6 h-6" /> },
       { id: 'leads', label: 'Leads', icon: <FunnelIcon className="w-6 h-6" /> },
       { id: 'organizations', label: 'Organizations', icon: <BuildingOfficeIcon className="w-6 h-6" /> },
       { id: 'team', label: 'Team', icon: <UsersIcon className="w-6 h-6" /> },
@@ -74,6 +80,7 @@ const navConfig = {
     title: 'My Workspace',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
+      { id: 'projects', label: 'Projects', icon: <RectangleStackIcon className="w-6 h-6" /> },
       { id: 'leads', label: 'My Registry', icon: <FunnelIcon className="w-6 h-6" /> },
       { id: 'my-requests', label: 'My Requests', icon: <RectangleStackIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
@@ -89,6 +96,7 @@ const navConfig = {
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
       { id: 'projects', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
+      { id: 'reference', label: 'Reference', icon: <RectangleStackIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
       { id: 'workflow', label: 'M-Workflow', icon: <PresentationChartLineIcon className="w-6 h-6" /> },
       // { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
@@ -99,6 +107,8 @@ const navConfig = {
     title: 'Quotation',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
+      { id: 'projects', label: 'Projects', icon: <RectangleStackIcon className="w-6 h-6" /> },
+      { id: 'requests', label: 'Requests', icon: <CheckCircleIcon className="w-6 h-6" /> },
       { id: 'quotations', label: 'Create Quotation', icon: <DocumentTextIcon className="w-6 h-6" /> },
       { id: 'catalog', label: 'Items Catalog', icon: <TagIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
@@ -112,6 +122,7 @@ const navConfig = {
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
       { id: 'projects', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
+      { id: 'reference', label: 'Reference', icon: <RectangleStackIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
       { id: 'workflow', label: 'M-Workflow', icon: <PresentationChartLineIcon className="w-6 h-6" /> },
       // { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
@@ -136,6 +147,7 @@ const navConfig = {
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
       { id: 'board', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
+      { id: 'reference', label: 'Reference', icon: <RectangleStackIcon className="w-6 h-6" /> },
       // Added unified leadership items
       { id: 'team', label: 'Team', icon: <UsersIcon className="w-6 h-6" /> },
       { id: 'approvals', label: 'Approvals', icon: <CheckCircleIcon className="w-6 h-6" /> },
@@ -160,6 +172,8 @@ const navConfig = {
   [UserRole.ACCOUNTS_TEAM]: {
     title: 'Financial Command Center',
     navItems: [
+      { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
+      { id: 'tasks', label: 'Tasks', icon: <ListBulletIcon className="w-6 h-6" /> },
       { id: 'overview', label: 'Overview', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
       { id: 'sales-invoices', label: 'GRIN', icon: <BanknotesIcon className="w-6 h-6" /> },
       { id: 'vendor-bills', label: 'GROUT', icon: <BuildingLibraryIcon className="w-6 h-6" /> },
@@ -200,6 +214,12 @@ const AppContent: React.FC = () => {
     // seedDemoData().catch(console.error);
     if (import.meta.env.VITE_RUN_USER_MIGRATIONS === 'true') {
       migrateUsersToFirestore().catch(console.error);
+    }
+    
+    // Expose migration function to window for manual execution
+    if (typeof window !== 'undefined') {
+      (window as any).migrateAllToCases = migrateAllToCases;
+      console.log('💡 Migration function loaded. Run in console: window.migrateAllToCases()');
     }
   }, []);
 
@@ -277,7 +297,13 @@ const AppContent: React.FC = () => {
         {isSettingsOpen ? (
           <SettingsPage onClose={handleCloseSettings} />
         ) : (
-          <Dashboard currentPage={currentPage} setCurrentPage={handleSetPage} />
+          <Routes>
+            <Route path="/projects/:caseId" element={<ProjectDetailsPage />} />
+            <Route path="/projects" element={<ProjectsListPage />} />
+            <Route path="/reference/:caseId" element={<ProjectDetailsPage />} />
+            <Route path="/reference" element={<ReferenceListPage />} />
+            <Route path="*" element={<Dashboard currentPage={currentPage} setCurrentPage={handleSetPage} />} />
+          </Routes>
         )}
       </InternalLayout>
     );

@@ -12,6 +12,7 @@ import ApprovalsPage from './super-admin/ApprovalsPage';
 import RegistrationsPage from './super-admin/RegistrationsPage';
 import FinancePage from './super-admin/FinancePage';
 import OrganizationsPage from './admin/OrganizationsPage';
+import UnifiedRequestInbox from './shared/UnifiedRequestInbox';
 
 interface SuperAdminDashboardProps {
     currentPage: string;
@@ -38,6 +39,9 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ currentPage, 
                     onNavigateToMember={handleNavigateToMember}
                 />
             );
+        case 'task-requests':
+        case 'approvals':
+            return <ApprovalsPage />;
         case 'team':
             return (
                 <TeamManagementPage
@@ -53,8 +57,6 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ currentPage, 
             return <LeadsManagementPage setCurrentPage={setCurrentPage} />;
         case 'communication':
             return <CommunicationDashboard />;
-        case 'approvals':
-            return <ApprovalsPage />;
         case 'registrations':
             return <RegistrationsPage />;
         case 'reports':

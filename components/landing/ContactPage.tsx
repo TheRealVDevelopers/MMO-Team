@@ -115,7 +115,12 @@ const ContactPage: React.FC = () => {
             <section className="max-w-7xl mx-auto px-6 -mt-12 relative z-10">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
                     <FadeInSection delay="100ms">
-                        <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-700 transform hover:scale-105 border border-border">
+                        <a 
+                            href="https://maps.google.com/?q=VJQG+JWF,+Begur+Rd,+Maruthi+Layout,+Mico+Layout,+Hongasandra,+Bengaluru,+Karnataka+560114"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-700 transform hover:scale-105 border border-border cursor-pointer"
+                        >
                             <div className="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center mb-6">
                                 <MapPinIcon className="w-7 h-7 text-primary" />
                             </div>
@@ -123,7 +128,10 @@ const ContactPage: React.FC = () => {
                             <p className="text-sm text-text-secondary font-light leading-relaxed">
                                 Experience our showroom and discuss your project in person
                             </p>
-                        </div>
+                            <p className="text-xs text-primary mt-3 font-medium">
+                                Click to open in Maps →
+                            </p>
+                        </a>
                     </FadeInSection>
 
                     <FadeInSection delay="200ms">
@@ -178,12 +186,20 @@ const ContactPage: React.FC = () => {
                                     <h3 className="text-xl font-serif font-bold">Headquarters</h3>
                                 </div>
                                 <div className="space-y-4 text-sm font-light">
-                                    <p className="text-gray-300 leading-relaxed">
-                                        123 Design District<br />
-                                        Cyber City, Sector 18<br />
-                                        Gurgaon, Haryana 122002<br />
-                                        India
-                                    </p>
+                                    <a 
+                                        href="https://maps.google.com/?q=VJQG+JWF,+Begur+Rd,+Maruthi+Layout,+Mico+Layout,+Hongasandra,+Bengaluru,+Karnataka+560114"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-gray-300 leading-relaxed hover:text-white transition-colors cursor-pointer block"
+                                    >
+                                        VJQG+JWF, Begur Rd<br />
+                                        Maruthi Layout, Mico Layout<br />
+                                        Hongasandra, Bengaluru<br />
+                                        Karnataka 560114, India
+                                        <span className="block mt-2 text-xs text-gray-400 hover:text-white">
+                                            📍 Click to open in Google Maps
+                                        </span>
+                                    </a>
                                     <div className="pt-4 border-t border-white/10">
                                         <p className="text-xs uppercase tracking-wider text-gray-400 mb-2">Phone</p>
                                         <p className="text-white">+91 (555) 123-4567</p>
@@ -226,32 +242,7 @@ const ContactPage: React.FC = () => {
                             </div>
                         </FadeInSection>
 
-                        {/* Regional Offices */}
-                        <FadeInSection delay="200ms">
-                            <div className="bg-white p-8 rounded-2xl shadow-lg border border-border">
-                                <div className="flex items-center space-x-3 mb-6">
-                                    <UserGroupIcon className="w-6 h-6 text-primary" />
-                                    <h3 className="text-xl font-serif font-bold text-text-primary/90">Regional Offices</h3>
-                                </div>
-                                <div className="space-y-4 text-sm">
-                                    <div>
-                                        <p className="font-bold text-text-primary/90 mb-1">Mumbai Office</p>
-                                        <p className="text-text-secondary font-light">BKC, Mumbai - 400051</p>
-                                        <p className="text-text-secondary text-xs mt-1">+91 (555) 234-5678</p>
-                                    </div>
-                                    <div>
-                                        <p className="font-bold text-text-primary/90 mb-1">Bangalore Office</p>
-                                        <p className="text-text-secondary font-light">Whitefield, Bangalore - 560066</p>
-                                        <p className="text-text-secondary text-xs mt-1">+91 (555) 345-6789</p>
-                                    </div>
-                                    <div>
-                                        <p className="font-bold text-text-primary/90 mb-1">Delhi Office</p>
-                                        <p className="text-text-secondary font-light">Connaught Place, Delhi - 110001</p>
-                                        <p className="text-text-secondary text-xs mt-1">+91 (555) 456-7890</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </FadeInSection>
+                        
 
                         {/* FAQ Quick Links */}
                         <FadeInSection delay="300ms">
@@ -453,12 +444,17 @@ const ContactPage: React.FC = () => {
                 <div className="max-w-7xl mx-auto">
                     <FadeInSection>
                         <div className="bg-white p-4 rounded-2xl shadow-lg">
-                            <div className="w-full h-96 bg-gray-100 rounded-xl flex items-center justify-center border-2 border-dashed border-gray-300">
-                                <div className="text-center">
-                                    <MapPinIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                                    <p className="text-lg font-bold text-text-secondary">Interactive Map</p>
-                                    <p className="text-sm text-gray-400 mt-2">Cyber City, Sector 18, Gurgaon</p>
-                                </div>
+                            <div className="w-full rounded-xl overflow-hidden">
+                                <iframe 
+                                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d248914.50260281313!2d77.33877182006835!3d12.889122517505701!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bae155f93c70e19%3A0x6989d36fd97ed3a1!2sMakeMyOffice.Online!5e0!3m2!1sen!2sin!4v1770228951428!5m2!1sen!2sin" 
+                                    width="100%" 
+                                    height="450" 
+                                    style={{ border: 0 }} 
+                                    allowFullScreen={true}
+                                    loading="lazy" 
+                                    referrerPolicy="no-referrer-when-downgrade"
+                                    title="MakeMyOffice Location"
+                                />
                             </div>
                         </div>
                     </FadeInSection>

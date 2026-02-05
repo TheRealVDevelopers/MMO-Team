@@ -131,6 +131,12 @@ export const updateTask = async (taskId: string, updates: Partial<Task>) => {
         if (updates.status === TaskStatus.COMPLETED) {
             finalUpdates.completedAt = new Date();
         }
+        if (updates.status === TaskStatus.ONGOING && !updates.startedAt) {
+            finalUpdates.startedAt = new Date();
+        }
+        if (updates.status === TaskStatus.ACKNOWLEDGED && !updates.acknowledgedAt) {
+            finalUpdates.acknowledgedAt = new Date();
+        }
         if (updates.deadline) {
             finalUpdates.dueAt = new Date(updates.deadline);
         }
@@ -144,9 +150,59 @@ export const updateTask = async (taskId: string, updates: Partial<Task>) => {
                 const taskSnap = await getDoc(taskRef);
                 if (taskSnap.exists()) {
                     const taskData = taskSnap.data() as Task;
+                    
+                    // Get case data if task is linked to a case
+                    let caseData: any = null;
+                    if (taskData.caseId) {
+                        const caseRef = doc(db, 'cases', taskData.caseId);
+                        const caseSnap = await getDoc(caseRef);
+                        if (caseSnap.exists()) {
+                            caseData = caseSnap.data();
+                        }
+                    }
 
-                    // 1. Notify the requester (Sales Member)
-                    if (taskData.requesterId) {
+                    // 1. Notify the task creator (createdBy) - MANDATORY
+                    if (taskData.createdBy && taskData.createdBy !== taskData.userId) {
+                        await createNotification({
+                            title: 'Task Completed',
+                            message: `Task "${taskData.title}" has been completed${caseData ? ` for ${caseData.projectName}` : ''} by ${taskData.assignedToName || 'team member'}`,
+                            user_id: taskData.createdBy,
+                            entity_type: taskData.caseId ? 'project' : 'task',
+                            entity_id: taskData.caseId || taskId,
+                            type: 'success'
+                        }).catch(e => console.error("Creator notification failed", e));
+                    }
+                    
+                    // 2. Notify the project head - MANDATORY if project exists
+                    if (caseData && caseData.projectHead && caseData.projectHead !== taskData.userId && caseData.projectHead !== taskData.createdBy) {
+                        await createNotification({
+                            title: `${taskData.taskType || 'Task'} Completed`,
+                            message: `${taskData.taskType || 'Task'} completed for ${caseData.projectName || 'project'}: "${taskData.title}"`,
+                            user_id: caseData.projectHead,
+                            entity_type: 'project',
+                            entity_id: taskData.caseId!,
+                            type: 'success'
+                        }).catch(e => console.error("Project head notification failed", e));
+                    }
+                    
+                    // 3. Notify additional users from notifyOnComplete array
+                    if (taskData.notifyOnComplete && taskData.notifyOnComplete.length > 0) {
+                        for (const userId of taskData.notifyOnComplete) {
+                            if (userId !== taskData.userId && userId !== taskData.createdBy && userId !== caseData?.projectHead) {
+                                await createNotification({
+                                    title: 'Task Update',
+                                    message: `Task "${taskData.title}" has been completed`,
+                                    user_id: userId,
+                                    entity_type: taskData.caseId ? 'project' : 'task',
+                                    entity_id: taskData.caseId || taskId,
+                                    type: 'info'
+                                }).catch(e => console.error("Additional notification failed", e));
+                            }
+                        }
+                    }
+
+                    // 4. Notify the requester (Sales Member) - Legacy support
+                    if (taskData.requesterId && taskData.requesterId !== taskData.userId && taskData.requesterId !== taskData.createdBy) {
                         await createNotification({
                             title: 'Mission Task Completed',
                             message: `Strategic Update: The task "${taskData.title}" has been completed by the specialist. You can now update the client.`,
@@ -157,8 +213,29 @@ export const updateTask = async (taskId: string, updates: Partial<Task>) => {
                         }).catch(e => console.error("Notification failed", e));
                     }
 
-                    // 2. Log to Lead/Project History
-                    if (taskData.contextId && taskData.contextType) {
+                    // 5. Log to Case History (unified architecture)
+                    if (taskData.caseId) {
+                        const caseRef = doc(db, 'cases', taskData.caseId);
+                        const caseSnap = await getDoc(caseRef);
+                        if (caseSnap.exists()) {
+                            const caseData = caseSnap.data();
+                            await updateDoc(caseRef, {
+                                history: [
+                                    ...(caseData.history || []),
+                                    {
+                                        action: `${taskData.taskType || 'Task'} Completed`,
+                                        user: taskData.assignedToName || 'Team Member',
+                                        timestamp: new Date(),
+                                        notes: `Task "${taskData.title}" completed${taskData.relatedDocumentId ? ` (Related: ${taskData.relatedDocumentId})` : ''}`
+                                    }
+                                ],
+                                updatedAt: new Date()
+                            }).catch(e => console.error("Case history log failed", e));
+                        }
+                    }
+                    
+                    // 6. Log to Lead/Project History (Legacy support)
+                    else if (taskData.contextId && taskData.contextType) {
                         const contextRef = doc(db, taskData.contextType === 'lead' ? 'leads' : 'projects', taskData.contextId);
                         const contextSnap = await getDoc(contextRef);
                         if (contextSnap.exists()) {
@@ -176,7 +253,7 @@ export const updateTask = async (taskId: string, updates: Partial<Task>) => {
                             }).catch(e => console.error("History log failed", e));
                         }
 
-                        // 3. Log to Global Activity Registry
+                        // 7. Log to Global Activity Registry
                         await logActivity({
                             description: `MISSION COMPLETE: Task "${taskData.title}" finished. Registry synchronized.`,
                             team: UserRole.SUPER_ADMIN,

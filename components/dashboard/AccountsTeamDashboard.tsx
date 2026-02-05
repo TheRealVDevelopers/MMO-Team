@@ -4,6 +4,8 @@ import { useExpenses, addExpense, updateExpense } from '../../hooks/useExpenses'
 import { useVendorBills, addVendorBill, updateVendorBill } from '../../hooks/useVendorBills';
 import { useProjects, addProject } from '../../hooks/useProjects';
 import { useLeads, updateLead } from '../../hooks/useLeads';
+import { convertLeadToProject } from '../../hooks/useCases';
+import { useAuth } from '../../context/AuthContext';
 import AccountsOverviewPage from './accounts-team/AccountsOverviewPage';
 import SalesInvoicesPage from './accounts-team/SalesInvoicesPage';
 import ExpensesPage from './accounts-team/ExpensesPage';
@@ -18,6 +20,7 @@ import AccountsApprovalsPage from './accounts-team/AccountsApprovalsPage';
 import AccountsBudgetApprovalPage from './accounts-team/AccountsBudgetApprovalPage';
 import SalaryPage from './accounts-team/SalaryPage';
 import InventoryPage from './accounts-team/InventoryPage';
+import AccountsTasksPage from './accounts-team/AccountsTasksPage';
 import { Invoice, VendorBill, Expense, Project, LeadPipelineStatus, ProjectStatus, ProjectLifecycleStatus } from '../../types';
 import { PAYMENT_VERIFICATION_REQUESTS } from '../../constants';
 
@@ -37,6 +40,7 @@ interface AccountsTeamDashboardProps {
 }
 
 const AccountsTeamDashboard: React.FC<AccountsTeamDashboardProps> = ({ currentPage, setCurrentPage }) => {
+  const { currentUser } = useAuth();
   const { invoices, loading: invoicesLoading } = useInvoices();
   const { expenses, loading: expensesLoading } = useExpenses();
   const { vendorBills, loading: billsLoading } = useVendorBills();
@@ -48,68 +52,23 @@ const AccountsTeamDashboard: React.FC<AccountsTeamDashboardProps> = ({ currentPa
 
   const handleVerifyPayment = async (requestId: string) => {
     const request = paymentRequests.find(r => r.id === requestId);
-    if (!request) return;
+    if (!request || !currentUser) return;
 
     try {
-      const leadId = request.projectId;
-      const lead = leads.find(l => l.id === leadId);
+      const caseId = request.projectId; // Actually a case ID (or legacy lead ID)
 
-      if (lead) {
-        await updateLead(leadId, {
-          status: LeadPipelineStatus.WON
-        });
+      // Convert case from lead to project using unified architecture
+      await convertLeadToProject(caseId, {
+        amount: request.amount,
+        verifiedBy: currentUser.id,
+        verifiedAt: new Date()
+      });
 
-        // Create a new Project
-        const newProject: Omit<Project, 'id'> = {
-          projectName: lead.projectName,
-          clientName: lead.clientName,
-          status: ProjectStatus.SITE_VISIT_PENDING,
-          lifecycleStatus: ProjectLifecycleStatus.ADVANCE_PAID,
-          priority: lead.priority || 'Medium',
-          budget: lead.value || 0,
-          advancePaid: request.amount,
-          clientAddress: '',
-          clientContact: {
-            name: lead.clientName,
-            phone: lead.clientMobile || ''
-          },
-          startDate: new Date(),
-          endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
-          progress: 5,
-          assignedTeam: {
-            drawing: '',
-            execution: [],
-            quotation: ''
-          },
-          stages: [
-            { id: 'stage-1', name: 'Site Visit', status: 'Pending', deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
-            { id: 'stage-2', name: 'Drawing', status: 'Pending', deadline: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) },
-            { id: 'stage-3', name: 'BOQ', status: 'Pending', deadline: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000) }
-          ],
-          milestones: [
-            { name: 'Site Visit Completed', completed: false },
-            { name: 'Design Approved', completed: false },
-            { name: 'BOQ Signed', completed: false }
-          ],
-          documents: [],
-          history: [
-            {
-              action: 'Project Created',
-              user: 'System',
-              timestamp: new Date(),
-              notes: 'Created automatically after advance payment verification.'
-            }
-          ]
-        };
-
-        await addProject(newProject);
-        alert(`Payment confirmed! Lead "${lead.clientName}" converted to Project.`);
-      }
-
+      alert(`Payment verified! Lead converted to Project.`);
       setPaymentRequests(prev => prev.filter(r => r.id !== requestId));
     } catch (error) {
       console.error("Error verifying payment:", error);
-      alert('Failed to verify payment and create project.');
+      alert('Failed to verify payment and convert to project.');
     }
   };
 
@@ -184,6 +143,9 @@ const AccountsTeamDashboard: React.FC<AccountsTeamDashboardProps> = ({ currentPa
   switch (currentPage) {
     case 'my-day':
       return <MyDayPage />;
+
+    case 'tasks':
+      return <AccountsTasksPage />;
 
     // Overview
     case 'overview':

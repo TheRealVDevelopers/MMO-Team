@@ -422,6 +422,87 @@ const ProjectSlide: React.FC<{ project: any }> = ({ project }) => (
     </motion.div>
 );
 
+// --- 3B. PORTFOLIO SHOWCASE SECTION ---
+const PortfolioShowcase: React.FC<{ onNavigate: (page: string) => void }> = ({ onNavigate }) => {
+    const portfolioClients = [
+        { name: 'Qlar', logo: '/qlar.jfif', industry: 'Corporate' },
+        { name: 'Ola', logo: '/ola-logo.png', industry: 'Corporate' },
+        { name: 'Dezy Dental', logo: '/dezy-dental.png', industry: 'Healthcare' },
+        { name: 'Pratham Motors', logo: '/pratham-motors.png', industry: 'Automotive' },
+        { name: 'Apna Mart', logo: '/apna mart.jfif', industry: 'Retail' },
+        { name: 'TeamLease Digital', logo: '/teamlease-digital.png', industry: 'Co-working' }
+    ];
+
+    return (
+        <section className="py-24 bg-background relative overflow-hidden">
+            {/* Background Pattern */}
+            <div className="absolute inset-0 opacity-5">
+                <div className="absolute inset-0" style={{
+                    backgroundImage: 'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)',
+                    backgroundSize: '40px 40px'
+                }} />
+            </div>
+
+            <div className="max-w-7xl mx-auto px-6 relative z-10">
+                <SectionHeader
+                    badge="Portfolio"
+                    title="Trusted by Leading Brands"
+                    description="We've partnered with innovative companies across industries to transform their spaces into inspiring environments."
+                />
+
+                {/* Logo Grid */}
+                <motion.div
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true, margin: "-100px" }}
+                    variants={staggerContainer}
+                    className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 mb-12"
+                >
+                    {portfolioClients.map((client, index) => (
+                        <motion.div
+                            key={client.name}
+                            variants={fadeInUp}
+                            whileHover={{ scale: 1.05, y: -5 }}
+                            className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-500 cursor-pointer group"
+                            onClick={() => onNavigate('portfolio')}
+                        >
+                            <div className="aspect-square flex items-center justify-center mb-3">
+                                <img
+                                    src={client.logo}
+                                    alt={client.name}
+                                    className="max-w-full max-h-full object-contain grayscale group-hover:grayscale-0 transition-all duration-500"
+                                />
+                            </div>
+                            <div className="text-center">
+                                <p className="text-xs font-bold text-text-primary mb-1">{client.name}</p>
+                                <p className="text-[10px] text-text-tertiary uppercase tracking-wider">{client.industry}</p>
+                            </div>
+                        </motion.div>
+                    ))}
+                </motion.div>
+
+                {/* View All CTA */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.8, delay: 0.4 }}
+                    className="text-center"
+                >
+                    <button
+                        onClick={() => onNavigate('portfolio')}
+                        className="group inline-flex items-center gap-3 px-8 py-4 bg-primary text-white font-bold text-sm uppercase tracking-widest rounded-xl hover:bg-primary-hover transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+                    >
+                        View All Projects
+                        <ArrowRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
+                    </button>
+                </motion.div>
+            </div>
+        </section>
+    );
+};
+
+// --- 4. FEATURED PROJECTS ---
 const FeaturedProjects: React.FC<{ onNavigate: (page: string) => void }> = ({ onNavigate }) => {
     const [activeIndex, setActiveIndex] = useState(0);
     const projects = [
@@ -750,6 +831,7 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
             <HeroSection onNavigate={onNavigate} />
             <BrandSection onNavigate={onNavigate} />
             <ServicesSection onNavigate={onNavigate} />
+            <PortfolioShowcase onNavigate={onNavigate} />
             <FeaturedProjects onNavigate={onNavigate} />
             <ProcessSection />
             <Testimonials />

@@ -166,7 +166,7 @@ const DesignAndSiteEngineeringDashboard: React.FC<{ currentPage: string, setCurr
                 'Site Visit Rescheduled'
             ].includes(p.status as any);
             
-            // Drawing Team should see ALL projects in drawing statuses
+            // Drawing Team should see ALL projects (not just drawing status)
             const isDrawingRole = userRole === UserRole.DRAWING_TEAM || userRole === UserRole.DESIGNER;
             const isInDrawingStatus = [
                 ProjectStatus.DRAWING_PENDING,
@@ -183,8 +183,8 @@ const DesignAndSiteEngineeringDashboard: React.FC<{ currentPage: string, setCurr
             // Include project if:
             // 1. User is explicitly assigned
             // 2. User is a manager/admin
-            // 3. User is a Site Engineer and project is in site visit OR drawing status (so they can see workflow progression)
-            // 4. User is in Drawing Team and project is in drawing status
+            // 3. User is a Site Engineer and project is in site visit OR drawing status
+            // 4. User is in Drawing Team - SHOW ALL PROJECTS
             const shouldInclude = 
                 isAssignedEngineer || 
                 isDrawingTeamMember || 
@@ -192,8 +192,8 @@ const DesignAndSiteEngineeringDashboard: React.FC<{ currentPage: string, setCurr
                 isSiteEngineer || 
                 isDrawingAssigned || 
                 isManager ||
-                (isSiteEngineerRole && (isInSiteVisitStatus || isInDrawingStatus)) || // Site Engineers see both stages
-                (isDrawingRole && isInDrawingStatus);
+                (isSiteEngineerRole && (isInSiteVisitStatus || isInDrawingStatus)) || 
+                isDrawingRole; // Drawing Team sees ALL projects
             
             if (shouldInclude) {
                 console.log(`[DesignAndSiteEngineeringDashboard] INCLUDED: ${p.projectName}, Status: ${p.status}, IsFromLead: ${p.id.startsWith('lead-')}`);
