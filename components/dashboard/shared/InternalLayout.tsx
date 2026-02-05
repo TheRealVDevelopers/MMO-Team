@@ -21,7 +21,7 @@ import {
     Bars3Icon,
     XMarkIcon
 } from '@heroicons/react/24/outline';
-// import UserSelector from '../../shared/UserSelector';
+import UserSelector from '../../shared/UserSelector';
 import CommandPalette from './CommandPalette';
 import NotificationPopover from './NotificationPopover';
 
@@ -71,9 +71,10 @@ const InternalLayout: React.FC<InternalLayoutProps> = ({
 
     const renderIcon = (icon: React.ReactNode, isActive: boolean) => {
         if (React.isValidElement(icon)) {
-            return React.cloneElement(icon as React.ReactElement, {
+            const element = icon as React.ReactElement<{ className?: string }>;
+            return React.cloneElement(element, {
                 className: cn(
-                    (icon as React.ReactElement).props.className,
+                    element.props.className,
                     "w-6 h-6 flex-shrink-0 transition-transform duration-300",
                     isActive ? "text-white" : "text-text-secondary group-hover:scale-110 group-hover:text-primary"
                 )
@@ -204,13 +205,13 @@ const InternalLayout: React.FC<InternalLayoutProps> = ({
 
                         <div className="flex items-center gap-4">
                             <div className="hidden md:block">
-                                {/* UserSelector removed for production */}
+                                <UserSelector />
                             </div>
                             <div className="text-right hidden sm:block">
                                 <p className="text-sm font-bold text-text-primary">{currentUser?.name}</p>
                                 <p className="text-[10px] uppercase tracking-widest text-text-secondary font-black">{currentUser?.role}</p>
                             </div>
-                            <div 
+                            <div
                                 onClick={onOpenSettings}
                                 className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center overflow-hidden border-2 border-border group cursor-pointer hover:border-primary transition-colors"
                             >

@@ -212,7 +212,7 @@ export const useCases = (filters?: UseCasesFilters) => {
                 snapshot.forEach((doc) => {
                     casesData.push(caseFromFirestore(doc.data(), doc.id));
                 });
-                
+
                 // Store cases data locally for merging
                 (window as any).__casesData = casesData;
                 mergeCases();
@@ -243,7 +243,7 @@ export const useCases = (filters?: UseCasesFilters) => {
                             })) || [],
                         } as Lead);
                     });
-                    
+
                     (window as any).__leadsData = leadsData;
                     mergeCases();
                 }, (err) => {
@@ -278,7 +278,7 @@ export const useCases = (filters?: UseCasesFilters) => {
                             })) || [],
                         } as Project);
                     });
-                    
+
                     (window as any).__projectsData = projectsData;
                     mergeCases();
                 }, (err) => {
@@ -360,7 +360,7 @@ export const updateCase = async (caseId: string, updates: Partial<Case>) => {
     try {
         const cleanData = removeUndefinedValues(updates);
         const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, caseId);
-        
+
         await updateDoc(caseRef, {
             ...cleanData,
             updatedAt: serverTimestamp(),
@@ -386,7 +386,7 @@ export const convertLeadToProject = async (caseId: string, paymentData: any) => 
 
         await updateDoc(caseRef, {
             isProject: true,
-            status: ProjectStatus.SITE_VISIT_PENDING,
+            status: ProjectStatus.PENDING_EXECUTION_APPROVAL, // STRICT WORKFLOW: Pending Execution Approval
             advancePaid: paymentData.amount,
             convertedToProjectAt: serverTimestamp(),
             convertedBy: paymentData.verifiedBy,
@@ -397,7 +397,7 @@ export const convertLeadToProject = async (caseId: string, paymentData: any) => 
                     action: 'Converted to Project',
                     user: 'Accounts Team',
                     timestamp: new Date(),
-                    notes: `Advance payment of ₹${paymentData.amount} verified and approved`
+                    notes: `Advance payment of ₹${paymentData.amount} verified. Project awaiting Execution Approval.`
                 }
             ]
         });
@@ -535,7 +535,7 @@ export const useCaseBOQs = (caseId: string) => {
 
         const boqsRef = collection(db, FIRESTORE_COLLECTIONS.CASES, caseId, 'boqs');
         const unsubscribe = onSnapshot(boqsRef, (snapshot) => {
-            const boqsData: CaseBOQ[]= [];
+            const boqsData: CaseBOQ[] = [];
             snapshot.forEach((doc) => {
                 const data = doc.data();
                 boqsData.push({
@@ -563,14 +563,14 @@ export const addCaseQuotation = async (caseId: string, quotation: Omit<CaseQuota
         // Check if case document exists
         const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, caseId);
         const caseSnap = await getDoc(caseRef);
-        
+
         if (!caseSnap.exists()) {
             const errorMsg = `❌ Case document not found: ${caseId}\n\n🔄 MIGRATION REQUIRED\n\nTo save quotations, you must first migrate all leads and projects to the unified cases collection.\n\n👉 Steps:\n1. Go to Super Admin dashboard\n2. Click the "🔄 Migrate to Cases" button\n3. Wait for migration to complete\n4. Try saving the quotation again\n\n💻 Alternative: Run in browser console:\nwindow.migrateAllToCases()`;
             console.error(errorMsg);
             alert(errorMsg);
             throw new Error(`Case document not found: ${caseId}. Please run migration first.`);
         }
-        
+
         // Save the quotation to subcollection
         const docRef = await addDoc(collection(db, FIRESTORE_COLLECTIONS.CASES, caseId, 'quotations'), {
             ...quotation,
@@ -642,7 +642,7 @@ export const approveQuotation = async (
     try {
         const quotationRef = doc(db, FIRESTORE_COLLECTIONS.CASES, caseId, 'quotations', quotationId);
         const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, caseId);
-        
+
         // Update quotation status
         await updateDoc(quotationRef, {
             status: 'Approved',
@@ -650,21 +650,21 @@ export const approveQuotation = async (
             approvedByName,
             approvedAt: serverTimestamp(),
         });
-        
+
         // Update case quotation status
         await updateDoc(caseRef, {
             quotationStatus: 'APPROVED',
             updatedAt: serverTimestamp(),
         });
-        
+
         // Get case data for notification
         const caseSnap = await getDoc(caseRef);
         const caseData = caseSnap.data();
-        
+
         // Get quotation data
         const quotSnap = await getDoc(quotationRef);
         const quotData = quotSnap.data();
-        
+
         // Notify quotation team who submitted it
         if (quotData?.submittedBy) {
             await createNotification({
@@ -676,7 +676,7 @@ export const approveQuotation = async (
                 entity_id: caseId,
             });
         }
-        
+
         // Log activity
         await logActivity({
             description: `Approved quotation for ${caseData?.projectName || 'project'}`,
@@ -685,7 +685,7 @@ export const approveQuotation = async (
             status: 'completed' as any,
             projectId: caseId,
         });
-        
+
         console.log(`✅ Quotation ${quotationId} approved successfully`);
     } catch (error) {
         console.error('Error approving quotation:', error);
@@ -707,7 +707,7 @@ export const rejectQuotation = async (
     try {
         const quotationRef = doc(db, FIRESTORE_COLLECTIONS.CASES, caseId, 'quotations', quotationId);
         const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, caseId);
-        
+
         // Update quotation status
         await updateDoc(quotationRef, {
             status: 'Rejected',
@@ -716,21 +716,21 @@ export const rejectQuotation = async (
             rejectedAt: serverTimestamp(),
             rejectionReason: reason,
         });
-        
+
         // Update case quotation status
         await updateDoc(caseRef, {
             quotationStatus: 'REJECTED',
             updatedAt: serverTimestamp(),
         });
-        
+
         // Get case data for notification
         const caseSnap = await getDoc(caseRef);
         const caseData = caseSnap.data();
-        
+
         // Get quotation data
         const quotSnap = await getDoc(quotationRef);
         const quotData = quotSnap.data();
-        
+
         // Notify quotation team who submitted it
         if (quotData?.submittedBy) {
             await createNotification({
@@ -742,7 +742,7 @@ export const rejectQuotation = async (
                 entity_id: caseId,
             });
         }
-        
+
         // Log activity
         await logActivity({
             description: `Rejected quotation for ${caseData?.projectName || 'project'}: ${reason}`,
@@ -751,7 +751,7 @@ export const rejectQuotation = async (
             status: 'completed' as any,
             projectId: caseId,
         });
-        
+
         console.log(`✅ Quotation ${quotationId} rejected successfully`);
     } catch (error) {
         console.error('Error rejecting quotation:', error);
@@ -786,19 +786,19 @@ export const createCaseTask = async (
         // Get case data to find project head
         const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, caseId);
         const caseSnap = await getDoc(caseRef);
-        
+
         if (!caseSnap.exists()) {
             throw new Error(`Case not found: ${caseId}`);
         }
-        
+
         const caseData = caseSnap.data();
-        
+
         // Build notify list: creator + project head
         const notifyOnComplete: string[] = [taskData.createdBy];
         if (caseData.projectHead && caseData.projectHead !== taskData.createdBy) {
             notifyOnComplete.push(caseData.projectHead);
         }
-        
+
         // Create task in myDayTasks collection
         const tasksRef = collection(db, 'myDayTasks');
         const taskDoc = await addDoc(tasksRef, {
@@ -823,7 +823,7 @@ export const createCaseTask = async (
             createdAt: new Date(),
             targetName: caseData.projectName || caseData.clientName,
         });
-        
+
         // Notify assigned user
         await createNotification({
             user_id: taskData.assignedTo,
@@ -833,7 +833,7 @@ export const createCaseTask = async (
             entity_id: caseId,
             type: 'info',
         });
-        
+
         // Log activity
         await logActivity({
             description: `${taskData.taskType} task created: "${taskData.title}"`,
@@ -842,7 +842,7 @@ export const createCaseTask = async (
             status: 'pending' as any,
             projectId: caseId,
         });
-        
+
         console.log(`✅ Task ${taskDoc.id} created with feedback loop for case ${caseId}`);
         return taskDoc.id;
     } catch (error) {
@@ -866,7 +866,7 @@ export const useCaseTasks = (caseId: string) => {
 
         const tasksRef = collection(db, 'myDayTasks');
         const q = query(tasksRef, where('caseId', '==', caseId), orderBy('createdAt', 'desc'));
-        
+
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const tasksData: any[] = [];
             snapshot.forEach((doc) => {

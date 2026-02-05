@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { MaterialRequest } from '../../../types';
+import { useAuth } from '../../../context/AuthContext';
+import { MaterialRequest, MaterialRequestStatus } from '../../../types';
 import { ArchiveBoxIcon, CheckCircleIcon, ClockIcon, PlusIcon, ShoppingCartIcon } from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
 import { USERS } from '../../../constants';
@@ -19,6 +20,7 @@ const BOQ_ITEMS = [
 ];
 
 const MaterialTracker: React.FC<MaterialTrackerProps> = ({ projectId, requests, onAddRequest }) => {
+    const { currentUser } = useAuth();
     const [isFormOpen, setIsFormOpen] = useState(false);
 
     // Form State
@@ -41,8 +43,8 @@ const MaterialTracker: React.FC<MaterialTrackerProps> = ({ projectId, requests, 
             quantityRequested: quantity,
             unit: item.unit,
             requiredDate: new Date(date).toISOString(),
-            status: 'Requested',
-            requestedBy: 'u-5', // TODO: Get current user
+            status: MaterialRequestStatus.REQUESTED,
+            requestedBy: currentUser?.id || 'unknown',
             createdAt: new Date(),
             notes,
             urgency,

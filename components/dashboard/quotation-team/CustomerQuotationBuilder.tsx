@@ -4,6 +4,7 @@ import { PlusIcon, TrashIcon, CheckCircleIcon, CalculatorIcon, DocumentTextIcon 
 import { PrimaryButton, SecondaryButton } from '../shared/DashboardUI';
 import { useAuth } from '../../../context/AuthContext';
 import { useCases, addCaseQuotation, useCaseQuotations, useCaseBOQs } from '../../../hooks/useCases';
+import { useTargetedApprovalRequests, useAssignedApprovalRequests } from '../../../hooks/useApprovalSystem';
 import { useCatalog } from '../../../hooks/useCatalog';
 import { Case, Project, UserRole, CaseQuotation, CaseBOQ } from '../../../types';
 import { formatCurrencyINR } from '../../../constants';
@@ -31,6 +32,51 @@ interface QuoteLineItem extends CatalogItem {
     total: number;
 }
 
+const CaseListItem: React.FC<{
+    caseItem: Case;
+    isPriority: boolean;
+    onSelect: (c: Case) => void;
+}> = ({ caseItem, isPriority, onSelect }) => {
+    const { boqs, loading: boqsLoading } = useCaseBOQs(caseItem.id);
+    const hasBoq = boqs.length > 0;
+
+    return (
+        <Card>
+            <div
+                className={`p-4 flex items-center justify-between transition-colors ${isPriority
+                    ? 'bg-blue-50/50 border-l-4 border-blue-500'
+                    : 'hover:bg-subtle-background'
+                    }`}
+            >
+                <div>
+                    <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-bold text-text-primary">{caseItem.projectName}</h3>
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${caseItem.isProject ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                            }`}>
+                            {caseItem.isProject ? 'PROJECT' : 'LEAD'}
+                        </span>
+                        {isPriority && (
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 animate-pulse">
+                                ACTION REQUIRED
+                            </span>
+                        )}
+                        {!boqsLoading && (
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${hasBoq ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'
+                                }`}>
+                                {hasBoq ? 'BOQ ATTACHED' : 'BOQ NOT ATTACHED'}
+                            </span>
+                        )}
+                    </div>
+                    <p className="text-sm text-text-secondary">{caseItem.clientName} • {caseItem.contact.phone}</p>
+                </div>
+                <SecondaryButton onClick={() => onSelect(caseItem)}>
+                    Create Quotation
+                </SecondaryButton>
+            </div>
+        </Card>
+    );
+};
+
 const CustomerQuotationBuilder: React.FC = () => {
     const { currentUser } = useAuth();
     const { cases } = useCases();
@@ -42,29 +88,66 @@ const CustomerQuotationBuilder: React.FC = () => {
     const [quoteItems, setQuoteItems] = useState<QuoteLineItem[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
-    
+
     // Filters
     const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'approved' | 'pending'>('all');
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedViewCase, setSelectedViewCase] = useState<Case | null>(null);
-    
+
     // PDF Modal
     const [showPDFModal, setShowPDFModal] = useState(false);
-    const [selectedQuotation, setSelectedQuotation] = useState<{quotation: CaseQuotation; caseData: Case} | null>(null);
-    
+    const [selectedQuotation, setSelectedQuotation] = useState<{ quotation: CaseQuotation; caseData: Case } | null>(null);
+
     // Edit Modal
     const [showEditModal, setShowEditModal] = useState(false);
-    const [editingQuotation, setEditingQuotation] = useState<{quotation: CaseQuotation; caseData: Case} | null>(null);
+    const [editingQuotation, setEditingQuotation] = useState<{ quotation: CaseQuotation; caseData: Case } | null>(null);
 
     // Form inputs for adding line item
     const [selectedCatalogId, setSelectedCatalogId] = useState('');
     const [quantity, setQuantity] = useState(1);
     const [discount, setDiscount] = useState(0);
+    const [ssLeft, setSsLeft] = useState<number | ''>(''); // SS Left value
+    const [ssRight, setSsRight] = useState<number | ''>(''); // SS Right value
+
+    // SS Field visibility (only for authorized roles)
+    const canViewSS = currentUser?.role === UserRole.QUOTATION_TEAM ||
+        currentUser?.role === UserRole.SUPER_ADMIN ||
+        currentUser?.role === UserRole.SALES_GENERAL_MANAGER;
+
+    // Fetch BOQs for selected case (used in build view)
+    const { boqs: selectedCaseBOQs, loading: selectedCaseBOQsLoading } = useCaseBOQs(selectedCase?.id || '');
 
     // Filter cases that need quotations
-    const activeCases = cases.filter(c => 
+    const activeCases = cases.filter(c =>
         !c.quotationStatus || c.quotationStatus === 'NONE'
     );
+
+    // FETCH TARGETED REQUESTS FOR PRIORITY SORTING
+    const { requests: targetedRequests } = useTargetedApprovalRequests(UserRole.QUOTATION_TEAM);
+    const { assignedRequests } = useAssignedApprovalRequests(currentUser?.id || '');
+
+    // Identification of priority cases
+    const inputRequests = [...targetedRequests, ...assignedRequests];
+    const priorityCaseIds = new Set(
+        inputRequests
+            .filter(r =>
+                (r.status === 'Assigned' || r.status === 'Pending' || r.status === 'Ongoing') && // Active Only
+                r.contextId // Must link to a case
+            )
+            .map(r => r.contextId!)
+    );
+
+    // Sorted Active Cases
+    const sortedCases = [...activeCases].sort((a, b) => {
+        const isAPriority = priorityCaseIds.has(a.id);
+        const isBPriority = priorityCaseIds.has(b.id);
+
+        if (isAPriority && !isBPriority) return -1;
+        if (!isAPriority && isBPriority) return 1;
+
+        // Then Sort by Newest Created
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
 
     // Render modals at component level (outside view conditionals)
     const renderModals = () => (
@@ -85,7 +168,7 @@ const CustomerQuotationBuilder: React.FC = () => {
                     }}
                 />
             )}
-            
+
             {/* Edit Modal */}
             {showEditModal && editingQuotation && (
                 <EditQuotationModal
@@ -101,7 +184,7 @@ const CustomerQuotationBuilder: React.FC = () => {
                     }}
                 />
             )}
-            
+
             {/* Success Message */}
             {showSuccess && (
                 <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
@@ -193,7 +276,8 @@ const CustomerQuotationBuilder: React.FC = () => {
                 submittedByName: currentUser.name,
                 submittedAt: new Date(),
                 status: 'Pending Approval', // Requires Admin or Sales Manager approval
-                notes: `Customer quotation submitted by ${currentUser.name}`
+                notes: `Customer quotation submitted by ${currentUser.name}`,
+                ssValue: (ssLeft !== '' || ssRight !== '') ? `${ssLeft || 0}:${ssRight || 0}` : undefined // SS format: left:right
             });
 
             console.log(`✅ Quotation saved to cases/${selectedCase.id}/quotations/${quotationId}`);
@@ -213,6 +297,8 @@ const CustomerQuotationBuilder: React.FC = () => {
                 setShowSuccess(false);
                 setSelectedCase(null);
                 setQuoteItems([]);
+                setSsLeft(''); // Reset SS Left
+                setSsRight(''); // Reset SS Right
                 setViewMode('list');
             }, 3000);
 
@@ -230,56 +316,44 @@ const CustomerQuotationBuilder: React.FC = () => {
             <>
                 {renderModals()}
                 <div className="p-6 space-y-4">
-                <div className="flex items-center justify-between mb-6">
-                    <div>
-                        <h2 className="text-2xl font-bold text-text-primary">Customer Quotations</h2>
-                        <p className="text-text-secondary">Create quotations for leads and projects</p>
+                    <div className="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 className="text-2xl font-bold text-text-primary">Customer Quotations</h2>
+                            <p className="text-text-secondary">Create quotations for leads and projects</p>
+                        </div>
+                        <div className="flex gap-3">
+                            <SecondaryButton onClick={() => setViewMode('view-quotations')}>
+                                <DocumentTextIcon className="w-5 h-5 mr-2" />
+                                View Submitted Quotations
+                            </SecondaryButton>
+                            <PrimaryButton onClick={handleStartNew}>
+                                <PlusIcon className="w-5 h-5 mr-2" />
+                                Create New Quotation
+                            </PrimaryButton>
+                        </div>
                     </div>
-                    <div className="flex gap-3">
-                        <SecondaryButton onClick={() => setViewMode('view-quotations')}>
-                            <DocumentTextIcon className="w-5 h-5 mr-2" />
-                            View Submitted Quotations
-                        </SecondaryButton>
-                        <PrimaryButton onClick={handleStartNew}>
-                            <PlusIcon className="w-5 h-5 mr-2" />
-                            Create New Quotation
-                        </PrimaryButton>
-                    </div>
-                </div>
 
-                <div className="grid gap-4">
-                    {activeCases.length === 0 ? (
-                        <Card>
-                            <div className="p-12 text-center">
-                                <DocumentTextIcon className="w-16 h-16 text-text-tertiary mx-auto mb-4" />
-                                <h3 className="text-lg font-bold text-text-primary mb-2">No Cases Available</h3>
-                                <p className="text-text-secondary">All cases have quotations or none are available.</p>
-                            </div>
-                        </Card>
-                    ) : (
-                        activeCases.map(caseItem => (
-                            <Card key={caseItem.id}>
-                                <div className="p-4 flex items-center justify-between">
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <h3 className="font-bold text-text-primary">{caseItem.projectName}</h3>
-                                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                                caseItem.isProject ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-                                            }`}>
-                                                {caseItem.isProject ? 'PROJECT' : 'LEAD'}
-                                            </span>
-                                        </div>
-                                        <p className="text-sm text-text-secondary">{caseItem.clientName} • {caseItem.contact.phone}</p>
-                                    </div>
-                                    <SecondaryButton onClick={() => handleSelectCase(caseItem)}>
-                                        Create Quotation
-                                    </SecondaryButton>
+                    <div className="grid gap-4">
+                        {sortedCases.length === 0 ? (
+                            <Card>
+                                <div className="p-12 text-center">
+                                    <DocumentTextIcon className="w-16 h-16 text-text-tertiary mx-auto mb-4" />
+                                    <h3 className="text-lg font-bold text-text-primary mb-2">No Cases Available</h3>
+                                    <p className="text-text-secondary">All cases have quotations or none are available.</p>
                                 </div>
                             </Card>
-                        ))
-                    )}
+                        ) : (
+                            sortedCases.map(caseItem => (
+                                <CaseListItem
+                                    key={caseItem.id}
+                                    caseItem={caseItem}
+                                    isPriority={priorityCaseIds.has(caseItem.id)}
+                                    onSelect={handleSelectCase}
+                                />
+                            ))
+                        )}
+                    </div>
                 </div>
-            </div>
             </>
         );
     }
@@ -290,34 +364,33 @@ const CustomerQuotationBuilder: React.FC = () => {
             <>
                 {renderModals()}
                 <div className="p-6 space-y-4">
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-text-primary">Select Case</h2>
-                    <SecondaryButton onClick={() => setViewMode('list')}>
-                        Back to List
-                    </SecondaryButton>
-                </div>
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-2xl font-bold text-text-primary">Select Case</h2>
+                        <SecondaryButton onClick={() => setViewMode('list')}>
+                            Back to List
+                        </SecondaryButton>
+                    </div>
 
-                <div className="grid gap-4">
-                    {activeCases.map(caseItem => (
-                        <Card key={caseItem.id}>
-                            <div 
-                                className="p-4 cursor-pointer hover:bg-subtle-background transition-colors"
-                                onClick={() => handleSelectCase(caseItem)}
-                            >
-                                <div className="flex items-center gap-2 mb-1">
-                                    <h3 className="font-bold text-text-primary">{caseItem.projectName}</h3>
-                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                        caseItem.isProject ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-                                    }`}>
-                                        {caseItem.isProject ? 'PROJECT' : 'LEAD'}
-                                    </span>
+                    <div className="grid gap-4">
+                        {activeCases.map(caseItem => (
+                            <Card key={caseItem.id}>
+                                <div
+                                    className="p-4 cursor-pointer hover:bg-subtle-background transition-colors"
+                                    onClick={() => handleSelectCase(caseItem)}
+                                >
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <h3 className="font-bold text-text-primary">{caseItem.projectName}</h3>
+                                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${caseItem.isProject ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                                            }`}>
+                                            {caseItem.isProject ? 'PROJECT' : 'LEAD'}
+                                        </span>
+                                    </div>
+                                    <p className="text-sm text-text-secondary">{caseItem.clientName} • {caseItem.contact.phone}</p>
                                 </div>
-                                <p className="text-sm text-text-secondary">{caseItem.clientName} • {caseItem.contact.phone}</p>
-                            </div>
-                        </Card>
-                    ))}
+                            </Card>
+                        ))}
+                    </div>
                 </div>
-            </div>
             </>
         );
     }
@@ -333,7 +406,7 @@ const CustomerQuotationBuilder: React.FC = () => {
             if (!expanded) {
                 const quotationCount = quotations.length;
                 const boqCount = boqs.length;
-                
+
                 return (
                     <Card>
                         <div className="p-4 cursor-pointer hover:bg-subtle-background transition-colors" onClick={() => setExpanded(true)}>
@@ -341,9 +414,8 @@ const CustomerQuotationBuilder: React.FC = () => {
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-1">
                                         <h3 className="font-bold text-text-primary">{caseItem.projectName}</h3>
-                                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                            caseItem.isProject ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-                                        }`}>
+                                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${caseItem.isProject ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                                            }`}>
                                             {caseItem.isProject ? 'PROJECT' : 'LEAD'}
                                         </span>
                                     </div>
@@ -369,9 +441,8 @@ const CustomerQuotationBuilder: React.FC = () => {
                             <div>
                                 <div className="flex items-center gap-2 mb-1">
                                     <h3 className="text-lg font-bold text-text-primary">{caseItem.projectName}</h3>
-                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                        caseItem.isProject ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-                                    }`}>
+                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${caseItem.isProject ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                                        }`}>
                                         {caseItem.isProject ? 'PROJECT' : 'LEAD'}
                                     </span>
                                 </div>
@@ -403,12 +474,11 @@ const CustomerQuotationBuilder: React.FC = () => {
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-2 mb-2">
                                                         <h5 className="font-bold text-text-primary">{quot.quotationNumber}</h5>
-                                                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                                            quot.status === 'Approved' ? 'bg-green-100 text-green-700' :
+                                                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${quot.status === 'Approved' ? 'bg-green-100 text-green-700' :
                                                             quot.status === 'Pending Approval' ? 'bg-yellow-100 text-yellow-700' :
-                                                            quot.status === 'Rejected' ? 'bg-red-100 text-red-700' :
-                                                            'bg-gray-100 text-gray-700'
-                                                        }`}>
+                                                                quot.status === 'Rejected' ? 'bg-red-100 text-red-700' :
+                                                                    'bg-gray-100 text-gray-700'
+                                                            }`}>
                                                             {quot.status}
                                                         </span>
                                                     </div>
@@ -460,11 +530,10 @@ const CustomerQuotationBuilder: React.FC = () => {
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-2 mb-2">
                                                         <h5 className="font-bold text-text-primary">BOQ #{boq.id.slice(-6)}</h5>
-                                                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                                            boq.status === 'Approved' ? 'bg-green-100 text-green-700' :
+                                                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${boq.status === 'Approved' ? 'bg-green-100 text-green-700' :
                                                             boq.status === 'Submitted' ? 'bg-blue-100 text-blue-700' :
-                                                            'bg-gray-100 text-gray-700'
-                                                        }`}>
+                                                                'bg-gray-100 text-gray-700'
+                                                            }`}>
                                                             {boq.status}
                                                         </span>
                                                     </div>
@@ -488,10 +557,10 @@ const CustomerQuotationBuilder: React.FC = () => {
         };
 
         // Filter cases - only show cases with quotations (pending approval or approved)
-        const casesWithQuotations = cases.filter(c => 
+        const casesWithQuotations = cases.filter(c =>
             c.quotationStatus === 'PENDING_APPROVAL' || c.quotationStatus === 'APPROVED' || c.quotationStatus === 'REJECTED'
         );
-        
+
         const filteredCases = casesWithQuotations.filter(c => {
             // Search filter
             if (searchTerm) {
@@ -509,188 +578,302 @@ const CustomerQuotationBuilder: React.FC = () => {
             <>
                 {renderModals()}
                 <div className="p-6 space-y-4">
-                <div className="flex items-center justify-between mb-6">
-                    <div>
-                        <h2 className="text-2xl font-bold text-text-primary">Submitted Quotations</h2>
-                        <p className="text-text-secondary">View all submitted quotations and BOQs</p>
+                    <div className="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 className="text-2xl font-bold text-text-primary">Submitted Quotations</h2>
+                            <p className="text-text-secondary">View all submitted quotations and BOQs</p>
+                        </div>
+                        <SecondaryButton onClick={() => setViewMode('list')}>
+                            Back to Create
+                        </SecondaryButton>
                     </div>
-                    <SecondaryButton onClick={() => setViewMode('list')}>
-                        Back to Create
-                    </SecondaryButton>
-                </div>
 
-                {/* Filters */}
-                <div className="flex flex-wrap gap-4 mb-6">
-                    <div className="flex-1 min-w-[200px]">
-                        <input
-                            type="text"
-                            placeholder="Search by project, client, or phone..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                        />
+                    {/* Filters */}
+                    <div className="flex flex-wrap gap-4 mb-6">
+                        <div className="flex-1 min-w-[200px]">
+                            <input
+                                type="text"
+                                placeholder="Search by project, client, or phone..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Cases List */}
+                    <div className="grid gap-4">
+                        {filteredCases.length === 0 ? (
+                            <Card>
+                                <div className="p-12 text-center">
+                                    <DocumentTextIcon className="w-16 h-16 text-text-tertiary mx-auto mb-4" />
+                                    <h3 className="text-lg font-bold text-text-primary mb-2">No Quotations Found</h3>
+                                    <p className="text-text-secondary">No submitted quotations available.</p>
+                                </div>
+                            </Card>
+                        ) : (
+                            filteredCases.map(caseItem => (
+                                <CaseQuotationsView key={caseItem.id} caseItem={caseItem} />
+                            ))
+                        )}
                     </div>
                 </div>
-
-                {/* Cases List */}
-                <div className="grid gap-4">
-                    {filteredCases.length === 0 ? (
-                        <Card>
-                            <div className="p-12 text-center">
-                                <DocumentTextIcon className="w-16 h-16 text-text-tertiary mx-auto mb-4" />
-                                <h3 className="text-lg font-bold text-text-primary mb-2">No Quotations Found</h3>
-                                <p className="text-text-secondary">No submitted quotations available.</p>
-                            </div>
-                        </Card>
-                    ) : (
-                        filteredCases.map(caseItem => (
-                            <CaseQuotationsView key={caseItem.id} caseItem={caseItem} />
-                        ))
-                    )}
-                </div>
-            </div>
             </>
         );
     }
 
-    // VIEW: Build quotation
+    // VIEW: Build quotation (Redesigned Split-View)
     return (
         <>
             {renderModals()}
             <div className="p-6 space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-2xl font-bold text-text-primary">Build Quotation</h2>
-                    <p className="text-text-secondary">{selectedCase?.projectName} - {selectedCase?.clientName}</p>
-                </div>
-                <SecondaryButton onClick={() => {
-                    setSelectedCase(null);
-                    setQuoteItems([]);
-                    setViewMode('list');
-                }}>
-                    Cancel
-                </SecondaryButton>
-            </div>
-
-            {/* Add Item Form */}
-            <Card>
-                <div className="p-6">
-                    <h3 className="text-lg font-bold text-text-primary mb-4">Add Items from Catalog</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-text-secondary mb-2">Item</label>
-                            <select
-                                value={selectedCatalogId}
-                                onChange={(e) => setSelectedCatalogId(e.target.value)}
-                                className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                            >
-                                <option value="">Select an item...</option>
-                                {catalogItems.map(item => (
-                                    <option key={item.id} value={item.id}>
-                                        {item.name} - {formatCurrencyINR(item.price)}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-text-secondary mb-2">Quantity</label>
-                            <input
-                                type="number"
-                                min="1"
-                                value={quantity}
-                                onChange={(e) => setQuantity(Number(e.target.value))}
-                                className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-text-secondary mb-2">Discount (%)</label>
-                            <input
-                                type="number"
-                                min="0"
-                                max="100"
-                                value={discount}
-                                onChange={(e) => setDiscount(Number(e.target.value))}
-                                className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                            />
-                        </div>
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h2 className="text-2xl font-bold text-text-primary">Build Quotation</h2>
+                        <p className="text-text-secondary">{selectedCase?.projectName} - {selectedCase?.clientName}</p>
                     </div>
-
-                    <div className="mt-4">
-                        <PrimaryButton onClick={handleAddItem} disabled={!selectedCatalogId || quantity <= 0}>
-                            <PlusIcon className="w-5 h-5 mr-2" />
-                            Add Item
-                        </PrimaryButton>
-                    </div>
+                    <SecondaryButton onClick={() => {
+                        setSelectedCase(null);
+                        setQuoteItems([]);
+                        setSsLeft('');
+                        setSsRight('');
+                        setViewMode('list');
+                    }}>
+                        Cancel
+                    </SecondaryButton>
                 </div>
-            </Card>
 
-            {/* Items List */}
-            {quoteItems.length > 0 && (
-                <Card>
-                    <div className="p-6">
-                        <h3 className="text-lg font-bold text-text-primary mb-4">Quotation Items</h3>
-                        <div className="space-y-3">
-                            {quoteItems.map((item, index) => (
-                                <div key={index} className="flex items-center justify-between p-4 bg-subtle-background rounded-lg">
-                                    <div className="flex-1">
-                                        <h4 className="font-bold text-text-primary">{item.name}</h4>
-                                        <p className="text-sm text-text-secondary">
-                                            {item.quantity} × {formatCurrencyINR(item.price)} 
-                                            {item.discount > 0 && ` - ${item.discount}% discount`}
-                                        </p>
+                {/* SPLIT VIEW: BOQ Reference (Left) + Quotation Builder (Right) */}
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+                    {/* LEFT PANEL: BOQ Reference (2 cols) */}
+                    <div className="lg:col-span-2 space-y-4">
+                        <Card>
+                            <div className="p-5 border-b border-border bg-gradient-to-r from-blue-50 to-transparent">
+                                <h3 className="text-lg font-bold text-text-primary flex items-center gap-2">
+                                    <CalculatorIcon className="w-5 h-5 text-blue-600" />
+                                    BOQ Reference
+                                </h3>
+                                <p className="text-sm text-text-secondary">Use these items as reference for your quotation</p>
+                            </div>
+                            <div className="p-4 max-h-[60vh] overflow-y-auto">
+                                {selectedCaseBOQsLoading ? (
+                                    <p className="text-text-tertiary text-sm py-8 text-center">Loading BOQs...</p>
+                                ) : selectedCaseBOQs.length === 0 ? (
+                                    <div className="py-8 text-center">
+                                        <CalculatorIcon className="w-12 h-12 text-text-tertiary mx-auto mb-2" />
+                                        <p className="text-text-tertiary text-sm">No BOQ attached for this case</p>
                                     </div>
-                                    <div className="flex items-center gap-4">
-                                        <span className="font-bold text-primary">{formatCurrencyINR(item.total)}</span>
-                                        <button
-                                            onClick={() => handleRemoveItem(index)}
-                                            className="p-2 text-error hover:bg-error-subtle-background rounded-lg transition-colors"
+                                ) : (
+                                    <div className="space-y-4">
+                                        {selectedCaseBOQs.map((boq) => (
+                                            <div key={boq.id} className="border border-border rounded-lg">
+                                                <div className="p-3 bg-subtle-background border-b border-border flex items-center justify-between">
+                                                    <span className="font-medium text-text-primary text-sm">BOQ #{boq.id.slice(-6)}</span>
+                                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${boq.status === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                                                        }`}>
+                                                        {boq.status}
+                                                    </span>
+                                                </div>
+                                                <div className="p-3 space-y-2">
+                                                    {boq.items.map((item, idx) => (
+                                                        <div key={idx} className="flex justify-between items-start text-sm py-1 border-b border-border last:border-0">
+                                                            <div className="flex-1">
+                                                                <p className="text-text-primary font-medium">{item.description || `Item ${idx + 1}`}</p>
+                                                                <p className="text-text-tertiary text-xs">Qty: {item.quantity} {item.unit}</p>
+                                                            </div>
+                                                            {item.estimatedCost && (
+                                                                <span className="text-text-secondary font-medium">{formatCurrencyINR(item.estimatedCost * item.quantity)}</span>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                    {boq.totalCost && (
+                                                        <div className="pt-2 mt-2 border-t border-border flex justify-between">
+                                                            <span className="font-bold text-text-primary">Total</span>
+                                                            <span className="font-bold text-primary">{formatCurrencyINR(boq.totalCost)}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </Card>
+                    </div>
+
+                    {/* RIGHT PANEL: Quotation Builder (3 cols) */}
+                    <div className="lg:col-span-3 space-y-5">
+                        {/* Add Item Form */}
+                        <Card>
+                            <div className="p-5 border-b border-border bg-gradient-to-r from-green-50 to-transparent">
+                                <h3 className="text-lg font-bold text-text-primary flex items-center gap-2">
+                                    <PlusIcon className="w-5 h-5 text-green-600" />
+                                    Add Items from Catalog
+                                </h3>
+                            </div>
+                            <div className="p-5">
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-medium text-text-secondary mb-2">Item</label>
+                                        <select
+                                            value={selectedCatalogId}
+                                            onChange={(e) => setSelectedCatalogId(e.target.value)}
+                                            className="w-full px-4 py-2.5 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white"
                                         >
-                                            <TrashIcon className="w-5 h-5" />
-                                        </button>
+                                            <option value="">Select an item...</option>
+                                            {catalogItems.map(item => (
+                                                <option key={item.id} value={item.id}>
+                                                    {item.name} - {formatCurrencyINR(item.price)}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-text-secondary mb-2">Quantity</label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            value={quantity}
+                                            onChange={(e) => setQuantity(Number(e.target.value))}
+                                            className="w-full px-4 py-2.5 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-text-secondary mb-2">Discount (%)</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max="100"
+                                            value={discount}
+                                            onChange={(e) => setDiscount(Number(e.target.value))}
+                                            className="w-full px-4 py-2.5 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                        />
                                     </div>
                                 </div>
-                            ))}
-                        </div>
+                                <div className="mt-4">
+                                    <PrimaryButton onClick={handleAddItem} disabled={!selectedCatalogId || quantity <= 0}>
+                                        <PlusIcon className="w-5 h-5 mr-2" />
+                                        Add Item
+                                    </PrimaryButton>
+                                </div>
+                            </div>
+                        </Card>
 
-                        {/* Totals */}
-                        <div className="mt-6 pt-6 border-t border-border space-y-2">
-                            <div className="flex justify-between text-text-secondary">
-                                <span>Subtotal:</span>
-                                <span className="font-medium">{formatCurrencyINR(calculateGrandTotal())}</span>
+                        {/* Items List */}
+                        <Card>
+                            <div className="p-5 border-b border-border">
+                                <h3 className="text-lg font-bold text-text-primary flex items-center gap-2">
+                                    <DocumentTextIcon className="w-5 h-5 text-primary" />
+                                    Quotation Items
+                                    {quoteItems.length > 0 && (
+                                        <span className="ml-2 px-2 py-0.5 bg-primary/10 text-primary rounded-full text-sm">
+                                            {quoteItems.length} item{quoteItems.length > 1 ? 's' : ''}
+                                        </span>
+                                    )}
+                                </h3>
                             </div>
-                            <div className="flex justify-between text-text-secondary">
-                                <span>Tax (18% GST):</span>
-                                <span className="font-medium">{formatCurrencyINR(calculateGrandTotal() * 0.18)}</span>
-                            </div>
-                            <div className="flex justify-between text-xl font-bold text-text-primary pt-2 border-t border-border">
-                                <span>Total:</span>
-                                <span className="text-primary">{formatCurrencyINR(calculateGrandTotal() * 1.18)}</span>
-                            </div>
-                        </div>
-
-                        <div className="mt-6">
-                            <PrimaryButton 
-                                onClick={handleSubmitQuotation} 
-                                disabled={isSubmitting || quoteItems.length === 0}
-                                className="w-full"
-                            >
-                                {isSubmitting ? (
-                                    'Submitting...'
+                            <div className="p-5">
+                                {quoteItems.length === 0 ? (
+                                    <div className="py-12 text-center">
+                                        <DocumentTextIcon className="w-12 h-12 text-text-tertiary mx-auto mb-2" />
+                                        <p className="text-text-tertiary">No items added yet. Select from catalog above.</p>
+                                    </div>
                                 ) : (
                                     <>
-                                        <CheckCircleIcon className="w-5 h-5 mr-2" />
-                                        Submit Quotation
+                                        <div className="space-y-3 max-h-[40vh] overflow-y-auto">
+                                            {quoteItems.map((item, index) => (
+                                                <div key={index} className="flex items-center justify-between p-4 bg-subtle-background rounded-lg border border-border hover:border-primary/30 transition-colors">
+                                                    <div className="flex-1">
+                                                        <h4 className="font-bold text-text-primary">{item.name}</h4>
+                                                        <p className="text-sm text-text-secondary">
+                                                            {item.quantity} × {formatCurrencyINR(item.price)}
+                                                            {item.discount > 0 && <span className="text-green-600 ml-1">(-{item.discount}%)</span>}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex items-center gap-4">
+                                                        <span className="font-bold text-primary text-lg">{formatCurrencyINR(item.total)}</span>
+                                                        <button
+                                                            onClick={() => handleRemoveItem(index)}
+                                                            className="p-2 text-error hover:bg-red-50 rounded-lg transition-colors"
+                                                        >
+                                                            <TrashIcon className="w-5 h-5" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {/* Totals & SS Field */}
+                                        <div className="mt-6 pt-6 border-t border-border">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                {/* SS Field (Visible to authorized users only) */}
+                                                {canViewSS && (
+                                                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                                        <label className="block text-xs font-bold text-amber-800 mb-1">PR (Internal Only)</label>
+                                                        <div className="flex items-center gap-1">
+                                                            <input
+                                                                type="number"
+                                                                value={ssLeft}
+                                                                onChange={(e) => setSsLeft(e.target.value === '' ? '' : Number(e.target.value))}
+                                                                placeholder="0"
+                                                                className="w-16 px-2 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-white text-center text-sm"
+                                                            />
+                                                            <span className="text-lg font-bold text-amber-700">:</span>
+                                                            <input
+                                                                type="number"
+                                                                value={ssRight}
+                                                                onChange={(e) => setSsRight(e.target.value === '' ? '' : Number(e.target.value))}
+                                                                placeholder="0"
+                                                                className="w-16 px-2 py-1.5 border border-amber-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-white text-center text-sm"
+                                                            />
+                                                        </div>
+                                                        <p className="text-xs text-amber-600 mt-1">Visible only to authorized personnel</p>
+                                                    </div>
+                                                )}
+
+                                                {/* Totals */}
+                                                <div className={`space-y-2 ${canViewSS ? '' : 'md:col-span-2'}`}>
+                                                    <div className="flex justify-between text-text-secondary">
+                                                        <span>Subtotal:</span>
+                                                        <span className="font-medium">{formatCurrencyINR(calculateGrandTotal())}</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-text-secondary">
+                                                        <span>Tax (18% GST):</span>
+                                                        <span className="font-medium">{formatCurrencyINR(calculateGrandTotal() * 0.18)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-xl font-bold text-text-primary pt-3 border-t border-border">
+                                                        <span>Total:</span>
+                                                        <span className="text-primary">{formatCurrencyINR(calculateGrandTotal() * 1.18)}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-6">
+                                            <PrimaryButton
+                                                onClick={handleSubmitQuotation}
+                                                disabled={isSubmitting || quoteItems.length === 0}
+                                                className="w-full py-3"
+                                            >
+                                                {isSubmitting ? (
+                                                    'Submitting...'
+                                                ) : (
+                                                    <>
+                                                        <CheckCircleIcon className="w-5 h-5 mr-2" />
+                                                        Submit Quotation
+                                                    </>
+                                                )}
+                                            </PrimaryButton>
+                                        </div>
                                     </>
                                 )}
-                            </PrimaryButton>
-                        </div>
+                            </div>
+                        </Card>
                     </div>
-                </Card>
-            )}
-        </div>
+                </div>
+            </div>
         </>
     );
 };

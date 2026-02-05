@@ -21,6 +21,7 @@ import EnquiryNotificationBanner from './EnquiryNotificationBanner';
 import EnquiriesListModal from './EnquiriesListModal';
 import JustDialImportModal from './sales-manager/JustDialImportModal';
 import { SectionHeader, PrimaryButton, SecondaryButton } from './shared/DashboardUI';
+import UnifiedProjectsPage from './shared/UnifiedProjectsPage';
 import { UserPlusIcon, UsersIcon, ArrowDownTrayIcon, CloudArrowDownIcon } from '@heroicons/react/24/outline';
 
 const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
@@ -152,6 +153,8 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
         return <SalesOverviewPage setCurrentPage={setCurrentPage} leads={leads} users={users} />;
       case 'leads':
         return <LeadManagementPage leads={leads} users={users} />;
+      case 'project-hub':
+        return <UnifiedProjectsPage roleView="manager" />;
       case 'organizations':
         return <OrganizationsPage setCurrentPage={setCurrentPage} />;
       case 'team':

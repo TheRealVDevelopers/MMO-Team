@@ -206,14 +206,19 @@ export const useCriticalAlerts = (teamView: boolean = true) => {
             }
         });
 
+        // Cutoff: Only show alerts from TODAY onwards to satisfy "delete all existing, show only new ones from tomorrow"
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
         // Sort by severity and timestamp
-        return generatedAlerts.sort((a, b) => {
-            const severityOrder = { critical: 0, high: 1, medium: 2 };
-            if (severityOrder[a.severity] !== severityOrder[b.severity]) {
-                return severityOrder[a.severity] - severityOrder[b.severity];
-            }
-            return b.timestamp.getTime() - a.timestamp.getTime();
-        });
+        return generatedAlerts
+            .filter(a => a.timestamp.getTime() >= todayStart)
+            .sort((a, b) => {
+                const severityOrder = { critical: 0, high: 1, medium: 2 };
+                if (severityOrder[a.severity] !== severityOrder[b.severity]) {
+                    return severityOrder[a.severity] - severityOrder[b.severity];
+                }
+                return b.timestamp.getTime() - a.timestamp.getTime();
+            });
     }, [tasks, users, currentTime]);
 
     // Categorized counts

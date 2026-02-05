@@ -520,43 +520,8 @@ export const approveRequest = async (
         // Status logic
         if (data.requestType === ApprovalRequestType.SITE_VISIT || data.requestType === ApprovalRequestType.SITE_VISIT_TOKEN) {
           updates.status = LeadPipelineStatus.SITE_VISIT_SCHEDULED;
-          // Automatic Project Conversion
-          try {
-            const projectsRef = collection(db, 'projects');
-            // Check if already converted
-            if (!leadData.isConverted) {
-              const projectData: any = {
-                id: leadData.id, // Keep same ID for easy linkage or generate new
-                clientName: leadData.clientName,
-                projectName: leadData.projectName,
-                status: ProjectStatus.AWAITING_DESIGN,
-                budget: leadData.value || 0,
-                priority: leadData.priority,
-                clientAddress: '',
-                clientContact: {
-                  name: leadData.clientName,
-                  phone: leadData.clientMobile || ''
-                },
-                assignedTeam: {
-                  salespersonId: leadData.assignedTo,
-                },
-                progress: 0,
-                milestones: [],
-                startDate: serverTimestamp(),
-                endDate: leadData.deadline ? leadData.deadline : null,
-                is_demo: false,
-                sourceLeadId: leadData.id,
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp()
-              };
-
-              await setDoc(doc(db, 'projects', leadData.id), projectData);
-              updates.isConverted = true;
-              updates.convertedProjectId = leadData.id;
-            }
-          } catch (projError) {
-            console.error('Error creating project during conversion:', projError);
-          }
+          // STRICT WORKFLOW: Project is NOT created here anymore.
+          // It is created only after Advance Payment Verification.
         }
         else if (data.requestType === ApprovalRequestType.RESCHEDULE_SITE_VISIT) {
           updates.status = LeadPipelineStatus.SITE_VISIT_RESCHEDULED;
@@ -578,7 +543,7 @@ export const approveRequest = async (
 
         // Also log to global activity registry
         await logActivity({
-          description: `STRATEGIC OVERRIDE: ${data.requestType} authorized by Admin for ${assigneeName}. Project timeline advanced.`,
+          description: `STRATEGIC OVERRIDE: ${data.requestType} authorized by Admin for ${assigneeName}.`,
           team: data.targetRole || UserRole.SUPER_ADMIN,
           userId: reviewerId,
           status: ActivityStatus.DONE,

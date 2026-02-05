@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Modal from './Modal';
-import { Lead, LeadPipelineStatus, LeadHistory, Reminder, UserRole, TaskStatus } from '../../types';
+import { Case, LeadPipelineStatus, LeadHistory, Reminder, UserRole, TaskStatus, ProjectStatus } from '../../types';
 import LeadHistoryView from './LeadHistoryView';
 import { useAuth } from '../../context/AuthContext';
 import { PlusIcon, BellIcon, MapPinIcon, PaintBrushIcon, CalculatorIcon, TruckIcon, WrenchScrewdriverIcon, CreditCardIcon, PhoneIcon, ChatBubbleLeftRightIcon, BanknotesIcon, CalendarIcon, UserCircleIcon, FireIcon, PaperClipIcon, XMarkIcon } from '../icons/IconComponents';
@@ -14,16 +15,17 @@ import { LeadHistoryAttachment } from '../../types';
 interface LeadDetailModalProps {
     isOpen: boolean;
     onClose: () => void;
-    lead: Lead;
-    onUpdate: (updatedLead: Lead) => void;
+    caseItem: Case; // Unified Case type (works for both Lead and Project)
+    onUpdate: (updatedCase: Case) => void;
 }
 
-const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead, onUpdate }) => {
-    if (!lead) return null;
+const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, caseItem, onUpdate }) => {
+    if (!caseItem) return null;
 
+    const navigate = useNavigate();
     const { currentUser } = useAuth();
     const [newNote, setNewNote] = useState('');
-    const [newStatus, setNewStatus] = useState<LeadPipelineStatus>(lead.status);
+    const [newStatus, setNewStatus] = useState<LeadPipelineStatus | ProjectStatus>(caseItem.status);
 
     const [reminderNote, setReminderNote] = useState('');
     const [reminderDate, setReminderDate] = useState('');
@@ -32,11 +34,17 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
 
     const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
 
+    // Determine available statuses based on whether it's a lead or project
+    const availableStatuses = caseItem.isProject
+        ? Object.values(ProjectStatus)
+        : Object.values(LeadPipelineStatus);
+
+
     // Removed handleOpenTaskModal as we now use RaiseRequestModal directly
 
     const handleLogActivity = async (e: React.FormEvent) => {
         e.preventDefault();
-        if ((!newNote.trim() && newStatus === lead.status && selectedFiles.length === 0) || isUploading) return;
+        if ((!newNote.trim() && newStatus === caseItem.status && selectedFiles.length === 0) || isUploading) return;
 
         setIsUploading(true);
 
@@ -44,12 +52,12 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
             let uploadedAttachments: LeadHistoryAttachment[] = [];
 
             if (selectedFiles.length > 0) {
-                uploadedAttachments = await uploadMultipleLeadAttachments(selectedFiles, lead.id);
+                uploadedAttachments = await uploadMultipleLeadAttachments(selectedFiles, caseItem.id);
             }
 
             const historyItems: LeadHistory[] = [];
 
-            if (newStatus !== lead.status) {
+            if (newStatus !== caseItem.status) {
                 historyItems.push({
                     action: `Status changed to ${newStatus}`,
                     user: currentUser?.name || 'Unknown',
@@ -67,13 +75,13 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
                 });
             }
 
-            const updatedLead = {
-                ...lead,
+            const updatedCase = {
+                ...caseItem,
                 status: newStatus,
-                history: [...lead.history, ...historyItems],
+                history: [...caseItem.history, ...historyItems],
             };
 
-            onUpdate(updatedLead);
+            onUpdate(updatedCase);
             setNewNote('');
             setSelectedFiles([]);
         } catch (error) {
@@ -105,12 +113,12 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
             completed: false,
         };
 
-        // Update lead with the new reminder
-        const updatedLead = {
-            ...lead,
-            reminders: [...(lead.reminders || []), newReminder],
+        // Update case with the new reminder
+        const updatedCase = {
+            ...caseItem,
+            reminders: [...(caseItem.reminders || []), newReminder],
             history: [
-                ...lead.history,
+                ...caseItem.history,
                 {
                     action: 'Reminder set',
                     user: currentUser?.name || 'Unknown',
@@ -127,8 +135,9 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
 
             try {
                 await addTask({
-                    title: `[Reminder] ${lead.clientName}: ${reminderNote}`,
+                    title: `[Reminder] ${caseItem.clientName}: ${reminderNote}`,
                     userId: currentUser.id,
+                    assignedTo: currentUser.id, // Required field
                     status: TaskStatus.PENDING,
                     timeSpent: 0,
                     priority: 'Medium',
@@ -136,7 +145,7 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
                     deadline: reminderDate,
                     isPaused: false,
                     date: dateStr,
-                    description: `Lead: ${lead.clientName} - ${lead.projectName}`,
+                    description: `${caseItem.isProject ? 'Project' : 'Lead'}: ${caseItem.clientName} - ${caseItem.projectName}`,
                     createdAt: new Date(),
                     createdBy: currentUser.id,
                     createdByName: currentUser.name,
@@ -146,18 +155,18 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
             }
         }
 
-        onUpdate(updatedLead);
+        onUpdate(updatedCase);
         setReminderNote('');
         setReminderDate('');
     };
 
     const handleToggleReminder = (reminderId: string) => {
-        const updatedReminders = lead.reminders?.map(r =>
+        const updatedReminders = caseItem.reminders?.map(r =>
             r.id === reminderId ? { ...r, completed: !r.completed } : r
         );
 
-        const updatedLead = { ...lead, reminders: updatedReminders };
-        onUpdate(updatedLead);
+        const updatedCase = { ...caseItem, reminders: updatedReminders };
+        onUpdate(updatedCase);
     };
 
     const isSalesperson = currentUser?.role === UserRole.SALES_TEAM_MEMBER;
@@ -173,70 +182,81 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
 
     return (
         <>
-            <Modal isOpen={isOpen} onClose={onClose} title={`Activity for ${lead.clientName}`} size="4xl">
+            <Modal isOpen={isOpen} onClose={onClose} title={`Activity for ${caseItem.clientName}`} size="4xl">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-8 gap-y-6">
                     {/* Project Details Section */}
                     <div className="lg:col-span-3 pb-6 border-b border-border mb-2">
-                        <h3 className="text-md font-bold text-text-primary mb-4 flex items-center">
-                            <FireIcon className="w-5 h-5 mr-2 text-primary" />
-                            Project Details
-                        </h3>
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-md font-bold text-text-primary flex items-center">
+                                <FireIcon className="w-5 h-5 mr-2 text-primary" />
+                                Project Details
+                            </h3>
+                            <button
+                                onClick={() => {
+                                    onClose();
+                                    navigate(`/projects/${caseItem.id}`);
+                                }}
+                                className="px-3 py-1.5 bg-subtle-background text-primary text-xs font-bold uppercase tracking-wider rounded-lg border border-primary/20 hover:bg-primary hover:text-white transition-all shadow-sm"
+                            >
+                                View Reference
+                            </button>
+                        </div>
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             <div className="bg-subtle-background p-3 rounded-xl">
                                 <div className="flex items-center gap-2 text-text-tertiary text-xs font-medium mb-1">
                                     <MapPinIcon className="w-4 h-4" />
                                     Project Name
                                 </div>
-                                <p className="text-sm font-bold text-text-primary">{lead.projectName}</p>
+                                <p className="text-sm font-bold text-text-primary">{caseItem.projectName}</p>
                             </div>
                             <div className="bg-subtle-background p-3 rounded-xl">
                                 <div className="flex items-center gap-2 text-text-tertiary text-xs font-medium mb-1">
                                     <UserCircleIcon className="w-4 h-4" />
                                     Client Name
                                 </div>
-                                <p className="text-sm font-bold text-text-primary">{lead.clientName}</p>
+                                <p className="text-sm font-bold text-text-primary">{caseItem.clientName}</p>
                             </div>
                             <div className="bg-subtle-background p-3 rounded-xl">
                                 <div className="flex items-center gap-2 text-text-tertiary text-xs font-medium mb-1">
                                     <PhoneIcon className="w-4 h-4" />
                                     Contact Number
                                 </div>
-                                <p className="text-sm font-bold text-text-primary">{lead.clientMobile || 'N/A'}</p>
+                                <p className="text-sm font-bold text-text-primary">{caseItem.clientMobile || 'N/A'}</p>
                             </div>
                             <div className="bg-subtle-background p-3 rounded-xl">
                                 <div className="flex items-center gap-2 text-text-tertiary text-xs font-medium mb-1">
                                     <ChatBubbleLeftRightIcon className="w-4 h-4" />
                                     Email
                                 </div>
-                                <p className="text-sm font-bold text-text-primary truncate">{lead.clientEmail || 'N/A'}</p>
+                                <p className="text-sm font-bold text-text-primary truncate">{caseItem.clientEmail || 'N/A'}</p>
                             </div>
                             <div className="bg-subtle-background p-3 rounded-xl">
                                 <div className="flex items-center gap-2 text-text-tertiary text-xs font-medium mb-1">
                                     <BanknotesIcon className="w-4 h-4" />
                                     Project Value
                                 </div>
-                                <p className="text-sm font-bold text-primary">{formatLargeNumberINR(lead.value)}</p>
+                                <p className="text-sm font-bold text-primary">{formatLargeNumberINR(caseItem.isProject ? (caseItem.budget || 0) : (caseItem.value || 0))}</p>
                             </div>
                             <div className="bg-subtle-background p-3 rounded-xl">
                                 <div className="flex items-center gap-2 text-text-tertiary text-xs font-medium mb-1">
                                     <CalendarIcon className="w-4 h-4" />
                                     Inquiry Date
                                 </div>
-                                <p className="text-sm font-bold text-text-primary">{formatDateTime(lead.inquiryDate)}</p>
+                                <p className="text-sm font-bold text-text-primary">{formatDateTime(caseItem.inquiryDate)}</p>
                             </div>
                             <div className="bg-subtle-background p-3 rounded-xl">
                                 <div className="flex items-center gap-2 text-text-tertiary text-xs font-medium mb-1">
                                     <FireIcon className="w-4 h-4" />
                                     Source
                                 </div>
-                                <p className="text-sm font-bold text-text-primary">{lead.source || 'N/A'}</p>
+                                <p className="text-sm font-bold text-text-primary">{caseItem.source || 'N/A'}</p>
                             </div>
                             <div className="bg-subtle-background p-3 rounded-xl">
                                 <div className="flex items-center gap-2 text-text-tertiary text-xs font-medium mb-1">
                                     <BellIcon className="w-4 h-4" />
                                     Current Status
                                 </div>
-                                <p className="text-sm font-bold text-accent">{lead.status}</p>
+                                <p className="text-sm font-bold text-accent">{caseItem.status}</p>
                             </div>
                         </div>
                     </div>
@@ -251,7 +271,7 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
                                     <select
                                         id="lead-status"
                                         value={newStatus}
-                                        onChange={(e) => setNewStatus(e.target.value as LeadPipelineStatus)}
+                                        onChange={(e) => setNewStatus(e.target.value as LeadPipelineStatus | ProjectStatus)}
                                         className="mt-1 block w-full rounded-md border-border shadow-sm focus:border-primary focus:ring-primary sm:text-sm bg-surface"
                                     >
                                         {Object.values(LeadPipelineStatus).map(status => (
@@ -317,7 +337,7 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
                                 <button
                                     type="submit"
                                     className="w-full inline-flex justify-center items-center rounded-md border border-transparent bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
-                                    disabled={(!newNote.trim() && newStatus === lead.status && selectedFiles.length === 0) || isUploading}
+                                    disabled={(!newNote.trim() && newStatus === caseItem.status && selectedFiles.length === 0) || isUploading}
                                 >
                                     <PlusIcon className="w-4 h-4 mr-2" />
                                     {isUploading ? 'Uploading...' : 'Log Activity'}
@@ -343,7 +363,7 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
                                         background: #cbd5e1;
                                     }
                                 `}</style>
-                                <LeadHistoryView lead={lead} />
+                                <LeadHistoryView lead={caseItem as any} />
                             </div>
                         </div>
                     </div>
@@ -372,8 +392,8 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
                                 <button type="submit" className="w-full text-sm font-medium bg-primary/20 text-primary py-1.5 rounded-md hover:bg-primary/30 disabled:opacity-50" disabled={!reminderDate || !reminderNote}>Add Reminder</button>
                             </form>
                             <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
-                                {lead.reminders && lead.reminders.length > 0 ? (
-                                    [...lead.reminders]
+                                {caseItem.reminders && caseItem.reminders.length > 0 ? (
+                                    [...caseItem.reminders]
                                         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
                                         .map(reminder => (
                                             <div key={reminder.id} className="flex items-start p-2 bg-subtle-background rounded-md">
@@ -409,15 +429,17 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
                 </div>
             </Modal>
 
-            {isSalesperson && (
-                <RaiseRequestModal
-                    isOpen={isRequestModalOpen}
-                    onClose={() => setIsRequestModalOpen(false)}
-                    leadId={lead.id}
-                    clientName={lead.clientName}
-                    projectId={lead.projectName}
-                />
-            )}
+            {
+                isSalesperson && (
+                    <RaiseRequestModal
+                        isOpen={isRequestModalOpen}
+                        onClose={() => setIsRequestModalOpen(false)}
+                        leadId={caseItem.id}
+                        clientName={caseItem.clientName}
+                        projectId={caseItem.projectName}
+                    />
+                )
+            }
         </>
     );
 };

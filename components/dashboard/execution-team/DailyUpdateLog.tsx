@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import { useAuth } from '../../../context/AuthContext';
 import { DailyUpdate } from '../../../types';
 import { CameraIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
@@ -11,7 +12,9 @@ interface DailyUpdateLogProps {
 }
 
 const DailyUpdateLog: React.FC<DailyUpdateLogProps> = ({ projectId, updates, onAddUpdate }) => {
+    const { currentUser } = useAuth();
     const [isFormOpen, setIsFormOpen] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Form State
     const [workDesc, setWorkDesc] = useState('');
@@ -19,6 +22,38 @@ const DailyUpdateLog: React.FC<DailyUpdateLogProps> = ({ projectId, updates, onA
     const [weather, setWeather] = useState('Sunny');
     const [completionPercent, setCompletionPercent] = useState(0);
     const [blocker, setBlocker] = useState<string>('');
+    const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
+    const [uploading, setUploading] = useState(false);
+
+    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const files = event.target.files;
+        if (!files || files.length === 0) return;
+
+        setUploading(true);
+        const newPhotos: string[] = [];
+
+        try {
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const reader = new FileReader();
+                const result = await new Promise<string>((resolve) => {
+                    reader.onload = () => resolve(reader.result as string);
+                    reader.readAsDataURL(file);
+                });
+                newPhotos.push(result);
+            }
+            setUploadedPhotos([...uploadedPhotos, ...newPhotos]);
+        } catch (error) {
+            console.error('Error reading files:', error);
+            alert('Failed to upload photos');
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const removePhoto = (index: number) => {
+        setUploadedPhotos(uploadedPhotos.filter((_, i) => i !== index));
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -29,8 +64,8 @@ const DailyUpdateLog: React.FC<DailyUpdateLogProps> = ({ projectId, updates, onA
             workDescription: workDesc,
             manpowerCount: manpower,
             weather,
-            photos: [],
-            createdBy: 'u-5', // TODO: Replace with current user from auth
+            photos: uploadedPhotos,
+            createdBy: currentUser?.id || 'unknown',
             createdAt: new Date(),
             // @ts-ignore - extending type for new fields
             completionPercent,
@@ -42,6 +77,7 @@ const DailyUpdateLog: React.FC<DailyUpdateLogProps> = ({ projectId, updates, onA
         setManpower(0);
         setCompletionPercent(0);
         setBlocker('');
+        setUploadedPhotos([]);
     };
 
     return (
@@ -128,9 +164,41 @@ const DailyUpdateLog: React.FC<DailyUpdateLogProps> = ({ projectId, updates, onA
                         </div>
 
                         {/* Photo Upload */}
-                        <div className="border-2 border-dashed border-border rounded-lg p-4 flex flex-col items-center justify-center text-text-tertiary cursor-not-allowed bg-subtle-background">
-                            <CameraIcon className="w-6 h-6 mb-2" />
-                            <span className="text-xs">Photo upload disabled in demo</span>
+                        <div className="space-y-3">
+                            <label className="block text-xs font-medium text-text-secondary">Site Photos</label>
+
+                            <div className="grid grid-cols-4 gap-2">
+                                {uploadedPhotos.map((photo, index) => (
+                                    <div key={index} className="relative aspect-square rounded-lg overflow-hidden group">
+                                        <img src={photo} alt="Site update" className="w-full h-full object-cover" />
+                                        <button
+                                            type="button"
+                                            onClick={() => removePhoto(index)}
+                                            className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            <span className="sr-only">Remove</span>
+                                            &times;
+                                        </button>
+                                    </div>
+                                ))}
+                                <button
+                                    type="button"
+                                    disabled={uploading}
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg hover:bg-subtle-background transition-colors text-text-tertiary hover:text-primary"
+                                >
+                                    <CameraIcon className="w-6 h-6 mb-1" />
+                                    <span className="text-[10px]">{uploading ? '...' : 'Add Photo'}</span>
+                                </button>
+                            </div>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                multiple
+                                accept="image/*"
+                                onChange={handleFileUpload}
+                                className="hidden"
+                            />
                         </div>
 
                         <div className="flex justify-end gap-2 pt-2">

@@ -47,7 +47,7 @@ const ProjectDetailModal: React.FC<{ project: Project; isOpen: boolean; onClose:
     const { users } = useUsers();
     // const { vendorBills } = useVendorBills(); // Using empty for now as VENDORS is also removed
 
-    const assignedTeamMembers = Object.entries(project.assignedTeam)
+    const assignedTeamMembers = Object.entries(project.assignedTeam || {})
         .flatMap(([role, userIdOrIds]) => {
             const userIds = Array.isArray(userIdOrIds) ? userIdOrIds : [userIdOrIds];
             return userIds.map(userId => {
@@ -222,7 +222,7 @@ const ProjectDetailModal: React.FC<{ project: Project; isOpen: boolean; onClose:
                                 <UserGroupIcon className="w-24 h-24" />
                             </div>
                             <h4 className="text-[10px] font-black uppercase tracking-widest text-primary mb-4 pb-2 border-b border-primary/10">Stakeholder Profile</h4>
-                            <p className="text-xl font-serif font-black text-text-primary mb-4">{project.clientContact.name}</p>
+                            <p className="text-xl font-serif font-black text-text-primary mb-4">{project.clientContact?.name || project.clientName}</p>
                             <div className="space-y-4">
                                 <div className="flex items-start gap-3">
                                     <div className="mt-1 flex-shrink-0 w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
@@ -234,7 +234,7 @@ const ProjectDetailModal: React.FC<{ project: Project; isOpen: boolean; onClose:
                                     <div className="flex-shrink-0 w-6 h-6 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary">
                                         <PhoneIcon className="w-3.5 h-3.5" />
                                     </div>
-                                    <span className="text-xs font-semibold text-text-secondary">{project.clientContact.phone}</span>
+                                    <span className="text-xs font-semibold text-text-secondary">{project.clientContact?.phone || 'No phone'}</span>
                                 </div>
                             </div>
                         </div>

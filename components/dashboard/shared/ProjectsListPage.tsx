@@ -38,7 +38,7 @@ const ProjectsListPage: React.FC = () => {
     });
 
     // Filter by search
-    const filteredItems = allItems.filter(item => 
+    const filteredItems = allItems.filter(item =>
         item.projectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.clientName?.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -62,7 +62,7 @@ const ProjectsListPage: React.FC = () => {
                 {/* Header */}
                 <div className="mb-6 flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold text-text-primary mb-2">Projects & Leads</h1>
+                        <h1 className="text-3xl font-bold text-text-primary mb-2">Reference</h1>
                         <p className="text-text-secondary">View all project details, drawings, BOQs, and quotations</p>
                         <div className="flex gap-4 mt-2 text-sm">
                             <span className="text-text-tertiary">Projects: <span className="font-bold text-primary">{projectCount}</span></span>
@@ -145,21 +145,7 @@ const ProjectsListPage: React.FC = () => {
                                             </p>
                                         )}
 
-                                        {/* Progress Bar (only for projects) */}
-                                        {!isLead && item.progress !== undefined && (
-                                            <div className="mb-4">
-                                                <div className="flex justify-between text-xs text-text-tertiary mb-1">
-                                                    <span>Progress</span>
-                                                    <span>{item.progress}%</span>
-                                                </div>
-                                                <div className="w-full bg-border rounded-full h-2">
-                                                    <div 
-                                                        className="bg-primary h-2 rounded-full transition-all"
-                                                        style={{ width: `${item.progress}%` }}
-                                                    />
-                                                </div>
-                                            </div>
-                                        )}
+
 
                                         {/* View Details Button */}
                                         <PrimaryButton

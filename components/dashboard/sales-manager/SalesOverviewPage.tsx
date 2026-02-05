@@ -433,9 +433,9 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; lead
             <LeadDetailModal
                 isOpen={isLeadModalOpen}
                 onClose={() => setIsLeadModalOpen(false)}
-                lead={selectedLead!}
+                caseItem={selectedLead as any}
                 onUpdate={async (updatedLead) => {
-                    await updateLead(updatedLead.id, updatedLead);
+                    await updateLead(updatedLead.id, updatedLead as any);
                 }}
             />
         </motion.div>

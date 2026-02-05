@@ -1838,6 +1838,7 @@ export interface CaseQuotation {
   versions?: QuotationVersion[];
   notes?: string;
   sss?: string; // Special Sales Strategy field
+  ssValue?: string; // Secret Selling Price (format: \"left:right\") - visible to Quotation Team, Super Admin, Sales GM
   pdfUrl?: string; // PDF file URL
   pdfFileName?: string; // PDF file name
 }

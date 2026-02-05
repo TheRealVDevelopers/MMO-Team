@@ -112,7 +112,7 @@ const ExecutionDashboard: React.FC<ExecutionDashboardProps> = ({ currentPage, se
                                                 onBack={handleBack}
                                             />
                                         ) : (
-                                            <div className="p-8 text-center text-red-500">Project not found or access denied</div>
+                                            <div className="p-8 text-center text-error">Project not found or access denied</div>
                                         )}
                                     </motion.div>
                                 )}

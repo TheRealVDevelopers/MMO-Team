@@ -321,7 +321,7 @@ const LeadsManagementPage: React.FC<{ setCurrentPage: (page: string) => void }> 
                 <LeadDetailModal
                     isOpen={!!selectedLead}
                     onClose={() => setSelectedLead(null)}
-                    lead={selectedLead}
+                    caseItem={selectedLead}
                     onUpdate={handleLeadUpdate}
                 />
             )}

@@ -13,6 +13,8 @@ import RegistrationsPage from './super-admin/RegistrationsPage';
 import FinancePage from './super-admin/FinancePage';
 import OrganizationsPage from './admin/OrganizationsPage';
 import UnifiedRequestInbox from './shared/UnifiedRequestInbox';
+import UnifiedProjectsPage from './shared/UnifiedProjectsPage';
+import CasesManagementPage from './super-admin/CasesManagementPage';
 
 interface SuperAdminDashboardProps {
     currentPage: string;
@@ -53,6 +55,8 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ currentPage, 
             );
         case 'projects':
             return <ProjectTrackingPage setCurrentPage={setCurrentPage} />;
+        case 'project-hub':
+            return <UnifiedProjectsPage roleView="admin" />;
         case 'leads':
             return <LeadsManagementPage setCurrentPage={setCurrentPage} />;
         case 'communication':
@@ -69,6 +73,8 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ currentPage, 
             return <FinancePage />;
         case 'organizations':
             return <OrganizationsPage setCurrentPage={setCurrentPage} />;
+        case 'cases':
+            return <CasesManagementPage />;
         default:
             return <OverviewDashboard setCurrentPage={setCurrentPage} />;
     }

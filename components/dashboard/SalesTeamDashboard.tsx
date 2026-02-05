@@ -13,6 +13,8 @@ import { useCases, addCase, updateCase } from '../../hooks/useCases';
 import { SectionHeader, PrimaryButton } from './shared/DashboardUI';
 import { ExclamationTriangleIcon, ArrowPathIcon, PlusIcon } from '@heroicons/react/24/outline';
 import AddNewLeadModal from './sales-manager/AddNewLeadModal';
+import UnifiedProjectsPage from './shared/UnifiedProjectsPage';
+import UnifiedRequestInbox from './shared/UnifiedRequestInbox';
 
 // Simple Error Boundary Component for internal use
 interface ErrorBoundaryProps {
@@ -75,8 +77,10 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
 
   const pageTitles: { [key: string]: string } = {
     'my-day': 'Personal Agenda',
+    projects: 'Project Hub',
     leads: 'My Registry',
-    'my-requests': 'My Request History',
+    'my-requests': 'Sent Requests Log',
+    requests: 'Request Inbox',
     // performance: 'Career Analytics',
     communication: 'Executive Chat',
     'escalate-issue': 'Priority Escalation',
@@ -130,7 +134,7 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
     console.log('Sales Team Dashboard - Leads Loading:', leadsLoading);
     console.log('Sales Team Dashboard - Leads Error:', leadsError);
     console.log('Sales Team Dashboard - Leads Count:', leads?.length);
-    
+
     // Shared Loading State
     if (leadsLoading && ['my-day', 'leads'].includes(currentPage)) {
       return (
@@ -158,12 +162,16 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
         case 'my-day':
           console.log('Rendering My Day Page');
           return <MyDayPage />;
+        case 'project-hub':
+          return <UnifiedProjectsPage roleView="sales" />;
         case 'leads':
           console.log('Rendering My Leads Page');
           return <MyLeadsPage leads={leads} onUpdateLead={handleLeadUpdate} onAddNewLead={handleAddNewLead} />;
         case 'my-requests':
           console.log('Rendering My Requests Page');
           return <MyRequestsPage />;
+        case 'requests':
+          return <UnifiedRequestInbox />;
         // case 'performance':
         //   return <MyPerformancePage setCurrentPage={setCurrentPage} />;
         case 'communication':

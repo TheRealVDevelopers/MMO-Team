@@ -439,3 +439,21 @@ export const TrashIcon: React.FC<{ className?: string }> = ({ className = "w-6 h
         <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
     </svg>
 );
+
+export const BeakerIcon: React.FC<{ className?: string }> = ({ className = "w-6 h-6" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v1.242c0 .289.268.497.55.512a7.463 7.463 0 0 1 3.4 0c.282-.015.55-.223.55-.512V3.104m-5.05 0c.333-.146.69-.221 1.05-.221s.717.075 1.05.221m-2.1 0h2.1m-4.2 12.01c.219.066.442.115.669.145 1.015.138 2.047.138 3.062 0 .227-.03.45-.079.669-.145m-4.4 0c.69-.328 1.403-.497 2.131-.497.73 0 1.441.169 2.13.497m-4.4 0C4.305 16.924 3.75 18.52 3.75 20.25a.75.75 0 0 0 .75.75h15a.75.75 0 0 0 .75-.75c0-1.73-.555-3.326-1.55-4.736m-12.7 0C7.234 14.155 9 13.5 12 13.5c3 0 4.766.655 5.95 2.014" />
+    </svg>
+);
+
+export const ArrowPathIcon: React.FC<{ className?: string }> = ({ className = "w-6 h-6" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+    </svg>
+);
+
+export const UserIcon: React.FC<{ className?: string }> = ({ className = "w-6 h-6" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+    </svg>
+);

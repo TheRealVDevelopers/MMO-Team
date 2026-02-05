@@ -8,7 +8,6 @@ import SettingsPage from './components/settings/SettingsPage';
 import InternalLayout from './components/dashboard/shared/InternalLayout';
 import ProjectsListPage from './components/dashboard/shared/ProjectsListPage';
 import ProjectDetailsPage from './components/dashboard/shared/ProjectDetailsPage';
-import ReferenceListPage from './components/dashboard/shared/ReferenceListPage';
 import LandingPage from './components/landing/LandingPage';
 import { useAuth } from './context/AuthContext';
 import { User, UserRole, Vendor } from './types';
@@ -30,8 +29,9 @@ const navConfig = {
     navItems: [
       { id: 'overview', label: 'Overview', icon: <RectangleGroupIcon className="w-6 h-6" /> },
       { id: 'team', label: 'Team', icon: <UsersIcon className="w-6 h-6" /> },
-      { id: 'projects', label: 'Projects', icon: <RectangleStackIcon className="w-6 h-6" /> },
-      { id: 'reference', label: 'References', icon: <RectangleStackIcon className="w-6 h-6" /> },
+      { id: 'project-hub', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
+      { id: 'projects', label: 'Reference', icon: <RectangleStackIcon className="w-6 h-6" /> },
+      { id: 'cases', label: 'Cases', icon: <RectangleGroupIcon className="w-6 h-6" /> },
       { id: 'organizations', label: 'Organizations', icon: <BuildingOfficeIcon className="w-6 h-6" /> },
       { id: 'leads', label: 'Leads', icon: <FunnelIcon className="w-6 h-6" /> },
       { id: 'approvals', label: 'Request Inbox', icon: <CheckCircleIcon className="w-6 h-6" /> },
@@ -50,7 +50,7 @@ const navConfig = {
     title: 'Sales Manager Workspace',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
-      { id: 'projects', label: 'Projects', icon: <RectangleStackIcon className="w-6 h-6" /> },
+      { id: 'projects', label: 'Reference', icon: <RectangleStackIcon className="w-6 h-6" /> },
       { id: 'leads', label: 'My Registry', icon: <FunnelIcon className="w-6 h-6" /> },
       { id: 'my-requests', label: 'My Requests', icon: <RectangleStackIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
@@ -64,8 +64,8 @@ const navConfig = {
     title: 'Sales Manager',
     navItems: [
       { id: 'overview', label: 'Dashboard', icon: <RectangleGroupIcon className="w-6 h-6" /> },
-      { id: 'projects', label: 'Projects', icon: <RectangleStackIcon className="w-6 h-6" /> },
-      { id: 'reference', label: 'References', icon: <RectangleStackIcon className="w-6 h-6" /> },
+      { id: 'project-hub', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
+      { id: 'projects', label: 'Reference', icon: <RectangleStackIcon className="w-6 h-6" /> },
       { id: 'leads', label: 'Leads', icon: <FunnelIcon className="w-6 h-6" /> },
       { id: 'organizations', label: 'Organizations', icon: <BuildingOfficeIcon className="w-6 h-6" /> },
       { id: 'team', label: 'Team', icon: <UsersIcon className="w-6 h-6" /> },
@@ -82,10 +82,11 @@ const navConfig = {
     title: 'My Workspace',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
-      { id: 'projects', label: 'Projects', icon: <RectangleStackIcon className="w-6 h-6" /> },
-      { id: 'reference', label: 'References', icon: <RectangleStackIcon className="w-6 h-6" /> },
+      { id: 'project-hub', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
+      { id: 'projects', label: 'Reference', icon: <RectangleStackIcon className="w-6 h-6" /> },
       { id: 'leads', label: 'My Registry', icon: <FunnelIcon className="w-6 h-6" /> },
-      { id: 'my-requests', label: 'My Requests', icon: <RectangleStackIcon className="w-6 h-6" /> },
+      { id: 'requests', label: 'Request Inbox', icon: <ListBulletIcon className="w-6 h-6" /> },
+      { id: 'my-requests', label: 'Sent Requests', icon: <RectangleStackIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
       { id: 'workflow', label: 'M-Workflow', icon: <PresentationChartLineIcon className="w-6 h-6" /> },
       // { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
@@ -98,8 +99,7 @@ const navConfig = {
     title: 'Site Engineer',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
-      { id: 'projects', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
-      { id: 'reference', label: 'References', icon: <RectangleStackIcon className="w-6 h-6" /> },
+      { id: 'projects', label: 'Reference', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
       { id: 'workflow', label: 'M-Workflow', icon: <PresentationChartLineIcon className="w-6 h-6" /> },
       // { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
@@ -110,8 +110,7 @@ const navConfig = {
     title: 'Quotation',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
-      { id: 'projects', label: 'Projects', icon: <RectangleStackIcon className="w-6 h-6" /> },
-      { id: 'reference', label: 'References', icon: <RectangleStackIcon className="w-6 h-6" /> },
+      { id: 'projects', label: 'Reference', icon: <RectangleStackIcon className="w-6 h-6" /> },
       { id: 'requests', label: 'Requests', icon: <CheckCircleIcon className="w-6 h-6" /> },
       { id: 'quotations', label: 'Create Quotation', icon: <DocumentTextIcon className="w-6 h-6" /> },
       { id: 'catalog', label: 'Items Catalog', icon: <TagIcon className="w-6 h-6" /> },
@@ -125,8 +124,7 @@ const navConfig = {
     title: 'Site Engineer',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
-      { id: 'projects', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
-      { id: 'reference', label: 'References', icon: <RectangleStackIcon className="w-6 h-6" /> },
+      { id: 'projects', label: 'Reference', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
       { id: 'workflow', label: 'M-Workflow', icon: <PresentationChartLineIcon className="w-6 h-6" /> },
       // { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
@@ -139,7 +137,6 @@ const navConfig = {
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
       { id: 'audit', label: 'Audit Quotations', icon: <DocumentTextIcon className="w-6 h-6" /> },
       { id: 'negotiations', label: 'Procurement', icon: <ViewColumnsIcon className="w-6 h-6" /> },
-      { id: 'reference', label: 'References', icon: <RectangleStackIcon className="w-6 h-6" /> },
       { id: 'items-catalog', label: 'Items Catalog', icon: <TagIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
       { id: 'workflow', label: 'M-Workflow', icon: <PresentationChartLineIcon className="w-6 h-6" /> },
@@ -152,7 +149,6 @@ const navConfig = {
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
       { id: 'board', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
-      { id: 'reference', label: 'References', icon: <RectangleStackIcon className="w-6 h-6" /> },
       // Added unified leadership items
       { id: 'team', label: 'Team', icon: <UsersIcon className="w-6 h-6" /> },
       { id: 'approvals', label: 'Approvals', icon: <CheckCircleIcon className="w-6 h-6" /> },
@@ -169,7 +165,6 @@ const navConfig = {
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
       { id: 'board', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
-      { id: 'reference', label: 'References', icon: <RectangleStackIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
       { id: 'workflow', label: 'M-Workflow', icon: <PresentationChartLineIcon className="w-6 h-6" /> },
       { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
@@ -181,7 +176,6 @@ const navConfig = {
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
       { id: 'tasks', label: 'Tasks', icon: <ListBulletIcon className="w-6 h-6" /> },
       { id: 'overview', label: 'Overview', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
-      { id: 'reference', label: 'References', icon: <RectangleStackIcon className="w-6 h-6" /> },
       { id: 'sales-invoices', label: 'GRIN', icon: <BanknotesIcon className="w-6 h-6" /> },
       { id: 'vendor-bills', label: 'GROUT', icon: <BuildingLibraryIcon className="w-6 h-6" /> },
       { id: 'expenses', label: 'Expenses', icon: <ReceiptPercentIcon className="w-6 h-6" /> },
@@ -307,8 +301,6 @@ const AppContent: React.FC = () => {
           <Routes>
             <Route path="/projects/:caseId" element={<ProjectDetailsPage />} />
             <Route path="/projects" element={<ProjectsListPage />} />
-            <Route path="/reference/:caseId" element={<ProjectDetailsPage />} />
-            <Route path="/reference" element={<ReferenceListPage />} />
             <Route path="*" element={<Dashboard currentPage={currentPage} setCurrentPage={handleSetPage} />} />
           </Routes>
         )}

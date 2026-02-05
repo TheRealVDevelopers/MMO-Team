@@ -236,11 +236,11 @@ const MyDayPage: React.FC = () => {
                 timeSpent: 0, // Todo: track time
                 priority: r.priority,
                 priorityOrder: 0,
-                deadline: r.endDate ? (r.endDate as any).toDate().toISOString() : undefined,
+                deadline: r.endDate ? (r.endDate instanceof Date ? r.endDate.toISOString() : (r.endDate as any).toDate().toISOString()) : undefined,
                 isPaused: false,
                 date: selectedDate, // Show today if active
                 description: r.description,
-                createdAt: r.requestedAt ? (r.requestedAt as any).toDate() : new Date(),
+                createdAt: r.requestedAt ? (r.requestedAt instanceof Date ? r.requestedAt : (r.requestedAt as any).toDate()) : new Date(),
                 createdBy: r.requesterId,
                 createdByName: r.requesterName,
                 source: 'request'
@@ -289,20 +289,6 @@ const MyDayPage: React.FC = () => {
                     newStatus === TaskStatus.IN_PROGRESS ? 'In Progress' : 'Pending';
 
                 await updateExecutionStatus(task.originalId, execStatus);
-                return;
-            }
-
-            if (task.source === 'request') {
-                // Update Approval Request Lifecycle
-                if (newStatus === TaskStatus.IN_PROGRESS) {
-                    await startRequest(task.originalId, currentUser.id);
-                    await addActivity(currentUser.id, currentUser.name, `Started Request: ${task.title}`);
-                } else if (newStatus === TaskStatus.COMPLETED) {
-                    if (confirm("Mark this request as completed? Admins will be notified.")) {
-                        await completeRequest(task.originalId, currentUser.id);
-                        await addActivity(currentUser.id, currentUser.name, `Completed Request: ${task.title}`, true);
-                    }
-                }
                 return;
             }
 

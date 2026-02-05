@@ -1,62 +1,121 @@
 import React, { useMemo, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useMyDayTasks, updateTask } from '../../../hooks/useMyDayTasks';
-import { Task, TaskStatus, UserRole } from '../../../types';
+import { useExecutionTasks } from '../../../hooks/useExecutionTasks';
+import { useAssignedApprovalRequests, startRequest, completeRequest } from '../../../hooks/useApprovalSystem';
+import { addActivity } from '../../../hooks/useTimeTracking';
+import { Task, TaskStatus, UserRole, ApprovalStatus, ApprovalRequestType } from '../../../types';
 import { ClockIcon, CheckCircleIcon, PlayIcon } from '../../icons/IconComponents';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../firebase';
 
 interface UnifiedRequestInboxProps {
     onNavigateToProject?: (caseId: string, tab?: string) => void;
 }
 
+interface UnifiedTask extends Task {
+    source: 'myDay' | 'execution' | 'request';
+    originalId: string;
+}
+
 const UnifiedRequestInbox: React.FC<UnifiedRequestInboxProps> = ({ onNavigateToProject }) => {
     const { currentUser } = useAuth();
-    const [allTasks, setAllTasks] = useState<Task[]>([]);
-    const [loading, setLoading] = useState(true);
 
-    // Fetch tasks based on role
-    React.useEffect(() => {
-        if (!db || !currentUser) return;
+    // 1. My Day Tasks
+    const { tasks: myDayTasks, loading: myDayLoading } = useMyDayTasks(currentUser?.id);
 
-        const tasksRef = collection(db, 'myDayTasks');
-        let q;
+    // 2. Execution Tasks
+    const { tasks: executionTasks, loading: execLoading, updateTaskStatus: updateExecutionStatus } = useExecutionTasks();
 
-        const isAdmin = currentUser.role === UserRole.SUPER_ADMIN || currentUser.role === UserRole.SALES_GENERAL_MANAGER;
-
-        if (isAdmin) {
-            // Admin sees tasks they created
-            q = query(tasksRef, where('createdBy', '==', currentUser.id));
-        } else {
-            // Everyone else sees tasks assigned to them
-            // Check both userId (old field) and assignedTo (new field)
-            q = query(tasksRef, where('userId', '==', currentUser.id));
-        }
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const taskList: Task[] = [];
-            console.log('📋 Tasks fetched:', snapshot.size, 'documents');
-            snapshot.forEach((doc) => {
-                const data = doc.data();
-                console.log('Task:', doc.id, 'assignedTo:', data.assignedTo, 'status:', data.status, 'taskType:', data.taskType);
-                taskList.push({
-                    ...data,
-                    id: doc.id,
-                    createdAt: data.createdAt?.toDate?.() || new Date(),
-                    dueAt: data.dueAt?.toDate?.() || undefined,
-                    completedAt: data.completedAt?.toDate?.() || undefined,
-                    startedAt: data.startedAt?.toDate?.() || undefined,
-                    acknowledgedAt: data.acknowledgedAt?.toDate?.() || undefined,
-                } as Task);
-            });
-            setAllTasks(taskList);
-            setLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, [currentUser]);
+    // 3. Approval Requests
+    const { assignedRequests, loading: requestsLoading } = useAssignedApprovalRequests(currentUser?.id || '');
 
     const isAdmin = currentUser?.role === UserRole.SUPER_ADMIN || currentUser?.role === UserRole.SALES_GENERAL_MANAGER;
+
+    // Merge and filter tasks
+    const allTasks = useMemo(() => {
+        if (!currentUser) return [];
+
+        const unifiedMyDay: UnifiedTask[] = (myDayTasks || []).map(t => ({
+            ...t,
+            source: 'myDay',
+            originalId: t.id
+        }));
+
+        // Filter execution tasks for current user
+        const myExecTasks = (executionTasks || []).filter(t => t.assignedTo === currentUser.id);
+        const unifiedExec: UnifiedTask[] = myExecTasks.map(t => ({
+            id: `exec-${t.id}`,
+            originalId: t.id,
+            title: `[${t.missionType}] ${t.projectName}`,
+            assignedTo: t.assignedTo,
+            userId: t.assignedTo,
+            status: t.status === 'Completed' ? TaskStatus.COMPLETED :
+                t.status === 'In Progress' ? TaskStatus.ONGOING : TaskStatus.ASSIGNED,
+            timeSpent: 0,
+            priority: t.priority || 'Medium',
+            priorityOrder: 0,
+            deadline: t.deadline,
+            isPaused: false,
+            date: '', // Not used in inbox
+            description: t.instructions,
+            createdAt: new Date(t.createdAt),
+            createdBy: 'System',
+            createdByName: 'Execution Team',
+            source: 'execution',
+            caseId: t.projectId, // Map to caseId for navigation
+            targetName: t.projectName
+        }));
+
+        // Filter approval requests
+        const myRequests = (assignedRequests || []).filter(r =>
+            r.status === ApprovalStatus.ASSIGNED ||
+            r.status === ApprovalStatus.ONGOING ||
+            r.status === ApprovalStatus.COMPLETED
+        );
+
+        const unifiedRequests: UnifiedTask[] = myRequests.map(r => {
+            let status = TaskStatus.ASSIGNED;
+            if (r.status === ApprovalStatus.ONGOING) status = TaskStatus.ONGOING;
+            if (r.status === ApprovalStatus.COMPLETED) status = TaskStatus.COMPLETED;
+
+            return {
+                id: `req-${r.id}`,
+                originalId: r.id,
+                title: `${r.title} (${r.requestType})`,
+                assignedTo: r.assigneeId || '',
+                userId: r.assigneeId || '',
+                status: status,
+                timeSpent: 0,
+                priority: r.priority || 'Medium',
+                priorityOrder: 0,
+                deadline: r.endDate instanceof Date ? r.endDate.toISOString() : (r.endDate as any)?.toDate?.().toISOString(),
+                isPaused: false,
+                date: '',
+                description: r.description,
+                createdAt: r.requestedAt instanceof Date ? r.requestedAt : (r.requestedAt as any)?.toDate?.() || new Date(),
+                createdBy: r.requesterId,
+                createdByName: r.requesterName,
+                source: 'request',
+                caseId: r.contextId,
+                taskType: 'General', // Fallback for Task interface compatibility
+                targetName: r.clientName
+            } as UnifiedTask;
+        });
+
+        // Combine
+        let merged = [...unifiedMyDay, ...unifiedExec, ...unifiedRequests];
+
+        // If Admin, they see what they created across all sources? 
+        // For now, let's keep it simple: Admins see myDayTasks they created (existing behavior)
+        if (isAdmin) {
+            return unifiedMyDay.filter(t => t.createdBy === currentUser.id);
+        }
+
+        return merged;
+    }, [myDayTasks, executionTasks, assignedRequests, currentUser, isAdmin]);
+
+    const loading = myDayLoading || execLoading || requestsLoading;
 
     // Filter tasks
     const { assignedTasks, ongoingTasks, completedTasks } = useMemo(() => {
@@ -64,7 +123,7 @@ const UnifiedRequestInbox: React.FC<UnifiedRequestInboxProps> = ({ onNavigateToP
         const ongoing = allTasks.filter(t => t.status === TaskStatus.ONGOING);
         const completed = allTasks.filter(t => t.status === TaskStatus.COMPLETED);
 
-        return { 
+        return {
             assignedTasks: assigned.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
             ongoingTasks: ongoing.sort((a, b) => new Date(b.startedAt || b.createdAt).getTime() - new Date(a.startedAt || a.createdAt).getTime()),
             completedTasks: completed.sort((a, b) => new Date(b.completedAt || b.createdAt).getTime() - new Date(a.completedAt || a.createdAt).getTime())
@@ -84,9 +143,16 @@ const UnifiedRequestInbox: React.FC<UnifiedRequestInboxProps> = ({ onNavigateToP
         }
     };
 
-    const handleStartTask = async (task: Task) => {
+    const handleStartTask = async (task: UnifiedTask) => {
         try {
-            await updateTask(task.id, { status: TaskStatus.ONGOING, startedAt: new Date() });
+            if (task.source === 'execution') {
+                await updateExecutionStatus(task.originalId, 'In Progress');
+            } else if (task.source === 'request') {
+                await startRequest(task.originalId, currentUser!.id);
+                await addActivity(currentUser!.id, currentUser!.name, `Started Request: ${task.title}`);
+            } else {
+                await updateTask(task.id, { status: TaskStatus.ONGOING, startedAt: new Date() });
+            }
             alert('✅ Task started!');
         } catch (error) {
             console.error('Error starting task:', error);
@@ -94,17 +160,28 @@ const UnifiedRequestInbox: React.FC<UnifiedRequestInboxProps> = ({ onNavigateToP
         }
     };
 
-    const handleCompleteTask = async (task: Task) => {
+    const handleCompleteTask = async (task: UnifiedTask) => {
         try {
-            await updateTask(task.id, { status: TaskStatus.COMPLETED, completedAt: new Date() });
-            alert('✅ Task marked complete! Creator has been notified.');
+            if (task.source === 'execution') {
+                await updateExecutionStatus(task.originalId, 'Completed');
+            } else if (task.source === 'request') {
+                if (confirm("Mark this request as completed? Admins will be notified.")) {
+                    await completeRequest(task.originalId, currentUser!.id);
+                    await addActivity(currentUser!.id, currentUser!.name, `Completed Request: ${task.title}`, true);
+                } else {
+                    return;
+                }
+            } else {
+                await updateTask(task.id, { status: TaskStatus.COMPLETED, completedAt: new Date() });
+            }
+            alert('✅ Task marked complete!');
         } catch (error) {
             console.error('Error completing task:', error);
             alert('❌ Failed to complete task');
         }
     };
 
-    const handleAcknowledge = async (task: Task) => {
+    const handleAcknowledge = async (task: UnifiedTask) => {
         if (confirm(`✅ Acknowledge this completed task?\n\n"${task.title}"\n\nThis will remove it from your view.`)) {
             try {
                 await updateTask(task.id, {
@@ -134,9 +211,23 @@ const UnifiedRequestInbox: React.FC<UnifiedRequestInboxProps> = ({ onNavigateToP
         }
     };
 
-    const formatDate = (date: Date | string | undefined) => {
+    const formatDate = (date: any) => {
         if (!date) return 'N/A';
-        const d = typeof date === 'string' ? new Date(date) : date;
+
+        let d: Date;
+        if (date instanceof Date) {
+            d = date;
+        } else if (typeof date === 'string') {
+            d = new Date(date);
+        } else if (date && typeof (date as any).toDate === 'function') {
+            d = (date as any).toDate();
+        } else if (typeof date === 'number') {
+            d = new Date(date);
+        } else {
+            return 'Invalid Date';
+        }
+
+        if (isNaN(d.getTime())) return 'Invalid Date';
         return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     };
 

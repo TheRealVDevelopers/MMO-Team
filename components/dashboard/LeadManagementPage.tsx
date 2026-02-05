@@ -301,7 +301,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
           </div>
           <button
             onClick={onClose}
-            className="bg-gray-100 dark:bg-surface/90 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-surface/80"
+            className="bg-subtle-background dark:bg-surface text-text-secondary dark:text-gray-300 px-4 py-2 rounded-lg hover:bg-border dark:hover:bg-surface/80"
           >
             ← Back
           </button>
@@ -313,7 +313,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
             onClick={() => setActiveTab('overview')}
             className={`px-4 py-2 font-semibold transition-all ${activeTab === 'overview'
               ? 'text-primary-hover border-b-2 border-primary-hover'
-              : 'text-gray-500 hover:text-gray-700'
+              : 'text-text-secondary hover:text-text-primary'
               }`}
           >
             Overview
@@ -322,7 +322,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
             onClick={() => setActiveTab('chat')}
             className={`px-4 py-2 font-semibold transition-all ${activeTab === 'chat'
               ? 'text-primary-hover border-b-2 border-primary-hover'
-              : 'text-gray-500 hover:text-gray-700'
+              : 'text-text-secondary hover:text-text-primary'
               }`}
           >
             Chat
@@ -331,7 +331,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
             onClick={() => setActiveTab('files')}
             className={`px-4 py-2 font-semibold transition-all ${activeTab === 'files'
               ? 'text-primary-hover border-b-2 border-primary-hover'
-              : 'text-gray-500 hover:text-gray-700'
+              : 'text-text-secondary hover:text-text-primary'
               }`}
           >
             Files
@@ -340,7 +340,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
             onClick={() => setActiveTab('milestones')}
             className={`px-4 py-2 font-semibold transition-all ${activeTab === 'milestones'
               ? 'text-primary-hover border-b-2 border-primary-hover'
-              : 'text-gray-500 hover:text-gray-700'
+              : 'text-text-secondary hover:text-text-primary'
               }`}
           >
             Milestones
@@ -359,7 +359,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
 
               {/* Lead Status */}
               <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-semibold text-text-secondary dark:text-gray-300 mb-2">
                   Lead Status
                 </label>
                 <select
@@ -376,19 +376,19 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
               {/* Client Info */}
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Email</p>
+                  <p className="text-sm text-text-tertiary dark:text-gray-400">Email</p>
                   <p className="font-semibold text-text-primary/90 dark:text-white">{lead.clientEmail || 'N/A'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Mobile</p>
+                  <p className="text-sm text-text-tertiary dark:text-gray-400">Mobile</p>
                   <p className="font-semibold text-text-primary/90 dark:text-white">{lead.clientMobile || 'N/A'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Priority</p>
+                  <p className="text-sm text-text-tertiary dark:text-gray-400">Priority</p>
                   <p className="font-semibold text-text-primary/90 dark:text-white">{lead.priority}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Source</p>
+                  <p className="text-sm text-text-tertiary dark:text-gray-400">Source</p>
                   <p className="font-semibold text-text-primary/90 dark:text-white">{lead.source}</p>
                 </div>
               </div>
@@ -404,7 +404,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
                     <p className="font-bold text-text-primary/90 dark:text-white">
                       Stage {lead.currentStage || 1}: {PROJECT_STAGES.find(s => s.id === (lead.currentStage || 1))?.name}
                     </p>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-2">
+                    <div className="w-full bg-border dark:bg-gray-700 rounded-full h-2 mt-2">
                       <div
                         className="bg-primary h-2 rounded-full transition-all duration-500"
                         style={{ width: `${((lead.currentStage || 1) / 8) * 100}%` }}
@@ -438,7 +438,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
                       <div
                         className={`max-w-[70%] rounded-lg p-3 ${msg.senderRole === 'sales'
                           ? 'bg-primary text-white'
-                          : 'bg-gray-100 dark:bg-surface/90 text-text-primary/90 dark:text-white'
+                          : 'bg-subtle-background dark:bg-surface/90 text-text-primary/90 dark:text-white'
                           }`}
                       >
                         <p className="text-sm font-semibold mb-1">{msg.senderName}</p>
@@ -450,7 +450,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                  <div className="text-center py-12 text-text-tertiary dark:text-gray-400">
                     <ChatBubbleLeftRightIcon className="w-12 h-12 mx-auto mb-2 opacity-30" />
                     <p>No messages yet. Start the conversation!</p>
                   </div>
@@ -512,7 +512,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
                       href={file.fileUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="bg-gray-50 dark:bg-surface/90 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-surface/80 transition-all"
+                      className="bg-subtle-background dark:bg-surface/90 rounded-lg p-4 hover:bg-border dark:hover:bg-surface/80 transition-all"
                     >
                       <div className="flex flex-col items-center text-center">
                         {file.fileType === 'image' ? (
@@ -523,17 +523,17 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
                         <p className="text-sm font-semibold text-text-primary/90 dark:text-white truncate w-full">
                           {file.fileName}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        <p className="text-xs text-text-secondary dark:text-gray-400 mt-1">
                           {file.uploadedByName}
                         </p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500">
+                        <p className="text-xs text-text-tertiary dark:text-gray-500">
                           {file.uploadedAt.toLocaleDateString()}
                         </p>
                       </div>
                     </a>
                   ))
                 ) : (
-                  <div className="col-span-full text-center py-12 text-gray-500 dark:text-gray-400">
+                  <div className="col-span-full text-center py-12 text-text-tertiary dark:text-gray-400">
                     <DocumentIcon className="w-12 h-12 mx-auto mb-2 opacity-30" />
                     <p>No files uploaded yet</p>
                   </div>
@@ -551,7 +551,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-text-secondary dark:text-gray-300 mb-2">
                       Project Stage
                     </label>
                     <select
@@ -568,7 +568,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-text-secondary dark:text-gray-300 mb-2">
                       Status
                     </label>
                     <select
@@ -583,7 +583,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-text-secondary dark:text-gray-300 mb-2">
                       Deadline
                     </label>
                     <input
@@ -595,7 +595,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-text-secondary dark:text-gray-300 mb-2">
                       Notes
                     </label>
                     <textarea
@@ -629,8 +629,8 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
                         <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg ${milestone?.status === 'completed'
                           ? 'bg-green-100 dark:bg-green-900/30'
                           : milestone?.status === 'in-progress'
-                            ? 'bg-yellow-100 dark:bg-yellow-900/30'
-                            : 'bg-gray-100 dark:bg-gray-700'
+                            ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800'
+                            : 'bg-subtle-background dark:bg-gray-700 text-text-secondary'
                           }`}>
                           {milestone?.status === 'completed' ? '✓' : stage.icon}
                         </div>
@@ -642,11 +642,11 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
                               </h3>
                               {milestone && (
                                 <>
-                                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                  <p className="text-sm text-text-secondary dark:text-gray-400 mt-1">
                                     {milestone.notes}
                                   </p>
                                   {milestone.deadline && (
-                                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 flex items-center">
+                                    <p className="text-xs text-text-tertiary dark:text-gray-500 mt-1 flex items-center">
                                       <ClockIcon className="w-3 h-3 mr-1" />
                                       Deadline: {milestone.deadline.toLocaleDateString()}
                                     </p>
@@ -659,7 +659,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
                                 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
                                 : milestone.status === 'in-progress'
                                   ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
-                                  : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                                  : 'bg-subtle-background text-text-secondary dark:bg-gray-700 dark:text-gray-300'
                                 }`}>
                                 {milestone.status}
                               </span>
@@ -682,15 +682,15 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
             <h3 className="text-lg font-bold text-text-primary/90 dark:text-white mb-4">Quick Stats</h3>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Messages</span>
+                <span className="text-sm text-text-secondary dark:text-gray-400">Messages</span>
                 <span className="font-bold text-primary-hover">{lead.communicationMessages?.length || 0}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Files</span>
+                <span className="text-sm text-text-secondary dark:text-gray-400">Files</span>
                 <span className="font-bold text-primary-hover">{lead.files?.length || 0}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Milestones</span>
+                <span className="text-sm text-text-secondary dark:text-gray-400">Milestones</span>
                 <span className="font-bold text-primary-hover">
                   {lead.milestones?.filter(m => m.status === 'completed').length || 0}/8
                 </span>
@@ -702,7 +702,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
           <div className="bg-surface dark:bg-surface/90 rounded-xl shadow-md p-6">
             <h3 className="text-lg font-bold text-text-primary/90 dark:text-white mb-4">Assigned To</h3>
             <p className="text-text-primary/90 dark:text-white font-semibold">{currentUser?.name || 'Sales Team'}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{currentUser?.role}</p>
+            <p className="text-sm text-text-secondary dark:text-gray-400">{currentUser?.role}</p>
           </div>
         </div>
       </div>

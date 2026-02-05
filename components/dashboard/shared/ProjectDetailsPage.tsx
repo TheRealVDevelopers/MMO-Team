@@ -254,18 +254,7 @@ const OverviewTab: React.FC<{ projectCase: Case }> = ({ projectCase }) => {
                         <p className="text-sm font-medium text-text-tertiary">Priority</p>
                         <p className="text-base text-text-primary">{projectCase.priority}</p>
                     </div>
-                    {projectCase.progress !== undefined && (
-                        <div>
-                            <p className="text-sm font-medium text-text-tertiary mb-2">Progress</p>
-                            <div className="w-full bg-border rounded-full h-2">
-                                <div
-                                    className="bg-primary h-2 rounded-full transition-all"
-                                    style={{ width: `${projectCase.progress}%` }}
-                                />
-                            </div>
-                            <p className="text-xs text-text-secondary mt-1">{projectCase.progress}% Complete</p>
-                        </div>
-                    )}
+
                 </div>
             </div>
         </Card>
