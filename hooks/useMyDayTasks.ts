@@ -150,7 +150,7 @@ export const updateTask = async (taskId: string, updates: Partial<Task>) => {
                 const taskSnap = await getDoc(taskRef);
                 if (taskSnap.exists()) {
                     const taskData = taskSnap.data() as Task;
-                    
+
                     // Get case data if task is linked to a case
                     let caseData: any = null;
                     if (taskData.caseId) {
@@ -172,7 +172,7 @@ export const updateTask = async (taskId: string, updates: Partial<Task>) => {
                             type: 'success'
                         }).catch(e => console.error("Creator notification failed", e));
                     }
-                    
+
                     // 2. Notify the project head - MANDATORY if project exists
                     if (caseData && caseData.projectHead && caseData.projectHead !== taskData.userId && caseData.projectHead !== taskData.createdBy) {
                         await createNotification({
@@ -184,7 +184,7 @@ export const updateTask = async (taskId: string, updates: Partial<Task>) => {
                             type: 'success'
                         }).catch(e => console.error("Project head notification failed", e));
                     }
-                    
+
                     // 3. Notify additional users from notifyOnComplete array
                     if (taskData.notifyOnComplete && taskData.notifyOnComplete.length > 0) {
                         for (const userId of taskData.notifyOnComplete) {
@@ -233,7 +233,7 @@ export const updateTask = async (taskId: string, updates: Partial<Task>) => {
                             }).catch(e => console.error("Case history log failed", e));
                         }
                     }
-                    
+
                     // 6. Log to Lead/Project History (Legacy support)
                     else if (taskData.contextId && taskData.contextType) {
                         const contextRef = doc(db, taskData.contextType === 'lead' ? 'leads' : 'projects', taskData.contextId);
@@ -281,6 +281,35 @@ export const updateTask = async (taskId: string, updates: Partial<Task>) => {
         }
     } catch (error) {
         console.error('Error updating task:', error);
+        throw error;
+    }
+};
+
+export const startTask = async (taskId: string) => {
+    try {
+        const taskRef = doc(db, 'myDayTasks', taskId);
+        await updateDoc(taskRef, {
+            status: TaskStatus.IN_PROGRESS,
+            startedAt: new Date(),
+        });
+        // Log start activity if needed
+    } catch (error) {
+        console.error('Error starting task:', error);
+        throw error;
+    }
+};
+
+export const completeTask = async (taskId: string) => {
+    try {
+        const taskRef = doc(db, 'myDayTasks', taskId);
+
+        // Use updateTask to handle all side effects (notifications, history, etc.)
+        await updateTask(taskId, {
+            status: TaskStatus.COMPLETED,
+            completedAt: new Date()
+        });
+    } catch (error) {
+        console.error('Error completing task:', error);
         throw error;
     }
 };

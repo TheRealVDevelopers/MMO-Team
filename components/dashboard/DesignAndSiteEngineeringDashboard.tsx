@@ -8,6 +8,7 @@ import MyDayPage from './shared/MyDayPage';
 import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
 import ProjectsWorkflowPage from './design-site-team/ProjectsWorkflowPage';
+import ProjectsListPage from './shared/ProjectsListPage';
 import MyPerformancePage from './drawing-team/MyPerformancePage';
 
 // Status values relevant for Design & Site Engineering workflow
@@ -239,6 +240,8 @@ const DesignAndSiteEngineeringDashboard: React.FC<{ currentPage: string, setCurr
                 return <CommunicationDashboard />;
             case 'escalate-issue':
                 return <EscalateIssuePage setCurrentPage={setCurrentPage} />;
+            case 'projects':
+                return <ProjectsListPage />;
             case 'create-quotation':
                 return (
                     <ProjectsWorkflowPage

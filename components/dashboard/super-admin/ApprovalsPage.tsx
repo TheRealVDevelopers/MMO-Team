@@ -204,42 +204,51 @@ const ApprovalsPage: React.FC = () => {
 
         // Determine the appropriate status based on task title
         const title = taskData.title.toLowerCase();
+        const assigneeId = taskData.userId; // The user this task is assigned to
 
         if (taskData.contextType === 'lead') {
-          // Update Lead status
+          // Update Lead status AND assignedTo
           if (title.includes('site inspection') || title.includes('site visit')) {
-            console.log('[ApprovalsPage] Setting lead status to SITE_VISIT_SCHEDULED');
+            console.log('[ApprovalsPage] Setting lead status to SITE_VISIT_SCHEDULED, assigned to:', assigneeId);
             await updateLead(taskData.contextId, {
-              status: LeadPipelineStatus.SITE_VISIT_SCHEDULED
+              status: LeadPipelineStatus.SITE_VISIT_SCHEDULED,
+              assignedTo: assigneeId // CRITICAL: Update assignedTo so the user can see this lead
             });
           } else if (title.includes('drawing') || title.includes('design')) {
-            console.log('[ApprovalsPage] Setting lead status to WAITING_FOR_DRAWING');
+            console.log('[ApprovalsPage] Setting lead status to WAITING_FOR_DRAWING, assigned to:', assigneeId);
             await updateLead(taskData.contextId, {
-              status: LeadPipelineStatus.WAITING_FOR_DRAWING
+              status: LeadPipelineStatus.WAITING_FOR_DRAWING,
+              assignedTo: assigneeId
             });
           } else if (title.includes('quotation')) {
-            console.log('[ApprovalsPage] Setting lead status to WAITING_FOR_QUOTATION');
+            console.log('[ApprovalsPage] Setting lead status to WAITING_FOR_QUOTATION, assigned to:', assigneeId);
             await updateLead(taskData.contextId, {
-              status: LeadPipelineStatus.WAITING_FOR_QUOTATION
+              status: LeadPipelineStatus.WAITING_FOR_QUOTATION,
+              assignedTo: assigneeId
             });
           }
         } else if (taskData.contextType === 'project') {
-          // Update Project status
+          // Update Project status AND assignedTeam
           if (title.includes('site inspection') || title.includes('site visit')) {
-            console.log('[ApprovalsPage] Setting project status to SITE_VISIT_PENDING');
+            console.log('[ApprovalsPage] Setting project status to SITE_VISIT_PENDING, assigned to:', assigneeId);
             await updateProject(taskData.contextId, {
-              status: ProjectStatus.SITE_VISIT_PENDING
-            });
+              status: ProjectStatus.SITE_VISIT_PENDING,
+              assignedEngineerId: assigneeId,
+              assignedTeam: { site_engineer: assigneeId }
+            } as any);
           } else if (title.includes('drawing') || title.includes('design')) {
-            console.log('[ApprovalsPage] Setting project status to DRAWING_PENDING');
+            console.log('[ApprovalsPage] Setting project status to DRAWING_PENDING, assigned to:', assigneeId);
             await updateProject(taskData.contextId, {
-              status: ProjectStatus.DRAWING_PENDING
-            });
+              status: ProjectStatus.DRAWING_PENDING,
+              drawingTeamMemberId: assigneeId,
+              assignedTeam: { drawing: assigneeId }
+            } as any);
           } else if (title.includes('quotation')) {
-            console.log('[ApprovalsPage] Setting project status to AWAITING_QUOTATION');
+            console.log('[ApprovalsPage] Setting project status to AWAITING_QUOTATION, assigned to:', assigneeId);
             await updateProject(taskData.contextId, {
-              status: ProjectStatus.AWAITING_QUOTATION
-            });
+              status: ProjectStatus.AWAITING_QUOTATION,
+              assignedTeam: { quotation: assigneeId }
+            } as any);
           }
         }
 

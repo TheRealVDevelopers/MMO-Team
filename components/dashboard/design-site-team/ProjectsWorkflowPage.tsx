@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Project, LeadPipelineStatus, Task, TaskStatus, ProjectStatus } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
-import { useMyDayTasks } from '../../../hooks/useMyDayTasks';
+import { useMyDayTasks, addTask, startTask, completeTask } from '../../../hooks/useMyDayTasks';
 import Card from '../../shared/Card';
 import { ContentCard, StatCard, SectionHeader, PrimaryButton, cn, staggerContainer } from '../shared/DashboardUI';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
@@ -18,6 +18,7 @@ import {
 import { formatDateTime, USERS } from '../../../constants';
 import BOQSubmissionModal from '../drawing-team/BOQSubmissionModal';
 import DrawingUploadModal from '../drawing-team/DrawingUploadModal';
+import SiteInspectionCompleteModal, { SiteInspectionData } from './SiteInspectionCompleteModal';
 
 // Animation variant
 const fadeInUp: Variants = {
@@ -275,6 +276,13 @@ const ProjectsWorkflowPage: React.FC<ProjectsWorkflowPageProps> = ({
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [selectedProjectForUpload, setSelectedProjectForUpload] = useState<Project | null>(null);
 
+    // Site Inspection Modal State
+    const [isInspectionModalOpen, setIsInspectionModalOpen] = useState(false);
+    const [selectedProjectForInspection, setSelectedProjectForInspection] = useState<Project | null>(null);
+
+    // New: Active Task State for handling task completions
+    const [activeTask, setActiveTask] = useState<Task | null>(null);
+
     // Filter projects based on showLeads toggle
     const filteredProjects = useMemo(() => {
         if (showLeads) {
@@ -300,51 +308,179 @@ const ProjectsWorkflowPage: React.FC<ProjectsWorkflowPageProps> = ({
         return grouped;
     }, [filteredProjects]);
 
+
+    // ------------------------------------------------------------------
+    // NEW: Task Handling Logic (Automation & Sync)
+    // ------------------------------------------------------------------
+
+    const handleStartTaskLogic = async (task: Task) => {
+        try {
+            console.log('[ProjectsWorkflowPage] Starting task:', task.title);
+
+            // 1. Update Task Status to IN_PROGRESS & Set StartedAt
+            await startTask(task.id);
+
+            // 2. Automation: If Site Visit, create Site Visit Record
+            if (task.title.toLowerCase().includes('site') && (task.title.toLowerCase().includes('visit') || task.title.toLowerCase().includes('inspection'))) {
+                // Determine context (Project or Lead)
+                const contextId = task.contextId || task.caseId;
+                if (contextId) {
+                    const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
+                    const { db } = await import('../../../firebase');
+
+                    const siteVisitsRef = collection(db, 'cases', contextId, 'siteVisits');
+                    await addDoc(siteVisitsRef, {
+                        engineerId: currentUser?.id,
+                        engineerName: currentUser?.name,
+                        startedAt: serverTimestamp(), // Auto-capture time
+                        status: 'IN_PROGRESS',
+                        taskId: task.id
+                    });
+                    console.log('[ProjectsWorkflowPage] Site Visit Record Created (Auto-timed)');
+                }
+            }
+        } catch (error) {
+            console.error('Error starting task:', error);
+            alert('Failed to start task');
+        }
+    };
+
+    const handleCompleteTaskLogic = async (task: Task) => {
+        const title = task.title.toLowerCase();
+
+        // 1. Logic for SITE VISIT
+        if (title.includes('site') && (title.includes('visit') || title.includes('inspection'))) {
+            // BLOCK immediate completion. Open Modal.
+            // Find the project for this task to pass to modal
+            const project = projects.find(p => p.id === task.contextId || p.id === task.caseId);
+            if (project) {
+                setSelectedProjectForInspection(project);
+                setActiveTask(task); // Track the task being completed
+                setIsInspectionModalOpen(true);
+            }
+            return;
+        }
+
+        // 2. Logic for DRAWING / BOQ / QUOTATION (Validation Gates)
+        if (title.includes('drawing') || title.includes('design')) {
+            const project = projects.find(p => p.id === (task.contextId || task.caseId));
+            if (project && !project.drawingSubmittedAt && !project.files?.some(f => f.category === 'drawing')) {
+                alert('⚠️ Cannot Complete Task\n\nPlease upload the Drawing first using the "Submit Drawing" button on the project card.');
+                return;
+            }
+        }
+
+        if (title.includes('boq')) {
+            const project = projects.find(p => p.id === (task.contextId || task.caseId));
+            if (project && (!project.items || project.items.length === 0) && !project.files?.some(f => f.category === 'boq')) {
+                alert('⚠️ Cannot Complete Task\n\nPlease submit the BOQ first using the "Submit BOQ" button on the project card.');
+                return;
+            }
+        }
+
+        // 3. General Completion (Safe fallback)
+        try {
+            await completeTask(task.id);
+            console.log('[ProjectsWorkflowPage] Task Completed:', task.title);
+        } catch (error) {
+            console.error('Error completing task:', error);
+        }
+    };
+
     // Handle project actions
     const handleProjectAction = async (project: Project, action: string) => {
         if (action === 'complete-inspection') {
-            try {
-                console.log('[ProjectsWorkflowPage] Completing inspection for:', project.projectName, 'ID:', project.id);
-
-                // Mark site inspection as complete and update status
-                await onUpdateProject(project.id, {
-                    siteInspectionDate: new Date(),
-                    status: ProjectStatus.DRAWING_PENDING, // Move to drawing stage
-                });
-
-                console.log('[ProjectsWorkflowPage] Update completed successfully');
-
-                // Auto-create "Start Drawing" task with 24-hour deadline
-                const deadline = new Date();
-                deadline.setHours(deadline.getHours() + 24);
-
-                await addTask({
-                    title: `Start Drawing - ${project.projectName}`,
-                    description: `Complete the drawing for ${project.clientName}'s project. This task will become a red flag if not completed within 24 hours.`,
-                    status: TaskStatus.PENDING,
-                    priority: 'High',
-                    date: new Date().toISOString().split('T')[0],
-                    userId: currentUser?.id || '',
-                    assignedTo: currentUser?.id || '',
-                    contextId: project.id,
-                    contextType: 'project',
-                    deadline: deadline.toISOString(),
-                    timeSpent: 0,
-                    isPaused: false,
-                    createdAt: new Date(),
-                });
-
-                console.log('[ProjectsWorkflowPage] Task created successfully');
-            } catch (error) {
-                console.error('[ProjectsWorkflowPage] Error completing inspection:', error);
-                alert('Failed to complete inspection. Please try again.');
-            }
+            setSelectedProjectForInspection(project);
+            setIsInspectionModalOpen(true);
         } else if (action === 'submit-drawing') {
             setSelectedProjectForUpload(project);
             setIsUploadModalOpen(true);
         } else if (action === 'submit-boq') {
             setSelectedProjectForBOQ(project);
             setIsBOQModalOpen(true);
+        }
+    };
+
+    // Handle site inspection completion with form data
+    const handleInspectionComplete = async (data: SiteInspectionData) => {
+        if (!selectedProjectForInspection) return;
+
+        const project = selectedProjectForInspection;
+        console.log('[ProjectsWorkflowPage] Completing inspection for:', project.projectName, 'ID:', project.id);
+
+        try {
+            const { updateDoc, doc, collection, getDocs, query, where, serverTimestamp } = await import('firebase/firestore');
+            const { db } = await import('../../../firebase');
+
+            // 1. Update Project Status/Data
+            await onUpdateProject(project.id, {
+                siteInspectionDate: new Date(),
+                siteInspectionDistance: data.totalDistance,
+                status: ProjectStatus.DRAWING_PENDING,
+            } as any);
+
+            // 2. Update the specific Site Visit Record (Find the one In Progress)
+            const siteVisitsRef = collection(db, 'cases', project.id, 'siteVisits');
+            const q = query(siteVisitsRef, where('status', '==', 'IN_PROGRESS'), where('engineerId', '==', currentUser?.id));
+            const snapshot = await getDocs(q);
+
+            if (!snapshot.empty) {
+                const visitDoc = snapshot.docs[0];
+                await updateDoc(visitDoc.ref, {
+                    endedAt: serverTimestamp(), // Auto-capture end time
+                    distanceKm: data.totalDistance,
+                    status: 'COMPLETED'
+                });
+                console.log('[ProjectsWorkflowPage] Site Visit Record Finalized');
+            } else {
+                // Fallback: Create one if it didn't exist (e.g., started before automation)
+                const { addDoc } = await import('firebase/firestore');
+                await addDoc(siteVisitsRef, {
+                    engineerId: currentUser?.id,
+                    engineerName: currentUser?.name,
+                    startedAt: new Date(), // Fallback
+                    endedAt: serverTimestamp(),
+                    distanceKm: data.totalDistance,
+                    status: 'COMPLETED',
+                    note: 'Manual completion (legacy)'
+                });
+            }
+
+            // 3. Complete the Task
+            if (activeTask) {
+                await completeTask(activeTask.id);
+            }
+
+            console.log('[ProjectsWorkflowPage] Update completed successfully');
+
+            // Auto-create "Start Drawing" task with 24-hour deadline
+            const deadline = new Date();
+            deadline.setHours(deadline.getHours() + 24);
+
+            await addTask({
+                title: `Start Drawing - ${project.projectName}`,
+                description: `Complete the drawing for ${project.clientName}'s project. This task will become a red flag if not completed within 24 hours.`,
+                status: TaskStatus.PENDING,
+                priority: 'High',
+                date: new Date().toISOString().split('T')[0],
+                userId: currentUser?.id || '',
+                assignedTo: currentUser?.id || '',
+                contextId: project.id,
+                contextType: 'project',
+                deadline: deadline.toISOString(),
+                timeSpent: 0,
+                isPaused: false,
+                createdAt: new Date(),
+            });
+
+            console.log('[ProjectsWorkflowPage] Next Phase Task created successfully');
+            setSelectedProjectForInspection(null);
+            setActiveTask(null);
+            setIsInspectionModalOpen(false); // Close modal
+
+        } catch (error) {
+            console.error('Error in inspection completion flow:', error);
+            alert('Failed to complete inspection process');
         }
     };
 
@@ -520,6 +656,16 @@ const ProjectsWorkflowPage: React.FC<ProjectsWorkflowPageProps> = ({
                 isOpen={isUploadModalOpen}
                 onClose={() => setIsUploadModalOpen(false)}
                 onUpload={handleDrawingUpload}
+            />
+
+            <SiteInspectionCompleteModal
+                isOpen={isInspectionModalOpen}
+                onClose={() => {
+                    setIsInspectionModalOpen(false);
+                    setSelectedProjectForInspection(null);
+                }}
+                onComplete={handleInspectionComplete}
+                projectName={selectedProjectForInspection?.projectName}
             />
         </motion.div>
     );

@@ -8,6 +8,7 @@ import { PlusIcon, BellIcon, MapPinIcon, PaintBrushIcon, CalculatorIcon, TruckIc
 import RaiseRequestModal from '../dashboard/sales-team/RaiseRequestModal';
 import DirectAssignTaskModal from '../dashboard/super-admin/DirectAssignTaskModal';
 import { addTask } from '../../hooks/useMyDayTasks';
+import { updateLead } from '../../hooks/useLeads';
 import { formatLargeNumberINR, formatDateTime } from '../../constants';
 import SmartDateTimePicker from './SmartDateTimePicker';
 import { uploadMultipleLeadAttachments, formatFileSize } from '../../services/leadAttachmentService';
@@ -456,6 +457,7 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
                 isOpen={isAddTaskModalOpen}
                 onClose={() => setIsAddTaskModalOpen(false)}
                 onAssign={async (task) => {
+                    // 1. Create the task
                     await addTask({
                         ...task,
                         status: TaskStatus.ASSIGNED, // Explicitly set Assigned for mission control
@@ -469,7 +471,44 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
                         contextId: task.contextId || caseItem.id,
                         contextType: task.contextType || (caseItem.isProject ? 'project' : 'lead')
                     } as any, currentUser?.id || '');
-                    alert('✅ Mission Deployed Successfully');
+
+                    // 2. CRITICAL: Update the lead/project status based on task type
+                    // This ensures the item appears in the correct workflow column
+                    const title = (task.title || '').toLowerCase();
+                    const assigneeId = task.userId;
+                    const contextType = task.contextType || (caseItem.isProject ? 'project' : 'lead');
+                    const contextId = task.contextId || caseItem.id;
+
+                    console.log('[LeadDetailModal] Task assigned:', title, 'to:', assigneeId, 'context:', contextType, contextId);
+
+                    if (contextType === 'lead') {
+                        // Determine status based on task title
+                        let newStatus: LeadPipelineStatus;
+                        if (title.includes('drawing') || title.includes('design')) {
+                            newStatus = LeadPipelineStatus.WAITING_FOR_DRAWING;
+                        } else if (title.includes('quotation')) {
+                            newStatus = LeadPipelineStatus.WAITING_FOR_QUOTATION;
+                        } else {
+                            // Default: Site Visit for any other task type
+                            newStatus = LeadPipelineStatus.SITE_VISIT_SCHEDULED;
+                        }
+
+                        console.log('[LeadDetailModal] Updating lead status to:', newStatus, 'assignedTo:', assigneeId);
+                        await updateLead(contextId, {
+                            status: newStatus,
+                            assignedTo: assigneeId
+                        });
+
+                        // Also update local state so UI reflects the change
+                        onUpdate({
+                            ...caseItem,
+                            status: newStatus,
+                            assignedTo: assigneeId
+                        });
+                    }
+                    // Note: For projects, the ApprovalsPage handles status updates
+
+                    alert('✅ Mission Deployed Successfully - Status updated!');
                     setIsAddTaskModalOpen(false);
                 }}
                 initialContextId={caseItem.id}

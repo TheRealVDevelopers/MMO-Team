@@ -29,12 +29,39 @@ const ProjectsListPage: React.FC = () => {
 
     // Filter: Show projects and optionally leads
     // Note: If isProject is undefined, treat as project for backward compatibility
+    // Filter: Show projects and optionally leads
+    // Note: If isProject is undefined, treat as project for backward compatibility
     const allItems = cases.filter(c => {
-        // Explicitly marked as project, OR isProject is undefined (legacy projects)
-        if (c.isProject === true || c.isProject === undefined) return true;
-        // Explicitly marked as lead - show only if toggle is on
-        if (showLeads && c.isProject === false) return true;
-        return false;
+        // 1. Basic type filter (Project vs Lead)
+        let matchesType = false;
+        if (c.isProject === true || c.isProject === undefined) matchesType = true;
+        else if (showLeads && c.isProject === false) matchesType = true;
+
+        if (!matchesType) return false;
+
+        // 2. Role-based Restriction Filter
+        // If user is Manager/Admin, show everything.
+        const isManager = [UserRole.SUPER_ADMIN, UserRole.SALES_GENERAL_MANAGER, 'Manager', 'Admin'].includes(currentUser.role);
+        if (isManager) return true;
+
+        // For restricted roles (Drawing/Site), only show assigned items
+        const isRestrictedRole = [UserRole.DRAWING_TEAM, UserRole.SITE_ENGINEER, UserRole.DESIGNER].includes(currentUser.role);
+
+        if (isRestrictedRole) {
+            const project = c as any;
+            const isAssignedEngineer = project.assignedEngineerId === currentUser.id;
+            const isDrawingTeamMember = project.drawingTeamMemberId === currentUser.id;
+            const isInExecutionTeam = project.assignedTeam?.execution?.includes(currentUser.id);
+            const isSiteEngineer = project.assignedTeam?.site_engineer === currentUser.id;
+            const isDrawingAssigned = project.assignedTeam?.drawing === currentUser.id;
+            const isGenericAssigned = project.assignedTo === currentUser.id;
+
+            return isAssignedEngineer || isDrawingTeamMember || isInExecutionTeam || isSiteEngineer || isDrawingAssigned || isGenericAssigned;
+        }
+
+        // Default allow for other roles (Sales, etc. usually see their own leads, but this page is 'Reference' so maybe restricted too? 
+        // For now, only enforcing restriction for the requested teams as per instruction)
+        return true;
     });
 
     // Filter by search

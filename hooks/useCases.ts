@@ -910,3 +910,42 @@ export const useCaseTasks = (caseId: string) => {
 
     return { tasks, loading };
 };
+
+// SITE VISITS
+export const useCaseSiteVisits = (caseId: string) => {
+    const [siteVisits, setSiteVisits] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!caseId) {
+            setLoading(false);
+            return;
+        }
+
+        const siteVisitsRef = collection(db, FIRESTORE_COLLECTIONS.CASES, caseId, 'siteVisits');
+        const q = query(siteVisitsRef, orderBy('startedAt', 'desc'));
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const visitsData: any[] = [];
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                visitsData.push({
+                    ...data,
+                    id: doc.id,
+                    startedAt: safeToDate(data.startedAt),
+                    endedAt: safeToDate(data.endedAt),
+                    date: safeToDate(data.date),
+                });
+            });
+            setSiteVisits(visitsData);
+            setLoading(false);
+        }, (err) => {
+            console.error("Error fetching case site visits:", err);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [caseId]);
+
+    return { siteVisits, loading };
+};

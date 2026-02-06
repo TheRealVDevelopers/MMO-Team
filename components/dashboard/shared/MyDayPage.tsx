@@ -22,7 +22,7 @@ import AddTaskModal from './AddTaskModal';
 import { ContentCard, PrimaryButton, SecondaryButton, cn, staggerContainer } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTimeEntries, addActivity } from '../../../hooks/useTimeTracking';
-import { useMyDayTasks, addTask, updateTask } from '../../../hooks/useMyDayTasks';
+import { useMyDayTasks, addTask, updateTask, startTask, completeTask } from '../../../hooks/useMyDayTasks';
 import { useExecutionTasks } from '../../../hooks/useExecutionTasks'; // Import Execution Tasks Hook
 import { useLeads } from '../../../hooks/useLeads';
 import { useFinance } from '../../../hooks/useFinance';
@@ -395,7 +395,101 @@ const MyDayPage: React.FC = () => {
         return date.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
     }, [selectedDate]);
 
-    if (!currentUser) return null;
+
+    // New: Handle Start Task with Automation
+    const handleStartTask = async (task: Task) => {
+        try {
+            console.log('[MyDayPage] Starting task:', task.title);
+
+            // 1. Update Task Status
+            await startTask(task.id);
+
+            // 2. Automation: Site Visit Record Creation
+            const title = task.title.toLowerCase();
+            if (title.includes('site') && (title.includes('visit') || title.includes('inspection'))) {
+                // Check context
+                const contextId = task.contextId || task.caseId;
+                if (contextId) {
+                    const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
+                    const { db } = await import('../../../firebase');
+
+                    const siteVisitsRef = collection(db, 'cases', contextId, 'siteVisits');
+                    await addDoc(siteVisitsRef, {
+                        engineerId: currentUser?.id,
+                        engineerName: currentUser?.name,
+                        startedAt: serverTimestamp(),
+                        status: 'IN_PROGRESS',
+                        taskId: task.id
+                    });
+                    console.log('[MyDayPage] Site Visit Record Created');
+                }
+            }
+        } catch (error) {
+            console.error('Error starting task:', error);
+            alert('Failed to start task');
+        }
+    };
+
+    // New: Handle Complete Task with Validation & Redirects
+    const handleCompleteTask = async (task: Task) => {
+        const title = task.title.toLowerCase();
+
+        // 1. Site Visit Logic -> Redirect to Project Workflow for "Distance" input
+        if (title.includes('site') && (title.includes('visit') || title.includes('inspection'))) {
+            const projectId = task.contextId || task.caseId;
+            if (projectId) {
+                // Navigate to workflow page to open the modal
+                // We use a query param to trigger the modal
+                // Assuming route is /workflow (Sales Manager/Site Engineer have this)
+                // We need to verify if the user has access to /workflow. Role based nav says yes for most.
+                window.location.href = `/workflow?action=complete-inspection&projectId=${projectId}&taskId=${task.id}`;
+                return;
+            }
+        }
+
+        // 2. Drawing/BOQ Logic -> Validation
+        if (title.includes('drawing') || title.includes('design') || title.includes('boq') || title.includes('quotation')) {
+            // We need to check if the document exists. 
+            // Since we don't have project data handy here for every task, we fetch it.
+            if (task.contextType === 'project' && task.contextId) {
+                try {
+                    const { doc, getDoc } = await import('firebase/firestore');
+                    const { db } = await import('../../../firebase');
+                    const projectRef = doc(db, 'cases', task.contextId);
+                    const projectSnap = await getDoc(projectRef);
+
+                    if (projectSnap.exists()) {
+                        const projectData = projectSnap.data();
+                        // Check Drawing
+                        if (title.includes('drawing') && !projectData.drawingSubmittedAt && !projectData.files?.some((f: any) => f.category === 'drawing')) {
+                            alert('⚠️ Cannot Complete Task\n\nPlease upload the Drawing first using the Project Board.');
+                            return;
+                        }
+                        // Check BOQ - Relaxed check for now as Items might be enough
+                        if (title.includes('boq') && (!projectData.items || projectData.items.length === 0) && !projectData.files?.some((f: any) => f.category === 'boq')) {
+                            alert('⚠️ Cannot Complete Task\n\nPlease submit the BOQ first using the Project Board.');
+                            return;
+                        }
+                        // Check Quotation
+                        if (title.includes('quotation') && !projectData.quotationSubmittedAt && !projectData.files?.some((f: any) => f.category === 'quotation')) {
+                            alert('⚠️ Cannot Complete Task\n\nPlease generate/upload the Quotation first.');
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Validation check failed", e);
+                    // Fail open or closed? Closed for safety, but warn.
+                }
+            }
+        }
+
+        // 3. completion
+        try {
+            await completeTask(task.id);
+        } catch (error) {
+            console.error('Error completing task:', error);
+        }
+    };
 
     return (
         <motion.div
@@ -485,7 +579,13 @@ const MyDayPage: React.FC = () => {
                             <AnimatePresence mode="popLayout">
                                 {daysTasks.length > 0 ? (
                                     daysTasks.map(task => (
-                                        <TaskCard key={task.id} task={task} onUpdateStatus={handleUpdateStatus} />
+                                        <TaskCard
+                                            key={task.id}
+                                            task={task}
+                                            onUpdateStatus={handleUpdateStatus}
+                                            onStartTask={handleStartTask}
+                                            onCompleteTask={handleCompleteTask}
+                                        />
                                     ))
                                 ) : (
                                     <motion.div

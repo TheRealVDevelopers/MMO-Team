@@ -340,6 +340,7 @@ export interface LeadFile {
   uploadedBy: string;
   uploadedByName: string;
   uploadedAt: Date;
+  category?: string; // e.g., 'drawing', 'boq', 'quotation'
 }
 
 export interface ProjectMilestone {
@@ -614,6 +615,7 @@ export interface Project {
   approvedByName?: string; // Admin name
   rejectedBy?: string; // Admin User ID who rejected
   rejectedByName?: string; // Admin name
+  files?: LeadFile[];
 }
 
 // NEW: Organization interface

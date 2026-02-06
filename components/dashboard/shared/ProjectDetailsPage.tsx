@@ -6,7 +6,7 @@ import { useCaseQuotations } from '../../../hooks/useCases';
 import { useCaseBOQs } from '../../../hooks/useCases';
 import { useCaseDrawings } from '../../../hooks/useCases';
 import { approveQuotation, rejectQuotation } from '../../../hooks/useCases';
-import { createCaseTask, useCaseTasks } from '../../../hooks/useCases';
+import { createCaseTask, useCaseTasks, useCaseSiteVisits } from '../../../hooks/useCases';
 import { Case, UserRole, CaseQuotation, CaseBOQ, CaseDrawing } from '../../../types';
 import { formatCurrencyINR } from '../../../constants';
 import Card from '../../shared/Card';
@@ -29,7 +29,7 @@ import QuotationPDFTemplate from '../quotation-team/QuotationPDFTemplate';
  * - Clients: Only Approved Drawings + Timeline
  */
 
-type TabType = 'overview' | 'drawings' | 'boq' | 'quotations' | 'tasks' | 'timeline' | 'materials' | 'documents' | 'payment';
+type TabType = 'overview' | 'drawings' | 'boq' | 'quotations' | 'tasks' | 'timeline' | 'materials' | 'documents' | 'payment' | 'site-visits';
 
 interface ProjectDetailsPageProps {
     initialTab?: TabType; // Allow external tab control (from notifications)
@@ -232,6 +232,7 @@ const ProjectDetailsPage: React.FC<ProjectDetailsPageProps> = ({ initialTab = 'o
                 )}
                 {activeTab === 'documents' && <DocumentsTab projectCase={projectCase} />}
                 {activeTab === 'tasks' && <TasksTab caseId={caseId!} />}
+                {activeTab === 'site-visits' && <SiteVisitsTab caseId={caseId!} />}
                 {activeTab === 'timeline' && <TimelineTab projectCase={projectCase} />}
                 {activeTab === 'materials' && <MaterialsTab caseId={caseId!} />}
                 {activeTab === 'payment' && <PaymentTab projectCase={projectCase} caseId={caseId!} />}
@@ -628,12 +629,15 @@ const TasksTab: React.FC<{ caseId: string }> = ({ caseId }) => {
 
     const getStatusBadge = (status: string) => {
         const statusMap: Record<string, { color: string; label: string }> = {
-            'pending': { color: 'bg-warning/10 text-warning', label: 'Pending' },
-            'in_progress': { color: 'bg-primary/10 text-primary', label: 'In Progress' },
-            'completed': { color: 'bg-success/10 text-success', label: 'Completed' },
+            'ASSIGNED': { color: 'bg-warning/10 text-warning', label: 'Assigned' },
+            'ONGOING': { color: 'bg-primary/10 text-primary', label: 'On Going' },
+            'COMPLETED': { color: 'bg-success/10 text-success', label: 'Completed' },
+            'ACKNOWLEDGED': { color: 'bg-success/20 text-success', label: 'Acknowledged' },
             'blocked': { color: 'bg-error/10 text-error', label: 'Blocked' },
         };
-        const config = statusMap[status] || statusMap['pending'];
+        // Handle lowercase versions as well for compatibility
+        const normalized = status.toUpperCase();
+        const config = statusMap[normalized] || { color: 'bg-gray-100 text-gray-800', label: status };
         return <span className={`px-2 py-1 rounded text-xs font-medium ${config.color}`}>{config.label}</span>;
     };
 
@@ -641,10 +645,10 @@ const TasksTab: React.FC<{ caseId: string }> = ({ caseId }) => {
         <Card>
             <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-bold text-text-primary">Tasks</h2>
+                    <h2 className="text-xl font-bold text-text-primary">Tasks History</h2>
                     {currentUser && (
                         <PrimaryButton onClick={() => setShowCreateModal(true)}>
-                            + Create Task
+                            + Assign Task
                         </PrimaryButton>
                     )}
                 </div>
@@ -668,16 +672,28 @@ const TasksTab: React.FC<{ caseId: string }> = ({ caseId }) => {
                                         {task.description && (
                                             <p className="text-sm text-text-secondary mb-2">{task.description}</p>
                                         )}
-                                        <div className="flex items-center gap-4 text-xs text-text-tertiary">
-                                            <span>Assigned to: {task.assignedToName || 'Unknown'}</span>
-                                            {task.dueAt && (
-                                                <span>Due: {new Date(task.dueAt).toLocaleDateString()}</span>
-                                            )}
-                                            <span>Created: {new Date(task.createdAt).toLocaleDateString()}</span>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3">
+                                            <div className="flex items-center gap-4 text-xs text-text-tertiary">
+                                                <span>Assigned to: <span className="text-text-secondary font-medium">{task.assignedToName || 'Unknown'}</span></span>
+                                                {task.dueAt && (
+                                                    <span>Due: <span className="text-text-secondary font-medium">{new Date(task.dueAt).toLocaleDateString()}</span></span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-3 text-xs text-text-tertiary">
+                                                {task.startedAt && (
+                                                    <span>Started: <span className="text-text-secondary">{new Date(task.startedAt).toLocaleString()}</span></span>
+                                                )}
+                                                {task.completedAt && (
+                                                    <span>Completed: <span className="text-success font-bold">{new Date(task.completedAt).toLocaleString()}</span></span>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="ml-4">
+                                    <div className="ml-4 flex flex-col items-end gap-2">
                                         {getStatusBadge(task.status)}
+                                        {task.status === 'COMPLETED' && (
+                                            <span className="text-[10px] text-success italic">Awaiting Acknowledgement</span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -697,6 +713,79 @@ const TasksTab: React.FC<{ caseId: string }> = ({ caseId }) => {
                                 Close
                             </SecondaryButton>
                         </div>
+                    </div>
+                )}
+            </div>
+        </Card>
+    );
+};
+
+const SiteVisitsTab: React.FC<{ caseId: string }> = ({ caseId }) => {
+    const { siteVisits, loading } = useCaseSiteVisits(caseId);
+    const { currentUser } = useAuth();
+
+    if (loading) return <Card><div className="p-6">Loading site visits...</div></Card>;
+
+    // Restrict visibility if not authorized
+    const isAuthorized = currentUser?.role === UserRole.SUPER_ADMIN ||
+        currentUser?.role === UserRole.SALES_GENERAL_MANAGER ||
+        currentUser?.role === UserRole.EXECUTION_TEAM;
+
+    if (!isAuthorized) {
+        return (
+            <Card>
+                <div className="p-6 text-center">
+                    <p className="text-text-secondary">Site visit details are only visible to Admins and Project Heads.</p>
+                </div>
+            </Card>
+        );
+    }
+
+    return (
+        <Card>
+            <div className="p-6">
+                <h2 className="text-xl font-bold text-text-primary mb-4">Site Visit Records</h2>
+                {siteVisits.length === 0 ? (
+                    <p className="text-text-secondary">No site visit records found for this project.</p>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead className="border-b border-border">
+                                <tr>
+                                    <th className="py-3 px-4 text-xs font-semibold text-text-tertiary uppercase">Specialist</th>
+                                    <th className="py-3 px-4 text-xs font-semibold text-text-tertiary uppercase">Start Time</th>
+                                    <th className="py-3 px-4 text-xs font-semibold text-text-tertiary uppercase">End Time</th>
+                                    <th className="py-3 px-4 text-xs font-semibold text-text-tertiary uppercase">Travel Distance</th>
+                                    <th className="py-3 px-4 text-xs font-semibold text-text-tertiary uppercase">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                                {siteVisits.map(visit => (
+                                    <tr key={visit.id} className="hover:bg-subtle-background transition-colors">
+                                        <td className="py-4 px-4">
+                                            <p className="text-sm font-medium text-text-primary">{visit.engineerName || 'Site Engineer'}</p>
+                                        </td>
+                                        <td className="py-4 px-4 text-sm text-text-secondary">
+                                            {visit.startedAt ? new Date(visit.startedAt).toLocaleString() : '-'}
+                                        </td>
+                                        <td className="py-4 px-4 text-sm text-text-secondary">
+                                            {visit.endedAt ? new Date(visit.endedAt).toLocaleString() : '-'}
+                                        </td>
+                                        <td className="py-4 px-4">
+                                            <span className="text-sm font-bold text-primary">
+                                                {visit.distanceKm ? `${visit.distanceKm} km` : '-'}
+                                            </span>
+                                        </td>
+                                        <td className="py-4 px-4">
+                                            <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${visit.status === 'COMPLETED' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning animate-pulse'
+                                                }`}>
+                                                {visit.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 )}
             </div>
