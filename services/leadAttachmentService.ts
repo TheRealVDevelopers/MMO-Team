@@ -1,3 +1,5 @@
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '../firebase';
 import { LeadHistoryAttachment } from '../types';
 
 /**
@@ -28,28 +30,51 @@ export const uploadLeadActivityAttachment = async (
     file: File,
     leadId: string
 ): Promise<LeadHistoryAttachment> => {
-    const fileToBase64 = (file: File): Promise<string> => {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = error => reject(error);
-        });
-    };
+    // If storage is not initialized (e.g. demo mode), fall back to checking if we can mock or error
+    if (!storage) {
+        console.warn("Storage not initialized, using base64 fallback (not recommended for large files)");
+        const fileToBase64 = (file: File): Promise<string> => {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = error => reject(error);
+            });
+        };
+        const downloadUrl = await fileToBase64(file);
+        const timestamp = Date.now();
+        return {
+            id: `att-${timestamp}-${Math.random().toString(36).substr(2, 9)}`,
+            fileName: file.name,
+            fileUrl: downloadUrl,
+            fileType: getFileTypeCategory(file.type),
+            fileSize: file.size,
+            uploadedAt: new Date(),
+        };
+    }
 
-    const timestamp = Date.now();
-    const downloadUrl = await fileToBase64(file);
+    try {
+        const timestamp = Date.now();
+        const storagePath = `leads/${leadId}/attachments/${timestamp}_${file.name}`;
+        const storageRef = ref(storage, storagePath);
 
-    const attachment: LeadHistoryAttachment = {
-        id: `att-${timestamp}-${Math.random().toString(36).substr(2, 9)}`,
-        fileName: file.name,
-        fileUrl: downloadUrl,
-        fileType: getFileTypeCategory(file.type),
-        fileSize: file.size,
-        uploadedAt: new Date(),
-    };
+        const snapshot = await uploadBytes(storageRef, file);
+        const downloadUrl = await getDownloadURL(snapshot.ref);
 
-    return attachment;
+        const attachment: LeadHistoryAttachment = {
+            id: `att-${timestamp}-${Math.random().toString(36).substr(2, 9)}`,
+            fileName: file.name,
+            fileUrl: downloadUrl,
+            fileType: getFileTypeCategory(file.type),
+            fileSize: file.size,
+            uploadedAt: new Date(),
+        };
+
+        return attachment;
+    } catch (error) {
+        console.error("Error uploading file to storage:", error);
+        throw error;
+    }
 };
 
 /**

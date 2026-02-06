@@ -474,6 +474,45 @@ export const approveRequest = async (
         entity_id: requestId,
         type: 'info'
       });
+
+      // ---------------------------------------------------------
+      // CRITICAL FIX: Create Execution Task for Site Engineer Board
+      // ---------------------------------------------------------
+      // The SiteEngineerProjectBoard filters tasks from 'executionTasks' collection 
+      // where missionType === 'SITE_INSPECTION' or 'DRAWING'.
+
+      const isSiteVisit = data.requestType === ApprovalRequestType.SITE_VISIT || data.requestType === ApprovalRequestType.SITE_VISIT_TOKEN;
+      const isDrawing = data.requestType === ApprovalRequestType.START_DRAWING;
+
+      if (isSiteVisit || isDrawing) {
+        try {
+          const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
+          const taskData = {
+            projectId: data.contextId || 'unknown',
+            projectName: data.clientName || 'Site Task',
+            title: data.title,
+            description: data.description,
+            assignedTo: assigneeId,
+            assigneeName: assigneeName,
+            status: 'Ongoing',
+            priority: data.priority,
+            missionType: isSiteVisit ? 'SITE_INSPECTION' : 'DRAWING',
+            instructions: `${isSiteVisit ? 'Site Visit' : 'Drawing'} Instructions: ${data.description}`,
+            deadline: deadline || data.endDate || new Date(Date.now() + 86400000),
+            createdAt: serverTimestamp(),
+            createdBy: reviewerId,
+            relatedRequestId: requestId
+          };
+
+          await addDoc(collection(db, 'executionTasks'), taskData);
+          console.log(`✅ Auto-created ExecutionTask for ${isSiteVisit ? 'Site Inspection' : 'Drawing'}`);
+
+        } catch (taskError) {
+          console.error('Failed to auto-create execution task:', taskError);
+        }
+      }
+      // ---------------------------------------------------------
+
     }
 
     // 3. Update Context (Lead/Project)

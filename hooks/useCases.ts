@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { db } from '../firebase';
 import {
     collection,
@@ -192,19 +192,89 @@ export const useCases = (filters?: UseCasesFilters) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
+    // ✅ FIX: Use refs instead of window caches to avoid race conditions
+    const casesDataRef = useRef<Case[]>([]);
+    const leadsDataRef = useRef<Case[]>([]);
+    const projectsDataRef = useRef<Case[]>([]);
+    const isInitializedRef = useRef({ cases: false, leads: false, projects: false });
+
     useEffect(() => {
         setLoading(true);
         setError(null);
 
+        // Reset refs on filter change
+        casesDataRef.current = [];
+        leadsDataRef.current = [];
+        projectsDataRef.current = [];
+        isInitializedRef.current = { cases: false, leads: false, projects: false };
+
         const unsubscribers: Array<() => void> = [];
+
+        // ✅ Atomic merge function - only runs when we have initial data from all active sources
+        const mergeCases = () => {
+            // Determine which sources should be tracked
+            const expectingLeads = filters?.isProject !== true;
+            const expectingProjects = filters?.isProject !== false;
+
+            // Wait until all expected sources have loaded at least once
+            const casesReady = isInitializedRef.current.cases;
+            const leadsReady = !expectingLeads || isInitializedRef.current.leads;
+            const projectsReady = !expectingProjects || isInitializedRef.current.projects;
+
+            if (!casesReady || !leadsReady || !projectsReady) {
+                // Still waiting for initial data - don't update state yet
+                return;
+            }
+
+            let merged = [
+                ...casesDataRef.current,
+                ...leadsDataRef.current,
+                ...projectsDataRef.current
+            ];
+
+            // Remove duplicates (prefer cases collection over legacy)
+            const seenIds = new Set<string>();
+            merged = merged.filter(c => {
+                if (seenIds.has(c.id)) return false;
+                seenIds.add(c.id);
+                return true;
+            });
+
+            // Apply sorting (descending by createdAt/inquiryDate)
+            merged.sort((a, b) => {
+                const dateA = a.createdAt?.getTime() || a.inquiryDate?.getTime() || 0;
+                const dateB = b.createdAt?.getTime() || b.inquiryDate?.getTime() || 0;
+                return dateB - dateA;
+            });
+
+            // Apply organization filter (if specified)
+            if (filters?.organizationId) {
+                merged = merged.filter(c => c.organizationId === filters.organizationId);
+            }
+
+            // ✅ Server-side filtering is now primary - this is backup only
+            // Note: Server-side WHERE clause applied below for leads/projects
+
+            setCases(merged);
+            setLoading(false);
+        };
 
         try {
             // 1. Listen to cases collection
             const casesCollection = collection(db, FIRESTORE_COLLECTIONS.CASES);
             let casesQuery = query(casesCollection);
 
+            // ✅ Add server-side filtering for cases
             if (filters?.isProject !== undefined) {
-                casesQuery = query(casesCollection, where('isProject', '==', filters.isProject));
+                if (filters?.userId && filters.isProject === false) {
+                    // For leads in cases collection, filter by assignedTo
+                    casesQuery = query(casesCollection,
+                        where('isProject', '==', filters.isProject),
+                        where('assignedTo', '==', filters.userId)
+                    );
+                } else {
+                    casesQuery = query(casesCollection, where('isProject', '==', filters.isProject));
+                }
             }
 
             const casesUnsub = onSnapshot(casesQuery, (snapshot) => {
@@ -213,19 +283,27 @@ export const useCases = (filters?: UseCasesFilters) => {
                     casesData.push(caseFromFirestore(doc.data(), doc.id));
                 });
 
-                // Store cases data locally for merging
-                (window as any).__casesData = casesData;
+                casesDataRef.current = casesData;
+                isInitializedRef.current.cases = true;
                 mergeCases();
             }, (err) => {
                 console.error("Error fetching cases:", err);
                 setError(err);
+                isInitializedRef.current.cases = true; // Mark as initialized even on error
+                mergeCases();
             });
             unsubscribers.push(casesUnsub);
 
             // 2. Listen to legacy leads collection (if not filtering for projects only)
             if (filters?.isProject !== true) {
                 const leadsCollection = collection(db, FIRESTORE_COLLECTIONS.LEADS);
-                const leadsQuery = query(leadsCollection); // Removed orderBy
+
+                // ✅ FIX: Add server-side WHERE clause for userId filtering
+                const leadsQuery = filters?.userId
+                    ? query(leadsCollection, where('assignedTo', '==', filters.userId))
+                    : query(leadsCollection);
+
+                console.log('[useCases] Leads query with userId filter:', filters?.userId || 'ALL');
 
                 const leadsUnsub = onSnapshot(leadsQuery, (snapshot) => {
                     const leadsData: Lead[] = [];
@@ -242,12 +320,19 @@ export const useCases = (filters?: UseCasesFilters) => {
                         } as Lead);
                     });
 
-                    (window as any).__leadsData = leadsData;
+                    console.log('[useCases] Leads fetched:', leadsData.length, 'for user:', filters?.userId);
+                    leadsDataRef.current = leadsData.map(leadToCase);
+                    isInitializedRef.current.leads = true;
                     mergeCases();
                 }, (err) => {
                     console.error("Error fetching legacy leads:", err);
+                    isInitializedRef.current.leads = true;
+                    mergeCases();
                 });
                 unsubscribers.push(leadsUnsub);
+            } else {
+                // Not expecting leads, mark as ready
+                isInitializedRef.current.leads = true;
             }
 
             // 3. Listen to legacy projects collection (if not filtering for leads only)
@@ -255,7 +340,7 @@ export const useCases = (filters?: UseCasesFilters) => {
                 const projectsCollection = collection(db, FIRESTORE_COLLECTIONS.PROJECTS);
                 const projectsQuery = filters?.userId
                     ? query(projectsCollection, where('assignedTeam.drawing', '==', filters.userId))
-                    : query(projectsCollection); // Removed orderBy (projectsQuery didn't have one anyway, but being safe)
+                    : query(projectsCollection);
 
                 const projectsUnsub = onSnapshot(projectsQuery, (snapshot) => {
                     const projectsData: Project[] = [];
@@ -277,59 +362,19 @@ export const useCases = (filters?: UseCasesFilters) => {
                         } as Project);
                     });
 
-                    (window as any).__projectsData = projectsData;
+                    projectsDataRef.current = projectsData.map(projectToCase);
+                    isInitializedRef.current.projects = true;
                     mergeCases();
                 }, (err) => {
                     console.error("Error fetching legacy projects:", err);
+                    isInitializedRef.current.projects = true;
+                    mergeCases();
                 });
                 unsubscribers.push(projectsUnsub);
+            } else {
+                // Not expecting projects, mark as ready
+                isInitializedRef.current.projects = true;
             }
-
-            // Merge function
-            const mergeCases = () => {
-                const casesData = (window as any).__casesData || [];
-                const leadsData = ((window as any).__leadsData || []).map(leadToCase);
-                const projectsData = ((window as any).__projectsData || []).map(projectToCase);
-
-                let merged = [...casesData, ...leadsData, ...projectsData];
-
-                // Remove duplicates (prefer cases collection over legacy)
-                const seenIds = new Set<string>();
-                merged = merged.filter(c => {
-                    if (seenIds.has(c.id)) return false;
-                    seenIds.add(c.id);
-                    return true;
-                });
-
-                // Apply sorting (descending by createdAt/inquiryDate)
-                merged.sort((a, b) => {
-                    const dateA = a.createdAt?.getTime() || a.inquiryDate?.getTime() || 0;
-                    const dateB = b.createdAt?.getTime() || b.inquiryDate?.getTime() || 0;
-                    return dateB - dateA;
-                });
-
-                // Apply filters
-                if (filters?.organizationId) {
-                    merged = merged.filter(c => c.organizationId === filters.organizationId);
-                }
-
-                // Strict User Filter (Safety Net)
-                if (filters?.userId) {
-                    // For leads (isProject=false), strict assignedTo check
-                    // For projects (isProject=true), check if user is in assignedTeam or is assignee
-                    merged = merged.filter(c => {
-                        if (!c.isProject) {
-                            return c.assignedTo === filters.userId;
-                        }
-                        // For projects, we might want to be more lenient or specific based on requirements
-                        // But for "Registry" (Leads), strictness is key.
-                        return true;
-                    });
-                }
-
-                setCases(merged);
-                setLoading(false);
-            };
 
         } catch (err) {
             console.error("Error setting up cases listeners:", err);

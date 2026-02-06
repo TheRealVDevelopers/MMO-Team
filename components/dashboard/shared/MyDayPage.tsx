@@ -145,7 +145,7 @@ interface UnifiedTask extends Task {
 const MyDayPage: React.FC = () => {
     const { currentUser } = useAuth();
     const { tasks: myDayTasks, loading: tasksLoading } = useMyDayTasks(currentUser?.id);
-    const { tasks: executionTasks, updateTaskStatus: updateExecutionStatus } = useExecutionTasks(); // Fetch execution tasks
+    const { tasks: executionTasks, updateTaskStatus: updateExecutionStatus } = useExecutionTasks(undefined, currentUser?.id); // ✅ FIX: Server-side filtering by userId
     const { assignedRequests, loading: requestsLoading } = useAssignedApprovalRequests(currentUser?.id || '');
     const { leads, loading: leadsLoading } = useLeads();
 
@@ -191,10 +191,8 @@ const MyDayPage: React.FC = () => {
             originalId: t.id
         }));
 
-        // Filter execution tasks for current user
-        const myExecutionTasks = executionTasks.filter(t => t.assignedTo === currentUser?.id);
-
-        const unifiedExecutionTasks: UnifiedTask[] = myExecutionTasks.map(t => ({
+        // ✅ Server-side filtering already done in useExecutionTasks hook - no client-side filter needed
+        const unifiedExecutionTasks: UnifiedTask[] = executionTasks.map(t => ({
             id: `exec-${t.id}`, // Avoid ID collisions
             originalId: t.id,
             title: `[${t.missionType}] ${t.projectName}`,

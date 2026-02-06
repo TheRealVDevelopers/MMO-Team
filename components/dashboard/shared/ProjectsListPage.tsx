@@ -18,6 +18,7 @@ const ProjectsListPage: React.FC = () => {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
     const [showLeads, setShowLeads] = useState(true);
+    const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
     if (!currentUser) return null;
 
@@ -83,6 +84,10 @@ const ProjectsListPage: React.FC = () => {
         );
     }
 
+
+
+    // ... (existing code)
+
     return (
         <div className="min-h-screen bg-background p-6">
             <div className="max-w-7xl mx-auto">
@@ -96,20 +101,44 @@ const ProjectsListPage: React.FC = () => {
                             <span className="text-text-tertiary">Leads: <span className="font-bold text-purple-500">{leadCount}</span></span>
                         </div>
                     </div>
-                    <button
-                        onClick={() => setShowLeads(!showLeads)}
-                        className={cn(
-                            "px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2",
-                            showLeads
-                                ? "bg-purple-500 text-white shadow-lg shadow-purple-500/20 hover:bg-purple-600"
-                                : "bg-surface border border-border text-text-secondary hover:bg-subtle-background"
-                        )}
-                    >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        {showLeads ? 'Showing Leads' : 'Leads Hidden'}
-                    </button>
+                    <div className="flex gap-3">
+                        {/* View Toggle */}
+                        <div className="flex bg-surface border border-border rounded-lg p-1">
+                            <button
+                                onClick={() => setViewMode('grid')}
+                                className={cn(
+                                    "p-2 rounded-md transition-all",
+                                    viewMode === 'grid' ? "bg-primary/10 text-primary" : "text-text-tertiary hover:text-text-primary"
+                                )}
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+                            </button>
+                            <button
+                                onClick={() => setViewMode('table')}
+                                className={cn(
+                                    "p-2 rounded-md transition-all",
+                                    viewMode === 'table' ? "bg-primary/10 text-primary" : "text-text-tertiary hover:text-text-primary"
+                                )}
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+                            </button>
+                        </div>
+
+                        <button
+                            onClick={() => setShowLeads(!showLeads)}
+                            className={cn(
+                                "px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2",
+                                showLeads
+                                    ? "bg-purple-500 text-white shadow-lg shadow-purple-500/20 hover:bg-purple-600"
+                                    : "bg-surface border border-border text-text-secondary hover:bg-subtle-background"
+                            )}
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            {showLeads ? 'Showing Leads' : 'Leads Hidden'}
+                        </button>
+                    </div>
                 </div>
 
                 {/* Search */}
@@ -125,14 +154,14 @@ const ProjectsListPage: React.FC = () => {
                     </div>
                 </Card>
 
-                {/* Projects & Leads Grid */}
+                {/* Projects & Leads Grid/Table */}
                 {filteredItems.length === 0 ? (
                     <Card>
                         <div className="p-12 text-center">
                             <p className="text-text-secondary">No {showLeads ? 'projects or leads' : 'projects'} found</p>
                         </div>
                     </Card>
-                ) : (
+                ) : viewMode === 'grid' ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {filteredItems.map(item => {
                             const isLead = item.isProject === false;
@@ -172,8 +201,6 @@ const ProjectsListPage: React.FC = () => {
                                             </p>
                                         )}
 
-
-
                                         {/* View Details Button */}
                                         <PrimaryButton
                                             onClick={() => navigate(`/projects/${item.id}`)}
@@ -185,6 +212,88 @@ const ProjectsListPage: React.FC = () => {
                                 </Card>
                             );
                         })}
+                    </div>
+                ) : (
+                    // TABLE VIEW
+                    <div className="bg-surface border border-border rounded-xl shadow-sm overflow-hidden">
+                        <table className="min-w-full divide-y divide-border">
+                            <thead className="bg-subtle-background">
+                                <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">Project / Client</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">Type</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">Status</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">Documents</th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-text-tertiary uppercase tracking-wider">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-surface divide-y divide-border">
+                                {filteredItems.map(item => {
+                                    const isLead = item.isProject === false;
+                                    // Combine legacy documents and new files array and cast to any for display
+                                    const docs: any[] = [...(item.files || []), ...(item.documents || [])];
+                                    const latestDocs = docs.sort((a, b) => {
+                                        const dateA = new Date(a.uploadedAt || a.uploaded || 0).getTime();
+                                        const dateB = new Date(b.uploadedAt || b.uploaded || 0).getTime();
+                                        return dateB - dateA;
+                                    }).slice(0, 3); // Show top 3
+
+                                    return (
+                                        <tr key={item.id} className="hover:bg-subtle-background/50 transition-colors">
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-bold text-text-primary">{item.projectName}</span>
+                                                    <span className="text-xs text-text-secondary">{item.clientName}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className={cn(
+                                                    "px-2 py-1 rounded text-xs font-bold uppercase tracking-wider",
+                                                    isLead ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"
+                                                )}>
+                                                    {isLead ? 'Lead' : 'Project'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className="text-sm text-text-secondary">{item.status}</span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-2">
+                                                    {docs.length === 0 ? (
+                                                        <span className="text-xs text-text-tertiary italic">No docs</span>
+                                                    ) : (
+                                                        <>
+                                                            {latestDocs.map((doc: any, i) => (
+                                                                <a
+                                                                    key={i}
+                                                                    href={doc.fileUrl || doc.url}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
+                                                                    className="group relative p-1.5 bg-subtle-background hover:bg-primary/10 rounded-lg transition-colors border border-border"
+                                                                    title={doc.fileName || doc.name}
+                                                                >
+                                                                    <svg className="w-4 h-4 text-text-secondary group-hover:text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                                                </a>
+                                                            ))}
+                                                            {docs.length > 3 && (
+                                                                <span className="text-xs text-text-tertiary self-center">+{docs.length - 3} more</span>
+                                                            )}
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                <PrimaryButton
+                                                    onClick={() => navigate(`/projects/${item.id}`)}
+                                                    className="px-3 py-1 text-xs"
+                                                >
+                                                    View
+                                                </PrimaryButton>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
                     </div>
                 )}
             </div>

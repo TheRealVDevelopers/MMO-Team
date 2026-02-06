@@ -82,14 +82,31 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
                 ...caseItem,
                 status: newStatus,
                 history: [...caseItem.history, ...historyItems],
+                // Also update the main files array
+                files: [
+                    ...(caseItem.files || []),
+                    ...(uploadedAttachments.map(att => ({
+                        id: att.id,
+                        leadId: caseItem.id,
+                        fileName: att.fileName,
+                        fileUrl: att.fileUrl,
+                        fileType: att.fileType,
+                        uploadedBy: currentUser?.id || 'unknown',
+                        uploadedByName: currentUser?.name || 'Unknown',
+                        uploadedAt: new Date(),
+                        category: 'Activity Attachment'
+                    })))
+                ]
             };
 
             onUpdate(updatedCase);
             setNewNote('');
             setSelectedFiles([]);
-        } catch (error) {
-            console.error("Error logging activity:", error);
-            alert("Failed to upload attachments. Please try again.");
+        } catch (error: any) {
+            console.error("Error logging activity/uploading:", error);
+            // Detailed error message for user
+            const errorMessage = error?.message || error?.code || "Unknown error";
+            alert(`Failed to save update. \nError details: ${errorMessage}\n\nCheck console for more info.`);
         } finally {
             setIsUploading(false);
         }
@@ -505,6 +522,38 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
                             status: newStatus,
                             assignedTo: assigneeId
                         });
+                    } else if (contextType === 'project') {
+                        // CRITICAL: Update project status for workflow visibility
+                        try {
+                            const { doc, updateDoc } = await import('firebase/firestore');
+                            const { db } = await import('../../firebase');
+
+                            let newProjectStatus: ProjectStatus;
+                            if (title.includes('site') && (title.includes('visit') || title.includes('inspection'))) {
+                                newProjectStatus = ProjectStatus.SITE_VISIT_PENDING;
+                            } else if (title.includes('drawing') || title.includes('design')) {
+                                newProjectStatus = ProjectStatus.DRAWING_PENDING;
+                            } else if (title.includes('quotation') || title.includes('boq')) {
+                                newProjectStatus = ProjectStatus.BOQ_PENDING;
+                            } else {
+                                newProjectStatus = ProjectStatus.SITE_VISIT_PENDING; // Default
+                            }
+
+                            console.log('[LeadDetailModal] Updating project status to:', newProjectStatus, 'assignedTo:', assigneeId);
+                            const projectRef = doc(db, 'cases', contextId);
+                            await updateDoc(projectRef, {
+                                status: newProjectStatus,
+                                assignedEngineerId: assigneeId
+                            });
+
+                            // Update local state
+                            onUpdate({
+                                ...caseItem,
+                                status: newProjectStatus as any
+                            });
+                        } catch (error) {
+                            console.error('[LeadDetailModal] Failed to update project status:', error);
+                        }
                     }
                     // Note: For projects, the ApprovalsPage handles status updates
 

@@ -288,6 +288,16 @@ export const updateTask = async (taskId: string, updates: Partial<Task>) => {
 export const startTask = async (taskId: string) => {
     try {
         const taskRef = doc(db, 'myDayTasks', taskId);
+
+        // First check if document exists
+        const { getDoc } = await import('firebase/firestore');
+        const taskSnap = await getDoc(taskRef);
+
+        if (!taskSnap.exists()) {
+            console.error(`[startTask] Task document not found: ${taskId}`);
+            throw new Error(`Task not found. The task may have been deleted or not properly saved. Please refresh the page.`);
+        }
+
         await updateDoc(taskRef, {
             status: TaskStatus.IN_PROGRESS,
             startedAt: new Date(),

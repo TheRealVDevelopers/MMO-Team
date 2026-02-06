@@ -19,7 +19,9 @@ import {
     CheckCircleIcon,
     PlusIcon,
     ChevronDownIcon,
-    PencilSquareIcon
+    PencilSquareIcon,
+    PaperClipIcon,
+    XMarkIcon
 } from '@heroicons/react/24/outline';
 import ProjectActivityHistory from '../../shared/ProjectActivityHistory';
 import { ContentCard, cn } from '../shared/DashboardUI';
@@ -68,33 +70,100 @@ const ProjectDetailModal: React.FC<{ project: Project; isOpen: boolean; onClose:
     const [newNote, setNewNote] = React.useState('');
     const [newStatus, setNewStatus] = React.useState<ProjectStatus>(project.status);
     const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
+    const [files, setFiles] = React.useState<File[]>([]);
+    const [isUploading, setIsUploading] = React.useState(false);
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            setFiles(Array.from(e.target.files));
+        }
+    };
 
     const handleUpdateProject = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsUpdating(true);
         try {
             const updates: Partial<Project> = { status: newStatus };
+            const uploadedFiles: any[] = []; // Using any to avoid LeadFile strictness issues if imports missing, but essentially LeadFile
+
+            // Handle File Uploads first
+            if (files.length > 0) {
+                setIsUploading(true);
+                // Dynamically import to avoid top-level issues if any
+                const { arrayUnion, doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
+                const { db } = await import('../../../firebase');
+
+                // Basic Base64 upload for demo/MVP (similar to LeadManagementPage)
+                const fileToBase64 = (file: File): Promise<string> => {
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.readAsDataURL(file);
+                        reader.onload = () => resolve(reader.result as string);
+                        reader.onerror = error => reject(error);
+                    });
+                };
+
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const fileUrl = await fileToBase64(file);
+                    const fileType = file.type.startsWith('image/') ? 'image' : 'document';
+
+                    const newFile = {
+                        id: `file-${Date.now()}-${i}`,
+                        leadId: project.id, // Using project ID as leadId for compatibility
+                        fileName: file.name,
+                        fileUrl: fileUrl,
+                        fileType: fileType,
+                        uploadedBy: 'admin', // defaulted as this is admin modal
+                        uploadedByName: 'System Admin',
+                        uploadedAt: new Date(),
+                        category: 'activity_attachment'
+                    };
+                    uploadedFiles.push(newFile);
+                }
+
+                // Update project documents
+                if (uploadedFiles.length > 0) {
+                    const projectRef = doc(db, 'projects', project.files ? project.id : project.id); // Guard check
+                    // Check if 'files' field exists on project type, if not use 'documents' or creating new field 'files'
+                    // Project interface has 'documents' and 'files'. Let's use 'files' to match LeadFile type.
+                    await updateDoc(projectRef, {
+                        files: arrayUnion(...uploadedFiles.map(f => ({
+                            ...f,
+                            uploadedAt: serverTimestamp() // Use server timestamp for Firestore
+                        })))
+                    });
+                    // Local state update for immediate reflection if needed, but we rely on re-fetch usually
+                }
+                setIsUploading(false);
+            }
+
 
             // If there's a note, we could potentially add it to a history field if one exists, 
             // but for now we log it as a global activity.
             await updateProject(project.id, updates);
             setProject(prev => ({ ...prev, ...updates }));
 
-            if (newNote.trim()) {
+            if (newNote.trim() || uploadedFiles.length > 0) {
                 await logActivity({
-                    description: `ADMIN OVERRIDE: ${newNote}`,
+                    description: `ADMIN OVERRIDE: ${newNote} ${uploadedFiles.length > 0 ? `[${uploadedFiles.length} file(s) attached]` : ''}`,
                     team: project.assignedTeam.drawing ? (users.find(u => u.id === project.assignedTeam.drawing)?.role || project.assignedTeam.drawing as any) : 'Management' as any,
                     userId: 'admin',
                     status: 'done' as any,
-                    projectId: project.id
+                    projectId: project.id,
+                    attachments: uploadedFiles // Attach to activity
                 });
             }
 
             setNewNote('');
+            setFiles([]);
+            if (fileInputRef.current) fileInputRef.current.value = '';
         } catch (error) {
             console.error("Failed to update project:", error);
         } finally {
             setIsUpdating(false);
+            setIsUploading(false);
         }
     };
 
@@ -266,6 +335,39 @@ const ProjectDetailModal: React.FC<{ project: Project; isOpen: boolean; onClose:
                                         placeholder="Log strategic update or operational note..."
                                         className="w-full bg-subtle-background border border-border rounded-xl px-4 py-3 text-xs font-medium text-text-primary min-h-[100px] focus:ring-2 focus:ring-primary/10 outline-none transition-all"
                                     />
+                                    <div className="mt-2 text-right">
+                                        <input
+                                            type="file"
+                                            multiple
+                                            ref={fileInputRef}
+                                            onChange={handleFileSelect}
+                                            className="hidden"
+                                            id="file-upload"
+                                        />
+                                        <label
+                                            htmlFor="file-upload"
+                                            className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 bg-subtle-background border border-border rounded-lg text-xs font-bold text-text-secondary hover:bg-surface hover:text-primary transition-colors"
+                                        >
+                                            <PaperClipIcon className="w-4 h-4" />
+                                            {files.length > 0 ? `${files.length} file(s)` : 'Attach Files'}
+                                        </label>
+                                    </div>
+                                    {files.length > 0 && (
+                                        <div className="mt-2 space-y-1">
+                                            {files.map((f, i) => (
+                                                <div key={i} className="flex items-center justify-between text-xs bg-surface p-1.5 rounded border border-border/50">
+                                                    <span className="truncate max-w-[180px]">{f.name}</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setFiles(prev => prev.filter((_, idx) => idx !== i))}
+                                                        className="text-error hover:text-error/80"
+                                                    >
+                                                        <XMarkIcon className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                                 <button
                                     type="submit"

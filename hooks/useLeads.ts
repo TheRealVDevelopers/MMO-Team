@@ -26,6 +26,23 @@ const fromFirestore = (docData: FirestoreLead, id: string): Lead => {
     };
 };
 
+// Helper function to recursively remove undefined values from objects
+const removeUndefinedValues = (obj: any): any => {
+    if (Array.isArray(obj)) {
+        return obj.map(item => removeUndefinedValues(item));
+    } else if (obj !== null && typeof obj === 'object' && !(obj instanceof Date) && !(obj instanceof Timestamp)) {
+        const cleaned: any = {};
+        Object.keys(obj).forEach(key => {
+            const value = obj[key];
+            if (value !== undefined) {
+                cleaned[key] = removeUndefinedValues(value);
+            }
+        });
+        return cleaned;
+    }
+    return obj;
+};
+
 export const useLeads = (userId?: string) => {
     const [leads, setLeads] = useState<Lead[]>([]);
     const [loading, setLoading] = useState(true);
@@ -44,7 +61,8 @@ export const useLeads = (userId?: string) => {
             let q;
 
             if (userId) {
-                q = query(leadsCollection, where('assignedTo', '==', userId), orderBy('inquiryDate', 'desc'));
+                // Fix: Remove orderBy to avoid missing index error
+                q = query(leadsCollection, where('assignedTo', '==', userId));
             } else {
                 q = query(leadsCollection, orderBy('inquiryDate', 'desc'));
             }
@@ -54,6 +72,8 @@ export const useLeads = (userId?: string) => {
                 querySnapshot.forEach((doc) => {
                     leadsData.push(fromFirestore(doc.data() as FirestoreLead, doc.id));
                 });
+                // Sort client-side
+                leadsData.sort((a, b) => b.inquiryDate.getTime() - a.inquiryDate.getTime());
                 setLeads(leadsData);
                 setLoading(false);
             }, (err) => {
@@ -75,8 +95,9 @@ export const useLeads = (userId?: string) => {
 
 export const addLead = async (leadData: Omit<Lead, 'id'>, createdBy?: string) => {
     try {
+        const cleanData = removeUndefinedValues(leadData);
         const docRef = await addDoc(collection(db, 'leads'), {
-            ...leadData,
+            ...cleanData,
             is_demo: false, // New leads are always real
         });
 
@@ -95,6 +116,7 @@ export const addLead = async (leadData: Omit<Lead, 'id'>, createdBy?: string) =>
             await addTask({
                 title: `New Lead Assigned: ${leadData.clientName}`,
                 userId: leadData.assignedTo,
+                assignedTo: leadData.assignedTo,
                 status: TaskStatus.ASSIGNED,
                 priority: 'High',
                 deadline: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days default
@@ -107,7 +129,7 @@ export const addLead = async (leadData: Omit<Lead, 'id'>, createdBy?: string) =>
                 createdByName: 'System', // Or fetch name if needed, but 'System' is fine for auto-tasks
                 contextId: docRef.id,
                 contextType: 'lead',
-                taskType: 'Client Meeting' // Default instruction type
+                taskType: 'General' // Default instruction type
             }, createdBy || 'system');
         }
 
@@ -129,8 +151,18 @@ export const addLead = async (leadData: Omit<Lead, 'id'>, createdBy?: string) =>
 
 export const updateLead = async (leadId: string, updatedData: Partial<Lead>) => {
     try {
+        console.log("updateLead called with:", updatedData);
+        const cleanData = removeUndefinedValues(updatedData);
+        console.log("cleanData after sanitization:", cleanData);
+
+        // Double check for currentStage explicitly
+        if ('currentStage' in cleanData && cleanData.currentStage === undefined) {
+            console.error("Critical: currentStage is still undefined in cleanData!", cleanData);
+            delete cleanData.currentStage;
+        }
+
         const leadRef = doc(db, 'leads', leadId);
-        await updateDoc(leadRef, updatedData);
+        await updateDoc(leadRef, cleanData);
 
         // Trigger notification if assignedTo changed
         if (updatedData.assignedTo) {
@@ -147,6 +179,7 @@ export const updateLead = async (leadId: string, updatedData: Partial<Lead>) => 
             await addTask({
                 title: `Lead Re-assigned: ${updatedData.clientName || 'Lead'}`,
                 userId: updatedData.assignedTo,
+                assignedTo: updatedData.assignedTo,
                 status: TaskStatus.ASSIGNED,
                 priority: 'High',
                 deadline: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
@@ -159,7 +192,7 @@ export const updateLead = async (leadId: string, updatedData: Partial<Lead>) => 
                 createdByName: 'System',
                 contextId: leadId,
                 contextType: 'lead',
-                taskType: 'Client Meeting'
+                taskType: 'General'
             }, 'system');
 
             // Log re-assignment activity

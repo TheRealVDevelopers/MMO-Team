@@ -537,7 +537,7 @@ export interface Project {
   issues?: ExecutionIssue[];
   stages?: ExecutionStage[];
   documents?: Document[];
-  salespersonId?: string; // User ID of the salesperson who won the deal
+  salespersonId?: string;
   history?: LeadHistory[];
   is_demo?: boolean;
   items?: Item[];
@@ -761,7 +761,7 @@ export interface ExecutionTask {
   missionType: string;
   instructions: string;
   deadline: string;
-  status: 'Pending' | 'In Progress' | 'Completed' | 'Blocked';
+  status: 'Pending' | 'In Progress' | 'Completed' | 'Blocked' | 'Ongoing' | 'Awaiting Execution Acceptance';
   priority?: 'High' | 'Medium' | 'Low';
   createdAt: Date;
 }
@@ -1251,6 +1251,7 @@ export interface Activity {
   timestamp: Date;
   status: ActivityStatus;
   projectId?: string;
+  attachments?: LeadFile[];
 }
 
 export enum AttendanceStatus {

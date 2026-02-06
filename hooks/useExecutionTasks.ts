@@ -13,7 +13,7 @@ interface UseExecutionTasksReturn {
     updateTask: (taskId: string, updates: Partial<ExecutionTask>) => Promise<void>;
 }
 
-export function useExecutionTasks(projectId?: string): UseExecutionTasksReturn {
+export function useExecutionTasks(projectId?: string, userId?: string): UseExecutionTasksReturn {
     const [tasks, setTasks] = useState<ExecutionTask[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -26,9 +26,14 @@ export function useExecutionTasks(projectId?: string): UseExecutionTasksReturn {
         const tasksRef = collection(db, 'executionTasks');
 
         if (projectId) {
-            q = query(tasksRef, where('projectId', '==', projectId), orderBy('createdAt', 'desc'));
+            // Filter by project - client-side sort
+            q = query(tasksRef, where('projectId', '==', projectId));
+        } else if (userId) {
+            // Filter by user - client-side sort
+            console.log('[useExecutionTasks] Fetching tasks for user:', userId);
+            q = query(tasksRef, where('assignedTo', '==', userId));
         } else {
-            // Fetch all tasks if no projectId (for manager view)
+            // Fetch all tasks if no filters (for manager view)
             q = query(tasksRef, orderBy('createdAt', 'desc'));
         }
 
@@ -53,6 +58,11 @@ export function useExecutionTasks(projectId?: string): UseExecutionTasksReturn {
                         ...data
                     } as ExecutionTask;
                 });
+                console.log('[useExecutionTasks] Tasks fetched:', fetchedTasks.length, 'for user:', userId || 'ALL');
+
+                // Sort client-side to ensure consistent ordering regardless of query index availability
+                fetchedTasks.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
                 setTasks(fetchedTasks);
                 setLoading(false);
             },
@@ -64,7 +74,7 @@ export function useExecutionTasks(projectId?: string): UseExecutionTasksReturn {
         );
 
         return () => unsubscribe();
-    }, [projectId]);
+    }, [projectId, userId]);
 
     const addTask = async (task: Omit<ExecutionTask, 'id' | 'createdAt'>) => {
         try {
@@ -79,13 +89,13 @@ export function useExecutionTasks(projectId?: string): UseExecutionTasksReturn {
             // Notify all admins and sales managers about the new task
             const usersRef = collection(db, 'users');
             const usersSnapshot = await getDocs(usersRef);
-            
+
             const adminAndManagerIds: string[] = [];
             usersSnapshot.forEach(doc => {
                 const userData = doc.data();
-                if (userData.role === UserRole.SUPER_ADMIN || 
+                if (userData.role === UserRole.SUPER_ADMIN ||
                     userData.role === UserRole.SALES_GENERAL_MANAGER ||
-                    userData.role === 'admin' || 
+                    userData.role === 'admin' ||
                     userData.role === 'Admin') {
                     adminAndManagerIds.push(doc.id);
                 }
