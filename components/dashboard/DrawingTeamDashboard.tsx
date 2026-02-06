@@ -8,6 +8,7 @@ import ProjectDetailModal from './drawing-team/ProjectDetailModal';
 import MyDayPage from './shared/MyDayPage';
 import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
+import WorkQueuePage from './shared/WorkQueuePage';
 
 const DrawingTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -20,6 +21,8 @@ const DrawingTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (pag
     switch (currentPage) {
       case 'my-day':
         return <MyDayPage />;
+      case 'work-queue':
+        return <WorkQueuePage />;
       case 'overview':
         return <DrawingOverviewPage onProjectSelect={handleProjectSelect} />;
       case 'projects':

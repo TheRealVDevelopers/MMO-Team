@@ -23,7 +23,8 @@ interface UseMaterialRequestsReturn {
     updateRequestStatus: (requestId: string, status: MaterialRequest['status']) => Promise<void>;
 }
 
-// Hook to fetch pending material requests across ALL projects (for Execution Head)
+// Hook to fetch pending material requests across ALL cases (for Execution Head)
+// CASE-CENTRIC: Uses collectionGroup on cases/{caseId}/materials
 export function useAllExecutionMaterialRequests() {
     const [requests, setRequests] = useState<MaterialRequest[]>([]);
     const [loading, setLoading] = useState(true);
@@ -33,22 +34,22 @@ export function useAllExecutionMaterialRequests() {
         setLoading(true);
         setError(null);
 
-        // Try a simpler query first to avoid index issues
-        // Just get all material requests and filter client-side
+        // CASE-CENTRIC: Query materials subcollection across all cases
         const q = query(
-            collectionGroup(db, 'materialRequests')
+            collectionGroup(db, 'materials')
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const fetched: MaterialRequest[] = snapshot.docs
                 .map(doc => {
                     const data = doc.data();
-                    // When using collectionGroup, doc.ref.parent.parent.id is the projectId
-                    const projectId = doc.ref.parent.parent?.id || data.projectId;
+                    // When using collectionGroup, doc.ref.parent.parent.id is the caseId
+                    const caseId = doc.ref.parent.parent?.id || data.caseId;
 
                     return {
                         id: doc.id,
-                        projectId: projectId,
+                        projectId: caseId, // Keep projectId for backward compatibility
+                        caseId: caseId, // Add explicit caseId
                         itemId: data.itemId || '',
                         itemName: data.itemName || '',
                         quantityRequested: data.quantityRequested || 0,
@@ -60,6 +61,7 @@ export function useAllExecutionMaterialRequests() {
                             ? data.createdAt.toDate()
                             : new Date(data.createdAt),
                         notes: data.notes || '',
+                        items: data.items || [], // Add items array for MaterialRequest type
                         targetRole: data.targetRole || 'execution',
                         urgency: data.urgency || 'Normal',
                         executionApproval: data.executionApproval || 'pending',
@@ -85,8 +87,9 @@ export function useAllExecutionMaterialRequests() {
         return () => unsubscribe();
     }, []);
 
-    const approveRequest = async (projectId: string, requestId: string) => {
-        const ref = doc(db, 'projects', projectId, 'materialRequests', requestId);
+    const approveRequest = async (caseId: string, requestId: string) => {
+        // CASE-CENTRIC: Update material in cases/{caseId}/materials
+        const ref = doc(db, 'cases', caseId, 'materials', requestId);
         await updateDoc(ref, {
             executionApproval: 'approved',
             status: MaterialRequestStatus.APPROVED,
@@ -95,8 +98,9 @@ export function useAllExecutionMaterialRequests() {
         });
     };
 
-    const rejectRequest = async (projectId: string, requestId: string) => {
-        const ref = doc(db, 'projects', projectId, 'materialRequests', requestId);
+    const rejectRequest = async (caseId: string, requestId: string) => {
+        // CASE-CENTRIC: Update material in cases/{caseId}/materials
+        const ref = doc(db, 'cases', caseId, 'materials', requestId);
         await updateDoc(ref, {
             executionApproval: 'rejected',
             status: MaterialRequestStatus.REJECTED
@@ -106,13 +110,15 @@ export function useAllExecutionMaterialRequests() {
     return { requests, loading, error, approveRequest, rejectRequest };
 }
 
-export function useMaterialRequests(projectId: string): UseMaterialRequestsReturn {
+// CASE-CENTRIC: Fetch material requests for a specific case
+// Changed from projects/{projectId}/materialRequests to cases/{caseId}/materials
+export function useMaterialRequests(caseId: string): UseMaterialRequestsReturn {
     const [requests, setRequests] = useState<MaterialRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!projectId) {
+        if (!caseId) {
             setLoading(false);
             return;
         }
@@ -120,8 +126,8 @@ export function useMaterialRequests(projectId: string): UseMaterialRequestsRetur
         setLoading(true);
         setError(null);
 
-        // Query material requests for this project
-        const requestsRef = collection(db, 'projects', projectId, 'materialRequests');
+        // CASE-CENTRIC: Query materials subcollection for this case
+        const requestsRef = collection(db, 'cases', caseId, 'materials');
         const q = query(requestsRef, orderBy('createdAt', 'desc'));
 
         const unsubscribe = onSnapshot(
@@ -131,7 +137,8 @@ export function useMaterialRequests(projectId: string): UseMaterialRequestsRetur
                     const data = doc.data();
                     return {
                         id: doc.id,
-                        projectId: data.projectId || projectId,
+                        projectId: caseId, // Keep projectId for backward compatibility
+                        caseId: caseId, // Add explicit caseId
                         itemId: data.itemId || '',
                         itemName: data.itemName || '',
                         quantityRequested: data.quantityRequested || 0,
@@ -143,6 +150,7 @@ export function useMaterialRequests(projectId: string): UseMaterialRequestsRetur
                             ? data.createdAt.toDate()
                             : new Date(data.createdAt),
                         notes: data.notes || '',
+                        items: data.items || [], // Add items array for MaterialRequest type
 
                         // New fields
                         targetRole: data.targetRole || 'execution',
@@ -162,14 +170,16 @@ export function useMaterialRequests(projectId: string): UseMaterialRequestsRetur
         );
 
         return () => unsubscribe();
-    }, [projectId]);
+    }, [caseId]);
 
     const addRequest = async (request: Omit<MaterialRequest, 'id' | 'createdAt'>) => {
         try {
-            const requestsRef = collection(db, 'projects', projectId, 'materialRequests');
+            // CASE-CENTRIC: Add to cases/{caseId}/materials
+            const requestsRef = collection(db, 'cases', caseId, 'materials');
             await addDoc(requestsRef, {
                 ...request,
-                projectId,
+                caseId: caseId,
+                projectId: caseId, // Keep projectId for backward compatibility
                 // Defaults for new workflow
                 targetRole: request.targetRole || 'execution',
                 urgency: request.urgency || 'Normal',
@@ -177,7 +187,7 @@ export function useMaterialRequests(projectId: string): UseMaterialRequestsRetur
                 accountsStatus: 'pending',
                 createdAt: serverTimestamp()
             });
-            console.log('Material request added successfully');
+            console.log('Material request added successfully to case:', caseId);
         } catch (err) {
             console.error('Error adding material request:', err);
             throw err;
@@ -186,7 +196,8 @@ export function useMaterialRequests(projectId: string): UseMaterialRequestsRetur
 
     const updateRequestStatus = async (requestId: string, status: MaterialRequest['status']) => {
         try {
-            const requestRef = doc(db, 'projects', projectId, 'materialRequests', requestId);
+            // CASE-CENTRIC: Update in cases/{caseId}/materials
+            const requestRef = doc(db, 'cases', caseId, 'materials', requestId);
             await updateDoc(requestRef, { status });
             console.log('Material request status updated');
         } catch (err) {

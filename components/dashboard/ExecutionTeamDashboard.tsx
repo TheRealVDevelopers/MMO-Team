@@ -8,11 +8,14 @@ import EscalateIssuePage from '../escalation/EscalateIssuePage';
 import ExecutionApprovalQueue from './execution-team/ExecutionApprovalQueue';
 import BlueprintCreationPage from './execution-team/BlueprintCreationPage';
 import BudgetDefinitionPage from './execution-team/BudgetDefinitionPage';
+import WorkQueuePage from './shared/WorkQueuePage';
 
 const ExecutionTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
     switch (currentPage) {
         case 'my-day':
             return <MyDayPage />;
+        case 'work-queue':
+            return <WorkQueuePage />;
         case 'board':
             return <ExecutionBoardPage />;
         case 'approvals':

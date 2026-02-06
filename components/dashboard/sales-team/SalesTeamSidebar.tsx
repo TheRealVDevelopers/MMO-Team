@@ -13,7 +13,8 @@ import {
     RectangleGroupIcon,
     ClockIcon,
     ChatBubbleLeftRightIcon,
-    ShieldExclamationIcon
+    ShieldExclamationIcon,
+    QueueListIcon
 } from '../../icons/IconComponents';
 
 interface SidebarProps {
@@ -58,6 +59,7 @@ const NavItem: React.FC<{
 const SalesTeamSidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, leadsCount, taskCounts }) => {
     const navItems = [
         { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
+        { id: 'work-queue', label: 'Work Queue', icon: <QueueListIcon className="w-6 h-6" /> },
         { id: 'leads', label: 'My Registry', icon: <FunnelIcon className="w-6 h-6" />, count: leadsCount },
         { id: 'my-requests', label: 'My Requests', icon: <RectangleGroupIcon className="w-6 h-6" /> },
         { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },

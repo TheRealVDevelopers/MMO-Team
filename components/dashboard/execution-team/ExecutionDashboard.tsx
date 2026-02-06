@@ -12,6 +12,7 @@ import CommunicationDashboard from '../../communication/CommunicationDashboard';
 import EscalateIssuePage from '../../escalation/EscalateIssuePage';
 import { useProjects } from '../../../hooks/useProjects';
 import { useAuth } from '../../../context/AuthContext';
+import WorkQueuePage from '../shared/WorkQueuePage';
 
 interface ExecutionDashboardProps {
     currentPage: string;
@@ -53,6 +54,12 @@ const ExecutionDashboard: React.FC<ExecutionDashboardProps> = ({ currentPage, se
                 return (
                     <div className="h-full overflow-y-auto">
                         <MyDayPage />
+                    </div>
+                );
+            case 'work-queue':
+                return (
+                    <div className="h-full overflow-y-auto">
+                        <WorkQueuePage />
                     </div>
                 );
             case 'gantt':

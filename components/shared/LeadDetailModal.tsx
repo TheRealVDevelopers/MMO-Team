@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Modal from './Modal';
 import { Case, LeadPipelineStatus, LeadHistory, Reminder, UserRole, TaskStatus, ProjectStatus } from '../../types';
 import LeadHistoryView from './LeadHistoryView';
 import { useAuth } from '../../context/AuthContext';
-import { PlusIcon, BellIcon, MapPinIcon, PaintBrushIcon, CalculatorIcon, TruckIcon, WrenchScrewdriverIcon, CreditCardIcon, PhoneIcon, ChatBubbleLeftRightIcon, BanknotesIcon, CalendarIcon, UserCircleIcon, FireIcon, PaperClipIcon, XMarkIcon } from '../icons/IconComponents';
+import { PlusIcon, BellIcon, MapPinIcon, PaintBrushIcon, CalculatorIcon, TruckIcon, WrenchScrewdriverIcon, CreditCardIcon, PhoneIcon, ChatBubbleLeftRightIcon, BanknotesIcon, CalendarIcon, UserCircleIcon, FireIcon, PaperClipIcon, XMarkIcon, CheckCircleIcon } from '../icons/IconComponents';
 import RaiseRequestModal from '../dashboard/sales-team/RaiseRequestModal';
 import DirectAssignTaskModal from '../dashboard/super-admin/DirectAssignTaskModal';
 import { addTask } from '../../hooks/useMyDayTasks';
@@ -13,6 +13,7 @@ import { formatLargeNumberINR, formatDateTime } from '../../constants';
 import SmartDateTimePicker from './SmartDateTimePicker';
 import { uploadMultipleLeadAttachments, formatFileSize } from '../../services/leadAttachmentService';
 import { LeadHistoryAttachment } from '../../types';
+import { useActivities } from '../../hooks/useActivities';
 
 interface LeadDetailModalProps {
     isOpen: boolean;
@@ -26,8 +27,10 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
 
     const navigate = useNavigate();
     const { currentUser } = useAuth();
+    const { activities, addActivity } = useActivities(caseItem.id);
+    
     const [newNote, setNewNote] = useState('');
-    const [newStatus, setNewStatus] = useState<LeadPipelineStatus | ProjectStatus>(caseItem.status);
+    const [newStatus, setNewStatus] = useState(caseItem.status);
 
     const [reminderNote, setReminderNote] = useState('');
     const [reminderDate, setReminderDate] = useState('');
@@ -38,9 +41,12 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
     const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
 
     // Determine available statuses based on whether it's a lead or project
-    const availableStatuses = caseItem.isProject
-        ? Object.values(ProjectStatus)
-        : Object.values(LeadPipelineStatus);
+    const availableStatuses = Object.values(caseItem.status.constructor);
+
+    // Sync newStatus with caseItem.status when it changes
+    useEffect(() => {
+        setNewStatus(caseItem.status);
+    }, [caseItem.status]);
 
 
     // Removed handleOpenTaskModal as we now use RaiseRequestModal directly
@@ -48,63 +54,77 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
     const handleLogActivity = async (e: React.FormEvent) => {
         e.preventDefault();
         if ((!newNote.trim() && newStatus === caseItem.status && selectedFiles.length === 0) || isUploading) return;
+        if (!currentUser) return;
 
         setIsUploading(true);
 
         try {
-            let uploadedAttachments: LeadHistoryAttachment[] = [];
+            let uploadedAttachmentUrls: string[] = [];
 
+            // Upload files if any
             if (selectedFiles.length > 0) {
-                uploadedAttachments = await uploadMultipleLeadAttachments(selectedFiles, caseItem.id);
+                uploadedAttachmentUrls = await uploadMultipleLeadAttachments(caseItem.id, selectedFiles);
             }
 
-            const historyItems: LeadHistory[] = [];
-
+            // Log status change activity
             if (newStatus !== caseItem.status) {
-                historyItems.push({
-                    action: `Status changed to ${newStatus}`,
-                    user: currentUser?.name || 'Unknown',
-                    timestamp: new Date(),
+                await addActivity({
+                    type: 'status_change',
+                    action: `Status changed from ${caseItem.status} to ${newStatus}`,
+                    userId: currentUser.id,
+                    userName: currentUser.name,
+                    metadata: {
+                        oldStatus: caseItem.status,
+                        newStatus: newStatus,
+                    }
                 });
             }
 
-            if (newNote.trim() || uploadedAttachments.length > 0) {
-                historyItems.push({
-                    action: uploadedAttachments.length > 0 ? 'Note added with attachments' : 'Note added',
-                    user: currentUser?.name || 'Unknown',
-                    timestamp: new Date(),
+            // Log note activity
+            if (newNote.trim()) {
+                await addActivity({
+                    type: 'note',
+                    action: uploadedAttachmentUrls.length > 0 ? 'Note added with attachments' : 'Note added',
+                    userId: currentUser.id,
+                    userName: currentUser.name,
                     notes: newNote,
-                    attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
+                    metadata: uploadedAttachmentUrls.length > 0 ? {
+                        attachmentUrls: uploadedAttachmentUrls
+                    } : undefined,
                 });
             }
 
-            const updatedCase = {
+            // Log file upload activity (if only files, no note)
+            if (uploadedAttachmentUrls.length > 0 && !newNote.trim()) {
+                await addActivity({
+                    type: 'file_upload',
+                    action: `Uploaded ${uploadedAttachmentUrls.length} file(s)`,
+                    userId: currentUser.id,
+                    userName: currentUser.name,
+                    metadata: {
+                        attachmentUrls: uploadedAttachmentUrls
+                    }
+                });
+            }
+
+            // Update Case status only (remove any undefined fields)
+            const updatedCase: Case = {
                 ...caseItem,
                 status: newStatus,
-                history: [...caseItem.history, ...historyItems],
-                // Also update the main files array
-                files: [
-                    ...(caseItem.files || []),
-                    ...(uploadedAttachments.map(att => ({
-                        id: att.id,
-                        leadId: caseItem.id,
-                        fileName: att.fileName,
-                        fileUrl: att.fileUrl,
-                        fileType: att.fileType,
-                        uploadedBy: currentUser?.id || 'unknown',
-                        uploadedByName: currentUser?.name || 'Unknown',
-                        uploadedAt: new Date(),
-                        category: 'Activity Attachment'
-                    })))
-                ]
+                updatedAt: new Date(),
             };
 
-            onUpdate(updatedCase);
+            // Only pass defined fields
+            const cleanedCase = Object.fromEntries(
+                Object.entries(updatedCase).filter(([_, v]) => v !== undefined)
+            ) as Case;
+
+            onUpdate(cleanedCase);
             setNewNote('');
             setSelectedFiles([]);
+            // Don't reset newStatus - keep it at the new status
         } catch (error: any) {
             console.error("Error logging activity/uploading:", error);
-            // Detailed error message for user
             const errorMessage = error?.message || error?.code || "Unknown error";
             alert(`Failed to save update. \nError details: ${errorMessage}\n\nCheck console for more info.`);
         } finally {
@@ -392,7 +412,46 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
                                         background: #cbd5e1;
                                     }
                                 `}</style>
-                                <LeadHistoryView lead={caseItem as any} />
+                                {/* Show activities from subcollection */}
+                                {activities && activities.length > 0 ? (
+                                    <div className="flow-root">
+                                        <ul role="list" className="-mb-8">
+                                            {activities.map((activity, idx) => (
+                                                <li key={activity.id}>
+                                                    <div className="relative pb-8">
+                                                        {idx !== activities.length - 1 ? (
+                                                            <span className="absolute left-[15px] top-6 -ml-px h-full w-[1.5px] bg-border/60" aria-hidden="true" />
+                                                        ) : null}
+                                                        <div className="relative flex items-start space-x-4">
+                                                            <div>
+                                                                <span className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center ring-4 ring-surface">
+                                                                    <CheckCircleIcon className="h-5 w-5 text-primary" aria-hidden="true" />
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex min-w-0 flex-1 justify-between items-start pt-1.5">
+                                                                <div className="flex-1">
+                                                                    <p className="text-sm font-medium text-text-primary">
+                                                                        {activity.action} <span className="text-text-secondary font-normal">by</span> <span className="font-semibold text-text-primary">{activity.userName}</span>
+                                                                    </p>
+                                                                    {activity.notes && (
+                                                                        <p className="mt-1.5 text-sm text-text-secondary italic bg-subtle-background/50 p-2 rounded-lg border-l-2 border-primary/20">
+                                                                            "{activity.notes}"
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+                                                                <div className="whitespace-nowrap text-right text-[11px] font-semibold text-text-tertiary bg-subtle-background px-2 py-1 rounded-md ml-4">
+                                                                    {formatDateTime(activity.timestamp)}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-text-tertiary italic text-center py-8">No activities yet</p>
+                                )}
                             </div>
                         </div>
                     </div>

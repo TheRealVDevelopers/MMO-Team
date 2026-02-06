@@ -10,7 +10,8 @@ import {
     PresentationChartLineIcon,
     ClockIcon,
     ChatBubbleLeftRightIcon,
-    ShieldExclamationIcon
+    ShieldExclamationIcon,
+    QueueListIcon
 } from '../../icons/IconComponents';
 
 interface SidebarProps {
@@ -45,6 +46,7 @@ const NavItem: React.FC<{
 const QuotationTeamSidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage }) => {
     const navItems = [
         { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
+        { id: 'work-queue', label: 'Work Queue', icon: <QueueListIcon className="w-6 h-6" /> },
         { id: 'negotiations', label: 'Procurement', icon: <ViewColumnsIcon className="w-6 h-6" /> },
         { id: 'catalog', label: 'Items Catalog', icon: <TagIcon className="w-6 h-6" /> },
         { id: 'templates', label: 'Templates', icon: <ListBulletIcon className="w-6 h-6" /> },

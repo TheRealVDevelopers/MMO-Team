@@ -184,7 +184,7 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
 
     const handleViewProjects = (org: Organization) => {
         // Fetch real projects by organization ID
-        const orgProjects = allProjects.filter(p => p.organizationId === org.id);
+        const orgProjects = (allProjects || []).filter(p => p.organizationId === org.id);
         setSelectedOrgProjects(orgProjects);
         setIsProjectsModalOpen(true);
     };
@@ -206,10 +206,15 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
         return colors[status] || 'bg-gray-100 text-gray-800 border-gray-200';
     };
 
-    const filteredOrgs = organizations.filter(org =>
-        org.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        org.contactPerson.toLowerCase().includes(searchQuery.toLowerCase())
+    const filteredOrgs = (organizations || []).filter(org =>
+        org.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        org.contactPerson?.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    // Count projects for each organization
+    const getOrgProjectCount = (orgId: string) => {
+        return (allProjects || []).filter(p => p.organizationId === orgId).length;
+    };
 
     return (
         <div className="space-y-6 p-6">
@@ -268,7 +273,7 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                                     <PencilIcon className="w-4 h-4" />
                                 </button>
                                 <span className="text-xs font-medium px-2 py-1 bg-subtle-background rounded-full text-text-secondary">
-                                    {org.projects.length} Projects
+                                    {getOrgProjectCount(org.id)} Projects
                                 </span>
                             </div>
                         </div>

@@ -10,13 +10,15 @@ interface UseDailyUpdatesReturn {
     addUpdate: (update: Omit<DailyUpdate, 'id' | 'createdAt'>) => Promise<void>;
 }
 
-export function useDailyUpdates(projectId: string): UseDailyUpdatesReturn {
+// CASE-CENTRIC: Changed from projects/{projectId}/dailyUpdates to cases/{caseId}/activities
+// Daily updates are now stored as activities with type='daily_update'
+export function useDailyUpdates(caseId: string): UseDailyUpdatesReturn {
     const [updates, setUpdates] = useState<DailyUpdate[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!projectId) {
+        if (!caseId) {
             setLoading(false);
             return;
         }
@@ -24,9 +26,13 @@ export function useDailyUpdates(projectId: string): UseDailyUpdatesReturn {
         setLoading(true);
         setError(null);
 
-        // Query daily updates for this project, ordered by date descending
-        const updatesRef = collection(db, 'projects', projectId, 'dailyUpdates');
-        const q = query(updatesRef, orderBy('createdAt', 'desc'));
+        // CASE-CENTRIC: Query activities for this case, filtered by type='daily_update'
+        const activitiesRef = collection(db, 'cases', caseId, 'activities');
+        const q = query(
+            activitiesRef, 
+            where('type', '==', 'daily_update'),
+            orderBy('createdAt', 'desc')
+        );
 
         const unsubscribe = onSnapshot(
             q,
@@ -35,8 +41,11 @@ export function useDailyUpdates(projectId: string): UseDailyUpdatesReturn {
                     const data = doc.data();
                     return {
                         id: doc.id,
-                        projectId: data.projectId || projectId,
+                        projectId: caseId, // Keep projectId for backward compatibility
+                        caseId: caseId, // Add explicit caseId
                         date: data.date,
+                        description: data.workDescription || data.description || '', // Map workDescription to description
+                        addedBy: data.createdBy || data.addedBy || '', // Map createdBy to addedBy
                         workDescription: data.workDescription || '',
                         weather: data.weather || 'Sunny',
                         manpowerCount: data.manpowerCount || 0,
@@ -60,17 +69,20 @@ export function useDailyUpdates(projectId: string): UseDailyUpdatesReturn {
         );
 
         return () => unsubscribe();
-    }, [projectId]);
+    }, [caseId]);
 
     const addUpdate = async (update: Omit<DailyUpdate, 'id' | 'createdAt'>) => {
         try {
-            const updatesRef = collection(db, 'projects', projectId, 'dailyUpdates');
-            await addDoc(updatesRef, {
+            // CASE-CENTRIC: Add to cases/{caseId}/activities with type='daily_update'
+            const activitiesRef = collection(db, 'cases', caseId, 'activities');
+            await addDoc(activitiesRef, {
                 ...update,
-                projectId,
+                caseId: caseId,
+                projectId: caseId, // Keep for backward compatibility
+                type: 'daily_update', // Mark as daily update activity
                 createdAt: serverTimestamp()
             });
-            console.log('Daily update added successfully');
+            console.log('Daily update added successfully to case:', caseId);
         } catch (err) {
             console.error('Error adding daily update:', err);
             throw err;

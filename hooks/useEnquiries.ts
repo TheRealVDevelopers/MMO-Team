@@ -192,30 +192,66 @@ export const markEnquiryAsViewed = async (enquiryId: string, userId: string) => 
     }
 };
 
-// Function to convert enquiry to lead
+// Function to convert enquiry to lead (now creates Case instead of Lead)
 export const convertEnquiryToLead = async (
     enquiryId: string,
     enquiry: ProjectEnquiry,
     leadData: any
 ) => {
     try {
-        // Create the lead
-        const leadRef = await addDoc(collection(db, 'leads'), {
-            ...leadData,
+        const { CaseStatus } = await import('../types');
+        const { FIRESTORE_COLLECTIONS } = await import('../constants');
+        
+        // Create case (not deprecated lead)
+        const caseRef = await addDoc(collection(db, FIRESTORE_COLLECTIONS.CASES), {
+            // Case-centric fields
+            organizationId: leadData.organizationId || 'default-org',
+            title: leadData.projectName || enquiry.clientName + ' Project',
+            clientName: enquiry.clientName,
+            clientEmail: enquiry.email,
+            clientPhone: enquiry.mobile,
+            siteAddress: leadData.address || '',
+            assignedSales: leadData.assignedTo,
+            createdBy: leadData.createdBy || 'system',
+            isProject: false, // It's a lead initially
+            status: CaseStatus.NEW,
+            
+            // Budget if provided
+            ...(leadData.estimatedValue && {
+                budget: {
+                    totalBudget: leadData.estimatedValue,
+                    allocated: 0,
+                    approved: false
+                }
+            }),
+            
+            // Workflow state
+            workflow: {
+                currentStage: CaseStatus.NEW,
+                siteVisitDone: false,
+                drawingDone: false,
+                boqDone: false,
+                quotationDone: false,
+                paymentVerified: false,
+                executionStarted: false
+            },
+            
+            // Timestamps
             createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
         });
 
         // Update enquiry status
         const enquiryRef = doc(db, 'projectEnquiries', enquiryId);
         await updateDoc(enquiryRef, {
             status: EnquiryStatus.CONVERTED_TO_LEAD,
-            convertedLeadId: leadRef.id,
+            convertedCaseId: caseRef.id, // Changed from convertedLeadId
             updatedAt: serverTimestamp(),
         });
 
-        // Also create client project for tracking
+        // Also create client project for tracking (optional - for client portal)
         await addDoc(collection(db, 'clientProjects'), {
-            projectId: enquiry.enquiryId.replace('ENQ', 'PRJ'), // Convert ENQ-2025-00123 to PRJ-2025-00123
+            projectId: enquiry.enquiryId.replace('ENQ', 'PRJ'),
             clientName: enquiry.clientName,
             email: enquiry.email,
             mobile: enquiry.mobile,
@@ -240,16 +276,17 @@ export const convertEnquiryToLead = async (
             updatedAt: serverTimestamp(),
         });
 
-        // Log overall project creation activity
+        // Log activity
         await logActivity({
-            description: `NEW PROJECT CREATED: Converted from enquiry ${enquiry.enquiryId} for ${enquiry.clientName}. Project ID: ${enquiry.enquiryId.replace('ENQ', 'PRJ')}`,
+            description: `NEW PROJECT CREATED: Converted from enquiry ${enquiry.enquiryId} for ${enquiry.clientName}. Case ID: ${caseRef.id}`,
             team: UserRole.SALES_GENERAL_MANAGER,
             userId: enquiry.assignedTo || '',
             status: ActivityStatus.DONE,
-            projectId: leadRef.id
+            projectId: caseRef.id // Use caseId instead of leadRef.id
         });
 
-        return leadRef.id;
+        console.log('✅ Enquiry converted to Case:', caseRef.id);
+        return caseRef.id;
     } catch (error) {
         console.error('Error converting enquiry to lead:', error);
         throw error;

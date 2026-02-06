@@ -1,20 +1,20 @@
 import React, { useState } from 'react';
 import MyLeadsPage from './sales-team/MyLeadsPage';
 import { useAuth } from '../../context/AuthContext';
-import { Lead } from '../../hooks/useLeads';
-import { LeadPipelineStatus } from '../../types';
+import { Lead, LeadPipelineStatus, Case, CaseStatus } from '../../types';
 import { useUsers } from '../../hooks/useUsers';
+import { useCases } from '../../hooks/useCases';
 import MyRequestsPage from './sales-team/MyRequestsPage';
 import MyPerformancePage from './sales-team/MyPerformancePage';
 import MyDayPage from './shared/MyDayPage';
 import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
-import { useLeads } from '../../hooks/useLeads';
 import { SectionHeader, PrimaryButton } from './shared/DashboardUI';
 import { ExclamationTriangleIcon, ArrowPathIcon, PlusIcon } from '@heroicons/react/24/outline';
-import AddNewLeadModal from './sales-manager/AddNewLeadModal';
+import CreateLeadModal from './shared/CreateLeadModal';
 import UnifiedProjectsPage from './shared/UnifiedProjectsPage';
 import UnifiedRequestInbox from './shared/UnifiedRequestInbox';
+import WorkQueuePage from './shared/WorkQueuePage';
 
 // Simple Error Boundary Component for internal use
 interface ErrorBoundaryProps {
@@ -68,10 +68,68 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
 const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
-  // Use leads hook with backward compatibility
-  const { leads, loading: leadsLoading, error: leadsError, updateLead, createLead } = useLeads();
+  
+  // Use Cases instead of Leads (case-centric architecture)
+  // Filter to show only cases assigned to current user where isProject=false
+  const { cases, loading: casesLoading, error: casesError, updateCase } = useCases({});
+  
   const { users, loading: usersLoading } = useUsers();
   const [isAddLeadModalOpen, setIsAddLeadModalOpen] = useState(false);
+
+  // Convert cases to Lead format for backward compatibility
+  // Only show cases assigned to this sales rep that aren't projects yet
+  // We pass the full Case object but map it to Lead interface for UI compatibility
+  const leads: Lead[] = (cases || [])
+    .filter(c => !c.isProject && c.assignedSales === currentUser?.id) // Only my leads
+    .map(c => {
+      const leadStatus = convertCaseStatusToLeadStatus(c.status);
+      return {
+        // Pass full Case data first
+        ...c,
+        
+        // Override with Lead-specific fields
+        projectName: c.title,
+        value: c.budget?.totalBudget || 0,
+        assignedTo: c.assignedSales || '',
+        status: leadStatus, // Override Case status with Lead status
+        inquiryDate: c.createdAt,
+        lastContacted: 'N/A',
+        priority: 'Medium' as 'High' | 'Medium' | 'Low',
+        history: [],
+        tasks: {},
+        reminders: [],
+        phone: c.clientPhone || '',
+        email: c.clientEmail || '',
+        source: 'Direct',
+        nextAction: 'Follow up',
+        nextActionDate: new Date(),
+      } as any;
+    });
+
+  function convertCaseStatusToLeadStatus(status: CaseStatus): LeadPipelineStatus {
+    switch (status) {
+      case CaseStatus.NEW:
+        return LeadPipelineStatus.NEW_NOT_CONTACTED;
+      case CaseStatus.CONTACTED:
+        return LeadPipelineStatus.CONTACTED_CALL_DONE;
+      case CaseStatus.SITE_VISIT:
+        return LeadPipelineStatus.SITE_VISIT_SCHEDULED;
+      case CaseStatus.DRAWING:
+        return LeadPipelineStatus.WAITING_FOR_DRAWING;
+      case CaseStatus.BOQ:
+        return LeadPipelineStatus.WAITING_FOR_QUOTATION;
+      case CaseStatus.QUOTATION:
+        return LeadPipelineStatus.QUOTATION_SENT;
+      case CaseStatus.PAYMENT_PENDING:
+        return LeadPipelineStatus.NEGOTIATION;
+      case CaseStatus.ACTIVE_PROJECT:
+        return LeadPipelineStatus.WON;
+      case CaseStatus.COMPLETED:
+        return LeadPipelineStatus.WON;
+      default:
+        return LeadPipelineStatus.NEW_NOT_CONTACTED;
+    }
+  }
 
   const pageTitles: { [key: string]: string } = {
     'my-day': 'Personal Agenda',
@@ -85,30 +143,49 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
   };
 
   const handleLeadUpdate = async (updatedLead: Lead) => {
-    await updateLead(updatedLead.id, updatedLead);
+    try {
+      // Convert Lead updates to Case updates
+      // The updatedLead contains the full case object due to the spread we added
+      const caseUpdates: any = {
+        ...updatedLead,
+        title: updatedLead.projectName || updatedLead.title,
+        assignedSales: updatedLead.assignedTo,
+      };
+
+      // Remove Lead-specific fields that don't belong in Case
+      delete caseUpdates.estimatedValue;
+      delete caseUpdates.nextAction;
+      delete caseUpdates.nextActionDate;
+      delete caseUpdates.lastContacted;
+      delete caseUpdates.source;
+      delete caseUpdates.priority;
+      delete caseUpdates.tasks;
+      delete caseUpdates.reminders;
+
+      await updateCase(updatedLead.id, caseUpdates);
+      console.log('Case updated successfully:', updatedLead.id);
+    } catch (error) {
+      console.error('Error updating case:', error);
+      alert('Failed to update lead. Please try again.');
+    }
   };
 
   const handleAddNewLead = async (
     newLeadData: Omit<Lead, 'id' | 'status' | 'inquiryDate' | 'workflow'>,
     reminder?: { date: string; notes: string }
   ) => {
-    const newLead: any = {
-      ...newLeadData,
-      status: LeadPipelineStatus.NEW_NOT_CONTACTED,
-      inquiryDate: new Date(),
-    };
-
-    await createLead(newLead);
+    // This function is deprecated - use CreateLeadModal instead
+    console.log('handleAddNewLead deprecated - use CreateLeadModal instead');
   };
 
   const renderPage = () => {
     console.log('Sales Team Dashboard - Current Page:', currentPage);
-    console.log('Sales Team Dashboard - Leads Loading:', leadsLoading);
-    console.log('Sales Team Dashboard - Leads Error:', leadsError);
-    console.log('Sales Team Dashboard - Leads Count:', leads?.length);
+    console.log('Sales Team Dashboard - Cases Loading:', casesLoading);
+    console.log('Sales Team Dashboard - Cases Error:', casesError);
+    console.log('Sales Team Dashboard - My Leads Count:', leads?.length);
 
     // Shared Loading State
-    if (leadsLoading && ['my-day', 'leads'].includes(currentPage)) {
+    if (casesLoading && ['my-day', 'leads'].includes(currentPage)) {
       return (
         <div className="flex flex-col items-center justify-center h-64">
           <ArrowPathIcon className="w-8 h-8 text-primary animate-spin mb-4" />
@@ -117,14 +194,14 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
       );
     }
 
-    if (leadsError) {
-      console.error('Sales Team Dashboard - Leads Error Details:', leadsError);
+    if (casesError) {
+      console.error('Sales Team Dashboard - Cases Error Details:', casesError);
       return (
         <div className="p-8 text-center bg-error/5 border border-error/20 rounded-3xl">
           <ExclamationTriangleIcon className="w-12 h-12 text-error mx-auto mb-4" />
           <h3 className="text-lg font-bold text-error">Data Synchronization Failed</h3>
           <p className="mt-2 text-text-secondary">Please verify your connection and try again.</p>
-          <p className="mt-1 text-xs text-error">{leadsError || 'Unknown error'}</p>
+          <p className="mt-1 text-xs text-error">{casesError || 'Unknown error'}</p>
         </div>
       );
     }
@@ -134,6 +211,9 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
         case 'my-day':
           console.log('Rendering My Day Page');
           return <MyDayPage />;
+        case 'work-queue':
+          console.log('Rendering Work Queue Page');
+          return <WorkQueuePage />;
         case 'project-hub':
           return <UnifiedProjectsPage roleView="sales" />;
         case 'leads':
@@ -189,18 +269,11 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
       </div>
 
       {/* Add Lead Modal */}
-      <AddNewLeadModal
+      <CreateLeadModal
         isOpen={isAddLeadModalOpen}
         onClose={() => setIsAddLeadModalOpen(false)}
-        users={users}
-        onAddLead={async (data, reminder) => {
-          const newLead: any = {
-            ...data,
-            status: LeadPipelineStatus.NEW_NOT_CONTACTED,
-            inquiryDate: new Date(),
-            assignedTo: currentUser?.id,
-          };
-          await createLead(newLead);
+        onLeadCreated={(caseId) => {
+          console.log('Lead created with ID:', caseId);
           setIsAddLeadModalOpen(false);
         }}
       />

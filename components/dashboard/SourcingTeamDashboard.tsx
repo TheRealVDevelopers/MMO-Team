@@ -8,11 +8,14 @@ import EscalateIssuePage from '../escalation/EscalateIssuePage';
 import QuotationBuilderPage from './sourcing-team/QuotationBuilderPage';
 import SimpleItemsCatalog from './sourcing-team/SimpleItemsCatalog';
 import QuotationAuditPage from './sourcing-team/QuotationAuditPage';
+import WorkQueuePage from './shared/WorkQueuePage';
 
 const ProcurementTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   switch (currentPage) {
     case 'my-day':
       return <MyDayPage />;
+    case 'work-queue':
+      return <WorkQueuePage />;
     case 'overview':
       return <SourcingOverviewPage />;
     case 'quotations':

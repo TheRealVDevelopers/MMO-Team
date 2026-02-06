@@ -24,16 +24,25 @@ export enum UserRole {
 }
 
 export enum CaseStatus {
-  LEAD = "lead",
+  NEW = "new",
+  CONTACTED = "contacted",
   SITE_VISIT = "site_visit",
   DRAWING = "drawing",
   BOQ = "boq",
   QUOTATION = "quotation",
-  EXECUTION = "execution",
+  PAYMENT_PENDING = "payment_pending",
+  ACTIVE_PROJECT = "active_project",
   COMPLETED = "completed",
 }
 
 export enum TaskType {
+  SALES_CONTACT = "sales_contact",
+  SITE_INSPECTION = "site_inspection",
+  DRAWING_TASK = "drawing_task",
+  QUOTATION_TASK = "quotation_task",
+  PROCUREMENT_AUDIT = "procurement_audit",
+  PROCUREMENT_BIDDING = "procurement_bidding",
+  EXECUTION_TASK = "execution_task",
   SITE_VISIT = "site_visit",
   DRAWING = "drawing",
   BOQ = "boq",
@@ -213,7 +222,7 @@ export interface CaseWorkflow {
   boqDone: boolean;
   quotationDone: boolean;
   paymentVerified: boolean;
-  executionApproved: boolean;
+  executionStarted: boolean;
 }
 
 export interface CaseBudget {
@@ -287,6 +296,7 @@ export interface CaseTask {
   startedAt?: Date;
   completedAt?: Date;
   acknowledgedAt?: Date;
+  deadline?: Date;
   kmTravelled?: number; // For site visit tasks
   notes?: string;
 }
@@ -383,6 +393,7 @@ export interface Organization {
   address?: string;
   phone?: string;
   email?: string;
+  gst?: string;
   createdAt: Date;
   settings?: OrganizationSettings;
 }
@@ -984,7 +995,7 @@ export interface Invoice {
   id: string;
   clientName: string;
   amount: number;
-  status: string;
+  status: 'pending' | 'paid' | 'overdue';
   issuedAt: Date;
   issueDate?: Date;
   projectId?: string;

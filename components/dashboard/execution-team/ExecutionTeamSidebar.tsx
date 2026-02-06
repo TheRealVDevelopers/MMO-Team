@@ -7,7 +7,8 @@ import {
     ChatBubbleLeftRightIcon,
     ShieldExclamationIcon,
     UsersIcon,
-    ClipboardDocumentCheckIcon
+    ClipboardDocumentCheckIcon,
+    QueueListIcon
 } from '../../icons/IconComponents';
 import { CheckCircleIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../../../context/AuthContext';
@@ -62,6 +63,7 @@ const ExecutionTeamSidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentP
     // Base items for all execution team members
     const baseItems: NavigationItem[] = [
         { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
+        { id: 'work-queue', label: 'Work Queue', icon: <QueueListIcon className="w-6 h-6" /> },
         { id: 'board', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
         { id: 'gantt', label: 'Gantt', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
     ];

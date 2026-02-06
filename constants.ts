@@ -1,42 +1,35 @@
 // ========================================
 // FIRESTORE COLLECTIONS (CASE-CENTRIC)
+// Root collections at database level
 // ========================================
 
 export const FIRESTORE_COLLECTIONS = {
-  // Organization root
+  // TOP LEVEL ROOT COLLECTIONS
   ORGANIZATIONS: 'organizations',
-  
-  // Global collections
   STAFF_USERS: 'staffUsers',
-  TIME_ENTRIES: 'timeEntries',
+  CASES: 'cases',
+  CATALOG: 'catalog',
   CHAT_CHANNELS: 'chat_channels',
   CHAT_MESSAGES: 'chat_messages',
-  CATALOG: 'catalog',
+  TIME_ENTRIES: 'timeEntries',
   SYSTEM: 'system',
-  
-  // Subcollections under organizations/{orgId}
-  CASES: 'cases',
-  MEMBERS: 'members',
-  VENDORS: 'vendors',
-  LEDGER: 'ledger',
-  PAYROLL: 'payroll',
-  INVOICES: 'invoices',
   
   // Subcollections under cases/{caseId}
   TASKS: 'tasks',
-  SITE_VISITS: 'siteVisits',
   DOCUMENTS: 'documents',
+  ACTIVITIES: 'activities',
   EXPENSES: 'expenses',
   VENDOR_BILLS: 'vendorBills',
   MATERIALS: 'materials',
-  ACTIVITIES: 'activities',
   
   // Subcollections under staffUsers/{userId}
   NOTIFICATIONS: 'notifications',
   
-  // Legacy collections for backward compatibility
+  // Legacy collections (DEPRECATED - DO NOT USE)
   LEADS: 'leads',
   PROJECTS: 'projects',
+  MY_DAY_TASKS: 'myDayTasks',
+  APPROVAL_REQUESTS: 'approvalRequests',
 } as const;
 
 // ========================================

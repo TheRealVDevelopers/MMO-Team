@@ -32,41 +32,46 @@ export const useCases = (options: UseCasesOptions = {}) => {
 
   // Real-time listener for cases
   useEffect(() => {
-    if (!db || !options.organizationId) {
+    if (!db) {
       setLoading(false);
       return;
     }
 
     try {
-      const casesRef = collection(
-        db,
-        FIRESTORE_COLLECTIONS.ORGANIZATIONS,
-        options.organizationId,
-        FIRESTORE_COLLECTIONS.CASES
-      );
+      // FLAT STRUCTURE: cases at root level
+      const casesRef = collection(db, FIRESTORE_COLLECTIONS.CASES);
 
       // Build query with filters
-      let q = query(casesRef, orderBy('createdAt', 'desc'));
+      let constraints = [];
+      
+      // OPTIONAL: Filter by organizationId (if not provided, show ALL cases)
+      if (options.organizationId) {
+        constraints.push(where('organizationId', '==', options.organizationId));
+      }
 
       // Apply isProject filter
       if (options.isProject !== undefined) {
-        q = query(q, where('isProject', '==', options.isProject));
+        constraints.push(where('isProject', '==', options.isProject));
       }
 
       // Apply status filter
       if (options.status) {
         const statuses = Array.isArray(options.status) ? options.status : [options.status];
         if (statuses.length === 1) {
-          q = query(q, where('status', '==', statuses[0]));
+          constraints.push(where('status', '==', statuses[0]));
         }
         // Note: For multiple statuses, we need to filter client-side
       }
 
-      // Apply user assignment filter
-      if (options.userId) {
-        // This will need client-side filtering for assigned sales OR project head
-        // Firestore doesn't support OR queries on different fields directly
-      }
+      // Always order by createdAt
+      constraints.push(orderBy('createdAt', 'desc'));
+
+      const q = query(casesRef, ...constraints);
+
+      // Apply user assignment filter (client-side since Firestore doesn't support OR on different fields)
+      // if (options.userId) {
+      //   // Filter for assignedSales OR projectHead
+      // }
 
       const unsubscribe = onSnapshot(
         q,
@@ -118,27 +123,23 @@ export const useCases = (options: UseCasesOptions = {}) => {
       if (!db || !options.organizationId) throw new Error('Database or organization not initialized');
 
       try {
-        const casesRef = collection(
-          db,
-          FIRESTORE_COLLECTIONS.ORGANIZATIONS,
-          options.organizationId,
-          FIRESTORE_COLLECTIONS.CASES
-        );
+        // FLAT STRUCTURE: cases at root level
+        const casesRef = collection(db, FIRESTORE_COLLECTIONS.CASES);
 
         const defaultWorkflow: CaseWorkflow = {
-          currentStage: CaseStatus.LEAD,
+          currentStage: CaseStatus.NEW,
           siteVisitDone: false,
           drawingDone: false,
           boqDone: false,
           quotationDone: false,
           paymentVerified: false,
-          executionApproved: false,
+          executionStarted: false,
         };
 
         const newCase: Omit<Case, 'id'> = {
           ...caseData,
           workflow: defaultWorkflow,
-          status: CaseStatus.LEAD,
+          status: CaseStatus.NEW,
           isProject: false,
           createdAt: new Date(),
         };
@@ -149,7 +150,7 @@ export const useCases = (options: UseCasesOptions = {}) => {
         });
 
         // Create activity log
-        await logActivity(options.organizationId, docRef.id, 'Case created', caseData.createdBy);
+        await logActivity(docRef.id, 'Case created', caseData.createdBy);
 
         return docRef.id;
       } catch (err: any) {
@@ -163,16 +164,11 @@ export const useCases = (options: UseCasesOptions = {}) => {
   // Update case
   const updateCase = useCallback(
     async (caseId: string, updates: Partial<Case>) => {
-      if (!db || !options.organizationId) throw new Error('Database or organization not initialized');
+      if (!db) throw new Error('Database not initialized');
 
       try {
-        const caseRef = doc(
-          db,
-          FIRESTORE_COLLECTIONS.ORGANIZATIONS,
-          options.organizationId,
-          FIRESTORE_COLLECTIONS.CASES,
-          caseId
-        );
+        // FLAT STRUCTURE: cases at root level
+        const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, caseId);
 
         await updateDoc(caseRef, {
           ...updates,
@@ -183,7 +179,7 @@ export const useCases = (options: UseCasesOptions = {}) => {
         const action = updates.status
           ? `Status changed to ${updates.status}`
           : 'Case updated';
-        await logActivity(options.organizationId, caseId, action, updates.createdBy || 'system');
+        await logActivity(caseId, action, updates.createdBy || 'system');
       } catch (err: any) {
         console.error('Error updating case:', err);
         throw err;
@@ -198,13 +194,8 @@ export const useCases = (options: UseCasesOptions = {}) => {
       if (!db || !options.organizationId) throw new Error('Database or organization not initialized');
 
       try {
-        const caseRef = doc(
-          db,
-          FIRESTORE_COLLECTIONS.ORGANIZATIONS,
-          options.organizationId,
-          FIRESTORE_COLLECTIONS.CASES,
-          caseId
-        );
+        // FLAT STRUCTURE: cases at root level
+        const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, caseId);
 
         await deleteDoc(caseRef);
       } catch (err: any) {
@@ -223,14 +214,14 @@ export const useCases = (options: UseCasesOptions = {}) => {
       try {
         await updateCase(caseId, {
           isProject: true,
-          status: CaseStatus.EXECUTION,
+          status: CaseStatus.ACTIVE_PROJECT,
           workflow: {
             ...cases.find((c) => c.id === caseId)?.workflow!,
             paymentVerified: true,
           },
         });
 
-        await logActivity(options.organizationId, caseId, 'Converted to project', userId);
+        await logActivity(caseId, 'Converted to project', userId);
       } catch (err: any) {
         console.error('Error converting to project:', err);
         throw err;
@@ -239,21 +230,21 @@ export const useCases = (options: UseCasesOptions = {}) => {
     [options.organizationId, cases, updateCase]
   );
 
-  // Helper: Log activity
-  const logActivity = async (orgId: string, caseId: string, action: string, userId: string) => {
+  // Helper: Log activity (FLAT STRUCTURE)
+  const logActivity = async (caseId: string, action: string, userId: string) => {
     if (!db) return;
 
     try {
+      // FLAT STRUCTURE: cases/{caseId}/activities
       const activitiesRef = collection(
         db,
-        FIRESTORE_COLLECTIONS.ORGANIZATIONS,
-        orgId,
         FIRESTORE_COLLECTIONS.CASES,
         caseId,
         FIRESTORE_COLLECTIONS.ACTIVITIES
       );
 
       await addDoc(activitiesRef, {
+        caseId,
         action,
         by: userId,
         timestamp: serverTimestamp(),

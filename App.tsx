@@ -15,7 +15,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   BuildingOfficeIcon, RectangleGroupIcon, UsersIcon, RectangleStackIcon, FunnelIcon, ChartPieIcon, ChatBubbleLeftRightIcon, ShieldExclamationIcon,
   ClockIcon, MapPinIcon, PaintBrushIcon, CalculatorIcon, TruckIcon, WrenchScrewdriverIcon, CreditCardIcon, ChartBarSquareIcon, CalendarDaysIcon, BanknotesIcon,
-  ViewColumnsIcon, TagIcon, ListBulletIcon, PresentationChartLineIcon, ReceiptPercentIcon, BuildingStorefrontIcon, BuildingLibraryIcon, CheckCircleIcon, DocumentTextIcon, CubeIcon
+  ViewColumnsIcon, TagIcon, ListBulletIcon, PresentationChartLineIcon, ReceiptPercentIcon, BuildingStorefrontIcon, BuildingLibraryIcon, CheckCircleIcon, DocumentTextIcon, CubeIcon, QueueListIcon
 } from './components/icons/IconComponents';
 
 const navConfig = {
@@ -77,6 +77,7 @@ const navConfig = {
     title: 'My Workspace',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
+      { id: 'work-queue', label: 'Work Queue', icon: <QueueListIcon className="w-6 h-6" /> },
       { id: 'project-hub', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       { id: 'projects', label: 'Reference', icon: <RectangleStackIcon className="w-6 h-6" /> },
       { id: 'leads', label: 'My Registry', icon: <FunnelIcon className="w-6 h-6" /> },
@@ -94,6 +95,7 @@ const navConfig = {
     title: 'Site Engineer',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
+      { id: 'work-queue', label: 'Work Queue', icon: <QueueListIcon className="w-6 h-6" /> },
       { id: 'projects-board', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       { id: 'projects', label: 'Reference', icon: <RectangleStackIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
@@ -106,6 +108,7 @@ const navConfig = {
     title: 'Quotation',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
+      { id: 'work-queue', label: 'Work Queue', icon: <QueueListIcon className="w-6 h-6" /> },
       { id: 'projects', label: 'Reference', icon: <RectangleStackIcon className="w-6 h-6" /> },
       { id: 'requests', label: 'Requests', icon: <CheckCircleIcon className="w-6 h-6" /> },
       { id: 'quotations', label: 'Create Quotation', icon: <DocumentTextIcon className="w-6 h-6" /> },
@@ -120,6 +123,7 @@ const navConfig = {
     title: 'Site Engineer',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
+      { id: 'work-queue', label: 'Work Queue', icon: <QueueListIcon className="w-6 h-6" /> },
       { id: 'projects-board', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       { id: 'projects', label: 'Reference', icon: <RectangleStackIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
@@ -132,6 +136,7 @@ const navConfig = {
     title: 'Procurement Hub',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
+      { id: 'work-queue', label: 'Work Queue', icon: <QueueListIcon className="w-6 h-6" /> },
       { id: 'audit', label: 'Audit Quotations', icon: <DocumentTextIcon className="w-6 h-6" /> },
       { id: 'negotiations', label: 'Procurement', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       { id: 'items-catalog', label: 'Items Catalog', icon: <TagIcon className="w-6 h-6" /> },
@@ -145,6 +150,7 @@ const navConfig = {
     title: 'Execution Hub',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
+      { id: 'work-queue', label: 'Work Queue', icon: <QueueListIcon className="w-6 h-6" /> },
       { id: 'board', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       // Added unified leadership items
       { id: 'team', label: 'Team', icon: <UsersIcon className="w-6 h-6" /> },

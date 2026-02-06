@@ -4,36 +4,87 @@ import SalesOverviewPage from './sales-manager/SalesOverviewPage';
 import LeadManagementPage from './sales-manager/LeadManagementPage';
 import TeamManagementPage from './sales-manager/TeamManagementPage';
 import ReportsPage from './sales-manager/ReportsPage';
-import { Lead, LeadHistory, LeadPipelineStatus } from '../../types';
+import { Lead, LeadHistory, LeadPipelineStatus, Case, CaseStatus } from '../../types';
 import { USERS } from '../../constants';
-import AddNewLeadModal from './sales-manager/AddNewLeadModal';
+import CreateLeadModal from './shared/CreateLeadModal';
 import AssignLeadModal from './sales-manager/AssignLeadModal';
 import { useAuth } from '../../context/AuthContext';
 import PerformancePage from './sales-manager/PerformancePage';
 import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
-import { useLeads } from '../../hooks/useLeads';
-import { useNewEnquiries, useEnquiries } from '../../hooks/useEnquiries';
+import { useCases } from '../../hooks/useCases';
 import { useUsers } from '../../hooks/useUsers';
 import ApprovalsPage from './super-admin/ApprovalsPage';
 import OrganizationsPage from './admin/OrganizationsPage';
-import EnquiryNotificationBanner from './EnquiryNotificationBanner';
-import EnquiriesListModal from './EnquiriesListModal';
-import JustDialImportModal from './sales-manager/JustDialImportModal';
 import { SectionHeader, PrimaryButton, SecondaryButton } from './shared/DashboardUI';
 import UnifiedProjectsPage from './shared/UnifiedProjectsPage';
 import { UserPlusIcon, UsersIcon, ArrowDownTrayIcon, CloudArrowDownIcon } from '@heroicons/react/24/outline';
 
 const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
-  const { leads, loading: leadsLoading, error: leadsError, createLead, updateLead } = useLeads();
+  
+  // Use Cases instead of Leads (case-centric architecture)
+  // Note: Cases with isProject=false are "leads"
+  const { cases, loading: casesLoading, error: casesError } = useCases({});
+  
   const { users, loading: usersLoading } = useUsers();
-  const { newEnquiries } = useNewEnquiries(currentUser?.id);
-  const { enquiries } = useEnquiries();
   const [isAddLeadModalOpen, setAddLeadModalOpen] = useState(false);
   const [isAssignLeadModalOpen, setAssignLeadModalOpen] = useState(false);
-  const [showEnquiriesModal, setShowEnquiriesModal] = useState(false);
-  const [showJustDialImport, setShowJustDialImport] = useState(false);
+
+  // Convert cases to Lead format for backward compatibility
+  // We pass the full Case object but map it to Lead interface for UI compatibility
+  const leads: Lead[] = (cases || [])
+    .filter(c => !c.isProject) // Only show non-project cases as leads
+    .map(c => ({
+      // Core Lead fields
+      id: c.id,
+      clientName: c.clientName || 'Unknown',
+      projectName: c.title,
+      value: c.budget?.totalBudget || 0, // Use 'value' not 'estimatedValue'
+      assignedTo: c.assignedSales || '',
+      status: convertCaseStatusToLeadStatus(c.status),
+      inquiryDate: c.createdAt,
+      
+      // Additional Lead fields
+      lastContacted: 'N/A',
+      priority: 'Medium' as 'High' | 'Medium' | 'Low',
+      history: [], // History will be fetched from activities subcollection
+      tasks: {},
+      reminders: [],
+      phone: c.clientPhone || '',
+      email: c.clientEmail || '',
+      source: 'Direct',
+      nextAction: 'Follow up',
+      nextActionDate: new Date(),
+      
+      // Pass full Case data for modal compatibility
+      ...c, // Spread the entire case object to preserve all fields
+    } as any));
+
+  function convertCaseStatusToLeadStatus(status: CaseStatus): LeadPipelineStatus {
+    switch (status) {
+      case CaseStatus.NEW:
+        return LeadPipelineStatus.NEW_NOT_CONTACTED;
+      case CaseStatus.CONTACTED:
+        return LeadPipelineStatus.CONTACTED_CALL_DONE;
+      case CaseStatus.SITE_VISIT:
+        return LeadPipelineStatus.SITE_VISIT_SCHEDULED;
+      case CaseStatus.DRAWING:
+        return LeadPipelineStatus.WAITING_FOR_DRAWING;
+      case CaseStatus.BOQ:
+        return LeadPipelineStatus.WAITING_FOR_QUOTATION;
+      case CaseStatus.QUOTATION:
+        return LeadPipelineStatus.QUOTATION_SENT;
+      case CaseStatus.PAYMENT_PENDING:
+        return LeadPipelineStatus.NEGOTIATION;
+      case CaseStatus.ACTIVE_PROJECT:
+        return LeadPipelineStatus.WON;
+      case CaseStatus.COMPLETED:
+        return LeadPipelineStatus.WON;
+      default:
+        return LeadPipelineStatus.NEW_NOT_CONTACTED;
+    }
+  }
 
   const pageTitles: { [key: string]: string } = {
     overview: 'Sales Overview',
@@ -52,52 +103,14 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
     newLeadData: Omit<Lead, 'id' | 'status' | 'inquiryDate' | 'history' | 'lastContacted'>,
     reminder?: { date: string; notes: string }
   ) => {
-    const newLead: Omit<Lead, 'id'> = {
-      ...newLeadData,
-      status: LeadPipelineStatus.NEW_NOT_CONTACTED,
-      inquiryDate: new Date(),
-      lastContacted: 'Just now',
-      history: [
-        {
-          action: 'Lead Created',
-          user: currentUser?.name || 'System',
-          timestamp: new Date(),
-          notes: `Assigned to ${users.find(u => u.id === newLeadData.assignedTo)?.name || 'Unknown'}`
-        }
-      ],
-      tasks: {},
-      reminders: [],
-    };
-
-    if (reminder && reminder.date && reminder.notes) {
-      newLead.reminders = [{
-        id: `rem-${Date.now()}`,
-        date: new Date(reminder.date),
-        notes: reminder.notes,
-        completed: false,
-      }];
-      newLead.history.push({
-        action: 'Reminder set upon creation',
-        user: currentUser?.name || 'System',
-        timestamp: new Date(),
-        notes: `For ${new Date(reminder.date).toLocaleString()}: ${reminder.notes}`
-      });
-    }
-    await createLead(newLead as any);
+    // This function is deprecated - leads are now created via CreateLeadModal
+    // which writes directly to cases collection
+    console.log('handleAddLead deprecated - use CreateLeadModal instead');
   };
 
   const handleAssignLead = async (leadId: string, newOwnerId: string) => {
-    const lead = leads.find(l => l.id === leadId);
-    if (lead) {
-      const newOwner = users.find(u => u.id === newOwnerId);
-      const newHistoryItem: LeadHistory = {
-        action: `Lead assigned to ${newOwner?.name || 'Unknown'}`,
-        user: currentUser?.name || 'System',
-        timestamp: new Date(),
-      };
-      const updatedHistory = [...lead.history, newHistoryItem];
-      await updateLead(leadId, { assignedTo: newOwnerId, history: updatedHistory });
-    }
+    // This function is deprecated - need to update case assignedSales field
+    console.log('handleAssignLead deprecated - need to implement case assignment');
   };
 
   const handleExportLeads = () => {
@@ -136,7 +149,7 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
   };
 
   const renderPage = () => {
-    if (leadsLoading || usersLoading) {
+    if (casesLoading || usersLoading) {
       return (
         <div className="flex flex-col items-center justify-center h-64">
           <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
@@ -144,8 +157,8 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
         </div>
       );
     }
-    if (leadsError) {
-      return <div className="p-8 text-center text-error bg-error/5 rounded-3xl border border-error/20">Error synchronizing lead data. Please try again.</div>;
+    if (casesError) {
+      return <div className="p-8 text-center text-error bg-error/5 rounded-3xl border border-error/20">Error synchronizing case data. Please try again.</div>;
     }
 
     switch (currentPage) {
@@ -176,13 +189,6 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
 
   return (
     <div className="max-w-[1600px] mx-auto">
-      {currentPage === 'overview' && (
-        <EnquiryNotificationBanner
-          newEnquiries={newEnquiries}
-          onViewEnquiries={() => setShowEnquiriesModal(true)}
-        />
-      )}
-
       <SectionHeader
         title={pageTitles[currentPage]}
         subtitle={currentPage === 'overview' ? `Welcome back, ${currentUser?.name.split(' ')[0]}. Here's what's happening today.` : undefined}
@@ -192,9 +198,6 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
               <PrimaryButton onClick={() => setAddLeadModalOpen(true)} icon={<UserPlusIcon className="w-4 h-4" />}>
                 Add Lead
               </PrimaryButton>
-              <SecondaryButton onClick={() => setShowJustDialImport(true)} icon={<CloudArrowDownIcon className="w-4 h-4" />}>
-                Just Dial Import
-              </SecondaryButton>
               <SecondaryButton onClick={() => setAssignLeadModalOpen(true)} icon={<UsersIcon className="w-4 h-4" />}>
                 Assign
               </SecondaryButton>
@@ -210,11 +213,13 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
         {renderPage()}
       </div>
 
-      <AddNewLeadModal
+      <CreateLeadModal
         isOpen={isAddLeadModalOpen}
         onClose={() => setAddLeadModalOpen(false)}
-        users={users}
-        onAddLead={handleAddLead}
+        onLeadCreated={(caseId) => {
+          console.log('Lead created with ID:', caseId);
+          setAddLeadModalOpen(false);
+        }}
       />
       <AssignLeadModal
         isOpen={isAssignLeadModalOpen}
@@ -222,20 +227,6 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
         leads={leads}
         users={users}
         onAssignLead={handleAssignLead}
-      />
-      <EnquiriesListModal
-        isOpen={showEnquiriesModal}
-        onClose={() => setShowEnquiriesModal(false)}
-        enquiries={enquiries}
-        currentUserId={currentUser?.id || ''}
-      />
-      <JustDialImportModal
-        isOpen={showJustDialImport}
-        onClose={() => setShowJustDialImport(false)}
-        onImportComplete={() => {
-          setShowJustDialImport(false);
-          // Leads will auto-refresh via useLeads hook
-        }}
       />
     </div>
   );

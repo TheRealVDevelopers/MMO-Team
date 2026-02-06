@@ -7,7 +7,8 @@ import {
     BuildingStorefrontIcon,
     ClockIcon,
     ChatBubbleLeftRightIcon,
-    ShieldExclamationIcon
+    ShieldExclamationIcon,
+    QueueListIcon
 } from '../../icons/IconComponents';
 
 interface SidebarProps {
@@ -42,6 +43,7 @@ const NavItem: React.FC<{
 const SourcingTeamSidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage }) => {
     const navItems = [
         { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
+        { id: 'work-queue', label: 'Work Queue', icon: <QueueListIcon className="w-6 h-6" /> },
         { id: 'audit', label: 'Audit Procurement', icon: <RectangleGroupIcon className="w-6 h-6" /> },
         { id: 'bidding', label: 'Bidding', icon: <TagIcon className="w-6 h-6" /> },
         { id: 'items-catalog', label: 'Items Catalog', icon: <BuildingStorefrontIcon className="w-6 h-6" /> },

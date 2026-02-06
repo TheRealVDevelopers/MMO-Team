@@ -1,10 +1,16 @@
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, onSnapshot, query, where, orderBy } from 'firebase/firestore';
-import { Task, UserRole } from '../types';
+import { collection, collectionGroup, onSnapshot, query, where, orderBy } from 'firebase/firestore';
+import { CaseTask, UserRole, TaskStatus } from '../types';
+import { FIRESTORE_COLLECTIONS } from '../constants';
 
+/**
+ * useTeamTasks - Fetches tasks from cases/{caseId}/tasks collection
+ * Now uses collectionGroup to query across all cases
+ * @param role - Optional role filter for team-specific tasks
+ */
 export const useTeamTasks = (role?: UserRole) => {
-    const [tasks, setTasks] = useState<Task[]>([]);
+    const [tasks, setTasks] = useState<CaseTask[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
@@ -13,27 +19,44 @@ export const useTeamTasks = (role?: UserRole) => {
             setLoading(false);
             return;
         }
-        const tasksRef = collection(db, 'myDayTasks');
-        let q = query(tasksRef, orderBy('created_at', 'desc'));
 
-        if (role) {
-            // This assumes we have a team/role field in tasks, if not, we might need to filter client-side
-            // based on matching userId's role. For now, let's fetch all and the component can filter.
-            // Or if we have a specific 'team' field:
-            // q = query(tasksRef, where('team', '==', role), orderBy('created_at', 'desc'));
-        }
+        // Use collectionGroup to query tasks across all cases
+        // Note: collectionGroup queries with orderBy require a composite index
+        // For now, we'll query without orderBy and sort client-side
+        const tasksQuery = query(
+            collectionGroup(db, FIRESTORE_COLLECTIONS.TASKS)
+        );
 
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const tasksData: Task[] = [];
+        const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
+            const tasksData: CaseTask[] = [];
             snapshot.forEach((doc) => {
-                const task = { id: doc.id, ...doc.data() } as Task;
+                const data = doc.data();
+                const task: CaseTask = {
+                    id: doc.id,
+                    caseId: data.caseId,
+                    type: data.type,
+                    assignedTo: data.assignedTo,
+                    assignedBy: data.assignedBy,
+                    status: data.status,
+                    createdAt: data.createdAt?.toDate() || new Date(),
+                    startedAt: data.startedAt?.toDate(),
+                    completedAt: data.completedAt?.toDate(),
+                    acknowledgedAt: data.acknowledgedAt?.toDate(),
+                    deadline: data.deadline?.toDate(),
+                    kmTravelled: data.kmTravelled,
+                    notes: data.notes,
+                };
 
-                // User Requirement: "If any of the team member adds a task by themselves, that should be reflected to them only. That should not be reflected to the general manager or the admin"
-                // Filtering out self-assigned tasks from the team view
-                if (task.userId !== task.createdBy) {
+                // Filter: exclude self-assigned tasks (user's own tasks should only be visible to them)
+                // Include task if assignedTo !== assignedBy (assigned by someone else)
+                if (task.assignedTo !== task.assignedBy) {
                     tasksData.push(task);
                 }
             });
+
+            // Client-side sorting by createdAt descending
+            tasksData.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
             setTasks(tasksData);
             setLoading(false);
         }, (err) => {

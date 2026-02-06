@@ -40,12 +40,10 @@ export const useCaseTasks = (options: UseCaseTasksOptions = {}) => {
     try {
       let q;
 
-      // Option 1: Get tasks for a specific case
-      if (options.caseId && options.organizationId) {
+      // Option 1: Get tasks for a specific case (FLAT STRUCTURE)
+      if (options.caseId) {
         const tasksRef = collection(
           db,
-          FIRESTORE_COLLECTIONS.ORGANIZATIONS,
-          options.organizationId,
           FIRESTORE_COLLECTIONS.CASES,
           options.caseId,
           FIRESTORE_COLLECTIONS.TASKS
@@ -116,15 +114,14 @@ export const useCaseTasks = (options: UseCaseTasksOptions = {}) => {
   // Create new task
   const createTask = useCallback(
     async (taskData: Omit<CaseTask, 'id' | 'createdAt'>) => {
-      if (!db || !options.organizationId || !taskData.caseId) {
-        throw new Error('Database, organization, or case not initialized');
+      if (!db || !taskData.caseId) {
+        throw new Error('Database or case not initialized');
       }
 
       try {
+        // FLAT STRUCTURE: cases/{caseId}/tasks
         const tasksRef = collection(
           db,
-          FIRESTORE_COLLECTIONS.ORGANIZATIONS,
-          options.organizationId,
           FIRESTORE_COLLECTIONS.CASES,
           taskData.caseId,
           FIRESTORE_COLLECTIONS.TASKS
@@ -136,21 +133,28 @@ export const useCaseTasks = (options: UseCaseTasksOptions = {}) => {
           createdAt: new Date(),
         };
 
+        // Remove undefined fields to prevent Firestore errors
+        const cleanTask = Object.fromEntries(
+          Object.entries(newTask).filter(([_, v]) => v !== undefined)
+        );
+
         const docRef = await addDoc(tasksRef, {
-          ...newTask,
+          ...cleanTask,
           createdAt: serverTimestamp(),
         });
 
         // Create activity log
-        await logActivity(options.organizationId, taskData.caseId, `Task created: ${taskData.type}`, taskData.assignedBy);
+        await logActivity(taskData.caseId, `Task created: ${taskData.type}`, taskData.assignedBy);
 
-        // Send notification to assigned user
-        await sendNotification(
-          taskData.assignedTo,
-          'New Task Assigned',
-          `You have been assigned a ${taskData.type} task`,
-          'info'
-        );
+        // Send notification to assigned user (only if assignedTo is specified)
+        if (taskData.assignedTo && taskData.assignedTo.trim()) {
+          await sendNotification(
+            taskData.assignedTo,
+            'New Task Assigned',
+            `You have been assigned a ${taskData.type} task`,
+            'info'
+          );
+        }
 
         return docRef.id;
       } catch (err: any) {
@@ -164,13 +168,12 @@ export const useCaseTasks = (options: UseCaseTasksOptions = {}) => {
   // Start task
   const startTask = useCallback(
     async (taskId: string, caseId: string) => {
-      if (!db || !options.organizationId) throw new Error('Database or organization not initialized');
+      if (!db) throw new Error('Database not initialized');
 
       try {
+        // FLAT STRUCTURE: cases/{caseId}/tasks/{taskId}
         const taskRef = doc(
           db,
-          FIRESTORE_COLLECTIONS.ORGANIZATIONS,
-          options.organizationId,
           FIRESTORE_COLLECTIONS.CASES,
           caseId,
           FIRESTORE_COLLECTIONS.TASKS,
@@ -182,7 +185,7 @@ export const useCaseTasks = (options: UseCaseTasksOptions = {}) => {
           startedAt: serverTimestamp(),
         });
 
-        await logActivity(options.organizationId, caseId, 'Task started', 'system');
+        await logActivity(caseId, 'Task started', 'system');
       } catch (err: any) {
         console.error('Error starting task:', err);
         throw err;
@@ -194,13 +197,12 @@ export const useCaseTasks = (options: UseCaseTasksOptions = {}) => {
   // Complete task
   const completeTask = useCallback(
     async (taskId: string, caseId: string, kmTravelled?: number) => {
-      if (!db || !options.organizationId) throw new Error('Database or organization not initialized');
+      if (!db) throw new Error('Database not initialized');
 
       try {
+        // FLAT STRUCTURE: cases/{caseId}/tasks/{taskId}
         const taskRef = doc(
           db,
-          FIRESTORE_COLLECTIONS.ORGANIZATIONS,
-          options.organizationId,
           FIRESTORE_COLLECTIONS.CASES,
           caseId,
           FIRESTORE_COLLECTIONS.TASKS,
@@ -213,7 +215,7 @@ export const useCaseTasks = (options: UseCaseTasksOptions = {}) => {
           ...(kmTravelled && { kmTravelled }),
         });
 
-        await logActivity(options.organizationId, caseId, 'Task completed', 'system');
+        await logActivity(caseId, 'Task completed', 'system');
 
         // Send notification to task creator
         const task = tasks.find((t) => t.id === taskId);
@@ -236,13 +238,12 @@ export const useCaseTasks = (options: UseCaseTasksOptions = {}) => {
   // Acknowledge task
   const acknowledgeTask = useCallback(
     async (taskId: string, caseId: string) => {
-      if (!db || !options.organizationId) throw new Error('Database or organization not initialized');
+      if (!db) throw new Error('Database not initialized');
 
       try {
+        // FLAT STRUCTURE: cases/{caseId}/tasks/{taskId}
         const taskRef = doc(
           db,
-          FIRESTORE_COLLECTIONS.ORGANIZATIONS,
-          options.organizationId,
           FIRESTORE_COLLECTIONS.CASES,
           caseId,
           FIRESTORE_COLLECTIONS.TASKS,
@@ -254,7 +255,7 @@ export const useCaseTasks = (options: UseCaseTasksOptions = {}) => {
           acknowledgedAt: serverTimestamp(),
         });
 
-        await logActivity(options.organizationId, caseId, 'Task acknowledged', 'system');
+        await logActivity(caseId, 'Task acknowledged', 'system');
       } catch (err: any) {
         console.error('Error acknowledging task:', err);
         throw err;
@@ -263,21 +264,21 @@ export const useCaseTasks = (options: UseCaseTasksOptions = {}) => {
     [options.organizationId]
   );
 
-  // Helper: Log activity
-  const logActivity = async (orgId: string, caseId: string, action: string, userId: string) => {
+  // Helper: Log activity (FLAT STRUCTURE)
+  const logActivity = async (caseId: string, action: string, userId: string) => {
     if (!db) return;
 
     try {
+      // FLAT STRUCTURE: cases/{caseId}/activities
       const activitiesRef = collection(
         db,
-        FIRESTORE_COLLECTIONS.ORGANIZATIONS,
-        orgId,
         FIRESTORE_COLLECTIONS.CASES,
         caseId,
         FIRESTORE_COLLECTIONS.ACTIVITIES
       );
 
       await addDoc(activitiesRef, {
+        caseId,
         action,
         by: userId,
         timestamp: serverTimestamp(),
@@ -290,6 +291,12 @@ export const useCaseTasks = (options: UseCaseTasksOptions = {}) => {
   // Helper: Send notification
   const sendNotification = async (userId: string, title: string, message: string, type: 'info' | 'success' | 'warning' | 'error') => {
     if (!db) return;
+    
+    // Validate userId before attempting to create notification
+    if (!userId || !userId.trim()) {
+      console.warn('Cannot send notification: userId is empty');
+      return;
+    }
 
     try {
       const notificationsRef = collection(

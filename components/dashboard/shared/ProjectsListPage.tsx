@@ -14,7 +14,9 @@ import { PrimaryButton, cn } from './DashboardUI';
 
 const ProjectsListPage: React.FC = () => {
     const { currentUser } = useAuth();
-    const { cases, loading } = useCases();
+    const { cases, loading } = useCases({
+        organizationId: currentUser?.organizationId
+    });
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
     const [showLeads, setShowLeads] = useState(true);
@@ -23,10 +25,10 @@ const ProjectsListPage: React.FC = () => {
     if (!currentUser) return null;
 
     // Debug: Log what we're getting
-    console.log('ProjectsListPage - Total cases:', cases.length);
-    console.log('ProjectsListPage - Cases with isProject=true:', cases.filter(c => c.isProject === true).length);
-    console.log('ProjectsListPage - Cases with isProject=false:', cases.filter(c => c.isProject === false).length);
-    console.log('ProjectsListPage - Cases with isProject undefined:', cases.filter(c => c.isProject === undefined).length);
+    console.log('ProjectsListPage - Total cases:', cases?.length || 0);
+    console.log('ProjectsListPage - Cases with isProject=true:', cases?.filter(c => c.isProject === true).length || 0);
+    console.log('ProjectsListPage - Cases with isProject=false:', cases?.filter(c => c.isProject === false).length || 0);
+    console.log('ProjectsListPage - Cases with isProject undefined:', cases?.filter(c => c.isProject === undefined).length || 0);
 
     // Filter: Show projects and optionally leads
     // Note: If isProject is undefined, treat as project for backward compatibility
@@ -67,7 +69,7 @@ const ProjectsListPage: React.FC = () => {
 
     // Filter by search
     const filteredItems = allItems.filter(item =>
-        item.projectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.clientName?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
@@ -185,7 +187,7 @@ const ProjectsListPage: React.FC = () => {
 
                                         {/* Project/Lead Info */}
                                         <h3 className="text-xl font-bold text-text-primary mb-2">
-                                            {item.projectName}
+                                            {item.title}
                                         </h3>
                                         <p className="text-text-secondary mb-4">
                                             {item.clientName}
@@ -197,7 +199,7 @@ const ProjectsListPage: React.FC = () => {
                                                 "text-lg font-bold mb-4",
                                                 isLead ? "text-purple-500" : "text-primary"
                                             )}>
-                                                {formatCurrencyINR(item.budget)}
+                                                {formatCurrencyINR(item.budget?.totalBudget || 0)}
                                             </p>
                                         )}
 
@@ -229,8 +231,9 @@ const ProjectsListPage: React.FC = () => {
                             <tbody className="bg-surface divide-y divide-border">
                                 {filteredItems.map(item => {
                                     const isLead = item.isProject === false;
-                                    // Combine legacy documents and new files array and cast to any for display
-                                    const docs: any[] = [...(item.files || []), ...(item.documents || [])];
+                                    // Note: Documents are now in subcollection, not inline
+                                    // This would require a separate query - for now show empty
+                                    const docs: any[] = [];
                                     const latestDocs = docs.sort((a, b) => {
                                         const dateA = new Date(a.uploadedAt || a.uploaded || 0).getTime();
                                         const dateB = new Date(b.uploadedAt || b.uploaded || 0).getTime();
@@ -241,7 +244,7 @@ const ProjectsListPage: React.FC = () => {
                                         <tr key={item.id} className="hover:bg-subtle-background/50 transition-colors">
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm font-bold text-text-primary">{item.projectName}</span>
+                                                    <span className="text-sm font-bold text-text-primary">{item.title}</span>
                                                     <span className="text-xs text-text-secondary">{item.clientName}</span>
                                                 </div>
                                             </td>
