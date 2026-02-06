@@ -34,7 +34,7 @@ const DesignAndSiteEngineeringDashboard: React.FC<{ currentPage: string, setCurr
     const { currentUser } = useAuth();
     const { projects, loading: projectsLoading, updateProject } = useProjects();
     const { leads, loading: leadsLoading } = useLeads();
-    
+
     const loading = projectsLoading || leadsLoading;
 
     // Convert leads with site visit status to Project-like objects
@@ -44,14 +44,14 @@ const DesignAndSiteEngineeringDashboard: React.FC<{ currentPage: string, setCurr
             console.log('[DesignAndSiteEngineeringDashboard] No leads available for conversion');
             return [];
         }
-        
+
         const siteVisitLeadStatuses = [
             LeadPipelineStatus.SITE_VISIT_SCHEDULED,
             LeadPipelineStatus.SITE_VISIT_RESCHEDULED,
             'Site Visit Scheduled',
             'Site Visit Rescheduled'
         ];
-        
+
         const drawingLeadStatuses = [
             LeadPipelineStatus.WAITING_FOR_DRAWING,
             LeadPipelineStatus.DRAWING_IN_PROGRESS,
@@ -60,7 +60,7 @@ const DesignAndSiteEngineeringDashboard: React.FC<{ currentPage: string, setCurr
             'Drawing In Progress',
             'Drawing Revisions'
         ];
-        
+
         const converted = leads
             .filter(lead => {
                 // Only include leads in relevant statuses for this workflow
@@ -86,7 +86,7 @@ const DesignAndSiteEngineeringDashboard: React.FC<{ currentPage: string, setCurr
                 } else {
                     projectStatus = ProjectStatus.SITE_VISIT_PENDING; // Default fallback
                 }
-                
+
                 const convertedProject: Project = {
                     id: `lead-${lead.id}`, // Prefix to distinguish from regular projects
                     clientName: lead.clientName,
@@ -112,96 +112,70 @@ const DesignAndSiteEngineeringDashboard: React.FC<{ currentPage: string, setCurr
                     // Mark this as originating from a lead
                     convertedFromLeadId: lead.id,
                 };
-                
+
                 console.log(`[DesignAndSiteEngineeringDashboard] Converted Lead to Project: ${lead.projectName}, LeadStatus: ${lead.status} -> ProjectStatus: ${projectStatus}`);
                 return convertedProject;
             });
-        
+
         console.log(`[DesignAndSiteEngineeringDashboard] Converted ${converted.length} leads to projects`);
         return converted;
     }, [leads]);
 
     // Filter projects assigned to this team member or all if manager
-    // Also include projects in Design/Site workflow statuses for relevant roles
+    // STRICT FILTERING: Only show projects assigned to the current user
     const myProjects = useMemo(() => {
         // Defensive check: ensure arrays exist
         const safeProjects = projects || [];
         const safeLeadsAsProjects = leadsAsProjects || [];
-        
+
         // Combine real projects with converted leads
         const allProjects = [...safeProjects, ...safeLeadsAsProjects];
-        
+
         console.log('[DesignAndSiteEngineeringDashboard] Total projects from Firebase:', safeProjects.length);
         console.log('[DesignAndSiteEngineeringDashboard] Total leads converted to projects:', safeLeadsAsProjects.length);
         console.log('[DesignAndSiteEngineeringDashboard] Combined total:', allProjects.length);
         console.log('[DesignAndSiteEngineeringDashboard] Current user:', currentUser?.id, currentUser?.role);
-        
+
         // Early return if no projects available
         if (allProjects.length === 0) {
             console.log('[DesignAndSiteEngineeringDashboard] No projects available to filter');
             return [];
         }
-        
+
         const filtered = allProjects.filter(p => {
+            // Check if user is a manager/admin - they see everything
+            const isManager = ['Super Admin', 'Admin', 'admin', 'Manager', 'manager', UserRole.SUPER_ADMIN, UserRole.SALES_GENERAL_MANAGER].includes(currentUser?.role || '');
+            if (isManager) {
+                return true;
+            }
+
+            // STRICT FILTERING for non-managers:
             // Check if user is assigned to this project in any role
             const isAssignedEngineer = p.assignedEngineerId === currentUser?.id;
             const isDrawingTeamMember = p.drawingTeamMemberId === currentUser?.id;
             const isInExecutionTeam = p.assignedTeam?.execution?.includes(currentUser?.id || '');
             const isSiteEngineer = p.assignedTeam?.site_engineer === currentUser?.id;
             const isDrawingAssigned = p.assignedTeam?.drawing === currentUser?.id;
-            
-            // Check if user is a manager/admin
-            const isManager = ['Super Admin', 'Admin', 'admin', 'Manager', 'manager', UserRole.SUPER_ADMIN, UserRole.SALES_GENERAL_MANAGER].includes(currentUser?.role || '');
-            
-            // Check if project is in a relevant workflow status for this dashboard
-            const isRelevantStatus = DESIGN_SITE_WORKFLOW_STATUSES.includes(p.status as any);
-            
-            // Site Engineers should see ALL projects in site visit statuses
-            const userRole = currentUser?.role as string;
-            const isSiteEngineerRole = userRole === UserRole.SITE_ENGINEER;
-            const isInSiteVisitStatus = [
-                ProjectStatus.SITE_VISIT_PENDING, 
-                ProjectStatus.SITE_VISIT_RESCHEDULED,
-                'Site Visit Pending',
-                'Site Visit Rescheduled'
-            ].includes(p.status as any);
-            
-            // Drawing Team should see ALL projects (not just drawing status)
-            const isDrawingRole = userRole === UserRole.DRAWING_TEAM || userRole === UserRole.DESIGNER;
-            const isInDrawingStatus = [
-                ProjectStatus.DRAWING_PENDING,
-                ProjectStatus.DESIGN_IN_PROGRESS,
-                ProjectStatus.REVISIONS_IN_PROGRESS,
-                ProjectStatus.AWAITING_DESIGN,
-                'Drawing Pending',
-                'Design In Progress',
-                'Revisions In Progress',
-                'Awaiting Design',
-                'Waiting for Drawing' // Add this for lead-sourced projects
-            ].includes(p.status as any);
-            
-            // Include project if:
-            // 1. User is explicitly assigned
-            // 2. User is a manager/admin
-            // 3. User is a Site Engineer and project is in site visit OR drawing status
-            // 4. User is in Drawing Team - SHOW ALL PROJECTS
-            const shouldInclude = 
-                isAssignedEngineer || 
-                isDrawingTeamMember || 
-                isInExecutionTeam || 
-                isSiteEngineer || 
-                isDrawingAssigned || 
-                isManager ||
-                (isSiteEngineerRole && (isInSiteVisitStatus || isInDrawingStatus)) || 
-                isDrawingRole; // Drawing Team sees ALL projects
-            
+
+            // Also check the generic assignedTo field (for leads)
+            const isGenericAssigned = (p as any).assignedTo === currentUser?.id;
+
+            // STRICT: Only include if user is explicitly assigned
+            const shouldInclude =
+                isAssignedEngineer ||
+                isDrawingTeamMember ||
+                isInExecutionTeam ||
+                isSiteEngineer ||
+                isDrawingAssigned ||
+                isGenericAssigned;
+
             if (shouldInclude) {
                 console.log(`[DesignAndSiteEngineeringDashboard] INCLUDED: ${p.projectName}, Status: ${p.status}, IsFromLead: ${p.id.startsWith('lead-')}`);
             }
-            
+
             return shouldInclude;
         });
-        
+
         console.log('[DesignAndSiteEngineeringDashboard] Filtered projects for user:', filtered.length);
         return filtered;
     }, [projects, leadsAsProjects, currentUser?.id, currentUser?.role]);
@@ -212,10 +186,10 @@ const DesignAndSiteEngineeringDashboard: React.FC<{ currentPage: string, setCurr
         if (id.startsWith('lead-')) {
             const actualLeadId = id.replace('lead-', '');
             console.log(`[DesignAndSiteEngineeringDashboard] Updating LEAD: ${actualLeadId}`, updates);
-            
+
             // Map project status back to lead status
             let leadUpdates: Partial<Lead> = {};
-            
+
             if (updates.status) {
                 switch (updates.status) {
                     case ProjectStatus.DRAWING_PENDING:
@@ -237,7 +211,7 @@ const DesignAndSiteEngineeringDashboard: React.FC<{ currentPage: string, setCurr
                         break;
                 }
             }
-            
+
             console.log('[DesignAndSiteEngineeringDashboard] Updating lead with:', leadUpdates);
             await updateLead(actualLeadId, leadUpdates);
         } else {
@@ -250,7 +224,7 @@ const DesignAndSiteEngineeringDashboard: React.FC<{ currentPage: string, setCurr
         switch (currentPage) {
             case 'my-day':
                 return <MyDayPage />;
-            case 'projects':
+            case 'projects-board':
                 return (
                     <ProjectsWorkflowPage
                         projects={myProjects}

@@ -62,7 +62,7 @@ const ProjectsListPage: React.FC = () => {
                 {/* Header */}
                 <div className="mb-6 flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold text-text-primary mb-2">Reference</h1>
+                        <h1 className="text-3xl font-bold text-text-primary mb-2">References</h1>
                         <p className="text-text-secondary">View all project details, drawings, BOQs, and quotations</p>
                         <div className="flex gap-4 mt-2 text-sm">
                             <span className="text-text-tertiary">Projects: <span className="font-bold text-primary">{projectCount}</span></span>

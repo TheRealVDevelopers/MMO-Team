@@ -21,9 +21,11 @@ interface DirectAssignTaskModalProps {
     isOpen: boolean;
     onClose: () => void;
     onAssign: (taskData: any) => Promise<void>;
+    initialContextId?: string;
+    initialContextType?: 'project' | 'lead';
 }
 
-const DirectAssignTaskModal: React.FC<DirectAssignTaskModalProps> = ({ isOpen, onClose, onAssign }) => {
+const DirectAssignTaskModal: React.FC<DirectAssignTaskModalProps> = ({ isOpen, onClose, onAssign, initialContextId, initialContextType }) => {
     const { users } = useUsers();
     const { projects } = useProjects();
     const { leads } = useLeads();
@@ -33,9 +35,17 @@ const DirectAssignTaskModal: React.FC<DirectAssignTaskModalProps> = ({ isOpen, o
     const [assigneeId, setAssigneeId] = useState('');
     const [priority, setPriority] = useState<'High' | 'Medium' | 'Low'>('Medium');
     const [deadline, setDeadline] = useState('');
-    const [contextType, setContextType] = useState<'project' | 'lead'>('project');
-    const [contextId, setContextId] = useState('');
+    const [contextType, setContextType] = useState<'project' | 'lead'>(initialContextType || 'project');
+    const [contextId, setContextId] = useState(initialContextId || '');
     const [processing, setProcessing] = useState(false);
+
+    // Update state when props change (re-opening modal)
+    React.useEffect(() => {
+        if (isOpen && initialContextId) {
+            setContextId(initialContextId);
+            if (initialContextType) setContextType(initialContextType);
+        }
+    }, [isOpen, initialContextId, initialContextType]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

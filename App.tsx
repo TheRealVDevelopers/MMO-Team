@@ -99,7 +99,7 @@ const navConfig = {
     title: 'Site Engineer',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
-      { id: 'projects', label: 'Reference', icon: <ViewColumnsIcon className="w-6 h-6" /> },
+      { id: 'projects-board', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
       { id: 'workflow', label: 'M-Workflow', icon: <PresentationChartLineIcon className="w-6 h-6" /> },
       // { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
@@ -124,7 +124,7 @@ const navConfig = {
     title: 'Site Engineer',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
-      { id: 'projects', label: 'Reference', icon: <ViewColumnsIcon className="w-6 h-6" /> },
+      { id: 'projects-board', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
       { id: 'workflow', label: 'M-Workflow', icon: <PresentationChartLineIcon className="w-6 h-6" /> },
       // { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
@@ -174,6 +174,7 @@ const navConfig = {
     title: 'Financial Command Center',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
+      { id: 'projects', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       { id: 'tasks', label: 'Tasks', icon: <ListBulletIcon className="w-6 h-6" /> },
       { id: 'overview', label: 'Overview', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
       { id: 'sales-invoices', label: 'GRIN', icon: <BanknotesIcon className="w-6 h-6" /> },

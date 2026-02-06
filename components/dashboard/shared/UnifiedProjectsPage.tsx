@@ -23,7 +23,7 @@ import ProjectDetailModal from '../super-admin/ProjectDetailModal';
 // --- Types & Interfaces ---
 
 interface UnifiedProjectsPageProps {
-    roleView?: 'admin' | 'manager' | 'sales';
+    roleView?: 'admin' | 'manager' | 'sales' | 'accounts';
 }
 
 type FilterStage = 'projects' | 'all' | 'leads' | 'site-visit' | 'drawing' | 'execution' | 'completed';

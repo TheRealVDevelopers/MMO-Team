@@ -114,27 +114,27 @@ const COMPLETED_STATUSES = [
 // Helper to determine which stage a project is in
 const getProjectStage = (project: Project): string => {
     const status = project.status;
-    
+
     // Debug logging for troubleshooting
     console.log(`[getProjectStage] Project: ${project.projectName}, Status: "${status}", Type: ${typeof status}`);
-    
+
     // First check project status for explicit workflow stages
     // Use includes() for robust string matching
     if (status && SITE_INSPECTION_STATUSES.includes(status as any)) {
         console.log(`[getProjectStage] -> site-inspection (matched status)`);
         return 'site-inspection';
     }
-    
+
     if (status && DRAWING_STATUSES.includes(status as any)) {
         console.log(`[getProjectStage] -> drawing (matched status)`);
         return 'drawing';
     }
-    
+
     if (status && COMPLETED_STATUSES.includes(status as any)) {
         console.log(`[getProjectStage] -> completed (matched status)`);
         return 'completed';
     }
-    
+
     // Fallback to date-based checks for backward compatibility
     const hasSiteInspection = project.siteInspectionDate != null;
     const hasDrawing = project.drawingSubmittedAt != null;
@@ -147,7 +147,7 @@ const getProjectStage = (project: Project): string => {
         console.log(`[getProjectStage] -> drawing (has inspection date)`);
         return 'drawing';
     }
-    
+
     // Default fallback - new projects go to site-inspection
     console.log(`[getProjectStage] -> site-inspection (fallback default)`);
     return 'site-inspection';
@@ -160,7 +160,7 @@ const ProjectCard: React.FC<{
 }> = ({ project, stage, onAction }) => {
     const stageConfig = WORKFLOW_STAGES.find(s => s.id === stage);
     const Icon = stageConfig?.icon || ClipboardDocumentListIcon;
-    
+
     // Check if this is a lead-sourced project
     const isFromLead = project.id.startsWith('lead-');
 
@@ -305,13 +305,13 @@ const ProjectsWorkflowPage: React.FC<ProjectsWorkflowPageProps> = ({
         if (action === 'complete-inspection') {
             try {
                 console.log('[ProjectsWorkflowPage] Completing inspection for:', project.projectName, 'ID:', project.id);
-                
+
                 // Mark site inspection as complete and update status
                 await onUpdateProject(project.id, {
                     siteInspectionDate: new Date(),
                     status: ProjectStatus.DRAWING_PENDING, // Move to drawing stage
                 });
-                
+
                 console.log('[ProjectsWorkflowPage] Update completed successfully');
 
                 // Auto-create "Start Drawing" task with 24-hour deadline
@@ -325,6 +325,7 @@ const ProjectsWorkflowPage: React.FC<ProjectsWorkflowPageProps> = ({
                     priority: 'High',
                     date: new Date().toISOString().split('T')[0],
                     userId: currentUser?.id || '',
+                    assignedTo: currentUser?.id || '',
                     contextId: project.id,
                     contextType: 'project',
                     deadline: deadline.toISOString(),
@@ -332,7 +333,7 @@ const ProjectsWorkflowPage: React.FC<ProjectsWorkflowPageProps> = ({
                     isPaused: false,
                     createdAt: new Date(),
                 });
-                
+
                 console.log('[ProjectsWorkflowPage] Task created successfully');
             } catch (error) {
                 console.error('[ProjectsWorkflowPage] Error completing inspection:', error);
@@ -370,6 +371,7 @@ const ProjectsWorkflowPage: React.FC<ProjectsWorkflowPageProps> = ({
                     priority: 'High',
                     date: new Date().toISOString().split('T')[0],
                     userId: quotationUserId, // Assign to Quotation Team Member
+                    assignedTo: quotationUserId, // Fix: Add assignedTo
                     contextId: selectedProjectForBOQ.id,
                     contextType: 'project',
                     deadline: new Date(new Date().setDate(new Date().getDate() + 2)).toISOString(), // 2 days deadline
@@ -428,7 +430,7 @@ const ProjectsWorkflowPage: React.FC<ProjectsWorkflowPageProps> = ({
             {/* Header with Toggle */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold text-text-primary">Projects Workflow</h1>
+                    <h1 className="text-3xl font-bold text-text-primary">Projects Board</h1>
                     <p className="text-text-secondary mt-1">Track and manage project stages</p>
                 </div>
                 <button

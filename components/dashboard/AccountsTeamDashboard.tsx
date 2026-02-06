@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import UnifiedProjectsPage from './shared/UnifiedProjectsPage';
 import { useInvoices, addInvoice, updateInvoice } from '../../hooks/useInvoices';
 import { useExpenses, addExpense, updateExpense } from '../../hooks/useExpenses';
 import { useVendorBills, addVendorBill, updateVendorBill } from '../../hooks/useVendorBills';
@@ -187,6 +188,9 @@ const AccountsTeamDashboard: React.FC<AccountsTeamDashboardProps> = ({ currentPa
       />;
 
     // New Modules
+    case 'projects':
+      return <UnifiedProjectsPage roleView="accounts" />;
+
     case 'project-pnl':
       return <ProjectPnLPage setCurrentPage={setCurrentPage} />;
 

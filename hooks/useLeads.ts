@@ -2,8 +2,11 @@
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, onSnapshot, query, where, addDoc, updateDoc, doc, Timestamp, orderBy } from 'firebase/firestore';
-import { Lead, LeadHistory, Reminder, Notification, UserRole, ActivityStatus } from '../types';
+import { Lead, LeadHistory, Reminder, Notification, UserRole, ActivityStatus, TaskStatus } from '../types';
 import { createNotification, logActivity } from '../services/liveDataService';
+import { addTask } from './useMyDayTasks';
+
+// Type from Firestore, where dates are Timestamps
 
 // Type from Firestore, where dates are Timestamps
 type FirestoreLead = Omit<Lead, 'inquiryDate' | 'history' | 'reminders'> & {
@@ -87,6 +90,27 @@ export const addLead = async (leadData: Omit<Lead, 'id'>, createdBy?: string) =>
             type: 'info'
         });
 
+        // 1. GENERATE TASK FOR ASSIGNED USER
+        if (leadData.assignedTo) {
+            await addTask({
+                title: `New Lead Assigned: ${leadData.clientName}`,
+                userId: leadData.assignedTo,
+                status: TaskStatus.ASSIGNED,
+                priority: 'High',
+                deadline: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days default
+                date: new Date().toISOString().split('T')[0],
+                description: `Initial contact required for new lead: ${leadData.clientName} (${leadData.projectName}).`,
+                isPaused: false,
+                timeSpent: 0,
+                createdAt: new Date(),
+                createdBy: createdBy || 'system',
+                createdByName: 'System', // Or fetch name if needed, but 'System' is fine for auto-tasks
+                contextId: docRef.id,
+                contextType: 'lead',
+                taskType: 'Client Meeting' // Default instruction type
+            }, createdBy || 'system');
+        }
+
         // Log lead creation activity
         await logActivity({
             description: `LEAD PROTOCOL INITIATED: New lead "${leadData.clientName}" registered in system.`,
@@ -118,6 +142,25 @@ export const updateLead = async (leadId: string, updatedData: Partial<Lead>) => 
                 entity_id: leadId,
                 type: 'info'
             });
+
+            // 2. GENERATE TASK FOR NEW ASSIGNEE
+            await addTask({
+                title: `Lead Re-assigned: ${updatedData.clientName || 'Lead'}`,
+                userId: updatedData.assignedTo,
+                status: TaskStatus.ASSIGNED,
+                priority: 'High',
+                deadline: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+                date: new Date().toISOString().split('T')[0],
+                description: `You have been assigned this lead. Please review history and contact the client.`,
+                isPaused: false,
+                timeSpent: 0,
+                createdAt: new Date(),
+                createdBy: 'system',
+                createdByName: 'System',
+                contextId: leadId,
+                contextType: 'lead',
+                taskType: 'Client Meeting'
+            }, 'system');
 
             // Log re-assignment activity
             await logActivity({

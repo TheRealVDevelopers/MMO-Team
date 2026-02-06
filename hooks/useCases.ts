@@ -201,10 +201,10 @@ export const useCases = (filters?: UseCasesFilters) => {
         try {
             // 1. Listen to cases collection
             const casesCollection = collection(db, FIRESTORE_COLLECTIONS.CASES);
-            let casesQuery = query(casesCollection, orderBy('createdAt', 'desc'));
+            let casesQuery = query(casesCollection);
 
             if (filters?.isProject !== undefined) {
-                casesQuery = query(casesCollection, where('isProject', '==', filters.isProject), orderBy('createdAt', 'desc'));
+                casesQuery = query(casesCollection, where('isProject', '==', filters.isProject));
             }
 
             const casesUnsub = onSnapshot(casesQuery, (snapshot) => {
@@ -225,9 +225,7 @@ export const useCases = (filters?: UseCasesFilters) => {
             // 2. Listen to legacy leads collection (if not filtering for projects only)
             if (filters?.isProject !== true) {
                 const leadsCollection = collection(db, FIRESTORE_COLLECTIONS.LEADS);
-                const leadsQuery = filters?.userId
-                    ? query(leadsCollection, where('assignedTo', '==', filters.userId), orderBy('inquiryDate', 'desc'))
-                    : query(leadsCollection, orderBy('inquiryDate', 'desc'));
+                const leadsQuery = query(leadsCollection); // Removed orderBy
 
                 const leadsUnsub = onSnapshot(leadsQuery, (snapshot) => {
                     const leadsData: Lead[] = [];
@@ -257,7 +255,7 @@ export const useCases = (filters?: UseCasesFilters) => {
                 const projectsCollection = collection(db, FIRESTORE_COLLECTIONS.PROJECTS);
                 const projectsQuery = filters?.userId
                     ? query(projectsCollection, where('assignedTeam.drawing', '==', filters.userId))
-                    : query(projectsCollection);
+                    : query(projectsCollection); // Removed orderBy (projectsQuery didn't have one anyway, but being safe)
 
                 const projectsUnsub = onSnapshot(projectsQuery, (snapshot) => {
                     const projectsData: Project[] = [];
@@ -295,11 +293,6 @@ export const useCases = (filters?: UseCasesFilters) => {
 
                 let merged = [...casesData, ...leadsData, ...projectsData];
 
-                // Apply filters
-                if (filters?.organizationId) {
-                    merged = merged.filter(c => c.organizationId === filters.organizationId);
-                }
-
                 // Remove duplicates (prefer cases collection over legacy)
                 const seenIds = new Set<string>();
                 merged = merged.filter(c => {
@@ -307,6 +300,32 @@ export const useCases = (filters?: UseCasesFilters) => {
                     seenIds.add(c.id);
                     return true;
                 });
+
+                // Apply sorting (descending by createdAt/inquiryDate)
+                merged.sort((a, b) => {
+                    const dateA = a.createdAt?.getTime() || a.inquiryDate?.getTime() || 0;
+                    const dateB = b.createdAt?.getTime() || b.inquiryDate?.getTime() || 0;
+                    return dateB - dateA;
+                });
+
+                // Apply filters
+                if (filters?.organizationId) {
+                    merged = merged.filter(c => c.organizationId === filters.organizationId);
+                }
+
+                // Strict User Filter (Safety Net)
+                if (filters?.userId) {
+                    // For leads (isProject=false), strict assignedTo check
+                    // For projects (isProject=true), check if user is in assignedTeam or is assignee
+                    merged = merged.filter(c => {
+                        if (!c.isProject) {
+                            return c.assignedTo === filters.userId;
+                        }
+                        // For projects, we might want to be more lenient or specific based on requirements
+                        // But for "Registry" (Leads), strictness is key.
+                        return true;
+                    });
+                }
 
                 setCases(merged);
                 setLoading(false);

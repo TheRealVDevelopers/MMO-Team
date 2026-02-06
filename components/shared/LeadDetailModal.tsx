@@ -6,6 +6,7 @@ import LeadHistoryView from './LeadHistoryView';
 import { useAuth } from '../../context/AuthContext';
 import { PlusIcon, BellIcon, MapPinIcon, PaintBrushIcon, CalculatorIcon, TruckIcon, WrenchScrewdriverIcon, CreditCardIcon, PhoneIcon, ChatBubbleLeftRightIcon, BanknotesIcon, CalendarIcon, UserCircleIcon, FireIcon, PaperClipIcon, XMarkIcon } from '../icons/IconComponents';
 import RaiseRequestModal from '../dashboard/sales-team/RaiseRequestModal';
+import DirectAssignTaskModal from '../dashboard/super-admin/DirectAssignTaskModal';
 import { addTask } from '../../hooks/useMyDayTasks';
 import { formatLargeNumberINR, formatDateTime } from '../../constants';
 import SmartDateTimePicker from './SmartDateTimePicker';
@@ -33,6 +34,7 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
     const [isUploading, setIsUploading] = useState(false);
 
     const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+    const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
 
     // Determine available statuses based on whether it's a lead or project
     const availableStatuses = caseItem.isProject
@@ -200,6 +202,15 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
                             >
                                 View Reference
                             </button>
+                            {(currentUser?.role === UserRole.SUPER_ADMIN || currentUser?.role === UserRole.MANAGER || currentUser?.role === UserRole.SALES_GENERAL_MANAGER) && (
+                                <button
+                                    onClick={() => setIsAddTaskModalOpen(true)}
+                                    className="ml-2 px-3 py-1.5 bg-primary text-white text-xs font-bold uppercase tracking-wider rounded-lg hover:bg-primary-hover transition-all shadow-sm flex items-center gap-1"
+                                >
+                                    <PlusIcon className="w-3 h-3" />
+                                    Assign Task
+                                </button>
+                            )}
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             <div className="bg-subtle-background p-3 rounded-xl">
@@ -440,6 +451,30 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
                     />
                 )
             }
+
+            <DirectAssignTaskModal
+                isOpen={isAddTaskModalOpen}
+                onClose={() => setIsAddTaskModalOpen(false)}
+                onAssign={async (task) => {
+                    await addTask({
+                        ...task,
+                        status: TaskStatus.ASSIGNED, // Explicitly set Assigned for mission control
+                        date: new Date().toISOString().split('T')[0],
+                        timeSpent: 0,
+                        isPaused: false,
+                        createdBy: currentUser?.id || '',
+                        createdByName: currentUser?.name || '',
+                        createdAt: new Date(),
+                        // Ensure context is passed if not already in task object (though it should be)
+                        contextId: task.contextId || caseItem.id,
+                        contextType: task.contextType || (caseItem.isProject ? 'project' : 'lead')
+                    } as any, currentUser?.id || '');
+                    alert('✅ Mission Deployed Successfully');
+                    setIsAddTaskModalOpen(false);
+                }}
+                initialContextId={caseItem.id}
+                initialContextType={caseItem.isProject ? 'project' : 'lead'}
+            />
         </>
     );
 };
