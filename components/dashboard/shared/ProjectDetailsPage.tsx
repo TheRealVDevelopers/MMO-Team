@@ -8,7 +8,7 @@ import { useCaseDrawings } from '../../../hooks/useCases';
 import { approveQuotation, rejectQuotation } from '../../../hooks/useCases';
 import { createCaseTask, useCaseTasks, useCaseSiteVisits } from '../../../hooks/useCases';
 import { Case, UserRole, CaseQuotation, CaseBOQ, CaseDrawing } from '../../../types';
-import { formatCurrencyINR } from '../../../constants';
+import { formatCurrencyINR, safeDate, safeDateTime } from '../../../constants';
 import Card from '../../shared/Card';
 import { PrimaryButton, SecondaryButton } from '../shared/DashboardUI';
 import { getTabFromUrl, setTabInUrl } from '../../../services/notificationRouting';
@@ -314,7 +314,7 @@ const DrawingsTab: React.FC<{ drawings: CaseDrawing[]; loading: boolean; caseId:
                                 <h3 className="font-semibold text-text-primary truncate">{drawing.fileName || 'Untitled Drawing'}</h3>
                                 <p className="text-sm text-text-secondary">Type: {drawing.fileType}</p>
                                 {drawing.category && <p className="text-sm text-text-secondary">Category: {drawing.category}</p>}
-                                <p className="text-xs text-text-tertiary mt-2">Uploaded: {new Date(drawing.uploadedAt).toLocaleDateString()}</p>
+                                <p className="text-xs text-text-tertiary mt-2">Uploaded: {safeDate(drawing.uploadedAt)}</p>
                             </div>
                         ))}
                     </div>
@@ -327,7 +327,7 @@ const DrawingsTab: React.FC<{ drawings: CaseDrawing[]; loading: boolean; caseId:
                             <div className="p-4 border-b border-border flex items-center justify-between">
                                 <div>
                                     <h3 className="text-lg font-bold text-text-primary">{selectedDrawing.fileName}</h3>
-                                    <p className="text-sm text-text-secondary">{selectedDrawing.category || 'Drawing'} - {new Date(selectedDrawing.uploadedAt).toLocaleDateString()}</p>
+                                    <p className="text-sm text-text-secondary">{selectedDrawing.category || 'Drawing'} - {safeDate(selectedDrawing.uploadedAt)}</p>
                                 </div>
                                 <button onClick={() => setSelectedDrawing(null)} className="text-text-tertiary hover:text-text-primary">
                                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -497,7 +497,7 @@ const QuotationsTab: React.FC<{
                                             {quot.quotationNumber || `QT-${quot.id.slice(-6)}`}
                                         </h3>
                                         <p className="text-xs text-text-tertiary">
-                                            Submitted: {new Date(quot.submittedAt).toLocaleDateString()}
+                                            Submitted: {safeDate(quot.submittedAt)}
                                         </p>
                                     </div>
                                     {quot.status === 'Pending Approval' && (
@@ -545,7 +545,7 @@ const QuotationsTab: React.FC<{
 
                                     {quot.status === 'Approved' && (
                                         <span className="text-xs text-text-tertiary">
-                                            Approved by {quot.approvedByName} on {quot.approvedAt && new Date(quot.approvedAt).toLocaleDateString()}
+                                            Approved by {quot.approvedByName} on {quot.approvedAt && safeDate(quot.approvedAt)}
                                         </span>
                                     )}
 
@@ -676,7 +676,7 @@ const TasksTab: React.FC<{ caseId: string }> = ({ caseId }) => {
                                             <div className="flex items-center gap-4 text-xs text-text-tertiary">
                                                 <span>Assigned to: <span className="text-text-secondary font-medium">{task.assignedToName || 'Unknown'}</span></span>
                                                 {task.dueAt && (
-                                                    <span>Due: <span className="text-text-secondary font-medium">{new Date(task.dueAt).toLocaleDateString()}</span></span>
+                                                    <span>Due: <span className="text-text-secondary font-medium">{safeDate(task.dueAt)}</span></span>
                                                 )}
                                             </div>
                                             <div className="flex items-center gap-3 text-xs text-text-tertiary">
@@ -766,10 +766,10 @@ const SiteVisitsTab: React.FC<{ caseId: string }> = ({ caseId }) => {
                                             <p className="text-sm font-medium text-text-primary">{visit.engineerName || 'Site Engineer'}</p>
                                         </td>
                                         <td className="py-4 px-4 text-sm text-text-secondary">
-                                            {visit.startedAt ? new Date(visit.startedAt).toLocaleString() : '-'}
+                                            {visit.startedAt ? safeDateTime(visit.startedAt) : '-'}
                                         </td>
                                         <td className="py-4 px-4 text-sm text-text-secondary">
-                                            {visit.endedAt ? new Date(visit.endedAt).toLocaleString() : '-'}
+                                            {visit.endedAt ? safeDateTime(visit.endedAt) : '-'}
                                         </td>
                                         <td className="py-4 px-4">
                                             <span className="text-sm font-bold text-primary">
