@@ -1,7 +1,7 @@
 import React from 'react';
 import { Lead } from '../../types';
 import { CheckCircleIcon } from '../icons/IconComponents';
-import { formatDateTime, safeDate } from '../../constants';
+import { formatDateTime } from '../../constants';
 
 import { DocumentTextIcon, CameraIcon } from '../icons/IconComponents';
 import { LeadHistoryAttachment } from '../../types';
@@ -22,7 +22,7 @@ const AttachmentItem: React.FC<{ attachment: LeadHistoryAttachment }> = ({ attac
       <div className="ml-3 min-w-0 flex-1">
         <p className="text-xs font-medium text-text-primary truncate">{attachment.fileName}</p>
         <p className="text-[10px] text-text-tertiary">
-          {safeDate(attachment.uploadedAt)}
+          {new Date(attachment.uploadedAt).toLocaleDateString()}
         </p>
       </div>
     </a>
@@ -30,23 +30,13 @@ const AttachmentItem: React.FC<{ attachment: LeadHistoryAttachment }> = ({ attac
 };
 
 const LeadHistoryView: React.FC<{ lead: Lead }> = ({ lead }) => {
-  const getTimestamp = (ts: any) => {
-    if (!ts) return 0;
-    if (ts instanceof Date) return ts.getTime();
-    if (typeof ts === 'number') return ts;
-    if (ts.toDate) return ts.toDate().getTime();
-    if (ts.seconds) return ts.seconds * 1000;
-    return 0;
-  };
-
-  const history = lead.history || [];
-  const sortedHistory = [...history].sort((a, b) => getTimestamp(b.timestamp) - getTimestamp(a.timestamp));
+  const sortedHistory = [...lead.history].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
   return (
     <div className="flow-root">
       <ul role="list" className="-mb-8">
         {sortedHistory.map((item, itemIdx) => (
-          <li key={getTimestamp(item.timestamp) + item.action + itemIdx}>
+          <li key={item.timestamp.getTime() + item.action + itemIdx}>
             <div className="relative pb-8">
               {itemIdx !== sortedHistory.length - 1 ? (
                 <span className="absolute left-[15px] top-6 -ml-px h-full w-[1.5px] bg-border/60" aria-hidden="true" />
