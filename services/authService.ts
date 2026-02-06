@@ -22,8 +22,8 @@ import {
     addDoc
 } from 'firebase/firestore';
 import { auth, db, logAgent } from '../firebase';
-import { User, UserRole, Vendor, ApprovalRequestType } from '../types';
-import { USERS, VENDORS } from '../constants';
+import { StaffUser, UserRole, Vendor, CaseStatus } from '../types';
+import { FIRESTORE_COLLECTIONS } from '../constants';
 import { firebaseConfig } from '../firebase';
 
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
@@ -32,11 +32,11 @@ const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
 export const DEFAULT_STAFF_PASSWORD = '123456';
 export const DEFAULT_CLIENT_PASSWORD = '123456';
 
-// Convert Firebase User + Firestore data to our User type
-export const convertToAppUser = async (firebaseUser: FirebaseUser): Promise<User | null> => {
+// Convert Firebase User + Firestore data to our StaffUser type
+export const convertToAppUser = async (firebaseUser: FirebaseUser): Promise<StaffUser | null> => {
     try {
         if (!db) return null;
-        const userDoc = await getDoc(doc(db, 'staffUsers', firebaseUser.uid));
+        const userDoc = await getDoc(doc(db, FIRESTORE_COLLECTIONS.STAFF_USERS, firebaseUser.uid));
         if (!userDoc.exists()) {
             return null;
         }
@@ -49,9 +49,9 @@ export const convertToAppUser = async (firebaseUser: FirebaseUser): Promise<User
             avatar: userData.avatar,
             email: userData.email,
             phone: userData.phone,
-            region: userData.region,
-            currentTask: userData.currentTask || '',
-            lastUpdateTimestamp: userData.lastUpdateTimestamp?.toDate() || new Date(),
+            organizationId: userData.organizationId,
+            isActive: userData.isActive !== false,
+            createdAt: userData.createdAt?.toDate() || new Date(),
         };
     } catch (error) {
         console.error('Error converting Firebase user to app user:', error);
@@ -64,7 +64,7 @@ export const convertToAppUser = async (firebaseUser: FirebaseUser): Promise<User
 /**
  * Sign in staff member with email and password
  */
-export const signInStaff = async (email: string, password: string): Promise<User | null> => {
+export const signInStaff = async (email: string, password: string): Promise<StaffUser | null> => {
     // Simplified Auth for Development - REMOVED
     // Check if the email exists in our USERS constant for mock login - REMOVED
     // const mockUser = USERS.find(u => u.email === email);
@@ -328,44 +328,45 @@ export const submitStaffRegistrationRequest = async (
             throw new Error('An account with this email already exists.');
         }
 
-        const pendingRequestCheck = await getDocs(
-            query(
-                collection(db, 'approvalRequests'),
-                where('requestType', '==', ApprovalRequestType.STAFF_REGISTRATION),
-                where('status', '==', 'Pending')
-            )
-        );
+        // TODO: Rebuild approval system with new Case-centric architecture
+        // const pendingRequestCheck = await getDocs(
+        //     query(
+        //         collection(db, 'approvalRequests'),
+        //         where('requestType', '==', 'STAFF_REGISTRATION'),
+        //         where('status', '==', 'Pending')
+        //     )
+        // );
 
-        const hasPendingRequest = pendingRequestCheck.docs.some(
-            doc => doc.data().email === email
-        );
+        const hasPendingRequest = false; // pendingRequestCheck.docs.some(
+        //     doc => doc.data().email === email
+        // );
 
         if (hasPendingRequest) {
             throw new Error('A registration request with this email is already pending approval.');
         }
 
+        // TODO: Rebuild approval system with new Case-centric architecture  
         // Create approval request (account NOT created yet)
-        const requestDoc = await addDoc(collection(db, 'approvalRequests'), {
-            requestType: ApprovalRequestType.STAFF_REGISTRATION,
-            requesterId: 'pending', // No user ID yet
-            requesterName: name,
-            requesterRole: requestedRole || UserRole.SALES_TEAM_MEMBER,
-            title: `Staff Registration Request: ${name}`,
-            description: `New staff registration request from "${name}". Email: ${email}, Phone: ${phone}, Requested Role: ${requestedRole || 'Not specified'}, Region: ${region || 'N/A'}.`,
-            status: 'Pending', // Requires admin approval
-            requestedAt: serverTimestamp(),
-            priority: 'High',
-            attachments: [],
-            // Store registration data for later account creation
-            email: email,
-            password: password, // Store securely (will be used when creating account)
-            phone: phone,
-            region: region || '',
-            requestedRole: requestedRole,
-        });
+        // const requestDoc = await addDoc(collection(db, 'approvalRequests'), {
+        //     requestType: 'STAFF_REGISTRATION',
+        //     requesterId: 'pending',
+        //     requesterName: name,
+        //     requesterRole: requestedRole || UserRole.SALES_TEAM_MEMBER,
+        //     title: `Staff Registration Request: ${name}`,
+        //     description: `New staff registration request from "${name}". Email: ${email}, Phone: ${phone}, Requested Role: ${requestedRole || 'Not specified'}, Region: ${region || 'N/A'}.`,
+        //     status: 'Pending',
+        //     requestedAt: serverTimestamp(),
+        //     priority: 'High',
+        //     attachments: [],
+        //     email: email,
+        //     password: password,
+        //     phone: phone,
+        //     region: region || '',
+        //     requestedRole: requestedRole,
+        // });
 
         console.log(`Staff registration request submitted for: ${name}`);
-        return requestDoc.id;
+        return 'temp-id'; // requestDoc.id;
     } catch (error: any) {
         console.error('Error submitting staff registration request:', error);
         throw new Error(error.message || 'Failed to submit registration request');
@@ -451,7 +452,7 @@ export const changeStaffPassword = async (
  */
 export const updateStaffProfile = async (
     userId: string,
-    updates: Partial<User>
+    updates: Partial<StaffUser>
 ): Promise<void> => {
     try {
         if (!db) return;
@@ -476,7 +477,7 @@ export const updateStaffProfile = async (
 /**
  * Get staff member by ID
  */
-export const getStaffMember = async (userId: string): Promise<User | null> => {
+export const getStaffMember = async (userId: string): Promise<StaffUser | null> => {
     try {
         if (!db) return null;
         const userDoc = await getDoc(doc(db, 'staffUsers', userId));
@@ -505,7 +506,7 @@ export const getStaffMember = async (userId: string): Promise<User | null> => {
 /**
  * Get all staff members
  */
-export const getAllStaff = async (): Promise<User[]> => {
+export const getAllStaff = async (): Promise<StaffUser[]> => {
     try {
         if (!db) return [];
         const staffSnapshot = await getDocs(collection(db, 'staffUsers'));

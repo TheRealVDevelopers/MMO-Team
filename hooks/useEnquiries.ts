@@ -12,7 +12,8 @@ import {
     Timestamp
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { ProjectEnquiry, EnquiryStatus } from '../types';
+import { ProjectEnquiry, EnquiryStatus, UserRole, ActivityStatus } from '../types';
+import { logActivity } from '../utils/activityLogger';
 
 // Hook to get all enquiries (for Sales Manager)
 export const useEnquiries = () => {
@@ -37,7 +38,7 @@ export const useEnquiries = () => {
                         ...data,
                         createdAt: data.createdAt?.toDate() || new Date(),
                         updatedAt: data.updatedAt?.toDate() || undefined,
-                    } as ProjectEnquiry);
+                    } as unknown as ProjectEnquiry);
                 });
                 setEnquiries(enquiriesData);
                 setLoading(false);
@@ -80,7 +81,7 @@ export const useNewEnquiries = (userId?: string) => {
                         ...data,
                         createdAt: data.createdAt?.toDate() || new Date(),
                         updatedAt: data.updatedAt?.toDate() || undefined,
-                    } as ProjectEnquiry);
+                    } as unknown as ProjectEnquiry);
                 }
             });
             setNewEnquiries(enquiriesData);
@@ -115,7 +116,7 @@ export const useMyEnquiries = (userId: string) => {
                     ...data,
                     createdAt: data.createdAt?.toDate() || new Date(),
                     updatedAt: data.updatedAt?.toDate() || undefined,
-                } as ProjectEnquiry);
+                } as unknown as ProjectEnquiry);
             });
             setMyEnquiries(enquiriesData);
             setLoading(false);

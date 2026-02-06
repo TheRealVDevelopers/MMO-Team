@@ -8,7 +8,7 @@ import {
     Item,
     User
 } from '../types';
-import { createNotification, logActivity } from '../services/liveDataService';
+import { createNotification, logActivity } from '../services/notificationService';
 import { UserRole, ActivityStatus } from '../types';
 
 export const useQuotationAudit = (userId: string, userName: string) => {

@@ -1,67 +1,106 @@
 import { useState, useEffect } from 'react';
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  onSnapshot,
+  doc,
+  getDoc,
+  Timestamp,
+} from 'firebase/firestore';
 import { db } from '../firebase';
-import { collection, onSnapshot, query, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
-import { User } from '../types';
+import { StaffUser, UserRole } from '../types';
+import { FIRESTORE_COLLECTIONS } from '../constants';
 
-export const useUsers = () => {
-    const [users, setUsers] = useState<User[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<Error | null>(null);
+interface UseUsersOptions {
+  organizationId?: string;
+  role?: UserRole;
+  isActive?: boolean;
+}
 
-    useEffect(() => {
-        setLoading(true);
-        const usersRef = collection(db, 'staffUsers');
-        // Order by name for better UI
-        const q = query(usersRef, orderBy('name', 'asc'));
+export const useUsers = (options: UseUsersOptions = {}) => {
+  const [users, setUsers] = useState<StaffUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const usersData: User[] = [];
-            snapshot.forEach((doc) => {
-                usersData.push({
-                    ...doc.data(),
-                    id: doc.id
-                } as User);
-            });
-            setUsers(usersData);
-            setLoading(false);
-        }, (err) => {
-            console.error('Error fetching users:', err);
-            setError(err);
-            setLoading(false);
-        });
+  useEffect(() => {
+    if (!db) {
+      setLoading(false);
+      return;
+    }
 
-        return () => unsubscribe();
-    }, []);
+    try {
+      const usersRef = collection(db, FIRESTORE_COLLECTIONS.STAFF_USERS);
+      let q = query(usersRef);
 
-    const addUser = async (userData: Omit<User, 'id'>) => {
-        try {
-            const usersRef = collection(db, 'staffUsers');
-            await addDoc(usersRef, {
-                ...userData,
-                createdAt: serverTimestamp(),
-                lastUpdateTimestamp: serverTimestamp()
-            });
-        } catch (err) {
-            console.error('Error adding user:', err);
-            throw err;
+      // Apply filters
+      if (options.organizationId) {
+        q = query(q, where('organizationId', '==', options.organizationId));
+      }
+      if (options.role) {
+        q = query(q, where('role', '==', options.role));
+      }
+      if (options.isActive !== undefined) {
+        q = query(q, where('isActive', '==', options.isActive));
+      }
+
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          const usersData = snapshot.docs.map((doc) => {
+            const data = doc.data();
+            return {
+              ...data,
+              id: doc.id,
+              createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
+            } as StaffUser;
+          });
+
+          setUsers(usersData);
+          setLoading(false);
+          setError(null);
+        },
+        (err) => {
+          console.error('Error fetching users:', err);
+          setError(err.message);
+          setLoading(false);
         }
-    };
+      );
 
-    const updateUserStatus = async (userId: string, isActive: boolean) => {
-        // Logic to update user status (e.g. set a flag or move to inactive collection)
-        // For now, let's assume we toggle a flag, though 'isActive' isn't on User type yet.
-        // We might need to add 'isActive' to User type or use 'attendanceStatus': 'ABSENT' as proxy?
-        // User request said "Activate / deactivate". 
-        // Let's assume we add an 'isActive' field to the user document update.
-        try {
-            // Implementation pending specific requirement on field, 
-            // but I will add the function signature for UI binding.
-            console.log(`Toggling status for ${userId} to ${isActive}`);
-        } catch (err) {
-            console.error('Error updating user status:', err);
-            throw err;
-        }
-    };
+      return () => unsubscribe();
+    } catch (err: any) {
+      console.error('Error setting up users listener:', err);
+      setError(err.message);
+      setLoading(false);
+    }
+  }, [options.organizationId, options.role, options.isActive]);
 
-    return { users, loading, error, addUser, updateUserStatus };
+  // Get single user by ID
+  const getUserById = async (userId: string): Promise<StaffUser | null> => {
+    if (!db) return null;
+
+    try {
+      const userDoc = await getDoc(doc(db, FIRESTORE_COLLECTIONS.STAFF_USERS, userId));
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        return {
+          ...data,
+          id: userDoc.id,
+          createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
+        } as StaffUser;
+      }
+      return null;
+    } catch (err) {
+      console.error('Error getting user:', err);
+      return null;
+    }
+  };
+
+  return {
+    users,
+    loading,
+    error,
+    getUserById,
+  };
 };

@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import MyLeadsPage from './sales-team/MyLeadsPage';
 import { useAuth } from '../../context/AuthContext';
-import { Lead, LeadPipelineStatus } from '../../types';
+import { Lead } from '../../hooks/useLeads';
+import { LeadPipelineStatus } from '../../types';
 import { useUsers } from '../../hooks/useUsers';
 import MyRequestsPage from './sales-team/MyRequestsPage';
 import MyPerformancePage from './sales-team/MyPerformancePage';
 import MyDayPage from './shared/MyDayPage';
 import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
-import { useLeads, addLead, updateLead } from '../../hooks/useLeads';
-import { useCases, addCase, updateCase } from '../../hooks/useCases';
+import { useLeads } from '../../hooks/useLeads';
 import { SectionHeader, PrimaryButton } from './shared/DashboardUI';
 import { ExclamationTriangleIcon, ArrowPathIcon, PlusIcon } from '@heroicons/react/24/outline';
 import AddNewLeadModal from './sales-manager/AddNewLeadModal';
@@ -68,10 +68,8 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
 const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
-  // Use unified Cases architecture - show only leads (isProject: false)
-  const { cases, loading: leadsLoading, error: leadsError } = useCases({ isProject: false, userId: currentUser?.id });
-  // Type assertion: cases with isProject=false are Leads (safe during transition)
-  const leads = cases as unknown as Lead[];
+  // Use leads hook with backward compatibility
+  const { leads, loading: leadsLoading, error: leadsError, updateLead, createLead } = useLeads();
   const { users, loading: usersLoading } = useUsers();
   const [isAddLeadModalOpen, setIsAddLeadModalOpen] = useState(false);
 
@@ -91,42 +89,16 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
   };
 
   const handleAddNewLead = async (
-    newLeadData: Omit<Lead, 'id' | 'status' | 'inquiryDate' | 'history' | 'lastContacted'>,
+    newLeadData: Omit<Lead, 'id' | 'status' | 'inquiryDate' | 'workflow'>,
     reminder?: { date: string; notes: string }
   ) => {
-    const newLead: Omit<Lead, 'id'> = {
+    const newLead: any = {
       ...newLeadData,
       status: LeadPipelineStatus.NEW_NOT_CONTACTED,
       inquiryDate: new Date(),
-      lastContacted: 'Just now',
-      history: [
-        {
-          action: 'Lead Created',
-          user: currentUser?.name || 'System',
-          timestamp: new Date(),
-          notes: `Assigned to ${users.find(u => u.id === newLeadData.assignedTo)?.name}`
-        }
-      ],
-      tasks: {},
-      reminders: [],
     };
 
-    if (reminder && reminder.date && reminder.notes) {
-      newLead.reminders = [{
-        id: `rem-${Date.now()}`,
-        date: new Date(reminder.date),
-        notes: reminder.notes,
-        completed: false,
-      }];
-      newLead.history.push({
-        action: 'Reminder set upon creation',
-        user: currentUser?.name || 'System',
-        timestamp: new Date(),
-        notes: `For ${new Date(reminder.date).toLocaleString()}: ${reminder.notes}`
-      });
-    }
-
-    await addLead(newLead);
+    await createLead(newLead);
   };
 
   const renderPage = () => {
@@ -152,7 +124,7 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
           <ExclamationTriangleIcon className="w-12 h-12 text-error mx-auto mb-4" />
           <h3 className="text-lg font-bold text-error">Data Synchronization Failed</h3>
           <p className="mt-2 text-text-secondary">Please verify your connection and try again.</p>
-          <p className="mt-1 text-xs text-error">{leadsError?.message || 'Unknown error'}</p>
+          <p className="mt-1 text-xs text-error">{leadsError || 'Unknown error'}</p>
         </div>
       );
     }
@@ -222,18 +194,13 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
         onClose={() => setIsAddLeadModalOpen(false)}
         users={users}
         onAddLead={async (data, reminder) => {
-          const newLead: Lead = {
+          const newLead: any = {
             ...data,
-            id: `lead-${Date.now()}`,
             status: LeadPipelineStatus.NEW_NOT_CONTACTED,
             inquiryDate: new Date(),
-            lastContacted: 'Just now',
-            history: [{ action: 'Lead Created', user: currentUser?.name || 'System', timestamp: new Date(), notes: 'Initial Registry' }],
-            reminders: reminder ? [{ id: `rem-${Date.now()}`, date: new Date(reminder.date), notes: reminder.notes, completed: false }] : [],
-            tasks: {},
             assignedTo: currentUser?.id,
           };
-          await addLead(newLead, currentUser?.id || '');
+          await createLead(newLead);
           setIsAddLeadModalOpen(false);
         }}
       />

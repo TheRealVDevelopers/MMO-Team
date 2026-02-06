@@ -9,30 +9,29 @@ import {
     ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../../context/AuthContext';
-import { useAssignedApprovalRequests, startRequest, completeRequest } from '../../../hooks/useApprovalSystem';
-import { ApprovalStatus, ApprovalRequestType } from '../../../types';
+import { useCaseTasks } from '../../../hooks/useCaseTasks';
+import { TaskStatus, TaskType } from '../../../types';
 import { ContentCard, staggerContainer, SectionHeader, cn, StatCard } from './DashboardUI';
 import { formatDateTime } from '../../../constants';
 
 const TasksPage: React.FC = () => {
     const { currentUser } = useAuth();
-    const { assignedRequests, loading } = useAssignedApprovalRequests(currentUser?.id || '');
+    const { tasks, loading, startTask, completeTask } = useCaseTasks({
+        organizationId: currentUser?.organizationId,
+        assignedTo: currentUser?.id,
+    });
     const [processingId, setProcessingId] = useState<string | null>(null);
 
-    const tasks = useMemo(() => {
-        // Filter out staff registrations as they are not "tasks"
-        return assignedRequests.filter(r => r.requestType !== ApprovalRequestType.STAFF_REGISTRATION);
-    }, [assignedRequests]);
+    const pendingTasks = tasks.filter(t => t.status === TaskStatus.PENDING);
+    const ongoingTasks = tasks.filter(t => t.status === TaskStatus.STARTED);
+    const completedTasks = tasks.filter(t => t.status === TaskStatus.COMPLETED);
+    const assignedTasks = pendingTasks; // Alias for UI compatibility
 
-    const assignedTasks = tasks.filter(t => t.status === ApprovalStatus.ASSIGNED);
-    const ongoingTasks = tasks.filter(t => t.status === ApprovalStatus.ONGOING);
-    const completedTasks = tasks.filter(t => t.status === ApprovalStatus.COMPLETED);
-
-    const handleStart = async (taskId: string) => {
-        if (!currentUser) return;
+    const handleStart = async (taskId: string, caseId: string) => {
+        if (!currentUser?.organizationId) return;
         setProcessingId(taskId);
         try {
-            await startRequest(taskId, currentUser.id);
+            await startTask(taskId, caseId);
         } catch (error) {
             console.error(error);
             alert('Failed to start task.');
@@ -41,13 +40,13 @@ const TasksPage: React.FC = () => {
         }
     };
 
-    const handleComplete = async (taskId: string) => {
-        if (!currentUser) return;
-        if (!confirm('Are you sure you want to mark this task as completed? The admin will be notified to acknowledge it.')) return;
+    const handleComplete = async (taskId: string, caseId: string, kmTravelled?: number) => {
+        if (!currentUser?.organizationId) return;
+        if (!confirm('Are you sure you want to mark this task as completed?')) return;
 
         setProcessingId(taskId);
         try {
-            await completeRequest(taskId, currentUser.id);
+            await completeTask(taskId, caseId, kmTravelled);
         } catch (error) {
             console.error(error);
             alert('Failed to complete task.');
@@ -126,23 +125,20 @@ const TasksPage: React.FC = () => {
                                 <ContentCard className="group hover:border-blue-500/30 transition-all">
                                     <div className="flex justify-between items-start mb-2">
                                         <span className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 text-[9px] font-black uppercase tracking-widest border border-blue-500/20">
-                                            {task.requestType}
+                                            {task.type}
                                         </span>
-                                        {task.priority === 'High' && (
-                                            <ExclamationTriangleIcon className="w-4 h-4 text-error" />
-                                        )}
                                     </div>
 
-                                    <h4 className="font-bold text-text-primary mb-1 line-clamp-1" title={task.title}>{task.title}</h4>
-                                    <p className="text-xs text-text-secondary line-clamp-2 mb-3">{task.description}</p>
+                                    <h4 className="font-bold text-text-primary mb-1 line-clamp-1">{task.type} Task</h4>
+                                    <p className="text-xs text-text-secondary line-clamp-2 mb-3">{task.notes || 'No description'}</p>
 
                                     <div className="flex items-center gap-2 text-[10px] text-text-tertiary font-medium mb-4">
                                         <CalendarDaysIcon className="w-3.5 h-3.5" />
-                                        <span>Due: {task.endDate ? formatDateTime(task.endDate).split(',')[0] : 'No deadline'}</span>
+                                        <span>Created: {formatDateTime(task.createdAt).split(',')[0]}</span>
                                     </div>
 
                                     <button
-                                        onClick={() => handleStart(task.id)}
+                                        onClick={() => handleStart(task.id, task.caseId)}
                                         disabled={processingId === task.id}
                                         className="w-full py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
                                     >
@@ -189,7 +185,7 @@ const TasksPage: React.FC = () => {
                                         <ClockIcon className="w-4 h-4 text-yellow-600" />
                                     </div>
 
-                                    <h4 className="font-bold text-text-primary mb-1 line-clamp-1">{task.title}</h4>
+                                    <h4 className="font-bold text-text-primary mb-1 line-clamp-1">{task.type} Task</h4>
 
                                     {task.startedAt && (
                                         <p className="text-[10px] text-text-tertiary mb-3">
@@ -198,7 +194,7 @@ const TasksPage: React.FC = () => {
                                     )}
 
                                     <button
-                                        onClick={() => handleComplete(task.id)}
+                                        onClick={() => handleComplete(task.id, task.caseId)}
                                         disabled={processingId === task.id}
                                         className="w-full py-2 bg-success hover:bg-success/90 text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
                                     >
@@ -245,7 +241,7 @@ const TasksPage: React.FC = () => {
                                         <CheckCircleIcon className="w-4 h-4 text-green-600" />
                                     </div>
 
-                                    <h4 className="font-bold text-text-primary mb-1 line-clamp-1 strike-through">{task.title}</h4>
+                                    <h4 className="font-bold text-text-primary mb-1 line-clamp-1 strike-through">{task.type} Task</h4>
                                     <p className="text-[10px] text-text-tertiary font-medium">
                                         Wait for Acknowledgement
                                     </p>

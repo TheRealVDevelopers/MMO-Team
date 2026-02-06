@@ -1,0 +1,309 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ========================================
+    // HELPER FUNCTIONS
+    // ========================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data;
+    }
+    
+    function getUserRole() {
+      return getUserData().role;
+    }
+    
+    function getUserOrgId() {
+      return getUserData().organizationId;
+    }
+    
+    function isOrgMember(orgId) {
+      return isAuthenticated() && getUserOrgId() == orgId;
+    }
+    
+    function isSuperAdmin() {
+      return isAuthenticated() && getUserRole() == 'SUPER_ADMIN';
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && getUserRole() in ['SUPER_ADMIN', 'ADMIN'];
+    }
+    
+    function isSalesManager() {
+      return isAuthenticated() && getUserRole() == 'SALES_GENERAL_MANAGER';
+    }
+    
+    function canManageCases(orgId) {
+      return isOrgMember(orgId) && getUserRole() in [
+        'SUPER_ADMIN',
+        'ADMIN',
+        'MANAGER',
+        'SALES_GENERAL_MANAGER'
+      ];
+    }
+    
+    function hasWritePermission(orgId, uid) {
+      return isOrgMember(orgId) && (
+        isSuperAdmin() ||
+        request.auth.uid == uid
+      );
+    }
+
+    // ========================================
+    // STAFF USERS (GLOBAL)
+    // ========================================
+    match /staffUsers/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin() || request.auth.uid == userId;
+      allow delete: if isSuperAdmin();
+      
+      // User notifications (subcollection)
+      match /notifications/{notificationId} {
+        allow read: if isAuthenticated() && request.auth.uid == userId;
+        allow write: if isAuthenticated();
+        allow delete: if request.auth.uid == userId;
+      }
+    }
+
+    // ========================================
+    // ORGANIZATIONS (ROOT LEVEL)
+    // ========================================
+    match /organizations/{orgId} {
+      allow read: if isOrgMember(orgId);
+      allow create: if isSuperAdmin();
+      allow update: if isOrgMember(orgId) && isAdmin();
+      allow delete: if isSuperAdmin();
+      
+      // Organization members (subcollection)
+      match /members/{memberId} {
+        allow read: if isOrgMember(orgId);
+        allow write: if isOrgMember(orgId) && isAdmin();
+      }
+      
+      // Organization vendors (subcollection)
+      match /vendors/{vendorId} {
+        allow read: if isOrgMember(orgId);
+        allow write: if isOrgMember(orgId) && getUserRole() in [
+          'SUPER_ADMIN',
+          'ADMIN',
+          'PROCUREMENT_TEAM',
+          'EXECUTION_TEAM'
+        ];
+      }
+      
+      // Organization ledger (subcollection)
+      match /ledger/{entryId} {
+        allow read: if isOrgMember(orgId) && getUserRole() in [
+          'SUPER_ADMIN',
+          'ADMIN',
+          'ACCOUNTS_TEAM',
+          'MANAGER'
+        ];
+        allow write: if isOrgMember(orgId) && getUserRole() in [
+          'SUPER_ADMIN',
+          'ACCOUNTS_TEAM'
+        ];
+      }
+      
+      // Organization payroll (subcollection)
+      match /payroll/{payrollId} {
+        allow read: if isOrgMember(orgId) && getUserRole() in [
+          'SUPER_ADMIN',
+          'ADMIN',
+          'ACCOUNTS_TEAM'
+        ];
+        allow write: if isOrgMember(orgId) && getUserRole() in [
+          'SUPER_ADMIN',
+          'ACCOUNTS_TEAM'
+        ];
+      }
+      
+      // Organization invoices (subcollection)
+      match /invoices/{invoiceId} {
+        allow read: if isOrgMember(orgId);
+        allow write: if isOrgMember(orgId) && getUserRole() in [
+          'SUPER_ADMIN',
+          'ADMIN',
+          'ACCOUNTS_TEAM',
+          'SALES_GENERAL_MANAGER'
+        ];
+      }
+
+      // ========================================
+      // CASES (CASE-CENTRIC ARCHITECTURE)
+      // ========================================
+      match /cases/{caseId} {
+        allow read: if isOrgMember(orgId);
+        
+        allow create: if isOrgMember(orgId) && getUserRole() in [
+          'SUPER_ADMIN',
+          'ADMIN',
+          'SALES_GENERAL_MANAGER',
+          'SALES_TEAM_MEMBER',
+          'MANAGER'
+        ];
+        
+        allow update: if isOrgMember(orgId) && (
+          canManageCases(orgId) ||
+          request.auth.uid == resource.data.assignedSales ||
+          request.auth.uid == resource.data.projectHead
+        );
+        
+        allow delete: if isOrgMember(orgId) && isSuperAdmin();
+        
+        // Case Tasks (subcollection)
+        match /tasks/{taskId} {
+          allow read: if isOrgMember(orgId);
+          
+          allow create: if isOrgMember(orgId) && getUserRole() in [
+            'SUPER_ADMIN',
+            'ADMIN',
+            'MANAGER',
+            'SALES_GENERAL_MANAGER',
+            'PROJECT_HEAD'
+          ];
+          
+          allow update: if isOrgMember(orgId) && (
+            canManageCases(orgId) ||
+            request.auth.uid == resource.data.assignedTo ||
+            request.auth.uid == resource.data.assignedBy
+          );
+          
+          allow delete: if isOrgMember(orgId) && canManageCases(orgId);
+        }
+        
+        // Case Site Visits (subcollection)
+        match /siteVisits/{visitId} {
+          allow read: if isOrgMember(orgId);
+          
+          allow write: if isOrgMember(orgId) && getUserRole() in [
+            'SUPER_ADMIN',
+            'ADMIN',
+            'SITE_ENGINEER',
+            'MANAGER'
+          ];
+        }
+        
+        // Case Documents (subcollection)
+        match /documents/{docId} {
+          allow read: if isOrgMember(orgId);
+          
+          allow create: if isOrgMember(orgId);
+          
+          allow update: if isOrgMember(orgId) && (
+            canManageCases(orgId) ||
+            request.auth.uid == resource.data.uploadedBy
+          );
+          
+          allow delete: if isOrgMember(orgId) && canManageCases(orgId);
+        }
+        
+        // Case Expenses (subcollection)
+        match /expenses/{expenseId} {
+          allow read: if isOrgMember(orgId);
+          
+          allow create: if isOrgMember(orgId) && getUserRole() in [
+            'SUPER_ADMIN',
+            'ADMIN',
+            'EXECUTION_TEAM',
+            'PROJECT_HEAD',
+            'ACCOUNTS_TEAM'
+          ];
+          
+          allow update: if isOrgMember(orgId) && (
+            canManageCases(orgId) ||
+            request.auth.uid == resource.data.paidBy
+          );
+          
+          allow delete: if isOrgMember(orgId) && getUserRole() in [
+            'SUPER_ADMIN',
+            'ACCOUNTS_TEAM'
+          ];
+        }
+        
+        // Case Vendor Bills (subcollection)
+        match /vendorBills/{billId} {
+          allow read: if isOrgMember(orgId);
+          
+          allow write: if isOrgMember(orgId) && getUserRole() in [
+            'SUPER_ADMIN',
+            'ADMIN',
+            'EXECUTION_TEAM',
+            'PROCUREMENT_TEAM',
+            'ACCOUNTS_TEAM'
+          ];
+        }
+        
+        // Case Materials (subcollection)
+        match /materials/{materialId} {
+          allow read: if isOrgMember(orgId);
+          
+          allow write: if isOrgMember(orgId) && getUserRole() in [
+            'SUPER_ADMIN',
+            'ADMIN',
+            'EXECUTION_TEAM',
+            'PROCUREMENT_TEAM'
+          ];
+        }
+        
+        // Case Activities (audit trail subcollection)
+        match /activities/{activityId} {
+          allow read: if isOrgMember(orgId);
+          allow create: if isOrgMember(orgId);
+          allow update, delete: if false; // Activities are immutable
+        }
+      }
+    }
+
+    // ========================================
+    // GLOBAL COLLECTIONS (NOT NESTED)
+    // ========================================
+    
+    // Catalog (global)
+    match /catalog/{itemId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+    
+    // System (global)
+    match /system/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+    
+    // Time Entries (global)
+    match /timeEntries/{entryId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow delete: if isAdmin();
+    }
+    
+    // Chat Channels (global)
+    match /chat_channels/{channelId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+    
+    // Chat Messages (global)
+    match /chat_messages/{messageId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.senderId;
+      allow delete: if isAdmin();
+    }
+
+    // ========================================
+    // DENY ALL OTHER PATHS
+    // ========================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

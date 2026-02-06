@@ -1,13 +1,14 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
-import { User, UserRole, Vendor } from '../types';
-import { onAuthStateChange, convertToAppUser } from '../services/authService';
+import { StaffUser, UserRole, Vendor } from '../types';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../firebase';
+import { auth, db } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { FIRESTORE_COLLECTIONS } from '../constants';
 
 interface AuthContextType {
-  currentUser: User | null;
-  setCurrentUser: (user: User | null) => void;
+  currentUser: StaffUser | null;
+  setCurrentUser: (user: StaffUser | null) => void;
   currentVendor: Vendor | null;
   setCurrentVendor: (vendor: Vendor | null) => void;
   updateCurrentUserAvatar: (avatarDataUrl: string) => void;
@@ -18,15 +19,14 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+  const [currentUser, setCurrentUser] = useState<StaffUser | null>(() => {
     // Check localStorage for persisted user on initial load
     const savedUser = localStorage.getItem('mmo-current-user');
     if (savedUser) {
       try {
         const parsed = JSON.parse(savedUser);
         // Revive Date objects
-        if (parsed.lastUpdateTimestamp) parsed.lastUpdateTimestamp = new Date(parsed.lastUpdateTimestamp);
-        if (parsed.currentTaskDetails?.startTime) parsed.currentTaskDetails.startTime = new Date(parsed.currentTaskDetails.startTime);
+        if (parsed.createdAt) parsed.createdAt = new Date(parsed.createdAt);
 
         console.log('Restored user from localStorage:', parsed.name);
         return parsed;
@@ -75,40 +75,46 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [currentVendor]);
 
   useEffect(() => {
-    // We listen for Firebase auth changes regardless of localStorage
-    const unsubscribe = onAuthStateChange((firebaseUser) => {
-      console.log('Auth State Verified. User:', firebaseUser?.email || 'None');
+    // Listen for Firebase auth changes
+    const unsubscribe = onAuthStateChanged(auth!, async (firebaseUser) => {
+      console.log('Auth State Changed. User:', firebaseUser?.email || 'None');
 
-      if (firebaseUser) {
-        // Firebase has confirmed a user session -> Update Source of Truth
-        setCurrentUser(firebaseUser);
+      if (firebaseUser && db) {
+        // Fetch user data from Firestore
+        try {
+          const userDoc = await getDoc(doc(db, FIRESTORE_COLLECTIONS.STAFF_USERS, firebaseUser.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data() as StaffUser;
+            setCurrentUser({ ...userData, id: firebaseUser.uid });
+            console.log('User data loaded from Firestore:', userData.name);
+          } else {
+            console.warn('User exists in Auth but not in Firestore');
+            setCurrentUser(null);
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          setCurrentUser(null);
+        }
       } else {
-        // Firebase says "No User"
-        // Check if we are currently using a "Simplified/Mock" login which relies ONLY on localStorage
-        // Mock users have IDs like 'user-1', 'user-2' etc. (length < 20)
-        // Real Firebase UIDs are 28 chars string
-
-        // We access the current Reference of state inside the callback? 
-        // No, closure captures initial state! We need to check localStorage directly or use functional update?
-        // Actually, we can check localStorage here since it's the persistence layer for mock users.
+        // Check if we have a mock/local user session
         const localData = localStorage.getItem('mmo-current-user');
         let isMockUser = false;
 
         if (localData) {
           try {
             const parsed = JSON.parse(localData);
-            // Simple heuristic: If ID is short (e.g. "user-1"), it's a mock user from constants
+            // Mock users have simple IDs like 'user-1'
             if (parsed.id && parsed.id.length < 20) {
               isMockUser = true;
             }
-          } catch (e) { }
+          } catch (e) {}
         }
 
         if (isMockUser) {
-          console.log('Keeping Simplified/Mock User session active despite no Firebase session.');
-          // Do NOT clear currentUser
+          console.log('Keeping mock user session active');
+          // Keep current user from localStorage
         } else {
-          console.log('No Firebase session and not a mock user -> Clearing session.');
+          console.log('No Firebase session -> Clearing session');
           setCurrentUser(null);
         }
       }
@@ -116,7 +122,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 
     return () => unsubscribe();
-  }, []); // Run once on mount
+  }, []);
 
   const updateCurrentUserAvatar = (avatarDataUrl: string) => {
     if (currentUser) {

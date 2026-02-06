@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, onSnapshot, query, orderBy, addDoc, Timestamp, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, addDoc, Timestamp, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { Organization } from '../types';
+import { FIRESTORE_COLLECTIONS } from '../constants';
 
 export const useOrganizations = () => {
     const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -9,8 +10,13 @@ export const useOrganizations = () => {
     const [error, setError] = useState<Error | null>(null);
 
     useEffect(() => {
+        if (!db) {
+            setLoading(false);
+            return;
+        }
+        
         setLoading(true);
-        const q = query(collection(db, 'organizations'), orderBy('createdAt', 'desc'));
+        const q = query(collection(db, FIRESTORE_COLLECTIONS.ORGANIZATIONS), orderBy('createdAt', 'desc'));
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const orgsData: Organization[] = [];
@@ -33,11 +39,13 @@ export const useOrganizations = () => {
         return () => unsubscribe();
     }, []);
 
-    const addOrganization = async (orgData: Omit<Organization, 'id'>) => {
+    const addOrganization = async (orgData: Omit<Organization, 'id' | 'createdAt'>) => {
+        if (!db) throw new Error('Database not initialized');
+        
         try {
-            const docRef = await addDoc(collection(db, 'organizations'), {
+            const docRef = await addDoc(collection(db, FIRESTORE_COLLECTIONS.ORGANIZATIONS), {
                 ...orgData,
-                createdAt: Timestamp.fromDate(orgData.createdAt),
+                createdAt: serverTimestamp(),
             });
             return docRef.id;
         } catch (err) {
@@ -47,8 +55,10 @@ export const useOrganizations = () => {
     };
 
     const updateOrganization = async (id: string, data: Partial<Organization>) => {
+        if (!db) throw new Error('Database not initialized');
+        
         try {
-            const docRef = doc(db, 'organizations', id);
+            const docRef = doc(db, FIRESTORE_COLLECTIONS.ORGANIZATIONS, id);
             await updateDoc(docRef, data);
         } catch (err) {
             console.error("Error updating organization:", err);

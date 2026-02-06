@@ -33,10 +33,6 @@ export const FIRESTORE_COLLECTIONS = {
   
   // Subcollections under staffUsers/{userId}
   NOTIFICATIONS: 'notifications',
-  
-  // Legacy collections for backward compatibility
-  LEADS: 'leads',
-  PROJECTS: 'projects',
 } as const;
 
 // ========================================
@@ -256,12 +252,3 @@ export const TASKS: any[] = [];
 export const ACTIVITIES: any[] = [];
 export const SITE_VISITS: any[] = [];
 export const DOCUMENTS: any[] = [];
-export const ATTENDANCE_DATA: any[] = [];
-export const MATERIAL_REQUESTS: any[] = [];
-export const PAYMENT_VERIFICATION_REQUESTS: any[] = [];
-export const BIDS_DATA: any[] = [];
-export const EXPENSE_CLAIMS: any[] = [];
-export const ISSUES: any[] = [];
-export const PROJECT_TEMPLATES: any[] = [];
-export const PURCHASE_ORDERS: any[] = [];
-export const RFQS: any[] = [];

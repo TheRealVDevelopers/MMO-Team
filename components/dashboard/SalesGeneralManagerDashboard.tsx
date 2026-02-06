@@ -12,7 +12,7 @@ import { useAuth } from '../../context/AuthContext';
 import PerformancePage from './sales-manager/PerformancePage';
 import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
-import { useLeads, addLead, updateLead } from '../../hooks/useLeads';
+import { useLeads } from '../../hooks/useLeads';
 import { useNewEnquiries, useEnquiries } from '../../hooks/useEnquiries';
 import { useUsers } from '../../hooks/useUsers';
 import ApprovalsPage from './super-admin/ApprovalsPage';
@@ -26,7 +26,7 @@ import { UserPlusIcon, UsersIcon, ArrowDownTrayIcon, CloudArrowDownIcon } from '
 
 const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
-  const { leads, loading: leadsLoading, error: leadsError } = useLeads();
+  const { leads, loading: leadsLoading, error: leadsError, createLead, updateLead } = useLeads();
   const { users, loading: usersLoading } = useUsers();
   const { newEnquiries } = useNewEnquiries(currentUser?.id);
   const { enquiries } = useEnquiries();
@@ -83,7 +83,7 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
         notes: `For ${new Date(reminder.date).toLocaleString()}: ${reminder.notes}`
       });
     }
-    await addLead(newLead);
+    await createLead(newLead as any);
   };
 
   const handleAssignLead = async (leadId: string, newOwnerId: string) => {

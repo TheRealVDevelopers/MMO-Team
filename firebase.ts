@@ -1,12 +1,13 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp, FirebaseApp } from "firebase/app";
 import { getAnalytics, Analytics } from "firebase/analytics";
-import { getFirestore, Firestore } from "firebase/firestore";
-import { getAuth, Auth } from "firebase/auth";
-import { getStorage, FirebaseStorage } from "firebase/storage";
+import { getFirestore, Firestore, connectFirestoreEmulator } from "firebase/firestore";
+import { getAuth, Auth, connectAuthEmulator } from "firebase/auth";
+import { getStorage, FirebaseStorage, connectStorageEmulator } from "firebase/storage";
 import { setPersistence, browserLocalPersistence } from 'firebase/auth';
 
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
+const USE_EMULATOR = import.meta.env.VITE_USE_EMULATOR === 'true';
 const AGENT_LOG_URL = import.meta.env.VITE_AGENT_LOG_URL;
 
 type AgentLogPayload = Record<string, unknown>;
@@ -45,13 +46,22 @@ if (!DEMO_MODE) {
     auth = getAuth(app);
     storage = getStorage(app);
 
+    // Connect to emulators if enabled
+    if (USE_EMULATOR) {
+      console.log('🔧 Connecting to Firebase Emulators...');
+      connectFirestoreEmulator(db, 'localhost', 8080);
+      connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
+      connectStorageEmulator(storage, 'localhost', 9199);
+      console.log('✅ Connected to Firebase Emulators');
+    }
+
     // Configure Auth Persistence
     setPersistence(auth, browserLocalPersistence).catch((error) => {
       console.error('Error setting auth persistence:', error);
     });
 
-    // Initialize Analytics only if in a browser environment
-    if (typeof window !== 'undefined' && firebaseConfig.measurementId) {
+    // Initialize Analytics only if in a browser environment and NOT using emulator
+    if (typeof window !== 'undefined' && firebaseConfig.measurementId && !USE_EMULATOR) {
       analytics = getAnalytics(app);
     }
   } catch (error) {

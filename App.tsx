@@ -10,18 +10,13 @@ import ProjectsListPage from './components/dashboard/shared/ProjectsListPage';
 import ProjectDetailsPage from './components/dashboard/shared/ProjectDetailsPage';
 import LandingPage from './components/landing/LandingPage';
 import { useAuth } from './context/AuthContext';
-import { User, UserRole, Vendor } from './types';
-// Fix: Imported missing CalendarDaysIcon and BanknotesIcon components.
+import { StaffUser, UserRole, Vendor } from './types';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   BuildingOfficeIcon, RectangleGroupIcon, UsersIcon, RectangleStackIcon, FunnelIcon, ChartPieIcon, ChatBubbleLeftRightIcon, ShieldExclamationIcon,
   ClockIcon, MapPinIcon, PaintBrushIcon, CalculatorIcon, TruckIcon, WrenchScrewdriverIcon, CreditCardIcon, ChartBarSquareIcon, CalendarDaysIcon, BanknotesIcon,
   ViewColumnsIcon, TagIcon, ListBulletIcon, PresentationChartLineIcon, ReceiptPercentIcon, BuildingStorefrontIcon, BuildingLibraryIcon, CheckCircleIcon, DocumentTextIcon, CubeIcon
 } from './components/icons/IconComponents';
-import { USERS } from './constants';
-import { seedDemoData } from './services/liveDataService';
-import { migrateUsersToFirestore } from './services/migrationService';
-import { migrateAllToCases } from './scripts/migrateToCases';
 
 const navConfig = {
   [UserRole.SUPER_ADMIN]: {
@@ -214,17 +209,7 @@ const AppContent: React.FC = () => {
   }, [location.pathname]);
 
   useEffect(() => {
-    // Seed demo data once on app start
-    // seedDemoData().catch(console.error);
-    if (import.meta.env.VITE_RUN_USER_MIGRATIONS === 'true') {
-      migrateUsersToFirestore().catch(console.error);
-    }
-
-    // Expose migration function to window for manual execution
-    if (typeof window !== 'undefined') {
-      (window as any).migrateAllToCases = migrateAllToCases;
-      console.log('💡 Migration function loaded. Run in console: window.migrateAllToCases()');
-    }
+    // No migrations needed - using Case-centric architecture
   }, []);
 
   const handleSetPage = (page: string) => {
@@ -242,12 +227,12 @@ const AppContent: React.FC = () => {
     setIsSettingsOpen(false);
   }
 
-  const handleLogin = (user: User | Vendor, type: 'staff' | 'vendor' = 'staff') => {
+  const handleLogin = (user: StaffUser | Vendor, type: 'staff' | 'vendor' = 'staff') => {
     if (type === 'vendor') {
       setCurrentVendor(user as Vendor);
       setCurrentUser(null);
     } else {
-      setCurrentUser(user as User);
+      setCurrentUser(user as StaffUser);
       setCurrentVendor(null);
     }
     setIsShowApp(true);
