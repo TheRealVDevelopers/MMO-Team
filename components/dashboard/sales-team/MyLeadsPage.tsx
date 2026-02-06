@@ -249,10 +249,10 @@ const MyLeadsPage: React.FC<MyLeadsPageProps> = ({ leads, onUpdateLead, onAddNew
       <LeadDetailModal
         isOpen={!!selectedLead}
         onClose={() => setSelectedLead(null)}
-        lead={selectedLead!}
+        caseItem={selectedLead as any}
         onUpdate={(updatedLead) => {
-          onUpdateLead(updatedLead);
-          setSelectedLead(updatedLead);
+          onUpdateLead(updatedLead as any);
+          setSelectedLead(updatedLead as any);
         }}
       />
 

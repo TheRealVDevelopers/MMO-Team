@@ -1,0 +1,369 @@
+import React, { useMemo, useState } from 'react';
+import { useAuth } from '../../../context/AuthContext';
+import { useMyDayTasks, updateTask } from '../../../hooks/useMyDayTasks';
+import { useExecutionTasks } from '../../../hooks/useExecutionTasks';
+import { useAssignedApprovalRequests, startRequest, completeRequest } from '../../../hooks/useApprovalSystem';
+import { addActivity } from '../../../hooks/useTimeTracking';
+import { Task, TaskStatus, UserRole, ApprovalStatus, ApprovalRequestType } from '../../../types';
+import { ClockIcon, CheckCircleIcon, PlayIcon } from '../../icons/IconComponents';
+import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { db } from '../../../firebase';
+
+interface UnifiedRequestInboxProps {
+    onNavigateToProject?: (caseId: string, tab?: string) => void;
+}
+
+interface UnifiedTask extends Task {
+    source: 'myDay' | 'execution' | 'request';
+    originalId: string;
+}
+
+const UnifiedRequestInbox: React.FC<UnifiedRequestInboxProps> = ({ onNavigateToProject }) => {
+    const { currentUser } = useAuth();
+
+    // 1. My Day Tasks
+    const { tasks: myDayTasks, loading: myDayLoading } = useMyDayTasks(currentUser?.id);
+
+    // 2. Execution Tasks
+    const { tasks: executionTasks, loading: execLoading, updateTaskStatus: updateExecutionStatus } = useExecutionTasks();
+
+    // 3. Approval Requests
+    const { assignedRequests, loading: requestsLoading } = useAssignedApprovalRequests(currentUser?.id || '');
+
+    const isAdmin = currentUser?.role === UserRole.SUPER_ADMIN || currentUser?.role === UserRole.SALES_GENERAL_MANAGER;
+
+    // Merge and filter tasks
+    const allTasks = useMemo(() => {
+        if (!currentUser) return [];
+
+        const unifiedMyDay: UnifiedTask[] = (myDayTasks || []).map(t => ({
+            ...t,
+            source: 'myDay',
+            originalId: t.id
+        }));
+
+        // Filter execution tasks for current user
+        const myExecTasks = (executionTasks || []).filter(t => t.assignedTo === currentUser.id);
+        const unifiedExec: UnifiedTask[] = myExecTasks.map(t => ({
+            id: `exec-${t.id}`,
+            originalId: t.id,
+            title: `[${t.missionType}] ${t.projectName}`,
+            assignedTo: t.assignedTo,
+            userId: t.assignedTo,
+            status: t.status === 'Completed' ? TaskStatus.COMPLETED :
+                t.status === 'In Progress' ? TaskStatus.ONGOING : TaskStatus.ASSIGNED,
+            timeSpent: 0,
+            priority: t.priority || 'Medium',
+            priorityOrder: 0,
+            deadline: t.deadline,
+            isPaused: false,
+            date: '', // Not used in inbox
+            description: t.instructions,
+            createdAt: new Date(t.createdAt),
+            createdBy: 'System',
+            createdByName: 'Execution Team',
+            source: 'execution',
+            caseId: t.projectId, // Map to caseId for navigation
+            targetName: t.projectName
+        }));
+
+        // Filter approval requests
+        const myRequests = (assignedRequests || []).filter(r =>
+            r.status === ApprovalStatus.ASSIGNED ||
+            r.status === ApprovalStatus.ONGOING ||
+            r.status === ApprovalStatus.COMPLETED
+        );
+
+        const unifiedRequests: UnifiedTask[] = myRequests.map(r => {
+            let status = TaskStatus.ASSIGNED;
+            if (r.status === ApprovalStatus.ONGOING) status = TaskStatus.ONGOING;
+            if (r.status === ApprovalStatus.COMPLETED) status = TaskStatus.COMPLETED;
+
+            return {
+                id: `req-${r.id}`,
+                originalId: r.id,
+                title: `${r.title} (${r.requestType})`,
+                assignedTo: r.assigneeId || '',
+                userId: r.assigneeId || '',
+                status: status,
+                timeSpent: 0,
+                priority: r.priority || 'Medium',
+                priorityOrder: 0,
+                deadline: r.endDate instanceof Date ? r.endDate.toISOString() : (r.endDate as any)?.toDate?.().toISOString(),
+                isPaused: false,
+                date: '',
+                description: r.description,
+                createdAt: r.requestedAt instanceof Date ? r.requestedAt : (r.requestedAt as any)?.toDate?.() || new Date(),
+                createdBy: r.requesterId,
+                createdByName: r.requesterName,
+                source: 'request',
+                caseId: r.contextId,
+                taskType: 'General', // Fallback for Task interface compatibility
+                targetName: r.clientName
+            } as UnifiedTask;
+        });
+
+        // Combine
+        let merged = [...unifiedMyDay, ...unifiedExec, ...unifiedRequests];
+
+        // If Admin, they see what they created across all sources? 
+        // For now, let's keep it simple: Admins see myDayTasks they created (existing behavior)
+        if (isAdmin) {
+            return unifiedMyDay.filter(t => t.createdBy === currentUser.id);
+        }
+
+        return merged;
+    }, [myDayTasks, executionTasks, assignedRequests, currentUser, isAdmin]);
+
+    const loading = myDayLoading || execLoading || requestsLoading;
+
+    // Filter tasks
+    const { assignedTasks, ongoingTasks, completedTasks } = useMemo(() => {
+        const assigned = allTasks.filter(t => t.status === TaskStatus.ASSIGNED);
+        const ongoing = allTasks.filter(t => t.status === TaskStatus.ONGOING);
+        const completed = allTasks.filter(t => t.status === TaskStatus.COMPLETED);
+
+        return {
+            assignedTasks: assigned.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+            ongoingTasks: ongoing.sort((a, b) => new Date(b.startedAt || b.createdAt).getTime() - new Date(a.startedAt || a.createdAt).getTime()),
+            completedTasks: completed.sort((a, b) => new Date(b.completedAt || b.createdAt).getTime() - new Date(a.completedAt || a.createdAt).getTime())
+        };
+    }, [allTasks]);
+
+    const getStatusBadge = (status: TaskStatus) => {
+        switch (status) {
+            case TaskStatus.ASSIGNED:
+                return <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold"><ClockIcon className="w-3.5 h-3.5" />ASSIGNED</span>;
+            case TaskStatus.ONGOING:
+                return <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-semibold"><PlayIcon className="w-3.5 h-3.5" />ONGOING</span>;
+            case TaskStatus.COMPLETED:
+                return <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold"><CheckCircleIcon className="w-3.5 h-3.5" />COMPLETED</span>;
+            default:
+                return null;
+        }
+    };
+
+    const handleStartTask = async (task: UnifiedTask) => {
+        try {
+            if (task.source === 'execution') {
+                await updateExecutionStatus(task.originalId, 'In Progress');
+            } else if (task.source === 'request') {
+                await startRequest(task.originalId, currentUser!.id);
+                await addActivity(currentUser!.id, currentUser!.name, `Started Request: ${task.title}`);
+            } else {
+                await updateTask(task.id, { status: TaskStatus.ONGOING, startedAt: new Date() });
+            }
+            alert('✅ Task started!');
+        } catch (error) {
+            console.error('Error starting task:', error);
+            alert('❌ Failed to start task');
+        }
+    };
+
+    const handleCompleteTask = async (task: UnifiedTask) => {
+        try {
+            if (task.source === 'execution') {
+                await updateExecutionStatus(task.originalId, 'Completed');
+            } else if (task.source === 'request') {
+                if (confirm("Mark this request as completed? Admins will be notified.")) {
+                    await completeRequest(task.originalId, currentUser!.id);
+                    await addActivity(currentUser!.id, currentUser!.name, `Completed Request: ${task.title}`, true);
+                } else {
+                    return;
+                }
+            } else {
+                await updateTask(task.id, { status: TaskStatus.COMPLETED, completedAt: new Date() });
+            }
+            alert('✅ Task marked complete!');
+        } catch (error) {
+            console.error('Error completing task:', error);
+            alert('❌ Failed to complete task');
+        }
+    };
+
+    const handleAcknowledge = async (task: UnifiedTask) => {
+        if (confirm(`✅ Acknowledge this completed task?\n\n"${task.title}"\n\nThis will remove it from your view.`)) {
+            try {
+                await updateTask(task.id, {
+                    status: TaskStatus.ACKNOWLEDGED,
+                    acknowledgedBy: currentUser!.id,
+                    acknowledgedByName: currentUser!.name,
+                    acknowledgedAt: new Date(),
+                });
+                alert('✅ Task acknowledged!');
+            } catch (error) {
+                console.error('Error acknowledging task:', error);
+                alert('❌ Failed to acknowledge task');
+            }
+        }
+    };
+
+    const handleViewProject = (task: Task) => {
+        if (task.caseId && onNavigateToProject) {
+            const tabMap: Record<string, string> = {
+                'Quotation': 'quotations',
+                'Drawing': 'drawings',
+                'BOQ': 'boq',
+                'Site Visit': 'overview',
+            };
+            const tab = task.taskType ? tabMap[task.taskType] || 'overview' : 'overview';
+            onNavigateToProject(task.caseId, tab);
+        }
+    };
+
+    const formatDate = (date: any) => {
+        if (!date) return 'N/A';
+
+        let d: Date;
+        if (date instanceof Date) {
+            d = date;
+        } else if (typeof date === 'string') {
+            d = new Date(date);
+        } else if (date && typeof (date as any).toDate === 'function') {
+            d = (date as any).toDate();
+        } else if (typeof date === 'number') {
+            d = new Date(date);
+        } else {
+            return 'Invalid Date';
+        }
+
+        if (isNaN(d.getTime())) return 'Invalid Date';
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    };
+
+    if (!currentUser) return <div className="p-6">Loading...</div>;
+
+    return (
+        <div className="p-6 max-w-7xl mx-auto">
+            <div className="mb-8">
+                <h1 className="text-3xl font-bold text-text-primary mb-2">Request Inbox</h1>
+                <p className="text-text-secondary">
+                    {isAdmin ? 'Tasks you assigned to team members' : 'Tasks assigned to you'}
+                </p>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                    <div className="text-3xl font-bold text-blue-700">{assignedTasks.length}</div>
+                    <div className="text-sm text-blue-600 font-medium mt-1">Assigned</div>
+                </div>
+                <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
+                    <div className="text-3xl font-bold text-orange-700">{ongoingTasks.length}</div>
+                    <div className="text-sm text-orange-600 font-medium mt-1">Ongoing</div>
+                </div>
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                    <div className="text-3xl font-bold text-green-700">{completedTasks.length}</div>
+                    <div className="text-sm text-green-600 font-medium mt-1">Completed</div>
+                </div>
+            </div>
+
+            {/* Ongoing Section (Assigned + Ongoing) */}
+            <div className="mb-8">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="w-1 h-6 bg-orange-500 rounded-full"></div>
+                    <h2 className="text-2xl font-bold text-text-primary">Ongoing Projects</h2>
+                    <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-semibold">
+                        {assignedTasks.length + ongoingTasks.length}
+                    </span>
+                </div>
+
+                <div className="space-y-4">
+                    {[...assignedTasks, ...ongoingTasks].length === 0 ? (
+                        <div className="bg-surface rounded-xl border border-border p-8 text-center">
+                            <div className="text-3xl mb-3">✅</div>
+                            <p className="text-text-secondary">No ongoing tasks</p>
+                        </div>
+                    ) : (
+                        [...assignedTasks, ...ongoingTasks].map(task => (
+                            <div key={task.id} className="bg-surface rounded-xl border border-border p-5 hover:shadow-md transition-shadow">
+                                <div className="flex items-start justify-between mb-3">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            {getStatusBadge(task.status)}
+                                            {task.priority === 'High' && (
+                                                <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-semibold">HIGH</span>
+                                            )}
+                                        </div>
+                                        <h3 className="text-lg font-bold text-text-primary mb-1">{task.title}</h3>
+                                        <p className="text-text-secondary text-sm">{task.description || 'No description'}</p>
+                                    </div>
+                                    <div className="ml-4">
+                                        {!isAdmin && task.status === TaskStatus.ASSIGNED && (
+                                            <button onClick={() => handleStartTask(task)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">Start</button>
+                                        )}
+                                        {!isAdmin && task.status === TaskStatus.ONGOING && (
+                                            <button onClick={() => handleCompleteTask(task)} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">Complete</button>
+                                        )}
+                                        {isAdmin && (
+                                            <button onClick={() => handleViewProject(task)} className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 text-sm font-medium">👁️ View</button>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-border text-sm">
+                                    <div>
+                                        <div className="text-xs text-text-tertiary font-medium mb-1">{isAdmin ? 'ASSIGNED TO' : 'REQUESTED BY'}</div>
+                                        <div className="font-semibold text-text-primary">{isAdmin ? task.assignedToName : task.createdByName}</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-xs text-text-tertiary font-medium mb-1">PROJECT</div>
+                                        <div className="font-semibold text-text-primary">{task.targetName || 'N/A'}</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-xs text-text-tertiary font-medium mb-1">TASK TYPE</div>
+                                        <div className="font-semibold text-text-primary">{task.taskType || 'General'}</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-xs text-text-tertiary font-medium mb-1">DUE DATE</div>
+                                        <div className="font-semibold text-text-primary">{formatDate(task.dueAt || task.deadline)}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
+
+            {/* Completed Section */}
+            <div>
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="w-1 h-6 bg-green-500 rounded-full"></div>
+                    <h2 className="text-2xl font-bold text-text-primary">Completed</h2>
+                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold">{completedTasks.length}</span>
+                </div>
+                <div className="space-y-4">
+                    {completedTasks.length === 0 ? (
+                        <div className="bg-surface rounded-xl border border-border p-8 text-center">
+                            <div className="text-3xl mb-3">📋</div>
+                            <p className="text-text-secondary">No completed tasks</p>
+                        </div>
+                    ) : (
+                        completedTasks.map(task => (
+                            <div key={task.id} className="bg-surface rounded-xl border-2 border-green-200 p-5">
+                                <div className="flex items-start justify-between mb-3">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            {getStatusBadge(task.status)}
+                                            <span className="px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-semibold">✔ By {task.assignedToName}</span>
+                                        </div>
+                                        <h3 className="text-lg font-bold text-text-primary mb-1">{task.title}</h3>
+                                        <p className="text-text-secondary text-sm">{task.description}</p>
+                                    </div>
+                                    {isAdmin && (
+                                        <div className="ml-4 flex gap-2">
+                                            <button onClick={() => handleViewProject(task)} className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 text-sm font-medium">👁️ Review</button>
+                                            <button onClick={() => handleAcknowledge(task)} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">Acknowledge</button>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="text-sm text-green-700 mt-2">✔ Completed on {formatDate(task.completedAt)}</div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default UnifiedRequestInbox;

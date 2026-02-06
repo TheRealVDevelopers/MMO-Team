@@ -1,6 +1,6 @@
 import React from 'react';
 import Card from '../../shared/Card';
-import { MATERIAL_REQUESTS } from '../../../constants';
+import { MATERIAL_REQUESTS, safeDate } from '../../../constants';
 import { MaterialRequest } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { FireIcon, ClockIcon } from '../../icons/IconComponents';
@@ -58,7 +58,7 @@ const ProcurementOverviewPage: React.FC = () => {
                                         <p className="text-sm font-bold text-text-primary">{request.projectName}</p>
                                         <p className="text-xs text-text-secondary">{request.materials.map(m => m.name).join(', ')}</p>
                                     </td>
-                                    <td className="px-4 py-3 text-sm text-text-secondary">{request.requiredBy.toLocaleDateString()}</td>
+                                    <td className="px-4 py-3 text-sm text-text-secondary">{safeDate(request.requiredDate)}</td>
                                     <td className="px-4 py-3"><PriorityIndicator priority={request.priority} /></td>
                                     <td className="px-4 py-3"><StatusPill color="blue">{request.status}</StatusPill></td>
                                 </tr>

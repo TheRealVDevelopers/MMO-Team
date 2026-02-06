@@ -2,7 +2,7 @@
 import React from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { BidStatus, Bid } from '../../../types';
-import { formatCurrencyINR } from '../../../constants';
+import { formatCurrencyINR, safeDate } from '../../../constants';
 import { DocumentTextIcon } from '@heroicons/react/24/outline';
 
 const MyBids: React.FC = () => {
@@ -60,8 +60,8 @@ const MyBids: React.FC = () => {
                                             <div className="text-xs text-text-secondary">{rfq?.rfqNumber}</div>
                                         </td>
                                         <td className="p-4 text-sm text-text-secondary">
-                                            <div>Date: {new Date(bid.submittedDate).toLocaleDateString()}</div>
-                                            <div>Validity: {new Date(bid.validityDate).toLocaleDateString()}</div>
+                                            <div>Date: {safeDate(bid.submittedDate)}</div>
+                                            <div>Validity: {safeDate(bid.validityDate)}</div>
                                         </td>
                                         <td className="p-4 text-right font-mono font-bold text-text-primary">
                                             {formatCurrencyINR(bid.totalAmount)}

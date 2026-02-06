@@ -20,8 +20,9 @@ import { deleteDoc, doc } from 'firebase/firestore';
 import { useAuth } from '../../../context/AuthContext';
 import { ContentCard, StatCard, cn, staggerContainer } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useLeads, updateLead } from '../../../hooks/useLeads';
+import { useLeads } from '../../../hooks/useLeads';
 import LeadDetailModal from '../../shared/LeadDetailModal';
+import { FIRESTORE_COLLECTIONS } from '../../../constants';
 
 const getStatusConfig = (status: LeadPipelineStatus) => {
     switch (status) {
@@ -39,7 +40,7 @@ const getStatusConfig = (status: LeadPipelineStatus) => {
 
 
 const LeadsManagementPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
-    const { leads, loading } = useLeads();
+    const { leads, loading, updateLead, deleteLead } = useLeads();
     const { currentUser } = useAuth();
     const { users } = useUsers();
     const [selectedLead, setSelectedLead] = React.useState<any>(null);
@@ -77,8 +78,8 @@ const LeadsManagementPage: React.FC<{ setCurrentPage: (page: string) => void }> 
     const handleDeleteLead = async (leadId: string) => {
         if (window.confirm('Are you sure you want to delete this lead? This action cannot be undone.')) {
             try {
-                await deleteDoc(doc(db, 'leads', leadId));
-                // Optionally refresh or show success toast
+                if (!currentUser?.organizationId) return;
+                await deleteLead(leadId);
             } catch (error) {
                 console.error("Error deleting lead:", error);
                 alert("Failed to delete lead.");
@@ -321,7 +322,7 @@ const LeadsManagementPage: React.FC<{ setCurrentPage: (page: string) => void }> 
                 <LeadDetailModal
                     isOpen={!!selectedLead}
                     onClose={() => setSelectedLead(null)}
-                    lead={selectedLead}
+                    caseItem={selectedLead}
                     onUpdate={handleLeadUpdate}
                 />
             )}

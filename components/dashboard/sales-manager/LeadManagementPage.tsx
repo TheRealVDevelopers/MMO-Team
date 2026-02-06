@@ -264,11 +264,10 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leads, users })
 
             {selectedLead && (
                 <LeadDetailModal
-                    lead={selectedLead}
+                    caseItem={selectedLead as any}
                     isOpen={!!selectedLead}
                     onClose={() => setSelectedLead(null)}
-                    onUpdate={handleLeadUpdate}
-                    users={users}
+                    onUpdate={(updatedLead) => handleLeadUpdate(updatedLead as any)}
                 />
             )}
         </motion.div>

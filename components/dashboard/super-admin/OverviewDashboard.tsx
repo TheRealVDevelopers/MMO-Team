@@ -19,6 +19,7 @@ import { useDashboardStats } from '../../../hooks/useDashboardStats';
 import { ActivityStatus, ProjectStatus, PaymentStatus, Project } from '../../../types';
 import { ContentCard, StatCard, SectionHeader, staggerContainer, cn } from '../shared/DashboardUI';
 import { motion } from 'framer-motion';
+import { migrateAllToCases } from '../../../scripts/migrateToCases';
 
 // New Components
 import OngoingProjectsCard from './OngoingProjectsCard';
@@ -257,9 +258,34 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage, o
                         title="Executive Overview"
                         subtitle="Synergized command center for MMO project operations."
                         actions={
-                            <div className="flex items-center gap-2 bg-surface px-4 py-2 rounded-2xl border border-border shadow-sm">
-                                <CalendarIcon className="w-4 h-4 text-text-tertiary" />
-                                <span className="text-xs font-black uppercase tracking-[0.15em] text-text-secondary">January 2026</span>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={async () => {
+                                        if (confirm('🔄 Run Migration?\n\nThis will migrate all leads and projects to the unified cases collection.\n\nExisting data will NOT be deleted.\n\nThis is REQUIRED before saving quotations.\n\nContinue?')) {
+                                            try {
+                                                console.log('🚀 Starting migration...');
+                                                const result = await migrateAllToCases();
+                                                if (result.success) {
+                                                    alert(`✅ Migration Completed Successfully!\n\nMigrated:\n• ${result.migratedLeads} leads\n• ${result.migratedProjects} projects\n\nTotal: ${result.migratedLeads + result.migratedProjects} cases in unified collection\n\n✅ You can now save quotations and use all features!`);
+                                                    window.location.reload();
+                                                } else {
+                                                    alert('⚠️ Migration completed with warnings. Check console.');
+                                                }
+                                            } catch (error) {
+                                                console.error('Migration error:', error);
+                                                alert('❌ Migration Failed\n\nError: ' + (error as Error).message + '\n\nPlease check browser console for details.');
+                                            }
+                                        }
+                                    }}
+                                    className="px-6 py-3 bg-gradient-to-r from-primary to-primary/80 text-white rounded-lg hover:shadow-lg hover:scale-105 transition-all font-bold text-sm flex items-center gap-2 border-2 border-primary/30"
+                                >
+                                    🔄 Migrate to Cases
+                                    <span className="text-xs font-normal opacity-90 bg-white/20 px-2 py-0.5 rounded">(Required)</span>
+                                </button>
+                                <div className="flex items-center gap-2 bg-surface px-4 py-2 rounded-2xl border border-border shadow-sm">
+                                    <CalendarIcon className="w-4 h-4 text-text-tertiary" />
+                                    <span className="text-xs font-black uppercase tracking-[0.15em] text-text-secondary">January 2026</span>
+                                </div>
                             </div>
                         }
                     />

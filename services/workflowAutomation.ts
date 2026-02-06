@@ -12,7 +12,6 @@ import {
   doc,
   serverTimestamp,
   getDoc,
-  writeBatch,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import {
@@ -22,7 +21,6 @@ import {
   TaskType,
   TaskStatus,
   CaseWorkflow,
-  UserRole,
 } from '../types';
 import { FIRESTORE_COLLECTIONS } from '../constants';
 import { ApprovalWorkflowService } from './approvalWorkflowService';
@@ -557,4 +555,4 @@ const sendNotification = async (
   } catch (err) {
     console.error('Error sending notification:', err);
   }
-}
+};

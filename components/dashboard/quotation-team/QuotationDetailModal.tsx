@@ -3,7 +3,9 @@ import Modal from '../../shared/Modal';
 import { Project, ProjectStatus, Item, RFQ, Bid, ApprovalRequestType, UserRole } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { useApprovals } from '../../../hooks/useApprovalSystem';
-import { formatCurrencyINR, VENDORS } from '../../../constants';
+import { addCaseQuotation } from '../../../hooks/useCases';
+import { createNotification } from '../../../services/liveDataService';
+import { formatCurrencyINR, VENDORS, safeDate, safeDateTime } from '../../../constants';
 import { CalculatorIcon, DocumentCheckIcon, XCircleIcon, PlusIcon, ClockIcon } from '../../icons/IconComponents';
 
 const QuotationDetailModal: React.FC<{
@@ -44,7 +46,6 @@ const QuotationDetailModal: React.FC<{
     const [counterOfferAmount, setCounterOfferAmount] = useState('');
     const [counterOfferNotes, setCounterOfferNotes] = useState('');
 
-
     const materialCost = useMemo(() => selectedItems.reduce((sum, item) => sum + item.price, 0), [selectedItems]);
     const calculatedQuote = useMemo(() => {
         const base = (materialCost + laborCost) / (1 - (margin / 100));
@@ -59,41 +60,84 @@ const QuotationDetailModal: React.FC<{
     const handleRequestApproval = async () => {
         if (!currentUser) return;
 
-        // Use L1 bid if available, otherwise fallback to calculated quote or project budget
-        const approvalAmount = l1Bid ? l1Bid.totalAmount : (calculatedQuote || project.budget);
-        const approvalNotes = l1Bid
-            ? `Based on L1 Bid from ${l1Bid.vendorName}`
-            : `Based on internal calculation (${margin}% margin)`;
+        try {
+            // Use L1 bid if available, otherwise fallback to calculated quote or project budget
+            const approvalAmount = l1Bid ? l1Bid.totalAmount : (calculatedQuote || project.budget);
+            const approvalNotes = l1Bid
+                ? `Based on L1 Bid from ${l1Bid.vendorName}`
+                : `Based on internal calculation (${margin}% margin)`;
 
-        // 1. Submit to Approval System (Firebase)
-        await submitRequest({
-            requestType: ApprovalRequestType.QUOTATION_APPROVAL,
-            requesterId: currentUser.id,
-            requesterName: currentUser.name,
-            requesterRole: currentUser.role,
-            title: `Quotation Approval for ${project.projectName}`,
-            description: `Total Value: ${formatCurrencyINR(approvalAmount)}. ${approvalNotes}.`,
-            contextId: project.id,
-            priority: 'High',
-            targetRole: 'Admin' as any
-        });
+            // Calculate tax
+            const taxAmount = approvalAmount * 0.18; // 18% GST
+            const finalAmount = approvalAmount + taxAmount;
 
-        // 2. Update Local State & Project Status
-        const updatedProject: Project = {
-            ...project,
-            status: ProjectStatus.APPROVAL_REQUESTED,
-            budget: approvalAmount, // Update project budget to approved amount
-            history: [
-                ...(project.history || []),
-                {
-                    action: 'Approval Requested',
-                    user: currentUser.name,
-                    timestamp: new Date(),
-                    notes: `Submitted for Admin Approval. Amount: ${formatCurrencyINR(approvalAmount)} (${approvalNotes})`
-                }
-            ]
-        };
-        onUpdate(updatedProject);
+            // ========================================
+            // SAVE QUOTATION TO CASE SUBCOLLECTION
+            // ========================================
+            const quotationId = await addCaseQuotation(project.id, {
+                caseId: project.id,
+                quotationNumber: `QT-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`,
+                items: selectedItems.map(item => ({
+                    itemId: item.id,
+                    quantity: 1,
+                    unitPrice: item.price,
+                    discount: 0
+                })),
+                totalAmount: approvalAmount,
+                discountAmount: 0,
+                taxAmount: taxAmount,
+                finalAmount: finalAmount,
+                submittedBy: currentUser.id,
+                submittedAt: new Date(),
+                status: 'Pending Approval',
+                notes: approvalNotes
+            });
+
+            console.log(`✅ Quotation saved to cases/${project.id}/quotations/${quotationId}`);
+
+            // Submit to Approval System (Firebase)
+            await submitRequest({
+                requestType: ApprovalRequestType.QUOTATION_APPROVAL,
+                requesterId: currentUser.id,
+                requesterName: currentUser.name,
+                requesterRole: currentUser.role,
+                title: `Quotation Approval for ${project.projectName}`,
+                description: `Total Value: ${formatCurrencyINR(approvalAmount)}\nTax (18%): ${formatCurrencyINR(taxAmount)}\nFinal Amount: ${formatCurrencyINR(finalAmount)}\n\n${approvalNotes}`,
+                contextId: project.id,
+                priority: 'High',
+                targetRole: 'Admin' as any
+            });
+
+            // Notify relevant parties
+            await createNotification({
+                title: 'Quotation Created',
+                message: `Quotation ${formatCurrencyINR(finalAmount)} submitted for approval - ${project.projectName}`,
+                user_id: (project as any).assignedTo || (project as any).salespersonId || currentUser.id,
+                entity_type: (project as any).isProject ? 'project' : 'lead',
+                entity_id: project.id,
+                type: 'info'
+            });
+
+            // Update Local State & Project Status
+            const updatedProject: Project = {
+                ...project,
+                status: ProjectStatus.APPROVAL_REQUESTED,
+                budget: approvalAmount,
+                history: [
+                    ...(project.history || []),
+                    {
+                        action: 'Quotation Created & Approval Requested',
+                        user: currentUser.name,
+                        timestamp: new Date(),
+                        notes: `Submitted for Admin Approval. Amount: ${formatCurrencyINR(finalAmount)} (${approvalNotes})`
+                    }
+                ]
+            };
+            onUpdate(updatedProject);
+        } catch (error) {
+            console.error('Error creating quotation:', error);
+            alert('Failed to create quotation. Please try again.');
+        }
     };
 
     const handleAddCounterOffer = () => {
@@ -143,6 +187,35 @@ const QuotationDetailModal: React.FC<{
                     {/* Main Content Area: Document View */}
                     <div className="col-span-8 overflow-y-auto p-8 bg-subtle-background/30 border-r border-border">
                         <div className="bg-white rounded-xl shadow-xl border border-border p-10 max-w-4xl mx-auto space-y-10 min-h-full">
+                            {project.boqSubmission && project.boqSubmission.items.length > 0 && (
+                                <div className="bg-subtle-background/60 border border-border rounded-xl p-5">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div>
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary">BOQ Submission</p>
+                                            <p className="text-sm font-bold text-text-primary">Submitted items from Drawing Team</p>
+                                        </div>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">
+                                            {safeDate(project.boqSubmission.submittedAt)}
+                                        </span>
+                                    </div>
+                                    <div className="space-y-3">
+                                        {project.boqSubmission.items.map((item, index) => (
+                                            <div key={item.id || `${item.description}-${index}`} className="flex items-start justify-between gap-4 bg-white rounded-lg border border-border/60 p-3">
+                                                <div>
+                                                    <p className="text-sm font-bold text-text-primary">{item.description}</p>
+                                                    {item.specifications && (
+                                                        <p className="text-[11px] text-text-secondary mt-1">{item.specifications}</p>
+                                                    )}
+                                                </div>
+                                                <div className="text-right text-xs font-semibold text-text-secondary">
+                                                    {item.quantity} {item.unit}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Document Header */}
                             <div className="flex justify-between items-start">
                                 <div>
@@ -259,7 +332,7 @@ const QuotationDetailModal: React.FC<{
                                                     <div className="bg-subtle-background p-4 rounded-xl border border-border/50 group hover:border-primary transition-all">
                                                         <div className="flex justify-between items-start mb-1">
                                                             <p className="text-[10px] font-black uppercase text-primary">{offer.userName}</p>
-                                                            <p className="text-[10px] text-text-tertiary">{new Date(offer.timestamp).toLocaleTimeString()}</p>
+                                                            <p className="text-[10px] text-text-tertiary">{safeDateTime(offer.timestamp)}</p>
                                                         </div>
                                                         <p className="text-lg font-black text-text-primary mb-1">{formatCurrencyINR(offer.amount)}</p>
                                                         {offer.notes && <p className="text-[10px] italic text-text-secondary leading-normal">"{offer.notes}"</p>}
@@ -373,7 +446,7 @@ const QuotationDetailModal: React.FC<{
                                                                 </div>
                                                                 <div className="text-right">
                                                                     <p className={`text-2xl font-serif font-black ${isL1 ? 'text-secondary' : 'text-text-primary'}`}>{formatCurrencyINR(latestBid.totalAmount)}</p>
-                                                                    <p className="text-[10px] text-text-tertiary mt-1 font-bold">Latest Bid: {new Date(latestBid.submittedDate).toLocaleTimeString()}</p>
+                                                                    <p className="text-[10px] text-text-tertiary mt-1 font-bold">Latest Bid: {safeDateTime(latestBid.submittedDate)}</p>
                                                                 </div>
                                                             </div>
 
@@ -440,7 +513,7 @@ const QuotationDetailModal: React.FC<{
                                                                                         <span className="font-bold text-text-secondary">
                                                                                             {hIdx === 0 ? 'Current Version' : `Version ${history.length - hIdx}`}
                                                                                         </span>
-                                                                                        <span className="text-text-tertiary font-mono">{new Date(h.submittedDate).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                                                                                        <span className="text-text-tertiary font-mono">{safeDateTime(h.submittedDate)}</span>
                                                                                     </div>
                                                                                     <div className="flex justify-between items-baseline mt-1">
                                                                                         <span className={`text-lg font-serif font-black ${hIdx === 0 ? 'text-text-primary' : 'text-text-tertiary'}`}>{formatCurrencyINR(h.totalAmount)}</span>

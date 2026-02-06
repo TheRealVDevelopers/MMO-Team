@@ -175,42 +175,94 @@ const TeamMemberDetailView: React.FC<{ user: User; initialTab?: 'history'; initi
 
         timeEntries.forEach(entry => {
             const isToday = entry.date === todayStr;
+            let entryEffectiveClockOut: Date | null = null;
 
-            // Logged time: From clock-in to clock-out (or now if clocked in)
-            if (entry.clockIn) {
-                const clockIn = entry.clockIn instanceof Date ? entry.clockIn : new Date(entry.clockIn);
-                const clockOut = entry.clockOut
-                    ? (entry.clockOut instanceof Date ? entry.clockOut : new Date(entry.clockOut))
-                    : (isToday ? now : clockIn);
+            // Helper to safely parse dates
+            const safeDate = (val: any) => {
+                if (!val) return null;
+                if (val instanceof Date) return val;
+                if (typeof val.toDate === 'function') return val.toDate();
+                if (val.seconds) return new Date(val.seconds * 1000);
+                return new Date(val);
+            };
 
-                if (clockOut > clockIn) {
-                    totalLoggedMins += (clockOut.getTime() - clockIn.getTime()) / (1000 * 60);
+            const clockIn = safeDate(entry.clockIn);
+            let clockOut = safeDate(entry.clockOut);
+
+            // Determine effective Clock Out
+            if (clockIn) {
+                if (clockOut) {
+                    // Normal clock out exists
+                    entryEffectiveClockOut = clockOut;
+                } else if (isToday) {
+                    // Still working today
+                    entryEffectiveClockOut = now;
+                } else {
+                    // Past day, forgot to clock out. 
+                    // Recover by finding the latest end time of any activity or break
+                    let maxTime = clockIn.getTime();
+
+                    (entry.activities || []).forEach(a => {
+                        const end = safeDate(a.endTime);
+                        if (end && end.getTime() > maxTime) maxTime = end.getTime();
+                        // If activity started but didn't end, use start time as fallback for maxTime 
+                        // (can't assume duration for unfinished past tasks)
+                        const start = safeDate(a.startTime);
+                        if (start && start.getTime() > maxTime) maxTime = start.getTime();
+                    });
+
+                    (entry.breaks || []).forEach(b => {
+                        const end = safeDate(b.endTime);
+                        if (end && end.getTime() > maxTime) maxTime = end.getTime();
+                        const start = safeDate(b.startTime);
+                        if (start && start.getTime() > maxTime) maxTime = start.getTime();
+                    });
+
+                    entryEffectiveClockOut = new Date(maxTime);
+                }
+
+                if (entryEffectiveClockOut && entryEffectiveClockOut > clockIn) {
+                    totalLoggedMins += (entryEffectiveClockOut.getTime() - clockIn.getTime()) / (1000 * 60);
                 }
             }
 
             // Active time: Sum of all activities
             (entry.activities || []).forEach(a => {
-                if (a.startTime) {
-                    const start = a.startTime instanceof Date ? a.startTime : new Date(a.startTime);
-                    const end = a.endTime
-                        ? (a.endTime instanceof Date ? a.endTime : new Date(a.endTime))
-                        : (isToday ? now : start);
+                const start = safeDate(a.startTime);
+                if (start) {
+                    // If activity has no end time:
+                    // - If today: use now
+                    // - If past: assume it ended at the fallback 'entryEffectiveClockOut' we calculated (or 0 if that's safer, but let's try to be generous if it makes sense, OR strict 0.
+                    // Strict 0 for past unfinished tasks is usually safer than fabricating hours, BUT
+                    // if we extended `totalLoggedMins` to encompass "Last Event", we should consistent.
+                    // However, standard tasks normally have end times. Let's stick to: End || (isToday ? Now : Start)
 
-                    if (end > start) {
+                    let end = safeDate(a.endTime);
+                    if (!end) {
+                        if (isToday) {
+                            end = now;
+                        } else {
+                            // Unfinished past task. 
+                            // It doesn't contribute to active time effectively (0 duration)
+                            end = start;
+                        }
+                    }
+
+                    if (end && end > start) {
                         totalActiveMins += (end.getTime() - start.getTime()) / (1000 * 60);
                     }
                 }
             });
 
-            // Break time: Sum of all breaks
+            // Break time: Sum of all breaks (For reference, even though user wants it in Idle)
             (entry.breaks || []).forEach(b => {
-                if (b.startTime) {
-                    const start = b.startTime instanceof Date ? b.startTime : new Date(b.startTime);
-                    const end = b.endTime
-                        ? (b.endTime instanceof Date ? b.endTime : new Date(b.endTime))
-                        : (isToday ? now : start);
-
-                    if (end > start) {
+                const start = safeDate(b.startTime);
+                if (start) {
+                    let end = safeDate(b.endTime);
+                    if (!end) {
+                        end = isToday ? now : start;
+                    }
+                    if (end && end > start) {
                         totalBreakMins += (end.getTime() - start.getTime()) / (1000 * 60);
                     }
                 }
@@ -219,7 +271,12 @@ const TeamMemberDetailView: React.FC<{ user: User; initialTab?: 'history'; initi
 
         const loggedHours = (totalLoggedMins / 60).toFixed(1);
         const activeHours = (totalActiveMins / 60).toFixed(1);
-        const idleHours = Math.max(0, (totalLoggedMins - totalActiveMins - totalBreakMins) / 60).toFixed(1);
+
+        // Idle = Logged - Active. (User specified Breaks should count as Idle)
+        // If we subtracted breaks, it would be: Logged - Active - Break. 
+        // But "Break goes to idle" means Idle bucket includes break time.
+        const idleMins = Math.max(0, totalLoggedMins - totalActiveMins);
+        const idleHours = (idleMins / 60).toFixed(1);
 
         return { loggedHours, activeHours, idleHours };
     }, [timeEntries]);
@@ -428,7 +485,7 @@ const TeamMemberDetailView: React.FC<{ user: User; initialTab?: 'history'; initi
                                                         {currentActiveTask.status}
                                                     </span>
                                                     <span className="text-[10px] font-bold text-text-tertiary">
-                                                        {currentActiveTask.createdAt && `Created ${formatDateTime(currentActiveTask.createdAt instanceof Date ? currentActiveTask.createdAt : new Date(currentActiveTask.createdAt))}`}
+                                                        {currentActiveTask.createdAt && `Created ${formatDateTime(currentActiveTask.createdAt)}`}
                                                     </span>
                                                 </div>
 
@@ -513,7 +570,7 @@ const TeamMemberDetailView: React.FC<{ user: User; initialTab?: 'history'; initi
                                                             {activity.description && <p className="text-xs text-text-tertiary mt-1 line-clamp-1">{activity.description}</p>}
                                                         </div>
                                                         <span className="text-[10px] font-black uppercase tracking-tighter text-text-tertiary whitespace-nowrap">
-                                                            {activity.createdAt && formatDateTime(activity.createdAt instanceof Date ? activity.createdAt : new Date(activity.createdAt))}
+                                                            {activity.createdAt && formatDateTime(activity.createdAt)}
                                                         </span>
                                                     </div>
                                                 </div>

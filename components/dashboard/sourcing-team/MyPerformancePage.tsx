@@ -23,7 +23,7 @@ const MyPerformancePage: React.FC<{ setCurrentPage: (page: string) => void }> = 
         const qualityCompliance = 1; // % rejection
         const inventory = 1; // 1 for good
 
-        const onTimeRequests = MATERIAL_REQUESTS.filter(r => new Date(r.requiredBy) >= new Date()).length;
+        const onTimeRequests = MATERIAL_REQUESTS.filter(r => r.requiredDate && new Date(r.requiredDate) >= new Date()).length;
         const onTimeDelivery = MATERIAL_REQUESTS.length > 0 ? (onTimeRequests / MATERIAL_REQUESTS.length) * 100 : 0;
 
         const avgVendorRating = VENDORS.reduce((sum, v) => sum + v.rating, 0) / VENDORS.length;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { TASKS, formatDateTime, ATTENDANCE_DATA } from '../../../constants';
+import { TASKS, formatDateTime, ATTENDANCE_DATA, safeDate } from '../../../constants';
 import { Task, TaskStatus, AttendanceType, UserRole, Reminder, AttendanceStatus, ExecutionTask } from '../../../types';
 import TaskCard from './TaskCard';
 import {
@@ -22,12 +22,13 @@ import AddTaskModal from './AddTaskModal';
 import { ContentCard, PrimaryButton, SecondaryButton, cn, staggerContainer } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTimeEntries, addActivity } from '../../../hooks/useTimeTracking';
-import { useMyDayTasks, addTask, updateTask } from '../../../hooks/useMyDayTasks';
+import { useMyDayTasks, addTask, updateTask, startTask, completeTask } from '../../../hooks/useMyDayTasks';
 import { useExecutionTasks } from '../../../hooks/useExecutionTasks'; // Import Execution Tasks Hook
 import { useLeads } from '../../../hooks/useLeads';
 import { useFinance } from '../../../hooks/useFinance';
-import { ProjectStatus } from '../../../types';
+import { ProjectStatus, ApprovalStatus, ApprovalRequestType } from '../../../types';
 import { useProjects } from '../../../hooks/useProjects';
+import { useAssignedApprovalRequests, startRequest, completeRequest } from '../../../hooks/useApprovalSystem';
 
 const SalesStats: React.FC<{ userId: string, leads: any[], timeEntries: any[] }> = ({ userId, leads, timeEntries }) => {
     const myLeads = leads.filter(l => l.assignedTo === userId);
@@ -128,7 +129,7 @@ const ReminderItem: React.FC<{ reminder: EnrichedReminder, onToggle: (id: string
                     "text-[10px] font-black uppercase tracking-tighter whitespace-nowrap px-2 py-1 rounded-md",
                     reminder.completed ? 'text-text-tertiary bg-subtle-background' : overdue ? 'text-error bg-error/10' : 'text-text-tertiary bg-subtle-background'
                 )}>
-                    {formatDateTime(new Date(reminder.date))}
+                    {safeDate(reminder.date)}
                 </p>
             </div>
         </motion.div>
@@ -137,14 +138,15 @@ const ReminderItem: React.FC<{ reminder: EnrichedReminder, onToggle: (id: string
 
 // Augmented Task Interface to include 'source'
 interface UnifiedTask extends Task {
-    source: 'myDay' | 'execution';
+    source: 'myDay' | 'execution' | 'request';
     originalId: string;
 }
 
 const MyDayPage: React.FC = () => {
     const { currentUser } = useAuth();
     const { tasks: myDayTasks, loading: tasksLoading } = useMyDayTasks(currentUser?.id);
-    const { tasks: executionTasks, updateTaskStatus: updateExecutionStatus } = useExecutionTasks(); // Fetch execution tasks
+    const { tasks: executionTasks, updateTaskStatus: updateExecutionStatus } = useExecutionTasks(undefined, currentUser?.id); // ✅ FIX: Server-side filtering by userId
+    const { assignedRequests, loading: requestsLoading } = useAssignedApprovalRequests(currentUser?.id || '');
     const { leads, loading: leadsLoading } = useLeads();
 
     const [reminders, setReminders] = useState<EnrichedReminder[]>([]);
@@ -189,14 +191,13 @@ const MyDayPage: React.FC = () => {
             originalId: t.id
         }));
 
-        // Filter execution tasks for current user
-        const myExecutionTasks = executionTasks.filter(t => t.assignedTo === currentUser?.id);
-
-        const unifiedExecutionTasks: UnifiedTask[] = myExecutionTasks.map(t => ({
+        // ✅ Server-side filtering already done in useExecutionTasks hook - no client-side filter needed
+        const unifiedExecutionTasks: UnifiedTask[] = executionTasks.map(t => ({
             id: `exec-${t.id}`, // Avoid ID collisions
             originalId: t.id,
             title: `[${t.missionType}] ${t.projectName}`,
-            userId: t.assignedTo,
+            assignedTo: t.assignedTo,
+            userId: t.assignedTo, // Keep for compatibility if used elsewhere, but assignedTo is key
             status: t.status === 'Completed' ? TaskStatus.COMPLETED :
                 t.status === 'In Progress' ? TaskStatus.IN_PROGRESS : TaskStatus.PENDING,
             timeSpent: 0, // Not tracked in execution task natively yet
@@ -212,20 +213,66 @@ const MyDayPage: React.FC = () => {
             source: 'execution'
         }));
 
-        // combine
-        const all = [...unifiedMyDayTasks, ...unifiedExecutionTasks];
+        // Filter valid operational requests
+        const myRequests = assignedRequests.filter(r =>
+            r.requestType !== ApprovalRequestType.STAFF_REGISTRATION &&
+            (r.status === ApprovalStatus.ASSIGNED || r.status === ApprovalStatus.ONGOING || r.status === ApprovalStatus.COMPLETED)
+        );
 
-        // Filter by date or show always if execution
+        const unifiedRequests: UnifiedTask[] = myRequests.map(r => {
+            let status = TaskStatus.PENDING;
+            if (r.status === ApprovalStatus.ONGOING) status = TaskStatus.IN_PROGRESS;
+            if (r.status === ApprovalStatus.COMPLETED) status = TaskStatus.COMPLETED;
+
+            return {
+                id: `req-${r.id}`,
+                originalId: r.id,
+                title: `${r.title} (${r.requestType})`,
+                assignedTo: r.assigneeId || '',
+                userId: r.assigneeId || '',
+                status: status,
+                timeSpent: 0, // Todo: track time
+                priority: r.priority,
+                priorityOrder: 0,
+                deadline: r.endDate ? (r.endDate instanceof Date ? r.endDate.toISOString() : (r.endDate as any).toDate().toISOString()) : undefined,
+                isPaused: false,
+                date: selectedDate, // Show today if active
+                description: r.description,
+                createdAt: r.requestedAt ? (r.requestedAt instanceof Date ? r.requestedAt : (r.requestedAt as any).toDate()) : new Date(),
+                createdBy: r.requesterId,
+                createdByName: r.requesterName,
+                source: 'request'
+            };
+        });
+
+
+        // combine
+        const all = [...unifiedMyDayTasks, ...unifiedExecutionTasks, ...unifiedRequests];
+
+        // Filter by date or show always if execution/request
         return all.filter(task => {
-            if (task.source === 'execution') {
-                // Show active tasks always, and completed tasks only if they are somehow relevant (e.g. completed today - simplified for now)
-                if (task.status !== TaskStatus.COMPLETED) return true;
+            if (task.source === 'execution' || task.source === 'request') {
+                // Show if Pending/InProgress. If completed, maybe filter out unless done today?
+                // For now, always show if assigned.
+                if (task.status === TaskStatus.COMPLETED) {
+                    // Only show completed if selected date matches today (assumes we want to see what we did today)
+                    // Simplified: Only hide manually. Or show always.
+                    // Let's filter out older completed items if we had a completion date mechanism.
+                    // For now, showing all helps track.
+                }
                 return true;
             }
             return task.date === selectedDate;
-        }).sort((a, b) => (a.priorityOrder || 99) - (b.priorityOrder || 99));
+        }).sort((a, b) => {
+            // Sor by status (Pending/In Progress first) then priority
+            if (a.status !== b.status) {
+                if (a.status === TaskStatus.IN_PROGRESS) return -1;
+                if (b.status === TaskStatus.IN_PROGRESS) return 1;
+            }
+            return (a.priorityOrder || 99) - (b.priorityOrder || 99);
+        });
 
-    }, [myDayTasks, executionTasks, currentUser, selectedDate]);
+    }, [myDayTasks, executionTasks, assignedRequests, currentUser, selectedDate]);
 
 
     const handleUpdateStatus = async (taskId: string, newStatus: TaskStatus) => {
@@ -240,6 +287,20 @@ const MyDayPage: React.FC = () => {
                     newStatus === TaskStatus.IN_PROGRESS ? 'In Progress' : 'Pending';
 
                 await updateExecutionStatus(task.originalId, execStatus);
+                return;
+            }
+
+            if (task.source === 'request') {
+                // Update Approval Request Lifecycle
+                if (newStatus === TaskStatus.IN_PROGRESS) {
+                    await startRequest(task.originalId, currentUser.id);
+                    await addActivity(currentUser.id, currentUser.name, `Started Request: ${task.title}`);
+                } else if (newStatus === TaskStatus.COMPLETED) {
+                    if (confirm("Mark this request as completed? Admins will be notified.")) {
+                        await completeRequest(task.originalId, currentUser.id);
+                        await addActivity(currentUser.id, currentUser.name, `Completed Request: ${task.title}`, true);
+                    }
+                }
                 return;
             }
 
@@ -295,6 +356,7 @@ const MyDayPage: React.FC = () => {
 
         const newTask: Omit<Task, 'id'> = {
             title: taskData.title,
+            assignedTo: taskData.assignedTo || currentUser.id,
             userId: taskData.assignedTo || currentUser.id,
             status: TaskStatus.PENDING,
             timeSpent: 0,
@@ -331,7 +393,101 @@ const MyDayPage: React.FC = () => {
         return date.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
     }, [selectedDate]);
 
-    if (!currentUser) return null;
+
+    // New: Handle Start Task with Automation
+    const handleStartTask = async (task: Task) => {
+        try {
+            console.log('[MyDayPage] Starting task:', task.title);
+
+            // 1. Update Task Status
+            await startTask(task.id);
+
+            // 2. Automation: Site Visit Record Creation
+            const title = task.title.toLowerCase();
+            if (title.includes('site') && (title.includes('visit') || title.includes('inspection'))) {
+                // Check context
+                const contextId = task.contextId || task.caseId;
+                if (contextId) {
+                    const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
+                    const { db } = await import('../../../firebase');
+
+                    const siteVisitsRef = collection(db, 'cases', contextId, 'siteVisits');
+                    await addDoc(siteVisitsRef, {
+                        engineerId: currentUser?.id,
+                        engineerName: currentUser?.name,
+                        startedAt: serverTimestamp(),
+                        status: 'IN_PROGRESS',
+                        taskId: task.id
+                    });
+                    console.log('[MyDayPage] Site Visit Record Created');
+                }
+            }
+        } catch (error) {
+            console.error('Error starting task:', error);
+            alert('Failed to start task');
+        }
+    };
+
+    // New: Handle Complete Task with Validation & Redirects
+    const handleCompleteTask = async (task: Task) => {
+        const title = task.title.toLowerCase();
+
+        // 1. Site Visit Logic -> Redirect to Project Workflow for "Distance" input
+        if (title.includes('site') && (title.includes('visit') || title.includes('inspection'))) {
+            const projectId = task.contextId || task.caseId;
+            if (projectId) {
+                // Navigate to workflow page to open the modal
+                // We use a query param to trigger the modal
+                // Assuming route is /workflow (Sales Manager/Site Engineer have this)
+                // We need to verify if the user has access to /workflow. Role based nav says yes for most.
+                window.location.href = `/workflow?action=complete-inspection&projectId=${projectId}&taskId=${task.id}`;
+                return;
+            }
+        }
+
+        // 2. Drawing/BOQ Logic -> Validation
+        if (title.includes('drawing') || title.includes('design') || title.includes('boq') || title.includes('quotation')) {
+            // We need to check if the document exists. 
+            // Since we don't have project data handy here for every task, we fetch it.
+            if (task.contextType === 'project' && task.contextId) {
+                try {
+                    const { doc, getDoc } = await import('firebase/firestore');
+                    const { db } = await import('../../../firebase');
+                    const projectRef = doc(db, 'cases', task.contextId);
+                    const projectSnap = await getDoc(projectRef);
+
+                    if (projectSnap.exists()) {
+                        const projectData = projectSnap.data();
+                        // Check Drawing
+                        if (title.includes('drawing') && !projectData.drawingSubmittedAt && !projectData.files?.some((f: any) => f.category === 'drawing')) {
+                            alert('⚠️ Cannot Complete Task\n\nPlease upload the Drawing first using the Project Board.');
+                            return;
+                        }
+                        // Check BOQ - Relaxed check for now as Items might be enough
+                        if (title.includes('boq') && (!projectData.items || projectData.items.length === 0) && !projectData.files?.some((f: any) => f.category === 'boq')) {
+                            alert('⚠️ Cannot Complete Task\n\nPlease submit the BOQ first using the Project Board.');
+                            return;
+                        }
+                        // Check Quotation
+                        if (title.includes('quotation') && !projectData.quotationSubmittedAt && !projectData.files?.some((f: any) => f.category === 'quotation')) {
+                            alert('⚠️ Cannot Complete Task\n\nPlease generate/upload the Quotation first.');
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Validation check failed", e);
+                    // Fail open or closed? Closed for safety, but warn.
+                }
+            }
+        }
+
+        // 3. completion
+        try {
+            await completeTask(task.id);
+        } catch (error) {
+            console.error('Error completing task:', error);
+        }
+    };
 
     return (
         <motion.div
@@ -421,7 +577,13 @@ const MyDayPage: React.FC = () => {
                             <AnimatePresence mode="popLayout">
                                 {daysTasks.length > 0 ? (
                                     daysTasks.map(task => (
-                                        <TaskCard key={task.id} task={task} onUpdateStatus={handleUpdateStatus} />
+                                        <TaskCard
+                                            key={task.id}
+                                            task={task}
+                                            onUpdateStatus={handleUpdateStatus}
+                                            onStartTask={handleStartTask}
+                                            onCompleteTask={handleCompleteTask}
+                                        />
                                     ))
                                 ) : (
                                     <motion.div

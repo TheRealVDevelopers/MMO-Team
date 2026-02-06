@@ -22,6 +22,7 @@ interface AddTaskModalProps {
     }) => void;
     existingTaskCount: number;
     currentUser: any; // Pass auth context
+    initialTarget?: string; // e.g. "project:123" or "lead:456"
 }
 
 const priorityOptions = [
@@ -30,7 +31,7 @@ const priorityOptions = [
     { value: 'Low', label: 'Low Priority', color: 'bg-text-secondary/10 text-text-secondary border-text-secondary/30' },
 ];
 
-const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onClose, onAddTask, existingTaskCount, currentUser }) => {
+const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onClose, onAddTask, existingTaskCount, currentUser, initialTarget }) => {
     const [title, setTitle] = useState('');
     const [priorityOrder, setPriorityOrder] = useState(existingTaskCount + 1);
     const [priority, setPriority] = useState<'High' | 'Medium' | 'Low'>('Medium');
@@ -39,7 +40,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onClose, onAddTask,
     // Target Selection State
     const { projects } = useProjects();
     const { leads } = useLeads();
-    const [selectedTarget, setSelectedTarget] = useState<string>('');
+    const [selectedTarget, setSelectedTarget] = useState<string>(initialTarget || '');
 
     // Assignment State
     const [assignedTo, setAssignedTo] = useState<string>('');
@@ -72,7 +73,12 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onClose, onAddTask,
             };
             fetchUsers();
         }
-    }, [isOpen, canAssign]);
+
+        // Update target if initialTarget provided
+        if (isOpen && initialTarget) {
+            setSelectedTarget(initialTarget);
+        }
+    }, [isOpen, canAssign, initialTarget]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();

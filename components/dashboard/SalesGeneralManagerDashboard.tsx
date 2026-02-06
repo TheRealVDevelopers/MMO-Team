@@ -4,7 +4,6 @@ import SalesOverviewPage from './sales-manager/SalesOverviewPage';
 import LeadManagementPage from './sales-manager/LeadManagementPage';
 import TeamManagementPage from './sales-manager/TeamManagementPage';
 import ReportsPage from './sales-manager/ReportsPage';
-import ProjectTrackingPage from './super-admin/ProjectTrackingPage';
 import { Lead, LeadHistory, LeadPipelineStatus } from '../../types';
 import { USERS } from '../../constants';
 import AddNewLeadModal from './sales-manager/AddNewLeadModal';
@@ -13,7 +12,7 @@ import { useAuth } from '../../context/AuthContext';
 import PerformancePage from './sales-manager/PerformancePage';
 import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
-import { useLeads, addLead, updateLead } from '../../hooks/useLeads';
+import { useLeads } from '../../hooks/useLeads';
 import { useNewEnquiries, useEnquiries } from '../../hooks/useEnquiries';
 import { useUsers } from '../../hooks/useUsers';
 import ApprovalsPage from './super-admin/ApprovalsPage';
@@ -22,11 +21,12 @@ import EnquiryNotificationBanner from './EnquiryNotificationBanner';
 import EnquiriesListModal from './EnquiriesListModal';
 import JustDialImportModal from './sales-manager/JustDialImportModal';
 import { SectionHeader, PrimaryButton, SecondaryButton } from './shared/DashboardUI';
+import UnifiedProjectsPage from './shared/UnifiedProjectsPage';
 import { UserPlusIcon, UsersIcon, ArrowDownTrayIcon, CloudArrowDownIcon } from '@heroicons/react/24/outline';
 
 const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
-  const { leads, loading: leadsLoading, error: leadsError } = useLeads();
+  const { leads, loading: leadsLoading, error: leadsError, createLead, updateLead } = useLeads();
   const { users, loading: usersLoading } = useUsers();
   const { newEnquiries } = useNewEnquiries(currentUser?.id);
   const { enquiries } = useEnquiries();
@@ -83,7 +83,7 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
         notes: `For ${new Date(reminder.date).toLocaleString()}: ${reminder.notes}`
       });
     }
-    await addLead(newLead);
+    await createLead(newLead as any);
   };
 
   const handleAssignLead = async (leadId: string, newOwnerId: string) => {
@@ -153,8 +153,8 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
         return <SalesOverviewPage setCurrentPage={setCurrentPage} leads={leads} users={users} />;
       case 'leads':
         return <LeadManagementPage leads={leads} users={users} />;
-      case 'projects':
-        return <ProjectTrackingPage setCurrentPage={setCurrentPage} />;
+      case 'project-hub':
+        return <UnifiedProjectsPage roleView="manager" />;
       case 'organizations':
         return <OrganizationsPage setCurrentPage={setCurrentPage} />;
       case 'team':

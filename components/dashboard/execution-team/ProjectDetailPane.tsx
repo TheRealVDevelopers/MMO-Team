@@ -15,7 +15,7 @@ const Checklist: React.FC<{ title: string, items: ChecklistItem[] }> = ({ title,
         <ul className="space-y-2">
             {items.map(item => (
                 <li key={item.id} className="flex items-center p-2 bg-subtle-background rounded-md">
-                    <input id={item.id} type="checkbox" className="h-4 w-4 text-primary focus:ring-primary border-border rounded" defaultChecked={item.completed} /> 
+                    <input id={item.id} type="checkbox" className="h-4 w-4 text-primary focus:ring-primary border-border rounded" defaultChecked={item.completed} />
                     <label htmlFor={item.id} className={`ml-3 text-sm text-text-primary ${item.completed ? 'line-through text-text-secondary' : ''}`}>{item.text}</label>
                 </li>
             ))}
@@ -24,7 +24,7 @@ const Checklist: React.FC<{ title: string, items: ChecklistItem[] }> = ({ title,
 );
 
 const IssueItem: React.FC<{ issue: Issue }> = ({ issue }) => (
-    <div className="p-2 border-l-4 rounded-r-md bg-subtle-background" style={{ borderLeftColor: issue.priority === 'High' ? 'var(--color-error)' : issue.priority === 'Medium' ? 'var(--color-accent)' : 'var(--color-border)'}}>
+    <div className="p-2 border-l-4 rounded-r-md bg-subtle-background" style={{ borderLeftColor: issue.priority === 'High' ? 'var(--color-error)' : issue.priority === 'Medium' ? 'var(--color-accent)' : 'var(--color-border)' }}>
         <p className="text-sm font-medium">{issue.title}</p>
         <p className="text-xs text-text-secondary">{issue.status} - Reported by {issue.reportedBy}</p>
     </div>
@@ -32,14 +32,14 @@ const IssueItem: React.FC<{ issue: Issue }> = ({ issue }) => (
 
 const ProjectDetailPane: React.FC<{ project: Project }> = ({ project }) => {
     const [activeTab, setActiveTab] = useState<'tasks' | 'issues' | 'chat'>('tasks');
-    
+
     return (
         <div className="flex flex-col h-full">
             <div className="p-4 border-b border-border">
                 <h3 className="font-bold text-lg text-text-primary">{project.projectName}</h3>
                 <p className="text-sm text-text-secondary">{project.clientName}</p>
             </div>
-            
+
             <div className="flex border-b border-border">
                 <TabButton icon={<ListBulletIcon />} label="Tasks" isActive={activeTab === 'tasks'} onClick={() => setActiveTab('tasks')} />
                 <TabButton icon={<ExclamationCircleIcon />} label="Issues" isActive={activeTab === 'issues'} onClick={() => setActiveTab('issues')} />
@@ -59,7 +59,7 @@ const ProjectDetailPane: React.FC<{ project: Project }> = ({ project }) => {
                     </div>
                 )}
                 {activeTab === 'chat' && (
-                     <div className="flex flex-col h-full">
+                    <div className="flex flex-col h-full">
                         <div className="flex-1 space-y-4">
                             {project.communication?.map(msg => (
                                 <div key={msg.id} className="flex items-start space-x-2">

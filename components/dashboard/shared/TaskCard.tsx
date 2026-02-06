@@ -6,9 +6,12 @@ import { ExclamationTriangleIcon, UserIcon } from '@heroicons/react/24/solid';
 import { motion } from 'framer-motion';
 import { cn } from './DashboardUI';
 
+
 interface TaskCardProps {
   task: Task;
   onUpdateStatus: (taskId: string, newStatus: TaskStatus) => void;
+  onStartTask?: (task: Task) => void;
+  onCompleteTask?: (task: Task) => void;
 }
 
 const formatTime = (seconds: number) => {
@@ -18,20 +21,30 @@ const formatTime = (seconds: number) => {
   return `${h}:${m}:${s}`;
 };
 
-const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdateStatus }) => {
+const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdateStatus, onStartTask, onCompleteTask }) => {
   const [elapsedTime, setElapsedTime] = useState(task.timeSpent);
 
   useEffect(() => {
     let interval: number | undefined;
     if (task.status === TaskStatus.IN_PROGRESS && !task.isPaused) {
-      const start = task.startTime || Date.now();
+      const start = task.startedAt ? new Date(task.startedAt).getTime() : Date.now();
+      // Calculate initial elapsed based on startedAt if available
+      const initialElapsed = task.startedAt ? Math.floor((Date.now() - new Date(task.startedAt).getTime()) / 1000) : 0;
+
+      // If timeSpent represents previously accumulated time, add it.
+      // Assuming simple case where we just count from startedAt for now for ongoing tasks
+      setElapsedTime(initialElapsed);
+
+
       interval = window.setInterval(() => {
         const secondsSinceStart = Math.floor((Date.now() - start) / 1000);
-        setElapsedTime(task.timeSpent + secondsSinceStart);
+        setElapsedTime(secondsSinceStart);
       }, 1000);
+    } else {
+      setElapsedTime(task.timeSpent || 0);
     }
     return () => clearInterval(interval);
-  }, [task.status, task.isPaused, task.startTime, task.timeSpent]);
+  }, [task.status, task.isPaused, task.startedAt, task.timeSpent]);
 
   // Check if task is overdue
   const isOverdue = useMemo(() => {
@@ -61,6 +74,24 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdateStatus }) => {
   }, [task.deadline]);
 
   const priorityColor = task.priority === 'High' ? 'border-l-error' : task.priority === 'Medium' ? 'border-l-accent' : 'border-l-border';
+
+  const handleStartClick = () => {
+    if (onStartTask) {
+      onStartTask(task);
+    } else {
+      // Fallback if no specific handler
+      onUpdateStatus(task.id, TaskStatus.IN_PROGRESS);
+    }
+  };
+
+  const handleCompleteClick = () => {
+    if (onCompleteTask) {
+      onCompleteTask(task);
+    } else {
+      // Fallback
+      onUpdateStatus(task.id, TaskStatus.COMPLETED);
+    }
+  };
 
   return (
     <motion.div
@@ -130,10 +161,10 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdateStatus }) => {
       </div>
 
       <div className="mt-4">
-        {task.status === TaskStatus.PENDING && (
+        {(task.status === TaskStatus.PENDING || task.status === TaskStatus.ASSIGNED) && (
           <button
-            onClick={() => onUpdateStatus(task.id, TaskStatus.IN_PROGRESS)}
-            className="w-full flex items-center justify-center space-x-2 py-3 bg-primary text-white rounded-xl text-sm font-bold hover:bg-secondary transition-all shadow-lg shadow-primary/20"
+            onClick={handleStartClick}
+            className="w-full flex items-center justify-center space-x-2 py-3 bg-primary text-white rounded-xl text-sm font-bold hover:bg-green-600 transition-all shadow-lg shadow-primary/20"
           >
             <PlayIcon className="w-4 h-4" />
             <span>Start Task</span>
@@ -147,7 +178,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdateStatus }) => {
               <span>{formatTime(elapsedTime)}</span>
             </div>
             <button
-              onClick={() => onUpdateStatus(task.id, TaskStatus.COMPLETED)}
+              onClick={handleCompleteClick}
               className="w-full flex items-center justify-center space-x-2 py-3 bg-secondary text-white rounded-xl text-sm font-bold hover:bg-primary transition-all shadow-lg shadow-secondary/20"
             >
               <CheckCircleIcon className="w-5 h-5" />
@@ -159,7 +190,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdateStatus }) => {
         {task.status === TaskStatus.COMPLETED && (
           <div className="flex items-center justify-center space-x-2 text-sm bg-secondary/10 text-secondary p-3 rounded-xl font-bold">
             <CheckCircleIcon className="w-5 h-5" />
-            <span>Completed in {formatTime(task.timeSpent)}</span>
+            <span>Completed</span>
           </div>
         )}
       </div>

@@ -5,11 +5,13 @@ import { PlusIcon, TrashIcon, CheckCircleIcon, CalculatorIcon, DocumentTextIcon,
 import { PrimaryButton, SecondaryButton } from '../shared/DashboardUI';
 import { useAuth } from '../../../context/AuthContext';
 import { useProjects } from '../../../hooks/useProjects';
+import { useCases, addCaseQuotation } from '../../../hooks/useCases';
 import { useApprovals, useMyApprovalRequests } from '../../../hooks/useApprovalSystem';
 import { useQuotationAudit } from '../../../hooks/useQuotationAudit';
 import { useCatalog } from '../../../hooks/useCatalog';
-import { Project, ProjectStatus, ApprovalRequestType, UserRole } from '../../../types';
+import { Project, ProjectStatus, ApprovalRequestType, UserRole, Case } from '../../../types';
 import { formatCurrencyINR } from '../../../constants';
+import { createNotification } from '../../../services/liveDataService';
 
 // Interface for items loaded from catalog
 interface CatalogItem {
@@ -33,7 +35,10 @@ interface QuoteLineItem extends CatalogItem {
 
 const QuotationBuilderPage: React.FC = () => {
     const { currentUser } = useAuth();
-    const { projects } = useProjects();
+    // Use unified Cases architecture - show both leads and projects for quotation team
+    const { cases } = useCases();
+    // Type assertion for compatibility during transition
+    const projects = cases as unknown as Project[];
     const { submitRequest, loading: submitting } = useApprovals();
     const { createVersion, checkApprovalNeeded } = useQuotationAudit(currentUser?.id || '', currentUser?.name || '');
 
@@ -115,14 +120,44 @@ const QuotationBuilderPage: React.FC = () => {
         setIsSubmitting(true);
 
         try {
-            // Calculate totals for approval check
+            // Calculate totals
             const totalValue = calculateGrandTotal();
             const totalDiscount = quoteItems.reduce((sum, item) => sum + ((item.price * item.quantity) - item.total), 0);
+            const taxAmount = quoteItems.reduce((sum, item) => {
+                const itemTotal = item.total;
+                const gst = itemTotal * 0.18; // 18% GST
+                return sum + gst;
+            }, 0);
+            const finalAmount = totalValue + taxAmount;
             const requiresManagerApproval = checkApprovalNeeded(totalValue + totalDiscount, totalDiscount);
+
+            // ========================================
+            // SAVE QUOTATION TO CASE SUBCOLLECTION
+            // ========================================
+            const quotationId = await addCaseQuotation(selectedProject.id, {
+                caseId: selectedProject.id,
+                quotationNumber: `QT-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`,
+                items: quoteItems.map(i => ({
+                    itemId: i.id,
+                    quantity: i.quantity,
+                    unitPrice: i.price,
+                    discount: i.discount
+                })),
+                totalAmount: totalValue + totalDiscount,
+                discountAmount: totalDiscount,
+                taxAmount: taxAmount,
+                finalAmount: finalAmount,
+                submittedBy: currentUser.id,
+                submittedAt: new Date(),
+                status: requiresManagerApproval ? 'Pending Approval' : 'Approved',
+                notes: `Submitted by ${currentUser.name} for ${selectedProject.projectName}`
+            });
+
+            console.log(`✅ Quotation saved to cases/${selectedProject.id}/quotations/${quotationId}`);
 
             // Create Version in Audit Log
             await createVersion(
-                `new-${Date.now()}`, // Temporary ID for new quote
+                quotationId,
                 quoteItems.map(i => ({
                     itemId: i.id,
                     quantity: i.quantity,
@@ -137,24 +172,35 @@ const QuotationBuilderPage: React.FC = () => {
                 `- ${i.name} x ${i.quantity} (${formatCurrencyINR(i.price)}/unit) - ${i.discount}% OFF = ${formatCurrencyINR(i.total)}`
             ).join('\n');
 
-            let fullDescription = `Quotation for ${selectedProject.projectName}\n\nItems:\n${lineItemsDescription}\n\nTotal Value: ${formatCurrencyINR(totalValue)}`;
+            let fullDescription = `Quotation for ${selectedProject.projectName}\n\nItems:\n${lineItemsDescription}\n\nSubtotal: ${formatCurrencyINR(totalValue)}\nTax (18%): ${formatCurrencyINR(taxAmount)}\nTotal: ${formatCurrencyINR(finalAmount)}`;
 
             if (requiresManagerApproval) {
                 fullDescription += `\n\n⚠️ REQUIRES MANAGER APPROVAL: High Discount Applied (${((totalDiscount / (totalValue + totalDiscount)) * 100).toFixed(1)}%)`;
             }
 
+            // Submit for approval workflow
             await submitRequest({
                 requestType: ApprovalRequestType.QUOTATION_APPROVAL,
                 title: `${requiresManagerApproval ? '[APPROVAL NEEDED] ' : ''}Quotation for ${selectedProject.clientName} - ${selectedProject.projectName}`,
                 description: fullDescription,
                 priority: requiresManagerApproval ? 'High' : 'Medium',
-                contextId: selectedProject.id, // Link to project
+                contextId: selectedProject.id,
                 requesterId: currentUser.id,
                 requesterName: currentUser.name,
                 requesterRole: currentUser.role,
-                targetRole: UserRole.SALES_GENERAL_MANAGER, // Send to Admin/Manager for approval
+                targetRole: UserRole.SALES_GENERAL_MANAGER,
                 startDate: new Date(),
-                endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week validity
+                endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            });
+
+            // Notify relevant parties (Sales team / Client contact)
+            await createNotification({
+                title: 'Quotation Created',
+                message: `Quotation ${formatCurrencyINR(finalAmount)} ready for ${selectedProject.clientName}`,
+                user_id: (selectedProject as any).assignedTo || (selectedProject as any).salespersonId || currentUser.id,
+                entity_type: (selectedProject as any).isProject ? 'project' : 'lead',
+                entity_id: selectedProject.id,
+                type: 'info'
             });
 
             setShowSuccess(true);
@@ -162,7 +208,7 @@ const QuotationBuilderPage: React.FC = () => {
                 setShowSuccess(false);
                 setSelectedProject(null);
                 setQuoteItems([]);
-                setViewMode('list'); // Return to list view
+                setViewMode('list');
             }, 3000);
 
         } catch (error) {

@@ -62,10 +62,6 @@ export enum ApprovalRequestType {
 
 export enum ApprovalStatus {
   PENDING = "pending",
-  ASSIGNED = "assigned",
-  ONGOING = "ongoing",
-  COMPLETED = "completed",
-  ACKNOWLEDGED = "acknowledged",
   APPROVED = "approved",
   REJECTED = "rejected",
 }
@@ -161,10 +157,6 @@ export interface ApprovalRequest {
   approvedBy: ApprovalAction[];
   rejectedBy: ApprovalAction[];
   comments: string[];
-  assignedTo?: string;
-  startedAt?: Date;
-  completedAt?: Date;
-  acknowledgedAt?: Date;
   createdAt: any; // Firestore Timestamp
   updatedAt: any; // Firestore Timestamp
 }

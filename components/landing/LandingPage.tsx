@@ -148,7 +148,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                 <NavLink view="home" label="Home" />
                 <NavLink view="about" label="Studio" />
                 <NavLink view="services" label="Services" />
-                <NavLink view="portfolio" label="Works" />
+                <NavLink view="portfolio" label="Portfolio" />
                 <NavLink view="contact" label="Contact" />
               </div>
 
@@ -370,16 +370,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                 <h3 className="text-text-primary font-serif font-bold text-lg mb-6">Contact</h3>
                 <ul className="space-y-4 text-sm font-medium text-text-secondary">
                   <li className="flex items-start group">
-                    <GlobeAltIcon className="w-5 h-5 text-primary mt-0.5 group-hover:scale-110 transition-transform" />
-                    <span className="ml-3">123 Design District, Metro City</span>
+                    <GlobeAltIcon className="w-7 h-7 text-primary mt-0.5 group-hover:scale-110 transition-transform" />
+                    <span className="ml-3">1VJQG+JWF, Begur Rd, Maruthi Layout, Mico Layout, Hongasandra, Bengaluru, Karnataka 560114</span>
                   </li>
                   <li className="flex items-center group">
                     <PhoneIcon className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
-                    <span className="ml-3">+91 (555) 123-4567</span>
+                    <span className="ml-3">+9740072666</span>
                   </li>
                   <li className="flex items-center group">
                     <EnvelopeIcon className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
-                    <span className="ml-3">projects@makemyoffice.com</span>
+                    <span className="ml-3">Sales@makemyoffice.com</span>
                   </li>
                 </ul>
               </div>

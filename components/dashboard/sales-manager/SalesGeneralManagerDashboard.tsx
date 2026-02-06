@@ -13,14 +13,14 @@ import { useAuth } from '../../../context/AuthContext';
 import PerformancePage from './PerformancePage';
 import CommunicationDashboard from '../../communication/CommunicationDashboard';
 import EscalateIssuePage from '../../escalation/EscalateIssuePage';
-import { useLeads, addLead, updateLead } from '../../../hooks/useLeads';
+import { useLeads } from '../../../hooks/useLeads';
 import Card from '../../shared/Card';
 import LeadImporter from '../../sales/LeadImporter';
 import { Upload } from 'lucide-react';
 
 const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
-  const { leads, loading: leadsLoading, error: leadsError } = useLeads();
+  const { leads, loading: leadsLoading, error: leadsError, createLead, updateLead } = useLeads();
   const [isAddLeadModalOpen, setAddLeadModalOpen] = useState(false);
   const [isAssignLeadModalOpen, setAssignLeadModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -71,7 +71,7 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
         notes: `For ${new Date(reminder.date).toLocaleString()}: ${reminder.notes}`
       });
     }
-    await addLead(newLead);
+    await createLead(newLead as any);
   };
 
   const handleAssignLead = async (leadId: string, newOwnerId: string) => {

@@ -241,12 +241,6 @@ const RedFlagsHeader: React.FC<RedFlagsHeaderProps> = ({ onNavigateToMember }) =
 
                                         <div className="flex flex-col items-end gap-2">
                                             <button
-                                                onClick={(e) => handleActNow(e, alert)}
-                                                className="px-3 py-1.5 text-xs font-bold bg-subtle-background hover:bg-primary hover:text-white rounded-lg transition-colors whitespace-nowrap"
-                                            >
-                                                ACT NOW
-                                            </button>
-                                            <button
                                                 onClick={(e) => handleDismiss(e, alert)}
                                                 className="px-3 py-1.5 text-xs font-bold text-text-tertiary hover:bg-error/10 hover:text-error rounded-lg transition-colors whitespace-nowrap flex items-center gap-1 opacity-0 group-hover:opacity-100"
                                                 title="Dismiss Alert"

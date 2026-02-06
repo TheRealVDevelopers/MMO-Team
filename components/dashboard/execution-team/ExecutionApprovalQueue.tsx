@@ -20,7 +20,7 @@ import ProjectEditModal from './ProjectEditModal';
 
 const ExecutionApprovalQueue: React.FC = () => {
     const { currentUser } = useAuth();
-    const { projects, loading: projectsLoading, updateProject } = useProjects();
+    const { projects: allProjects, loading: projectsLoading, updateProject } = useProjects();
     const { requests: materialRequests, loading: matRequestsLoading, approveRequest: approveMaterial, rejectRequest: rejectMaterial } = useAllExecutionMaterialRequests();
     const { requests: generalRequests, loading: genRequestsLoading } = useTargetedApprovalRequests(UserRole.EXECUTION_TEAM);
     const { users } = useUsers();
@@ -31,16 +31,29 @@ const ExecutionApprovalQueue: React.FC = () => {
 
     const loading = projectsLoading || matRequestsLoading || genRequestsLoading;
 
+    const userProjects = useMemo(() => {
+        if (!currentUser) return [];
+        return allProjects.filter(project => {
+            const executionTeam = project.assignedTeam?.execution || [];
+            return executionTeam.includes(currentUser.id) || project.projectHeadId === currentUser.id;
+        });
+    }, [allProjects, currentUser]);
+
     // Filter projects pending execution approval
     const pendingProjects = useMemo(() => {
-        return projects.filter(p =>
+        return userProjects.filter(p =>
             p.status === ProjectStatus.PENDING_EXECUTION_APPROVAL
         );
-    }, [projects]);
+    }, [userProjects]);
 
     const pendingGeneralRequests = useMemo(() => {
         return generalRequests.filter(r => r.status === ApprovalStatus.PENDING);
     }, [generalRequests]);
+
+    const userProjectIds = useMemo(() => new Set(userProjects.map(p => p.id)), [userProjects]);
+    const scopedMaterialRequests = useMemo(() => (
+        materialRequests.filter(req => userProjectIds.has(req.projectId))
+    ), [materialRequests, userProjectIds]);
 
     const handleSaveEdits = async (updatedProject: Project) => {
         setProcessingId(updatedProject.id);
@@ -95,7 +108,7 @@ const ExecutionApprovalQueue: React.FC = () => {
     };
 
     const handleMaterialAction = async (requestId: string, action: 'approve' | 'reject') => {
-        const req = materialRequests.find(r => r.id === requestId);
+        const req = scopedMaterialRequests.find(r => r.id === requestId);
         if (!req) return;
         setProcessingId(requestId);
 
@@ -161,7 +174,7 @@ const ExecutionApprovalQueue: React.FC = () => {
                             : 'text-text-secondary hover:text-text-primary'
                             }`}
                     >
-                        Materials ({materialRequests.length})
+                        Materials ({scopedMaterialRequests.length})
                     </button>
                     <button
                         onClick={() => setActiveTab('general')}
@@ -184,7 +197,7 @@ const ExecutionApprovalQueue: React.FC = () => {
                         </div>
                         <div>
                             <div className="text-2xl font-bold text-text-primary">
-                                {pendingProjects.length + materialRequests.length + pendingGeneralRequests.length}
+                                {pendingProjects.length + scopedMaterialRequests.length + pendingGeneralRequests.length}
                             </div>
                             <div className="text-xs text-text-secondary">Total Pending</div>
                         </div>
@@ -197,7 +210,7 @@ const ExecutionApprovalQueue: React.FC = () => {
                         </div>
                         <div>
                             <div className="text-2xl font-bold text-text-primary">
-                                {projects.filter(p => p.status === ProjectStatus.ACTIVE || p.status === ProjectStatus.IN_EXECUTION).length}
+                                {userProjects.filter(p => p.status === ProjectStatus.ACTIVE || p.status === ProjectStatus.IN_EXECUTION).length}
                             </div>
                             <div className="text-xs text-text-secondary">Active Projects</div>
                         </div>
@@ -265,13 +278,13 @@ const ExecutionApprovalQueue: React.FC = () => {
 
             {activeTab === 'materials' && (
                 <div className="space-y-4">
-                    {materialRequests.length === 0 ? (
+                    {scopedMaterialRequests.length === 0 ? (
                         <div className="text-center py-12 bg-surface rounded-xl border border-border">
                             <CheckCircleIcon className="w-12 h-12 mx-auto text-success mb-3" />
                             <p className="text-text-primary font-medium">No material requests pending</p>
                         </div>
                     ) : (
-                        materialRequests.map(req => (
+                        scopedMaterialRequests.map(req => (
                             <div key={req.id} className="bg-surface rounded-xl border border-border p-5 hover:shadow-md transition-all">
                                 <div className="flex justify-between items-start">
                                     <div>

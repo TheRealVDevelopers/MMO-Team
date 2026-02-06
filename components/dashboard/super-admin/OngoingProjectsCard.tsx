@@ -72,22 +72,7 @@ const OngoingProjectsCard: React.FC<OngoingProjectsCardProps> = ({ onProjectSele
                                 </div>
                             </div>
 
-                            <div className="relative h-2 w-full bg-subtle-background rounded-full overflow-hidden border border-border/20 shadow-inner">
-                                <motion.div
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${project.progress}%` }}
-                                    transition={{ duration: 1.5, ease: "easeOut", delay: idx * 0.1 }}
-                                    className={cn(
-                                        "h-full rounded-full shadow-lg",
-                                        project.progress > 80 ? "bg-secondary" :
-                                            project.progress > 40 ? "bg-primary" : "bg-accent"
-                                    )}
-                                />
-                            </div>
-                            <div className="flex justify-between mt-1.5">
-                                <span className="text-[10px] font-black text-text-tertiary tabular-nums tracking-widest">{project.progress}% SYNC</span>
-                                <span className="text-[10px] font-black text-text-tertiary uppercase tracking-widest">ETA: {project.deadline || 'TBA'}</span>
-                            </div>
+
                         </motion.div>
                     );
                 })}

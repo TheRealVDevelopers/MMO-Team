@@ -1,5 +1,7 @@
 
 import React from 'react';
+import { useRFQs } from '../../../hooks/useRFQs';
+import { safeDate } from '../../../constants';
 import { useAuth } from '../../../context/AuthContext';
 import { RFQStatus, BidStatus, RFQ, Bid } from '../../../types';
 import { ClipboardDocumentListIcon, DocumentCheckIcon, TrophyIcon, FireIcon, ClockIcon } from '@heroicons/react/24/outline';
@@ -87,7 +89,7 @@ const VendorOverview: React.FC = () => {
                                         <p className="font-bold text-text-primary">{rfq.projectName}</p>
                                         <div className="flex items-center text-[10px] text-text-secondary mt-1">
                                             <ClockIcon className="w-3 h-3 mr-1" />
-                                            Deadline: {new Date(rfq.deadline).toLocaleDateString()}
+                                            Deadline: {safeDate(rfq.deadline)}
                                             {isUrgent && <span className="ml-2 text-red-500 font-bold uppercase tracking-tighter">Urgent!</span>}
                                         </div>
                                     </div>

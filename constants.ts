@@ -193,7 +193,7 @@ export const BANK_DETAILS = {
 // DEFAULT VALUES / CONSTANTS
 // ========================================
 
-export const DEFAULT_ORGANIZATION_ID = 'org-test';
+export const DEFAULT_ORGANIZATION_ID = 'org-default';
 
 export const CASE_STATUS_LABELS = {
   lead: 'Lead',

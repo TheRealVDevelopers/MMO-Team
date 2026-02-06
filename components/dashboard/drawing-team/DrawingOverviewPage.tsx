@@ -1,9 +1,11 @@
 import React from 'react';
 import Card from '../../shared/Card';
-import { PROJECTS, USERS } from '../../../constants';
 import { Project, ProjectStatus } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
+import { useProjects } from '../../../hooks/useProjects';
+import { useUsers } from '../../../hooks/useUsers';
 import { useTeamTasks } from '../../../hooks/useTeamTasks'; // Or useMyDayTasks, but assuming we want to see what is assigned
+
 import {
     FireIcon, ClockIcon, ChartBarSquareIcon, PaintBrushIcon,
     ClipboardDocumentCheckIcon, ArrowUpRightIcon
@@ -23,13 +25,16 @@ const KpiCard: React.FC<{ title: string; value: string | number; icon: React.Rea
 
 const DrawingOverviewPage: React.FC<{ onProjectSelect: (project: Project) => void }> = ({ onProjectSelect }) => {
     const { currentUser } = useAuth();
+    const { projects: assignedProjects, loading: projectsLoading } = useProjects(currentUser?.id);
+    const { users } = useUsers();
+
     // In a real app, useMyDayTasks would be better, but useTeamTasks allows filtering if needed. 
     // Assuming useTeamTasks returns all tasks, we filter by assignee.
     const { tasks: allTasks } = useTeamTasks();
 
     if (!currentUser) return null;
 
-    const myProjects = PROJECTS.filter(p => p.assignedTeam.drawing === currentUser.id);
+    const myProjects = assignedProjects;
 
     // Filter tasks assigned to me (Direct Assignments)
     const myTasks = allTasks.filter(t => t.userId === currentUser.id && t.status !== 'Completed');
@@ -60,6 +65,10 @@ const DrawingOverviewPage: React.FC<{ onProjectSelect: (project: Project) => voi
     return (
         <div className="space-y-6">
             <h2 className="text-2xl font-bold text-text-primary">Design Dashboard</h2>
+
+            {projectsLoading && (
+                <div className="text-sm text-text-secondary">Loading assigned projects...</div>
+            )}
 
             {/* KPIs */}
             <div className="flex flex-col md:flex-row gap-4">
@@ -128,7 +137,7 @@ const DrawingOverviewPage: React.FC<{ onProjectSelect: (project: Project) => voi
                                 </thead>
                                 <tbody className="bg-surface divide-y divide-border">
                                     {designQueue.map(project => {
-                                        const salesperson = USERS.find(u => u.id === project.salespersonId);
+                                        const salesperson = users.find(u => u.id === project.salespersonId);
                                         return (
                                             <tr key={project.id} onClick={() => onProjectSelect(project)} className="cursor-pointer hover:bg-subtle-background">
                                                 <td className="px-6 py-4 whitespace-nowrap">
