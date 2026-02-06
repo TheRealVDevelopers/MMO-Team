@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { AlertTriangle, X } from 'lucide-react';
+import { safeDate } from '../../../constants';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FireIcon, XMarkIcon, BellAlertIcon } from '@heroicons/react/24/outline';
 import { useCriticalAlerts } from '../../../hooks/useCriticalAlerts';
@@ -192,7 +194,7 @@ const CriticalAlertBanner: React.FC<CriticalAlertBannerProps> = ({
                                             <p className="text-xs opacity-80 mt-0.5">{alert.description}</p>
                                             <div className="flex items-center gap-3 mt-1 text-[10px] opacity-70">
                                                 {alert.timestamp && <span>🕒 {alert.timestamp.toLocaleTimeString()}</span>}
-                                                {alert.deadline && <span>📅 Due: {alert.deadline.toLocaleDateString()}</span>}
+                                                {alert.deadline && <span>📅 Due: {safeDate(alert.deadline)}</span>}
                                             </div>
                                         </div>
 

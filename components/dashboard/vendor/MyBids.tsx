@@ -2,7 +2,7 @@
 import React from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { BidStatus, Bid } from '../../../types';
-import { formatCurrencyINR } from '../../../constants';
+import { formatCurrencyINR, safeDate } from '../../../constants';
 import { DocumentTextIcon } from '@heroicons/react/24/outline';
 
 const MyBids: React.FC = () => {

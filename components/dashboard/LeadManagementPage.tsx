@@ -12,6 +12,7 @@ import {
 import { doc, getDoc, updateDoc, arrayUnion, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Lead, LeadCommunicationMessage, LeadFile, ProjectMilestone, LeadPipelineStatus } from '../../types';
+import { formatCurrencyINR, safeDate } from '../../constants';
 import { useAuth } from '../../context/AuthContext';
 
 interface LeadManagementPageProps {
@@ -648,7 +649,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
                                   {milestone.deadline && (
                                     <p className="text-xs text-text-tertiary dark:text-gray-500 mt-1 flex items-center">
                                       <ClockIcon className="w-3 h-3 mr-1" />
-                                      Deadline: {milestone.deadline.toLocaleDateString()}
+                                      Deadline: {safeDate(milestone.deadline)}
                                     </p>
                                   )}
                                 </>
