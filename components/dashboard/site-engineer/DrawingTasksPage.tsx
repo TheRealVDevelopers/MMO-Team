@@ -4,6 +4,7 @@ import Card from '../../shared/Card';
 import { Clock, AlertCircle, CheckCircle2, Pencil } from 'lucide-react';
 import { useAutomatedTaskCreation } from '../../../hooks/useAutomatedTaskCreation';
 import { useAuth } from '../../../context/AuthContext';
+import { safeDate, safeDateTime } from '../../../constants';
 
 interface DrawingTasksPageProps {
     drawingTasks: DrawingTask[];
@@ -104,8 +105,8 @@ const DrawingTasksPage: React.FC<DrawingTasksPageProps> = ({
                         key={f}
                         onClick={() => setFilter(f as any)}
                         className={`px-4 py-2 text-sm font-medium transition-colors ${filter === f
-                                ? 'text-primary border-b-2 border-primary'
-                                : 'text-text-secondary hover:text-text-primary'
+                            ? 'text-primary border-b-2 border-primary'
+                            : 'text-text-secondary hover:text-text-primary'
                             }`}
                     >
                         {f.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
@@ -134,8 +135,8 @@ const DrawingTasksPage: React.FC<DrawingTasksPageProps> = ({
                                             {getStatusIcon(task.status)}
                                             <h3 className="font-semibold text-text-primary">{task.projectName}</h3>
                                             <span className={`text-xs px-2 py-1 rounded ${task.priority === 'High' ? 'bg-error-subtle text-error' :
-                                                    task.priority === 'Medium' ? 'bg-warning-subtle text-warning' :
-                                                        'bg-subtle-background text-text-secondary'
+                                                task.priority === 'Medium' ? 'bg-warning-subtle text-warning' :
+                                                    'bg-subtle-background text-text-secondary'
                                                 }`}>
                                                 {task.priority}
                                             </span>
@@ -147,7 +148,7 @@ const DrawingTasksPage: React.FC<DrawingTasksPageProps> = ({
                                         <div className="flex items-center gap-4 text-xs text-text-secondary">
                                             <span className="flex items-center gap-1">
                                                 <Clock className="w-3 h-3" />
-                                                Created: {new Date(task.createdAt).toLocaleDateString()}
+                                                Created: {safeDate(task.createdAt)}
                                             </span>
                                             {task.metadata?.measurements && (
                                                 <span>📏 Measurements available</span>
@@ -167,11 +168,11 @@ const DrawingTasksPage: React.FC<DrawingTasksPageProps> = ({
                                             {formatTimeLeft(task.deadline)}
                                         </p>
                                         <p className="text-xs text-text-secondary mt-1">
-                                            Due: {new Date(task.deadline).toLocaleString()}
+                                            Due: {safeDateTime(task.deadline)}
                                         </p>
                                         <span className={`inline-block mt-2 text-xs px-2 py-1 rounded ${task.status === 'Pending' ? 'bg-warning-subtle text-warning' :
-                                                task.status === 'In Progress' ? 'bg-primary-subtle text-primary' :
-                                                    'bg-success-subtle text-success'
+                                            task.status === 'In Progress' ? 'bg-primary-subtle text-primary' :
+                                                'bg-success-subtle text-success'
                                             }`}>
                                             {task.status}
                                         </span>

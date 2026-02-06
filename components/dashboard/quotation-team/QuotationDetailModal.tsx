@@ -5,7 +5,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useApprovals } from '../../../hooks/useApprovalSystem';
 import { addCaseQuotation } from '../../../hooks/useCases';
 import { createNotification } from '../../../services/liveDataService';
-import { formatCurrencyINR, VENDORS } from '../../../constants';
+import { formatCurrencyINR, VENDORS, safeDate, safeDateTime } from '../../../constants';
 import { CalculatorIcon, DocumentCheckIcon, XCircleIcon, PlusIcon, ClockIcon } from '../../icons/IconComponents';
 
 const QuotationDetailModal: React.FC<{
@@ -195,7 +195,7 @@ const QuotationDetailModal: React.FC<{
                                             <p className="text-sm font-bold text-text-primary">Submitted items from Drawing Team</p>
                                         </div>
                                         <span className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">
-                                            {new Date(project.boqSubmission.submittedAt).toLocaleDateString()}
+                                            {safeDate(project.boqSubmission.submittedAt)}
                                         </span>
                                     </div>
                                     <div className="space-y-3">
@@ -332,7 +332,7 @@ const QuotationDetailModal: React.FC<{
                                                     <div className="bg-subtle-background p-4 rounded-xl border border-border/50 group hover:border-primary transition-all">
                                                         <div className="flex justify-between items-start mb-1">
                                                             <p className="text-[10px] font-black uppercase text-primary">{offer.userName}</p>
-                                                            <p className="text-[10px] text-text-tertiary">{new Date(offer.timestamp).toLocaleTimeString()}</p>
+                                                            <p className="text-[10px] text-text-tertiary">{safeDateTime(offer.timestamp)}</p>
                                                         </div>
                                                         <p className="text-lg font-black text-text-primary mb-1">{formatCurrencyINR(offer.amount)}</p>
                                                         {offer.notes && <p className="text-[10px] italic text-text-secondary leading-normal">"{offer.notes}"</p>}
@@ -446,7 +446,7 @@ const QuotationDetailModal: React.FC<{
                                                                 </div>
                                                                 <div className="text-right">
                                                                     <p className={`text-2xl font-serif font-black ${isL1 ? 'text-secondary' : 'text-text-primary'}`}>{formatCurrencyINR(latestBid.totalAmount)}</p>
-                                                                    <p className="text-[10px] text-text-tertiary mt-1 font-bold">Latest Bid: {new Date(latestBid.submittedDate).toLocaleTimeString()}</p>
+                                                                    <p className="text-[10px] text-text-tertiary mt-1 font-bold">Latest Bid: {safeDateTime(latestBid.submittedDate)}</p>
                                                                 </div>
                                                             </div>
 
@@ -513,7 +513,7 @@ const QuotationDetailModal: React.FC<{
                                                                                         <span className="font-bold text-text-secondary">
                                                                                             {hIdx === 0 ? 'Current Version' : `Version ${history.length - hIdx}`}
                                                                                         </span>
-                                                                                        <span className="text-text-tertiary font-mono">{new Date(h.submittedDate).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                                                                                        <span className="text-text-tertiary font-mono">{safeDateTime(h.submittedDate)}</span>
                                                                                     </div>
                                                                                     <div className="flex justify-between items-baseline mt-1">
                                                                                         <span className={`text-lg font-serif font-black ${hIdx === 0 ? 'text-text-primary' : 'text-text-tertiary'}`}>{formatCurrencyINR(h.totalAmount)}</span>

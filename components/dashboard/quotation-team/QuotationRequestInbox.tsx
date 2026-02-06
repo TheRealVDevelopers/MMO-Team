@@ -5,7 +5,7 @@ import { Task, TaskStatus } from '../../../types';
 import { ClockIcon, CheckCircleIcon, PlayIcon } from '../../icons/IconComponents';
 import { updateDoc, doc } from 'firebase/firestore';
 import { db } from '../../../firebase';
-import { FIRESTORE_COLLECTIONS } from '../../../constants';
+import { FIRESTORE_COLLECTIONS, safeDate } from '../../../constants';
 
 const QuotationRequestInbox: React.FC = () => {
     const { currentUser } = useAuth();
@@ -14,8 +14,8 @@ const QuotationRequestInbox: React.FC = () => {
     // Filter tasks for quotation team
     const quotationTasks = useMemo(() => {
         if (!currentUser) return [];
-        
-        return tasks.filter(task => 
+
+        return tasks.filter(task =>
             task.assignedTo === currentUser.id &&
             task.taskType === 'Quotation' &&
             task.status !== TaskStatus.ACKNOWLEDGED
@@ -26,13 +26,14 @@ const QuotationRequestInbox: React.FC = () => {
                 [TaskStatus.ONGOING]: 2,
                 [TaskStatus.COMPLETED]: 3,
             };
-            
+
             const aOrder = statusOrder[a.status as keyof typeof statusOrder] || 99;
             const bOrder = statusOrder[b.status as keyof typeof statusOrder] || 99;
-            
+
             if (aOrder !== bOrder) return aOrder - bOrder;
-            
-            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+
+            const getTime = (d: any) => d?.toMillis ? d.toMillis() : d?.toDate ? d.toDate().getTime() : new Date(d || 0).getTime();
+            return getTime(b.createdAt) - getTime(a.createdAt);
         });
     }, [tasks, currentUser]);
 
@@ -70,7 +71,7 @@ const QuotationRequestInbox: React.FC = () => {
 
     const handleStartTask = async (task: Task) => {
         if (task.status !== TaskStatus.ASSIGNED) return;
-        
+
         try {
             await updateTask(task.id, {
                 status: TaskStatus.ONGOING,
@@ -88,12 +89,12 @@ const QuotationRequestInbox: React.FC = () => {
             alert('⚠️ Please start the task first before marking it complete.');
             return;
         }
-        
+
         if (!task.relatedDocumentId) {
             alert('⚠️ Please upload the quotation first before marking complete.\n\nGo to Quotation Builder and submit the quotation for this project.');
             return;
         }
-        
+
         try {
             await updateTask(task.id, {
                 status: TaskStatus.COMPLETED,
@@ -137,11 +138,6 @@ const QuotationRequestInbox: React.FC = () => {
         }
     };
 
-    const formatDate = (date: Date | string | undefined) => {
-        if (!date) return 'No deadline';
-        const d = typeof date === 'string' ? new Date(date) : date;
-        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    };
 
     if (!currentUser) {
         return <div className="p-6">Loading...</div>;
@@ -249,7 +245,7 @@ const QuotationRequestInbox: React.FC = () => {
                                         DUE DATE
                                     </div>
                                     <div className="text-sm font-semibold text-text-primary">
-                                        {formatDate(task.dueAt || task.deadline)}
+                                        {safeDate(task.dueAt || task.deadline)}
                                     </div>
                                 </div>
                                 <div>
@@ -257,7 +253,7 @@ const QuotationRequestInbox: React.FC = () => {
                                         CREATED
                                     </div>
                                     <div className="text-sm font-semibold text-text-primary">
-                                        {formatDate(task.createdAt)}
+                                        {safeDate(task.createdAt)}
                                     </div>
                                 </div>
                             </div>
@@ -265,7 +261,7 @@ const QuotationRequestInbox: React.FC = () => {
                             {task.status === TaskStatus.COMPLETED && (
                                 <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
                                     <p className="text-sm text-green-700">
-                                        ✔ Completed on {formatDate(task.completedAt)} - Awaiting admin acknowledgement
+                                        ✔ Completed on {safeDate(task.completedAt)} - Awaiting admin acknowledgement
                                     </p>
                                 </div>
                             )}

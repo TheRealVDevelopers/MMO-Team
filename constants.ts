@@ -9,18 +9,18 @@ import { User, Lead, UserRole, Project, ProjectStatus, Vendor, Invoice, PaymentS
 // FIRESTORE COLLECTIONS
 // ========================================
 export const FIRESTORE_COLLECTIONS = {
-  CASES: 'cases',
-  LEADS: 'leads', // Keep for backward compatibility during transition
-  PROJECTS: 'projects', // Keep for backward compatibility during transition
-  USERS: 'users',
-  ORGANIZATIONS: 'organizations',
-  INVOICES: 'invoices',
-  EXPENSES: 'expenses',
-  VENDOR_BILLS: 'vendorBills',
-  ACTIVITIES: 'activities',
-  NOTIFICATIONS: 'notifications',
-  CHAT_CHANNELS: 'chatChannels',
-  CHAT_MESSAGES: 'chatMessages'
+    CASES: 'cases',
+    LEADS: 'leads', // Keep for backward compatibility during transition
+    PROJECTS: 'projects', // Keep for backward compatibility during transition
+    USERS: 'users',
+    ORGANIZATIONS: 'organizations',
+    INVOICES: 'invoices',
+    EXPENSES: 'expenses',
+    VENDOR_BILLS: 'vendorBills',
+    ACTIVITIES: 'activities',
+    NOTIFICATIONS: 'notifications',
+    CHAT_CHANNELS: 'chatChannels',
+    CHAT_MESSAGES: 'chatMessages'
 } as const;
 
 // ❌ DEMO DATA REMOVED - ALL DATA NOW FROM FIRESTORE
@@ -45,6 +45,44 @@ export const formatCurrencyINR = (value: number) =>
         minimumFractionDigits: 0,
         maximumFractionDigits: 2,
     }).format(value);
+
+// Safe Date Formatter (Prevents "toLocaleDateString of undefined" crash)
+export const safeDate = (ts: any): string => {
+    if (!ts) return "—";
+    try {
+        if (ts instanceof Date) return ts.toLocaleDateString();
+        if (typeof ts === 'string') return new Date(ts).toLocaleDateString();
+        // Handle Firestore Timestamp (checking nested toDate because instanceof checks can fail across bundles)
+        if (typeof ts.toDate === 'function') return ts.toDate().toLocaleDateString();
+        if (ts.seconds) return new Date(ts.seconds * 1000).toLocaleDateString();
+        return "—";
+    } catch (e) {
+        return "Invalid Date";
+    }
+};
+
+export const safeDateTime = (ts: any): string => {
+    if (!ts) return "—";
+    try {
+        let date: Date | undefined;
+        if (ts instanceof Date) date = ts;
+        else if (typeof ts === 'string') date = new Date(ts);
+        else if (typeof ts.toDate === 'function') date = ts.toDate();
+        else if (ts.seconds) date = new Date(ts.seconds * 1000);
+
+        if (!date || isNaN(date.getTime())) return "Invalid Date";
+
+        return date.toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit'
+        });
+    } catch (e) {
+        return "Invalid Date";
+    }
+};
 
 export const formatLargeNumberINR = (value: number): string => {
     if (value >= 10000000) {

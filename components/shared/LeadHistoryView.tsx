@@ -1,7 +1,7 @@
 import React from 'react';
 import { Lead } from '../../types';
 import { CheckCircleIcon } from '../icons/IconComponents';
-import { formatDateTime } from '../../constants';
+import { formatDateTime, safeDate } from '../../constants';
 
 import { DocumentTextIcon, CameraIcon } from '../icons/IconComponents';
 import { LeadHistoryAttachment } from '../../types';
@@ -22,7 +22,7 @@ const AttachmentItem: React.FC<{ attachment: LeadHistoryAttachment }> = ({ attac
       <div className="ml-3 min-w-0 flex-1">
         <p className="text-xs font-medium text-text-primary truncate">{attachment.fileName}</p>
         <p className="text-[10px] text-text-tertiary">
-          {new Date(attachment.uploadedAt).toLocaleDateString()}
+          {safeDate(attachment.uploadedAt)}
         </p>
       </div>
     </a>

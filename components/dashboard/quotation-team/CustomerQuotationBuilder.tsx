@@ -7,7 +7,7 @@ import { useCases, addCaseQuotation, useCaseQuotations, useCaseBOQs } from '../.
 import { useTargetedApprovalRequests, useAssignedApprovalRequests } from '../../../hooks/useApprovalSystem';
 import { useCatalog } from '../../../hooks/useCatalog';
 import { Case, Project, UserRole, CaseQuotation, CaseBOQ } from '../../../types';
-import { formatCurrencyINR } from '../../../constants';
+import { formatCurrencyINR, safeDate } from '../../../constants';
 import { createNotification } from '../../../services/liveDataService';
 import QuotationPDFTemplate from './QuotationPDFTemplate';
 import EditQuotationModal from './EditQuotationModal';
@@ -486,7 +486,7 @@ const CustomerQuotationBuilder: React.FC = () => {
                                                         {quot.items.length} items • Subtotal: {formatCurrencyINR(quot.totalAmount)}
                                                     </p>
                                                     <p className="text-xs text-text-tertiary">
-                                                        Submitted: {new Date(quot.submittedAt).toLocaleDateString()}
+                                                        Submitted: {safeDate(quot.submittedAt)}
                                                     </p>
                                                 </div>
                                                 <div className="flex items-center gap-4">
@@ -541,7 +541,7 @@ const CustomerQuotationBuilder: React.FC = () => {
                                                         {boq.items.length} items{boq.totalCost ? ` • ${formatCurrencyINR(boq.totalCost)}` : ''}
                                                     </p>
                                                     <p className="text-xs text-text-tertiary">
-                                                        Submitted: {new Date(boq.submittedAt).toLocaleDateString()}
+                                                        Submitted: {safeDate(boq.submittedAt)}
                                                     </p>
                                                     {boq.notes && <p className="text-xs text-text-secondary mt-2">{boq.notes}</p>}
                                                 </div>

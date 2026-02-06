@@ -5,6 +5,7 @@ import { Task, TaskStatus, UserRole } from '../../../types';
 import { ClockIcon, CheckCircleIcon, PlayIcon } from '../../icons/IconComponents';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../firebase';
+import { safeDate, safeDateTime } from '../../../constants';
 import { handleNotificationClick } from '../../../services/notificationRouting';
 
 interface AdminTaskRequestsProps {
@@ -21,7 +22,7 @@ const AdminTaskRequests: React.FC<AdminTaskRequestsProps> = ({ onNavigateToProje
         if (!db || !currentUser) return;
 
         const tasksRef = collection(db, 'myDayTasks');
-        
+
         // Query for tasks created by current user or tasks they should see
         const q = query(
             tasksRef,
@@ -51,12 +52,12 @@ const AdminTaskRequests: React.FC<AdminTaskRequestsProps> = ({ onNavigateToProje
 
     // Filter tasks into assigned/ongoing and completed
     const { assignedTasks, completedTasks } = useMemo(() => {
-        const assigned = allTasks.filter(task => 
-            task.status === TaskStatus.ASSIGNED || 
+        const assigned = allTasks.filter(task =>
+            task.status === TaskStatus.ASSIGNED ||
             task.status === TaskStatus.ONGOING
         ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-        const completed = allTasks.filter(task => 
+        const completed = allTasks.filter(task =>
             task.status === TaskStatus.COMPLETED
         ).sort((a, b) => new Date(b.completedAt || b.createdAt).getTime() - new Date(a.completedAt || a.createdAt).getTime());
 
@@ -102,7 +103,7 @@ const AdminTaskRequests: React.FC<AdminTaskRequestsProps> = ({ onNavigateToProje
                 'Procurement': 'materials',
                 'Execution': 'tasks',
             };
-            
+
             const tab = task.taskType ? tabMap[task.taskType] || 'overview' : 'overview';
             onNavigateToProject(task.caseId, tab);
         } else {
@@ -134,23 +135,7 @@ const AdminTaskRequests: React.FC<AdminTaskRequestsProps> = ({ onNavigateToProje
         }
     };
 
-    const formatDate = (date: Date | string | undefined) => {
-        if (!date) return 'N/A';
-        const d = typeof date === 'string' ? new Date(date) : date;
-        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    };
-
-    const formatDateTime = (date: Date | string | undefined) => {
-        if (!date) return 'N/A';
-        const d = typeof date === 'string' ? new Date(date) : date;
-        return d.toLocaleString('en-US', { 
-            month: 'short', 
-            day: 'numeric', 
-            year: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit'
-        });
-    };
+    // Local formatters removed in favor of global safe helpers
 
     if (!currentUser) {
         return <div className="p-6">Loading...</div>;
@@ -256,11 +241,11 @@ const AdminTaskRequests: React.FC<AdminTaskRequestsProps> = ({ onNavigateToProje
                                     </div>
                                     <div>
                                         <div className="text-xs text-text-tertiary font-medium mb-1">DUE DATE</div>
-                                        <div className="font-semibold text-text-primary">{formatDate(task.dueAt || task.deadline)}</div>
+                                        <div className="font-semibold text-text-primary">{safeDate(task.dueAt || task.deadline)}</div>
                                     </div>
                                     <div>
                                         <div className="text-xs text-text-tertiary font-medium mb-1">CREATED</div>
-                                        <div className="font-semibold text-text-primary">{formatDate(task.createdAt)}</div>
+                                        <div className="font-semibold text-text-primary">{safeDate(task.createdAt)}</div>
                                     </div>
                                 </div>
                             </div>
@@ -342,11 +327,11 @@ const AdminTaskRequests: React.FC<AdminTaskRequestsProps> = ({ onNavigateToProje
                                     </div>
                                     <div>
                                         <div className="text-xs text-text-tertiary font-medium mb-1">COMPLETED ON</div>
-                                        <div className="font-semibold text-green-700">{formatDateTime(task.completedAt)}</div>
+                                        <div className="font-semibold text-green-700">{safeDateTime(task.completedAt)}</div>
                                     </div>
                                     <div>
                                         <div className="text-xs text-text-tertiary font-medium mb-1">CREATED</div>
-                                        <div className="font-semibold text-text-primary">{formatDate(task.createdAt)}</div>
+                                        <div className="font-semibold text-text-primary">{safeDate(task.createdAt)}</div>
                                     </div>
                                 </div>
 

@@ -19,7 +19,7 @@ const QuotationPDFTemplate: React.FC<QuotationPDFTemplateProps> = ({ quotation, 
     const printRef = useRef<HTMLDivElement>(null);
     const { currentUser } = useAuth();
     const { items: catalogItems } = useCatalog();
-    
+
     console.log('QuotationPDFTemplate rendered', { quotation, caseData, catalogItems });
 
     // Lock body scroll when modal is open
@@ -48,9 +48,9 @@ const QuotationPDFTemplate: React.FC<QuotationPDFTemplateProps> = ({ quotation, 
     };
 
     const modalContent = (
-        <div 
+        <div
             className="fixed inset-0 z-[9999] flex items-center justify-center p-4 overflow-y-auto"
-            style={{ 
+            style={{
                 backgroundColor: 'rgba(0, 0, 0, 0.75)',
                 position: 'fixed',
                 top: 0,
@@ -65,7 +65,7 @@ const QuotationPDFTemplate: React.FC<QuotationPDFTemplateProps> = ({ quotation, 
                 }
             }}
         >
-            <div 
+            <div
                 className="bg-white rounded-lg shadow-2xl max-w-4xl w-full my-8 relative"
                 style={{
                     maxHeight: '90vh',
@@ -134,26 +134,32 @@ const QuotationPDFTemplate: React.FC<QuotationPDFTemplateProps> = ({ quotation, 
                                     <span className="font-semibold">Quotation No:</span> {quotation.quotationNumber}
                                 </p>
                                 <p className="text-sm text-text-secondary">
-                                    <span className="font-semibold">Date:</span> {new Date(quotation.submittedAt).toLocaleDateString('en-IN', { 
-                                        year: 'numeric', 
-                                        month: 'long', 
-                                        day: 'numeric' 
-                                    })}
+                                    <span className="font-semibold">Date:</span> {(() => {
+                                        try {
+                                            const d = quotation.submittedAt instanceof Date ? quotation.submittedAt :
+                                                (quotation.submittedAt as any)?.toDate ? (quotation.submittedAt as any).toDate() :
+                                                    new Date(quotation.submittedAt);
+                                            return d.toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
+                                        } catch (e) { return 'Invalid Date'; }
+                                    })()}
                                 </p>
                                 <p className="text-sm text-text-secondary">
-                                    <span className="font-semibold">Valid Until:</span> {new Date(new Date(quotation.submittedAt).getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', { 
-                                        year: 'numeric', 
-                                        month: 'long', 
-                                        day: 'numeric' 
-                                    })}
+                                    <span className="font-semibold">Valid Until:</span> {(() => {
+                                        try {
+                                            const d = quotation.submittedAt instanceof Date ? quotation.submittedAt :
+                                                (quotation.submittedAt as any)?.toDate ? (quotation.submittedAt as any).toDate() :
+                                                    new Date(quotation.submittedAt);
+                                            const validUntil = new Date(d.getTime() + 30 * 24 * 60 * 60 * 1000);
+                                            return validUntil.toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
+                                        } catch (e) { return 'Invalid Date'; }
+                                    })()}
                                 </p>
                             </div>
-                            <div className={`px-4 py-2 rounded-lg font-bold ${
-                                quotation.status === 'Approved' ? 'bg-green-100 text-green-700' :
-                                quotation.status === 'Pending Approval' ? 'bg-yellow-100 text-yellow-700' :
-                                quotation.status === 'Rejected' ? 'bg-red-100 text-red-700' :
-                                'bg-gray-100 text-gray-700'
-                            }`}>
+                            <div className={`px-4 py-2 rounded-lg font-bold ${quotation.status === 'Approved' ? 'bg-green-100 text-green-700' :
+                                    quotation.status === 'Pending Approval' ? 'bg-yellow-100 text-yellow-700' :
+                                        quotation.status === 'Rejected' ? 'bg-red-100 text-red-700' :
+                                            'bg-gray-100 text-gray-700'
+                                }`}>
                                 {quotation.status}
                             </div>
                         </div>
@@ -186,12 +192,12 @@ const QuotationPDFTemplate: React.FC<QuotationPDFTemplateProps> = ({ quotation, 
                                     const lineTotal = item.unitPrice * item.quantity;
                                     const discountAmount = (lineTotal * item.discount) / 100;
                                     const finalAmount = lineTotal - discountAmount;
-                                    
+
                                     // Find item name from catalog
                                     const catalogItem = catalogItems.find(ci => ci.id === item.itemId);
                                     const itemName = catalogItem?.name || `Item #${item.itemId.slice(-6)}`;
                                     const itemDescription = catalogItem?.description || '';
-                                    
+
                                     return (
                                         <tr key={index} className="border-b border-border">
                                             <td className="border border-border p-3 text-sm">{index + 1}</td>
@@ -311,7 +317,7 @@ const QuotationPDFTemplate: React.FC<QuotationPDFTemplateProps> = ({ quotation, 
             </div>
         </div>
     );
-    
+
     // Render modal using portal to document.body
     return createPortal(modalContent, document.body);
 };

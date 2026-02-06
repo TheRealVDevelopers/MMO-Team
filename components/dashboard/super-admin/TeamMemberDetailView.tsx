@@ -485,7 +485,7 @@ const TeamMemberDetailView: React.FC<{ user: User; initialTab?: 'history'; initi
                                                         {currentActiveTask.status}
                                                     </span>
                                                     <span className="text-[10px] font-bold text-text-tertiary">
-                                                        {currentActiveTask.createdAt && `Created ${formatDateTime(currentActiveTask.createdAt instanceof Date ? currentActiveTask.createdAt : new Date(currentActiveTask.createdAt))}`}
+                                                        {currentActiveTask.createdAt && `Created ${formatDateTime(currentActiveTask.createdAt)}`}
                                                     </span>
                                                 </div>
 
@@ -570,7 +570,7 @@ const TeamMemberDetailView: React.FC<{ user: User; initialTab?: 'history'; initi
                                                             {activity.description && <p className="text-xs text-text-tertiary mt-1 line-clamp-1">{activity.description}</p>}
                                                         </div>
                                                         <span className="text-[10px] font-black uppercase tracking-tighter text-text-tertiary whitespace-nowrap">
-                                                            {activity.createdAt && formatDateTime(activity.createdAt instanceof Date ? activity.createdAt : new Date(activity.createdAt))}
+                                                            {activity.createdAt && formatDateTime(activity.createdAt)}
                                                         </span>
                                                     </div>
                                                 </div>

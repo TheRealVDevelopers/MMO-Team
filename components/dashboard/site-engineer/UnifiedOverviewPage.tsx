@@ -4,6 +4,7 @@ import { DrawingTask, SiteVisit, SiteVisitStatus } from '../../../types';
 import Card from '../../shared/Card';
 import { useAuth } from '../../../context/AuthContext';
 import { useAutomatedTaskCreation } from '../../../hooks/useAutomatedTaskCreation';
+import { safeDate } from '../../../constants';
 
 interface UnifiedOverviewPageProps {
     visits: SiteVisit[];
@@ -219,7 +220,7 @@ const UnifiedOverviewPage: React.FC<UnifiedOverviewPageProps> = ({
                                                 {formatTimeLeft(task.deadline)}
                                             </span>
                                             <p className="text-xs text-text-secondary mt-1">
-                                                Due: {new Date(task.deadline).toLocaleDateString()}
+                                                Due: {safeDate(task.deadline)}
                                             </p>
                                         </div>
                                     </div>

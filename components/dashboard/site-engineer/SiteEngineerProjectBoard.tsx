@@ -11,6 +11,7 @@ import {
     MapPin, Clock, Calendar, ChevronRight, AlertTriangle,
     CheckCircle, FileText, Upload, Ruler
 } from 'lucide-react';
+import { safeDate, safeDateTime } from '../../../constants';
 
 // --- Types & Helpers ---
 
@@ -30,31 +31,6 @@ interface ExtendedCase extends Case {
         status?: string;
     }
 }
-
-const COLUMNS = {
-    SITE_INSPECTION: 'Site Inspection',
-    WAITING_FOR_DRAWING: 'Waiting for Drawing',
-    COMPLETED: 'Completed'
-};
-
-const formatTime = (date?: Date) => {
-    if (!date) return '--:--';
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-};
-
-const formatDate = (date?: Date) => {
-    if (!date) return '';
-    return date.toLocaleDateString();
-};
-
-const getDuration = (start?: Date, end?: Date) => {
-    if (!start || !end) return '';
-    const diffMs = end.getTime() - start.getTime();
-    const diffMins = Math.round(diffMs / 60000);
-    const hours = Math.floor(diffMins / 60);
-    const mins = diffMins % 60;
-    return `${hours}h ${mins}m`;
-};
 
 // --- Main Component ---
 
@@ -247,7 +223,7 @@ const SiteEngineerProjectBoard: React.FC = () => {
                                 {deadline && (
                                     <div className={`mt-3 p-2 rounded text-xs font-mono flex items-center gap-2 ${isLate ? 'bg-red-500/10 text-red-500' : 'bg-orange-500/10 text-orange-500'}`}>
                                         <Clock className="w-3 h-3" />
-                                        Deadline: {formatTime(deadline)}
+                                        Deadline: {safeDateTime(deadline)}
                                     </div>
                                 )}
 
@@ -293,7 +269,7 @@ const SiteEngineerProjectBoard: React.FC = () => {
                                         </div>
                                         <div className="flex justify-between">
                                             <span>Completed:</span>
-                                            <span>{formatDate(getTimestamp(inspection.completedAt) || undefined)}</span>
+                                            <span>{safeDate(inspection.completedAt)}</span>
                                         </div>
                                     </div>
                                 )}

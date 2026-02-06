@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { TASKS, formatDateTime, ATTENDANCE_DATA } from '../../../constants';
+import { TASKS, formatDateTime, ATTENDANCE_DATA, safeDate } from '../../../constants';
 import { Task, TaskStatus, AttendanceType, UserRole, Reminder, AttendanceStatus, ExecutionTask } from '../../../types';
 import TaskCard from './TaskCard';
 import {
@@ -129,7 +129,7 @@ const ReminderItem: React.FC<{ reminder: EnrichedReminder, onToggle: (id: string
                     "text-[10px] font-black uppercase tracking-tighter whitespace-nowrap px-2 py-1 rounded-md",
                     reminder.completed ? 'text-text-tertiary bg-subtle-background' : overdue ? 'text-error bg-error/10' : 'text-text-tertiary bg-subtle-background'
                 )}>
-                    {formatDateTime(new Date(reminder.date))}
+                    {safeDate(reminder.date)}
                 </p>
             </div>
         </motion.div>
