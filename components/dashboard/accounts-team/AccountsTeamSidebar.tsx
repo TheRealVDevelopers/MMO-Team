@@ -10,9 +10,8 @@ import {
     ChartPieIcon,
     ChatBubbleLeftRightIcon,
     ShieldExclamationIcon,
-    BuildingOfficeIcon,
-    ShieldCheckIcon
-} from '@heroicons/react/24/outline';
+    BuildingOfficeIcon
+} from '@heroicons/react/24/outline'; // Direct import for better coverage
 
 interface SidebarProps {
     currentPage: string;
@@ -58,7 +57,6 @@ const AccountsTeamSidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPa
     const navItems = [
         { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
         { id: 'approvals', label: 'Inbox', icon: <InboxStackIcon className="w-6 h-6" />, badge: pendingCount },
-        { id: 'payment-verification', label: 'Payment Verification', icon: <ShieldCheckIcon className="w-6 h-6" /> },
 
         { type: 'divider', label: 'Financials' },
         { id: 'general-ledger', label: 'General Ledger', icon: <BookOpenIcon className="w-6 h-6" /> },

@@ -17,7 +17,8 @@ const colorClasses: Record<PillColor, { bg: string, text: string, dot: string, b
 };
 
 const StatusPill: React.FC<StatusPillProps> = ({ children, color }) => {
-  const classes = colorClasses[color];
+  // Fallback to 'slate' if color is invalid or undefined
+  const classes = colorClasses[color] || colorClasses.slate;
   return (
     <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold border ${classes.bg} ${classes.text} ${classes.border} shadow-sm`}>
         <span className={`w-2 h-2 mr-2 rounded-full ${classes.dot} shadow-sm`}></span>

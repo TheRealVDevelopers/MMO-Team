@@ -30,11 +30,13 @@ const QuotationPDFTemplate: React.FC<QuotationPDFTemplateProps> = ({ quotation, 
         };
     }, []);
 
-    // Check if user can see SSS field
-    const canViewSSS = currentUser?.role && [
-        UserRole.SALES_GENERAL_MANAGER,
-        UserRole.SUPER_ADMIN,
-        'QUOTATION_TEAM' as any
+    // Check if user can see PR (Internal Price Rate) field
+    // Only visible to: Sales Manager (Sales General Manager), Quotation Team, Admin (Super Admin)
+    const canViewPR = currentUser?.role && [
+        UserRole.SALES_GENERAL_MANAGER, // Sales Manager
+        UserRole.SUPER_ADMIN,           // Admin
+        UserRole.ADMIN,                 // Admin
+        UserRole.QUOTATION_TEAM         // Quotation Team
     ].includes(currentUser.role);
 
     const handleDownloadPDF = () => {
@@ -242,22 +244,24 @@ const QuotationPDFTemplate: React.FC<QuotationPDFTemplateProps> = ({ quotation, 
                         </div>
                     </div>
 
-                    {/* SSS Field - Visible only to authorized roles */}
-                    {canViewSSS && (
-                        <div className="mb-8 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded">
+                    {/* PR (Internal Price Rate) Field - Visible only to authorized roles */}
+                    {canViewPR && quotation.internalPRCode && (
+                        <div className="mb-8 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded print:hidden">
                             <div className="flex items-start gap-3">
                                 <div className="flex-shrink-0">
                                     <svg className="w-5 h-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                        <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                                     </svg>
                                 </div>
                                 <div className="flex-1">
-                                    <h4 className="text-sm font-bold text-yellow-800 mb-1">SSS (Internal Use Only)</h4>
+                                    <h4 className="text-sm font-bold text-yellow-800 mb-1">🔒 Internal PR Code (Confidential)</h4>
                                     <p className="text-sm text-yellow-700">
-                                        <span className="font-semibold">Special Sales Strategy:</span> {quotation.notes || 'Standard pricing applied'}
+                                        <span className="font-semibold">PR Code:</span> {quotation.internalPRCode}
                                     </p>
                                     <p className="text-xs text-yellow-600 mt-1">
-                                        ⚠️ This field is confidential and visible only to Sales Manager, Admin, and Quotation Team
+                                        ⚠️ This field is confidential and visible only to Sales Manager, Admin, and Quotation Team.
+                                        <br />
+                                        <strong>NOT included in printed/downloaded PDF.</strong>
                                     </p>
                                 </div>
                             </div>
@@ -278,7 +282,7 @@ const QuotationPDFTemplate: React.FC<QuotationPDFTemplateProps> = ({ quotation, 
                     </div>
 
                     {/* Notes */}
-                    {quotation.notes && !canViewSSS && (
+                    {quotation.notes && (
                         <div className="mb-8 p-4 bg-subtle-background rounded-lg">
                             <h4 className="text-sm font-bold text-text-primary mb-2">Additional Notes:</h4>
                             <p className="text-sm text-text-secondary">{quotation.notes}</p>

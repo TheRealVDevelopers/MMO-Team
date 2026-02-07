@@ -9,15 +9,13 @@ import CreateInvoicePage from './CreateInvoicePage';
 import { deleteInvoice } from '../../../hooks/useInvoices';
 
 const PaymentStatusPill: React.FC<{ status: PaymentStatus }> = ({ status }) => {
-    const color = {
+    const colorMap: Record<string, 'green' | 'amber' | 'red' | 'slate' | 'blue' | 'purple'> = {
         [PaymentStatus.PAID]: 'green',
         [PaymentStatus.PENDING]: 'amber',
         [PaymentStatus.OVERDUE]: 'red',
-        [PaymentStatus.DRAFT]: 'slate',
-        [PaymentStatus.SENT]: 'green',
-        [PaymentStatus.PARTIALLY_PAID]: 'purple',
-    }[status] as 'green' | 'amber' | 'red' | 'slate' | 'blue' | 'purple';
-    return <StatusPill color={color}>{status}</StatusPill>;
+    };
+    const color = colorMap[status] || 'slate'; // Fallback to slate for unknown statuses
+    return <StatusPill color={color}>{status || 'Unknown'}</StatusPill>;
 };
 
 interface SalesInvoicesPageProps {

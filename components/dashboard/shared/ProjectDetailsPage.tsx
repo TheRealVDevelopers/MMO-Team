@@ -14,6 +14,7 @@ import Card from '../../shared/Card';
 import { PrimaryButton, SecondaryButton } from '../shared/DashboardUI';
 import { getTabFromUrl, setTabInUrl } from '../../../services/notificationRouting';
 import QuotationPDFTemplate from '../quotation-team/QuotationPDFTemplate';
+import BOQPDFTemplate from '../quotation-team/BOQPDFTemplate';
 
 /**
  * UNIFIED PROJECT DETAILS PAGE
@@ -222,7 +223,7 @@ const ProjectDetailsPage: React.FC<ProjectDetailsPageProps> = ({ initialTab = 'o
             <div>
                 {activeTab === 'overview' && <OverviewTab projectCase={projectCase} />}
                 {activeTab === 'drawings' && <DrawingsTab drawings={drawings} loading={drawingsLoading} caseId={caseId!} />}
-                {activeTab === 'boq' && <BOQTab boqs={boqs} loading={boqsLoading} caseId={caseId!} />}
+                {activeTab === 'boq' && <BOQTab boqs={boqs} loading={boqsLoading} caseId={caseId!} projectCase={projectCase} />}
                 {activeTab === 'quotations' && (
                     <QuotationsTab
                         quotations={quotations}
@@ -373,8 +374,16 @@ const DrawingsTab: React.FC<{ drawings: CaseDrawing[]; loading: boolean; caseId:
     );
 };
 
-const BOQTab: React.FC<{ boqs: CaseBOQ[]; loading: boolean; caseId: string }> = ({ boqs, loading }) => {
+const BOQTab: React.FC<{ boqs: CaseBOQ[]; loading: boolean; caseId: string; projectCase: Case }> = ({ boqs, loading, projectCase }) => {
+    const [showPDFModal, setShowPDFModal] = useState(false);
+    const [selectedBOQ, setSelectedBOQ] = useState<CaseBOQ | null>(null);
+
     if (loading) return <Card><div className="p-6">Loading BOQs...</div></Card>;
+
+    const handleViewPDF = (boq: CaseBOQ) => {
+        setSelectedBOQ(boq);
+        setShowPDFModal(true);
+    };
 
     return (
         <Card>
@@ -386,12 +395,44 @@ const BOQTab: React.FC<{ boqs: CaseBOQ[]; loading: boolean; caseId: string }> = 
                     <div className="grid gap-4">
                         {boqs.map(boq => (
                             <div key={boq.id} className="border border-border rounded-lg p-4">
-                                <h3 className="font-semibold text-text-primary">BOQ #{boq.id.slice(-6)}</h3>
-                                <p className="text-sm text-text-secondary">{boq.items.length} items</p>
-                                <p className="text-lg font-bold text-primary">{formatCurrencyINR(boq.subtotal)}</p>
+                                <div className="flex items-start justify-between mb-2">
+                                    <div>
+                                        <h3 className="font-semibold text-text-primary">BOQ #{boq.id.slice(-6)}</h3>
+                                        <p className="text-sm text-text-secondary">{boq.items.length} items</p>
+                                        <p className="text-xs text-text-tertiary">
+                                            Created: {safeDate(boq.createdAt)}
+                                        </p>
+                                    </div>
+                                    {boq.status && (
+                                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                            boq.status === 'approved' ? 'bg-success/10 text-success' :
+                                            boq.status === 'pending' ? 'bg-warning/10 text-warning' :
+                                            boq.status === 'rejected' ? 'bg-error/10 text-error' :
+                                            'bg-gray-100 text-gray-700'
+                                        }`}>
+                                            {boq.status.toUpperCase()}
+                                        </span>
+                                    )}
+                                </div>
+                                <p className="text-lg font-bold text-primary mb-3">{formatCurrencyINR(boq.subtotal)}</p>
+                                <SecondaryButton onClick={() => handleViewPDF(boq)}>
+                                    📄 View PDF
+                                </SecondaryButton>
                             </div>
                         ))}
                     </div>
+                )}
+
+                {/* BOQ PDF Template Modal */}
+                {showPDFModal && selectedBOQ && (
+                    <BOQPDFTemplate
+                        boq={selectedBOQ}
+                        caseData={projectCase}
+                        onClose={() => {
+                            setShowPDFModal(false);
+                            setSelectedBOQ(null);
+                        }}
+                    />
                 )}
             </div>
         </Card>

@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
-import { UserRole } from '../../../types';
 import { cn } from './DashboardUI';
 import {
     Squares2X2Icon,
@@ -24,6 +23,8 @@ import {
 import UserSelector from '../../shared/UserSelector';
 import CommandPalette from './CommandPalette';
 import NotificationPopover from './NotificationPopover';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../../../firebase';
 
 interface NavItemProp {
     id: string;
@@ -55,6 +56,25 @@ const InternalLayout: React.FC<InternalLayoutProps> = ({
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+    const [userSwitchingDisabled, setUserSwitchingDisabled] = useState(false);
+
+    // Listen for global app setting to disable user switching
+    React.useEffect(() => {
+        if (!db) return;
+
+        const settingsRef = doc(db, 'appSettings', 'general');
+        const unsubscribe = onSnapshot(settingsRef, (snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.data();
+                setUserSwitchingDisabled(data?.disableUserSwitching || false);
+            }
+        }, (error) => {
+            console.log('App settings not found or error:', error);
+            setUserSwitchingDisabled(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     // Keyboard Shortcut for Command Palette
     React.useEffect(() => {
@@ -204,9 +224,12 @@ const InternalLayout: React.FC<InternalLayoutProps> = ({
                         <div className="h-8 w-px bg-border hidden sm:block" />
 
                         <div className="flex items-center gap-4">
-                            <div className="hidden md:block">
-                                <UserSelector />
-                            </div>
+                            {/* User Selector - Shown unless admin has disabled user switching globally */}
+                            {!userSwitchingDisabled && (
+                                <div className="hidden md:block">
+                                    <UserSelector />
+                                </div>
+                            )}
                             <div className="text-right hidden sm:block">
                                 <p className="text-sm font-bold text-text-primary">{currentUser?.name}</p>
                                 <p className="text-[10px] uppercase tracking-widest text-text-secondary font-black">{currentUser?.role}</p>

@@ -31,8 +31,9 @@ import {
     serverTimestamp,
     writeBatch
 } from 'firebase/firestore';
-import { Case, CaseStatus } from '../../../types';
+import { Case, CaseStatus, UserRole, StaffUser } from '../../../types';
 import { FIRESTORE_COLLECTIONS, formatCurrencyINR } from '../../../constants';
+import { createNotification } from '../../../services/notificationService';
 import {
     XMarkIcon,
     BanknotesIcon,
@@ -266,6 +267,36 @@ const VerifyWithAccountantModal: React.FC<Props> = ({
             await batch.commit();
 
             console.log('[VerifyWithAccountant] ✅ Payment request created successfully');
+
+            // 4. Send notifications to all Accounts Team members
+            try {
+                const staffRef = collection(db, FIRESTORE_COLLECTIONS.STAFF_USERS);
+                const accountsQuery = query(
+                    staffRef,
+                    where('role', '==', UserRole.ACCOUNTS_TEAM),
+                    where('isActive', '==', true)
+                );
+                const accountsSnapshot = await getDocs(accountsQuery);
+                
+                const notificationPromises = accountsSnapshot.docs.map(doc => {
+                    const accountsUser = doc.data() as StaffUser;
+                    return createNotification({
+                        title: '💰 New Payment Verification Request',
+                        message: `${currentUser.name} submitted a payment of ₹${paymentDetails.amount.toLocaleString('en-IN')} for ${selectedLead.clientName} (${selectedLead.title}). UTR: ${paymentDetails.utr}. Please verify.`,
+                        user_id: doc.id,
+                        entity_type: 'payment_verification',
+                        entity_id: selectedLead.id,
+                        type: 'warning'
+                    });
+                });
+
+                await Promise.all(notificationPromises);
+                console.log(`[VerifyWithAccountant] ✅ Sent notifications to ${accountsSnapshot.docs.length} accounts team members`);
+            } catch (notifError) {
+                console.error('[VerifyWithAccountant] Error sending notifications:', notifError);
+                // Don't fail the whole operation if notifications fail
+            }
+
             alert('✅ Payment verification request submitted!\n\nAwaiting accountant approval.\nProject will be created after verification.');
             
             onSubmitSuccess?.();

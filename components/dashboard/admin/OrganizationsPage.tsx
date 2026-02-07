@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { doc, getDoc, collection, query, where, onSnapshot, writeBatch, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../firebase';
-import { PlusIcon, BuildingOfficeIcon, MagnifyingGlassIcon, UserIcon, MapPinIcon, XMarkIcon, CurrencyRupeeIcon, UserCircleIcon, MapIcon, CheckCircleIcon, PencilIcon, RocketLaunchIcon, BanknotesIcon, ClockIcon, ArrowPathIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import { Organization, ProjectStatus, Project, ExecutionStage, PaymentTerm, Case, CaseStatus, CasePayment } from '../../../types';
+import { PlusIcon, BuildingOfficeIcon, MagnifyingGlassIcon, UserIcon, MapPinIcon, XMarkIcon, CurrencyRupeeIcon, UserCircleIcon, MapIcon, CheckCircleIcon, PencilIcon, RocketLaunchIcon, BanknotesIcon } from '@heroicons/react/24/outline';
+import { Organization, ProjectStatus, Project, ExecutionStage, PaymentTerm } from '../../../types';
 import { useProjects } from '../../../hooks/useProjects';
 import { useLeads } from '../../../hooks/useLeads';
 import { formatCurrencyINR } from '../../../constants';
 import CreateOrganizationModal from './CreateOrganizationModal';
+import ConvertFromLeadModal from './ConvertFromLeadModal';
+import CreateFreshProjectModal from './CreateFreshProjectModal';
 import VerifyWithAccountantModal from './VerifyWithAccountantModal';
 import Modal from '../../shared/Modal';
 
@@ -17,13 +19,13 @@ interface OrganizationsPageProps {
 
 import { useOrganizations } from '../../../hooks/useOrganizations';
 import { useUsers } from '../../../hooks/useUsers';
-import { useAuth } from '../../../context/AuthContext';
-import { FIRESTORE_COLLECTIONS } from '../../../constants';
 
 const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage }) => {
-    const { currentUser } = useAuth();
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isProjectLauncherOpen, setIsProjectLauncherOpen] = useState(false);
+    const [isConvertLeadModalOpen, setIsConvertLeadModalOpen] = useState(false);
     const [isVerifyAccountantModalOpen, setIsVerifyAccountantModalOpen] = useState(false);
+    const [isFreshProjectModalOpen, setIsFreshProjectModalOpen] = useState(false);
     const [selectedOrgId, setSelectedOrgId] = useState<string>('');
     const [searchQuery, setSearchQuery] = useState('');
     const [organizationToEdit, setOrganizationToEdit] = useState<Organization | null>(null);
@@ -33,112 +35,10 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
     const [isProjectDetailOpen, setIsProjectDetailOpen] = useState(false);
 
-    // Payment-gated flow states
-    const [waitingForAccountant, setWaitingForAccountant] = useState<(Case & { pendingPaymentData?: any })[]>([]);
-    const [readyToConvert, setReadyToConvert] = useState<Case[]>([]);
-    const [loadingPaymentCases, setLoadingPaymentCases] = useState(true);
-    const [convertingCaseId, setConvertingCaseId] = useState<string | null>(null);
-    const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
-    const [caseToConvert, setCaseToConvert] = useState<Case | null>(null);
-    const [selectedProjectHeadId, setSelectedProjectHeadId] = useState<string>('');
-
     const { addProject, projects: allProjects } = useProjects();
     const { leads } = useLeads();
     const { organizations: realOrgs, addOrganization, updateOrganization } = useOrganizations();
     const { users } = useUsers();
-
-    // Fetch cases waiting for accountant (WAITING_FOR_PAYMENT) and ready to convert (WAITING_FOR_PLANNING)
-    useEffect(() => {
-        if (!db) {
-            setLoadingPaymentCases(false);
-            return;
-        }
-
-        const casesRef = collection(db, FIRESTORE_COLLECTIONS.CASES);
-        
-        // Query for WAITING_FOR_PAYMENT cases
-        const waitingQuery = query(
-            casesRef,
-            where('isProject', '==', false),
-            where('status', '==', CaseStatus.WAITING_FOR_PAYMENT)
-        );
-
-        // Query for WAITING_FOR_PLANNING cases (ready to convert)
-        const readyQuery = query(
-            casesRef,
-            where('isProject', '==', false),
-            where('status', '==', CaseStatus.WAITING_FOR_PLANNING)
-        );
-
-        const unsubWaiting = onSnapshot(waitingQuery, (snapshot) => {
-            const cases = snapshot.docs.map(doc => {
-                const data = doc.data();
-                return {
-                    ...data,
-                    id: doc.id,
-                    createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
-                } as Case;
-            });
-            setWaitingForAccountant(cases);
-        });
-
-        const unsubReady = onSnapshot(readyQuery, (snapshot) => {
-            const cases = snapshot.docs.map(doc => {
-                const data = doc.data();
-                return {
-                    ...data,
-                    id: doc.id,
-                    createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
-                } as Case;
-            });
-            setReadyToConvert(cases);
-            setLoadingPaymentCases(false);
-        });
-
-        return () => {
-            unsubWaiting();
-            unsubReady();
-        };
-    }, []);
-
-    // Convert to Project handler (ONLY for WAITING_FOR_PLANNING status)
-    const handleConvertToProject = async () => {
-        if (!caseToConvert || !selectedProjectHeadId || !currentUser) {
-            alert('Please select a project head');
-            return;
-        }
-
-        setConvertingCaseId(caseToConvert.id);
-
-        try {
-            const batch = writeBatch(db);
-            const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, caseToConvert.id);
-
-            batch.update(caseRef, {
-                isProject: true,
-                projectHeadId: selectedProjectHeadId,
-                status: CaseStatus.ACTIVE,
-                convertedAt: serverTimestamp(),
-                convertedBy: currentUser.id,
-                'workflow.executionStarted': false,
-            });
-
-            await batch.commit();
-
-            alert('Successfully converted to project! Execution can now begin.');
-            setIsConvertModalOpen(false);
-            setCaseToConvert(null);
-            setSelectedProjectHeadId('');
-        } catch (error) {
-            console.error('Error converting to project:', error);
-            alert('Failed to convert to project');
-        } finally {
-            setConvertingCaseId(null);
-        }
-    };
-
-    // Get project heads (users with Project Head role)
-    const projectHeads = users.filter(u => u.role === 'Project Head' || u.role === 'Admin' || u.role === 'Manager');
 
     // Merge mock organizations with real Firestore organizations
     const organizations = realOrgs; // Removed mock ORGANIZATIONS
@@ -228,7 +128,7 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                     <button
                         onClick={() => {
                             setSelectedOrgId('');
-                            setIsVerifyAccountantModalOpen(true);
+                            setIsProjectLauncherOpen(true);
                         }}
                         className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl transition-colors shadow-lg shadow-green-600/30 font-bold text-lg"
                     >
@@ -258,122 +158,6 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                     />
                 </div>
             </div>
-
-            {/* PAYMENT-GATED SECTIONS */}
-            {/* Waiting for Accountant Section */}
-            {waitingForAccountant.length > 0 && (
-                <div className="bg-orange-50 dark:bg-orange-900/20 border-2 border-orange-300 dark:border-orange-700 rounded-xl p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 bg-orange-100 dark:bg-orange-800 rounded-lg">
-                            <ClockIcon className="w-6 h-6 text-orange-600" />
-                        </div>
-                        <div>
-                            <h2 className="text-lg font-bold text-orange-800 dark:text-orange-200">Waiting for Accountant</h2>
-                            <p className="text-sm text-orange-600 dark:text-orange-400">Payment verification pending - Cannot convert to project</p>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {waitingForAccountant.map((caseItem) => {
-                            const pendingPayment = (caseItem as any).pendingPayment;
-                            return (
-                                <div key={caseItem.id} className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-orange-200 dark:border-orange-700">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <h3 className="font-bold text-text-primary">{caseItem.title}</h3>
-                                        <span className="text-xs font-bold px-2 py-1 bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-200 rounded-full">
-                                            Pending Verification
-                                        </span>
-                                    </div>
-                                    <p className="text-sm text-text-secondary mb-1">{caseItem.clientName}</p>
-                                    
-                                    {/* Payment Details */}
-                                    {pendingPayment && (
-                                        <div className="space-y-1 mt-2">
-                                            <div className="flex items-center gap-2 text-sm">
-                                                <CurrencyRupeeIcon className="w-4 h-4 text-orange-600" />
-                                                <span className="text-text-secondary">Amount:</span>
-                                                <span className="font-bold text-orange-700">{formatCurrencyINR(pendingPayment.amount || 0)}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-sm">
-                                                <BanknotesIcon className="w-4 h-4 text-orange-600" />
-                                                <span className="text-text-secondary">UTR:</span>
-                                                <span className="font-mono font-medium text-text-primary">{pendingPayment.utr || 'N/A'}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-sm">
-                                                <span className="text-text-secondary">Method:</span>
-                                                <span className="font-medium text-text-primary">{pendingPayment.method || 'N/A'}</span>
-                                            </div>
-                                            {pendingPayment.submittedBy && (
-                                                <div className="flex items-center gap-2 text-sm">
-                                                    <span className="text-text-secondary">Submitted by:</span>
-                                                    <span className="font-medium text-text-primary">
-                                                        {users.find(u => u.id === pendingPayment.submittedBy)?.name || pendingPayment.submittedBy}
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                                        <p className="text-xs text-orange-600 flex items-center gap-1">
-                                            <ExclamationTriangleIcon className="w-4 h-4" />
-                                            Conversion blocked until payment verified
-                                        </p>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
-
-            {/* Ready to Convert Section */}
-            {readyToConvert.length > 0 && (
-                <div className="bg-green-50 dark:bg-green-900/20 border-2 border-green-300 dark:border-green-700 rounded-xl p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 bg-green-100 dark:bg-green-800 rounded-lg">
-                            <CheckCircleIcon className="w-6 h-6 text-green-600" />
-                        </div>
-                        <div>
-                            <h2 className="text-lg font-bold text-green-800 dark:text-green-200">Ready to Convert</h2>
-                            <p className="text-sm text-green-600 dark:text-green-400">Payment verified by accountant - Ready for project conversion</p>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {readyToConvert.map((caseItem) => (
-                            <div key={caseItem.id} className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-green-200 dark:border-green-700">
-                                <div className="flex justify-between items-start mb-2">
-                                    <h3 className="font-bold text-text-primary">{caseItem.title}</h3>
-                                    <span className="text-xs font-bold px-2 py-1 bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200 rounded-full">
-                                        Verified
-                                    </span>
-                                </div>
-                                <p className="text-sm text-text-secondary mb-2">{caseItem.clientName}</p>
-                                {caseItem.financial && (
-                                    <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400 font-semibold mb-2">
-                                        <CurrencyRupeeIcon className="w-4 h-4" />
-                                        <span>Advance: {formatCurrencyINR(caseItem.financial.advanceAmount || 0)}</span>
-                                    </div>
-                                )}
-                                <button
-                                    onClick={() => {
-                                        setCaseToConvert(caseItem);
-                                        setIsConvertModalOpen(true);
-                                    }}
-                                    disabled={convertingCaseId === caseItem.id}
-                                    className="w-full mt-3 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white px-4 py-2 rounded-lg font-bold transition-colors"
-                                >
-                                    {convertingCaseId === caseItem.id ? (
-                                        <ArrowPathIcon className="w-5 h-5 animate-spin" />
-                                    ) : (
-                                        <RocketLaunchIcon className="w-5 h-5" />
-                                    )}
-                                    Convert to Project
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
 
             {/* Organizations Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -430,7 +214,7 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     setSelectedOrgId(org.id);
-                                    setIsVerifyAccountantModalOpen(true);
+                                    setIsProjectLauncherOpen(true);
                                 }}
                                 className="text-sm font-medium text-primary hover:text-primary/80"
                             >
@@ -451,9 +235,48 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                 initialData={organizationToEdit}
             />
 
-            {/* REMOVED: Project Launcher Modal with "Create Fresh Project" bypass.
-                HARD RULE: All projects must go through payment-gated flow.
-                "New Project" now opens VerifyWithAccountantModal directly. */}
+            {/* New Project Launcher Modal */}
+            {isProjectLauncherOpen && (
+                <Modal
+                    isOpen={isProjectLauncherOpen}
+                    onClose={() => setIsProjectLauncherOpen(false)}
+                    title="Create New Project"
+                    size="lg"
+                >
+                    <div className="space-y-6 p-4">
+                        <p className="text-text-secondary text-center">Choose how you want to create this project:</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <button
+                                onClick={() => {
+                                    setIsProjectLauncherOpen(false);
+                                    setIsVerifyAccountantModalOpen(true);
+                                }}
+                                className="p-6 bg-subtle-background hover:bg-primary/10 border-2 border-border hover:border-primary rounded-xl transition-all text-left group"
+                            >
+                                <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-lg w-fit mb-4">
+                                    <BanknotesIcon className="w-8 h-8 text-orange-600" />
+                                </div>
+                                <h3 className="text-lg font-bold text-text-primary group-hover:text-primary">Convert From Lead</h3>
+                                <p className="text-sm text-text-secondary mt-1">Select lead and verify payment with accountant first</p>
+                                <p className="text-xs text-orange-600 mt-2">⚠️ Requires accountant approval</p>
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setIsProjectLauncherOpen(false);
+                                    setIsFreshProjectModalOpen(true);
+                                }}
+                                className="p-6 bg-subtle-background hover:bg-primary/10 border-2 border-border hover:border-primary rounded-xl transition-all text-left group"
+                            >
+                                <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg w-fit mb-4">
+                                    <RocketLaunchIcon className="w-8 h-8 text-green-600" />
+                                </div>
+                                <h3 className="text-lg font-bold text-text-primary group-hover:text-primary">Create Fresh Project</h3>
+                                <p className="text-sm text-text-secondary mt-1">Start a brand new project from scratch</p>
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
 
             {/* Enhanced Projects Modal */}
             {isProjectsModalOpen && (
@@ -720,107 +543,27 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                 }}
             />
 
-            {/* REMOVED: ConvertFromLeadModal and CreateFreshProjectModal
-                HARD RULE: No direct lead → project conversion.
-                All project creation MUST go through VerifyWithAccountantModal → Accountant Approval → Convert. */}
+            {/* Legacy Convert From Lead Modal (DEPRECATED - kept for reference) */}
+            {/* <ConvertFromLeadModal
+                isOpen={isConvertLeadModalOpen}
+                onClose={() => setIsConvertLeadModalOpen(false)}
+                organizationId={selectedOrgId}
+                onProjectCreated={(caseId) => {
+                    setIsConvertLeadModalOpen(false);
+                    handleProjectCreated(caseId);
+                }}
+            /> */}
 
-            {/* Convert to Project Modal (PAYMENT-GATED - Only for WAITING_FOR_PLANNING) */}
-            {isConvertModalOpen && caseToConvert && (
-                <Modal
-                    isOpen={isConvertModalOpen}
-                    onClose={() => {
-                        setIsConvertModalOpen(false);
-                        setCaseToConvert(null);
-                        setSelectedProjectHeadId('');
-                    }}
-                    title="Convert to Project"
-                    size="md"
-                >
-                    <div className="space-y-6 p-4">
-                        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-4">
-                            <div className="flex items-center gap-2 text-green-700 dark:text-green-300 mb-2">
-                                <CheckCircleIcon className="w-5 h-5" />
-                                <span className="font-bold">Payment Verified</span>
-                            </div>
-                            <p className="text-sm text-green-600 dark:text-green-400">
-                                This lead has been verified by the accounts team and is ready for project conversion.
-                            </p>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-xs font-bold text-text-tertiary uppercase">Lead Title</label>
-                                <p className="text-lg font-bold text-text-primary">{caseToConvert.title}</p>
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold text-text-tertiary uppercase">Client Name</label>
-                                <p className="text-text-primary">{caseToConvert.clientName}</p>
-                            </div>
-                            {caseToConvert.financial && (
-                                <div>
-                                    <label className="text-xs font-bold text-text-tertiary uppercase">Verified Advance Amount</label>
-                                    <p className="text-xl font-bold text-green-600">{formatCurrencyINR(caseToConvert.financial.advanceAmount || 0)}</p>
-                                </div>
-                            )}
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-bold text-text-primary mb-2">
-                                Assign Project Head <span className="text-red-500">*</span>
-                            </label>
-                            <select
-                                value={selectedProjectHeadId}
-                                onChange={(e) => setSelectedProjectHeadId(e.target.value)}
-                                className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary bg-background text-text-primary"
-                                required
-                            >
-                                <option value="">Select Project Head</option>
-                                {projectHeads.map((user) => (
-                                    <option key={user.id} value={user.id}>
-                                        {user.name} ({user.role})
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4">
-                            <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                                <strong>Note:</strong> Once converted, the project will move to ACTIVE status and execution can begin.
-                            </p>
-                        </div>
-
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => {
-                                    setIsConvertModalOpen(false);
-                                    setCaseToConvert(null);
-                                    setSelectedProjectHeadId('');
-                                }}
-                                className="flex-1 px-4 py-3 border border-border rounded-lg text-text-secondary hover:bg-subtle-background transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleConvertToProject}
-                                disabled={!selectedProjectHeadId || convertingCaseId === caseToConvert.id}
-                                className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white px-4 py-3 rounded-lg font-bold transition-colors"
-                            >
-                                {convertingCaseId === caseToConvert.id ? (
-                                    <>
-                                        <ArrowPathIcon className="w-5 h-5 animate-spin" />
-                                        Converting...
-                                    </>
-                                ) : (
-                                    <>
-                                        <RocketLaunchIcon className="w-5 h-5" />
-                                        Convert to Project
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    </div>
-                </Modal>
-            )}
+            {/* Create Fresh Project Modal */}
+            <CreateFreshProjectModal
+                isOpen={isFreshProjectModalOpen}
+                onClose={() => setIsFreshProjectModalOpen(false)}
+                organizationId={selectedOrgId}
+                onProjectCreated={(caseId) => {
+                    setIsFreshProjectModalOpen(false);
+                    handleProjectCreated(caseId);
+                }}
+            />
         </div>
     );
 };

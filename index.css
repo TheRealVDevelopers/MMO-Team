@@ -125,3 +125,34 @@ body {
   background-color: var(--color-background);
   color: var(--color-text-primary);
 }
+
+/* Print Styles */
+@media print {
+  /* Hide elements marked with print:hidden */
+  .print\:hidden {
+    display: none !important;
+  }
+  
+  /* Reset background colors for printing */
+  body {
+    background-color: white !important;
+    color: black !important;
+  }
+  
+  /* Ensure proper page breaks */
+  .page-break-before {
+    page-break-before: always;
+  }
+  
+  .page-break-after {
+    page-break-after: always;
+  }
+  
+  /* Hide navigation and UI elements during print */
+  aside,
+  nav,
+  header.print\\:hidden,
+  footer.print\\:hidden {
+    display: none !important;
+  }
+}

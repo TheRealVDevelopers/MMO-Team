@@ -1,9 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Card from '../shared/Card';
 import { useAuth } from '../../context/AuthContext';
 import { UserCircleIcon, CameraIcon, CheckIcon, XMarkIcon, PhoneIcon, MapPinIcon, PencilSquareIcon } from '../icons/IconComponents';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { UserRole } from '../../types';
 
@@ -19,6 +19,54 @@ const ProfileCard: React.FC = () => {
     region: currentUser?.region || '',
     currentTask: currentUser?.currentTask || ''
   });
+
+  // Admin setting: User switching disabled
+  const [userSwitchingDisabled, setUserSwitchingDisabled] = useState(false);
+  const [loadingAppSettings, setLoadingAppSettings] = useState(true);
+
+  // Check if user is admin
+  const isAdmin = currentUser?.role === UserRole.ADMIN || currentUser?.role === UserRole.SUPER_ADMIN;
+
+  // Load app settings on mount
+  useEffect(() => {
+    const loadAppSettings = async () => {
+      if (!db) {
+        setLoadingAppSettings(false);
+        return;
+      }
+
+      try {
+        const settingsRef = doc(db, 'appSettings', 'general');
+        const settingsDoc = await getDoc(settingsRef);
+        
+        if (settingsDoc.exists()) {
+          const data = settingsDoc.data();
+          setUserSwitchingDisabled(data?.disableUserSwitching || false);
+        }
+      } catch (error) {
+        console.error('Error loading app settings:', error);
+      } finally {
+        setLoadingAppSettings(false);
+      }
+    };
+
+    loadAppSettings();
+  }, []);
+
+  // Toggle user switching (admin only)
+  const handleToggleUserSwitching = async () => {
+    if (!db || !isAdmin) return;
+
+    const newValue = !userSwitchingDisabled;
+    try {
+      const settingsRef = doc(db, 'appSettings', 'general');
+      await setDoc(settingsRef, { disableUserSwitching: newValue }, { merge: true });
+      setUserSwitchingDisabled(newValue);
+    } catch (error) {
+      console.error('Error toggling user switching:', error);
+      alert('Failed to update setting. Please try again.');
+    }
+  };
 
   if (!currentUser) {
     return null;
@@ -399,45 +447,40 @@ const ProfileCard: React.FC = () => {
           </div>
         </div>
 
-        {/* Admin Settings - User Selector Toggle */}
-        {(currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.SUPER_ADMIN) && (
+        {/* Admin Settings - Stop User Switching */}
+        {isAdmin && (
           <div className="pt-6 border-t border-border">
             <h3 className="text-sm font-bold text-text-secondary uppercase tracking-wider mb-4">Admin Settings</h3>
             <div className="flex items-center justify-between p-4 bg-subtle-background rounded-lg">
               <div>
-                <p className="font-bold text-text-primary">Toggle User Selector</p>
+                <p className="font-bold text-text-primary">Stop User Switching</p>
                 <p className="text-xs text-text-secondary mt-1">
-                  Show or hide the user switcher dropdown in the header
+                  {userSwitchingDisabled 
+                    ? 'User switching is currently DISABLED for everyone' 
+                    : 'Anyone can switch between users (development mode)'}
                 </p>
               </div>
               <button
-                onClick={async () => {
-                  const newValue = !currentUser.showUserSelector;
-                  try {
-                    await updateUserInFirestore({ showUserSelector: newValue });
-                    setCurrentUser({
-                      ...currentUser,
-                      showUserSelector: newValue,
-                      lastUpdateTimestamp: new Date()
-                    });
-                  } catch (error: any) {
-                    console.error('Error toggling user selector:', error);
-                    alert(`Failed to update setting: ${error.message || 'Please try again.'}`);
-                  }
-                }}
-                className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
-                  currentUser.showUserSelector ? 'bg-primary' : 'bg-gray-300 dark:bg-slate-600'
+                onClick={handleToggleUserSwitching}
+                disabled={loadingAppSettings}
+                className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 ${
+                  userSwitchingDisabled ? 'bg-red-500' : 'bg-gray-300 dark:bg-slate-600'
                 }`}
                 role="switch"
-                aria-checked={currentUser.showUserSelector || false}
+                aria-checked={userSwitchingDisabled}
               >
                 <span
                   className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                    currentUser.showUserSelector ? 'translate-x-5' : 'translate-x-0'
+                    userSwitchingDisabled ? 'translate-x-5' : 'translate-x-0'
                   }`}
                 />
               </button>
             </div>
+            {userSwitchingDisabled && (
+              <p className="text-xs text-red-600 mt-2 px-4">
+                ⚠️ User switching is disabled. Only you can turn this back on.
+              </p>
+            )}
           </div>
         )}
 

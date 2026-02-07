@@ -118,6 +118,9 @@ const AccountsTeamDashboard: React.FC<AccountsTeamDashboardProps> = ({ currentPa
     case 'my-day':
       return <MyDayPage />;
 
+    case 'payment-verification':
+      return <PaymentVerificationInbox />;
+
     case 'tasks':
       return <AccountsTasksPage />;
 
@@ -182,10 +185,6 @@ const AccountsTeamDashboard: React.FC<AccountsTeamDashboardProps> = ({ currentPa
 
     case 'general-ledger':
       return <GeneralLedgerPage />;
-
-    // Payment Verification (PAYMENT-GATED PROJECT CREATION)
-    case 'payment-verification':
-      return <PaymentVerificationInbox />;
 
     // Shared / Misc
     case 'reports':
