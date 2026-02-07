@@ -399,6 +399,48 @@ const ProfileCard: React.FC = () => {
           </div>
         </div>
 
+        {/* Admin Settings - User Selector Toggle */}
+        {(currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.SUPER_ADMIN) && (
+          <div className="pt-6 border-t border-border">
+            <h3 className="text-sm font-bold text-text-secondary uppercase tracking-wider mb-4">Admin Settings</h3>
+            <div className="flex items-center justify-between p-4 bg-subtle-background rounded-lg">
+              <div>
+                <p className="font-bold text-text-primary">Toggle User Selector</p>
+                <p className="text-xs text-text-secondary mt-1">
+                  Show or hide the user switcher dropdown in the header
+                </p>
+              </div>
+              <button
+                onClick={async () => {
+                  const newValue = !currentUser.showUserSelector;
+                  try {
+                    await updateUserInFirestore({ showUserSelector: newValue });
+                    setCurrentUser({
+                      ...currentUser,
+                      showUserSelector: newValue,
+                      lastUpdateTimestamp: new Date()
+                    });
+                  } catch (error: any) {
+                    console.error('Error toggling user selector:', error);
+                    alert(`Failed to update setting: ${error.message || 'Please try again.'}`);
+                  }
+                }}
+                className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                  currentUser.showUserSelector ? 'bg-primary' : 'bg-gray-300 dark:bg-slate-600'
+                }`}
+                role="switch"
+                aria-checked={currentUser.showUserSelector || false}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    currentUser.showUserSelector ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Last Updated */}
         <div className="pt-4 border-t border-border">
           <p className="text-xs text-text-secondary text-center">
