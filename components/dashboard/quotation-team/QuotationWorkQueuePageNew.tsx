@@ -204,8 +204,8 @@ const QuotationWorkQueuePageNew: React.FC = () => {
 
             const caseData = caseSnap.data() as Case;
 
-            // 1. Save quotation to cases/{caseId}/quotations
-            const quotationData: Omit<CaseQuotation, 'id' | 'pdfUrl'> & { pdfUrl: string } = {
+            // 1. Save quotation to cases/{caseId}/quotations (no undefined fields - Firestore rejects them)
+            const quotationData: Record<string, unknown> = {
                 caseId: selectedTask.caseId,
                 boqId: latestBOQ?.id || '',
                 items: quotationItems,
@@ -215,13 +215,15 @@ const QuotationWorkQueuePageNew: React.FC = () => {
                 discount,
                 discountAmount,
                 grandTotal,
-                internalPRCode: canSeePRCode ? prCode : undefined,
-                notes,
+                notes: notes || '',
                 createdBy: currentUser!.id,
                 createdAt: serverTimestamp(),
                 auditStatus: 'pending',
-                pdfUrl: '' // Will be updated after PDF generation
+                pdfUrl: ''
             };
+            if (canSeePRCode && prCode) {
+                quotationData.internalPRCode = prCode;
+            }
 
             const quotRef = await addDoc(
                 collection(db!, FIRESTORE_COLLECTIONS.CASES, selectedTask.caseId, FIRESTORE_COLLECTIONS.QUOTATIONS),
@@ -237,7 +239,7 @@ const QuotationWorkQueuePageNew: React.FC = () => {
             const quotWithId: CaseQuotation = {
                 ...quotationData,
                 id: quotRef.id
-            };
+            } as CaseQuotation;
 
             const pdfUrl = await generateQuotationPDF(quotWithId, { ...caseData, id: selectedTask.caseId });
 

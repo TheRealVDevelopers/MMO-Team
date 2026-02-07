@@ -11,6 +11,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../../context/AuthContext';
 import { useApprovalRequests, approveRequest, rejectRequest } from '../../../hooks/useApprovalSystem';
+import { createStaffAccountFromApproval, DEFAULT_STAFF_PASSWORD } from '../../../services/authService';
 import { ApprovalRequest, ApprovalStatus, ApprovalRequestType, UserRole } from '../../../types';
 import { formatDateTime } from '../../../constants';
 import { ContentCard, StatCard, SectionHeader, cn, staggerContainer, PrimaryButton } from '../shared/DashboardUI';
@@ -95,21 +96,28 @@ const RegistrationsPage: React.FC = () => {
       }
 
       if (reviewAction === 'approve') {
-        await approveRequest(
-          selectedRequest.id,
-          currentUser.id,
-          currentUser.name,
-          assignedRole, // Pass role as assigneeId for registration
-          reviewComments,
-          undefined // No deadline for registrations
-        );
+        // Update approval doc (caseId undefined for approvalRequests collection)
+        await approveRequest(selectedRequest.id, undefined, currentUser.id);
+
+        // Create the actual staff account so the new user appears in the database
+        const email = (selectedRequest as ApprovalRequest & { email?: string }).email;
+        const requesterName = selectedRequest.requesterName || selectedRequest.title?.replace(/^Staff Registration Request: /, '') || 'Staff';
+        const phone = (selectedRequest as ApprovalRequest & { phone?: string }).phone ?? '';
+        const region = (selectedRequest as ApprovalRequest & { region?: string }).region;
+        if (email) {
+          await createStaffAccountFromApproval(
+            email,
+            DEFAULT_STAFF_PASSWORD,
+            requesterName,
+            assignedRole as UserRole,
+            phone,
+            region
+          );
+        } else {
+          console.warn('[RegistrationsPage] Approval request missing email; staff account not created.');
+        }
       } else {
-        await rejectRequest(
-          selectedRequest.id,
-          currentUser.id,
-          currentUser.name,
-          reviewComments
-        );
+        await rejectRequest(selectedRequest.id, undefined, currentUser.id, reviewComments);
       }
 
       setShowReviewModal(false);

@@ -1,6 +1,11 @@
 // ========================================
 // FIRESTORE COLLECTIONS (CASE-CENTRIC)
 // Root collections at database level
+//
+// SCHEMA: Single source of truth is "cases".
+// - Lead = case with isProject: false  (direct lead lives in cases, not a separate "leads" collection)
+// - Project = case with isProject: true
+// - Subcollections: cases/{caseId}/tasks, quotations, documents, activities, boq, etc.
 // ========================================
 
 export const FIRESTORE_COLLECTIONS = {

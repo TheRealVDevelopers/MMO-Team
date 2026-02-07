@@ -285,6 +285,12 @@ export interface Case {
 
   // Master Project PDF (generated after execution plan approval)
   masterProjectPdfUrl?: string;
+
+  // Lead-specific (when isProject = false) – case-centric: lead data lives on the case
+  communicationMessages?: Array<Record<string, any>>;
+  files?: Array<Record<string, any>>;
+  milestones?: Array<Record<string, any>>;
+  currentStage?: number;
 }
 
 // ... (Keep existing interfaces) ...

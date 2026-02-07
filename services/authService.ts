@@ -206,19 +206,20 @@ export const createStaffAccountFromApproval = async (
             }
         }
 
-        // Create Firestore document using the main db instance
-        await setDoc(doc(db, 'staffUsers', newUserUid), {
+        // Create Firestore document (no undefined - Firestore rejects undefined)
+        const staffData: Record<string, unknown> = {
             email,
             name,
             role,
             avatar: avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
-            phone,
-            region: region || null,
+            phone: phone ?? '',
+            region: region ?? null,
             currentTask: '',
             lastUpdateTimestamp: serverTimestamp(),
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
-        });
+        };
+        await setDoc(doc(db, 'staffUsers', newUserUid), staffData);
 
         console.log(`Staff account created successfully: ${name} (${email})`);
         return newUserUid;
@@ -272,19 +273,20 @@ export const createStaffAccount = async (
             }
         }
 
-        // Create Firestore document
-        await setDoc(doc(db, 'staffUsers', newUserUid), {
+        // Create Firestore document (no undefined - Firestore rejects undefined)
+        const staffData: Record<string, unknown> = {
             email,
             name,
             role,
-            avatar,
-            phone,
-            region: region || null,
+            avatar: avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+            phone: phone ?? '',
+            region: region ?? null,
             currentTask: '',
             lastUpdateTimestamp: serverTimestamp(),
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
-        });
+        };
+        await setDoc(doc(db, 'staffUsers', newUserUid), staffData);
 
         // Create an approval request notification for admins about the new staff member
         try {
@@ -342,45 +344,42 @@ export const submitStaffRegistrationRequest = async (
             throw new Error('An account with this email already exists.');
         }
 
-        // TODO: Rebuild approval system with new Case-centric architecture
-        // const pendingRequestCheck = await getDocs(
-        //     query(
-        //         collection(db, 'approvalRequests'),
-        //         where('requestType', '==', 'STAFF_REGISTRATION'),
-        //         where('status', '==', 'Pending')
-        //     )
-        // );
+        const pendingRequestCheck = await getDocs(
+            query(
+                collection(db, 'approvalRequests'),
+                where('requestType', '==', 'STAFF_REGISTRATION'),
+                where('status', '==', 'pending')
+            )
+        );
 
-        const hasPendingRequest = false; // pendingRequestCheck.docs.some(
-        //     doc => doc.data().email === email
-        // );
+        const hasPendingRequest = pendingRequestCheck.docs.some(
+            (d) => d.data().email === email
+        );
 
         if (hasPendingRequest) {
             throw new Error('A registration request with this email is already pending approval.');
         }
 
-        // TODO: Rebuild approval system with new Case-centric architecture  
-        // Create approval request (account NOT created yet)
-        // const requestDoc = await addDoc(collection(db, 'approvalRequests'), {
-        //     requestType: 'STAFF_REGISTRATION',
-        //     requesterId: 'pending',
-        //     requesterName: name,
-        //     requesterRole: requestedRole || UserRole.SALES_TEAM_MEMBER,
-        //     title: `Staff Registration Request: ${name}`,
-        //     description: `New staff registration request from "${name}". Email: ${email}, Phone: ${phone}, Requested Role: ${requestedRole || 'Not specified'}, Region: ${region || 'N/A'}.`,
-        //     status: 'Pending',
-        //     requestedAt: serverTimestamp(),
-        //     priority: 'High',
-        //     attachments: [],
-        //     email: email,
-        //     password: password,
-        //     phone: phone,
-        //     region: region || '',
-        //     requestedRole: requestedRole,
-        // });
+        // Create approval request (account NOT created until admin approves; do not store password)
+        const requestDoc = await addDoc(collection(db, 'approvalRequests'), {
+            requestType: 'STAFF_REGISTRATION',
+            requesterId: 'pending',
+            requesterName: name,
+            requesterRole: requestedRole || UserRole.SALES_TEAM_MEMBER,
+            title: `Staff Registration Request: ${name}`,
+            description: `New staff registration request from "${name}". Email: ${email}, Phone: ${phone}, Requested Role: ${requestedRole || 'Not specified'}, Region: ${region || 'N/A'}.`,
+            status: 'pending',
+            requestedAt: serverTimestamp(),
+            priority: 'High',
+            attachments: [],
+            email,
+            phone: phone ?? '',
+            region: region ?? '',
+            requestedRole: requestedRole || UserRole.SALES_TEAM_MEMBER,
+        });
 
         console.log(`Staff registration request submitted for: ${name}`);
-        return 'temp-id'; // requestDoc.id;
+        return requestDoc.id;
     } catch (error: any) {
         console.error('Error submitting staff registration request:', error);
         throw new Error(error.message || 'Failed to submit registration request');
@@ -671,16 +670,17 @@ export const createClientAccount = async (
             }
         }
 
-        // Create Firestore Client Profile
-        await setDoc(doc(db, 'clients', newUserUid), {
+        // Create Firestore Client Profile (no undefined - Firestore rejects undefined)
+        const clientData: Record<string, unknown> = {
             id: newUserUid,
             name: clientName,
-            email: email,
-            isFirstLogin: true, // Force password reset
-            caseId: caseId || null,
+            email,
+            isFirstLogin: true,
+            caseId: caseId ?? null,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
-        });
+        };
+        await setDoc(doc(db, 'clients', newUserUid), clientData);
 
         console.log(`Client account created: ${clientName} (${email})`);
         return newUserUid;

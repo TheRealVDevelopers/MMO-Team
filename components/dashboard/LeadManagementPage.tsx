@@ -12,8 +12,9 @@ import {
 import { doc, getDoc, updateDoc, arrayUnion, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Lead, LeadCommunicationMessage, LeadFile, ProjectMilestone, LeadPipelineStatus } from '../../types';
-import { formatCurrencyINR, safeDate } from '../../constants';
+import { formatCurrencyINR, safeDate, FIRESTORE_COLLECTIONS } from '../../constants';
 import { useAuth } from '../../context/AuthContext';
+import { mapCaseStatusToLeadStatus } from '../../hooks/useLeads';
 
 interface LeadManagementPageProps {
   leadId: string;
@@ -64,35 +65,42 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Case-centric: lead = case with isProject false; leadId is caseId
   const fetchLead = async () => {
     if (!leadId) return;
 
     try {
-      const leadRef = doc(db, 'leads', leadId);
-      const leadSnap = await getDoc(leadRef);
+      const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, leadId);
+      const caseSnap = await getDoc(caseRef);
 
-      if (leadSnap.exists()) {
-        const data = leadSnap.data() as Lead;
+      if (caseSnap.exists()) {
+        const data = caseSnap.data() as any;
+        const createdAt = data.createdAt?.toDate?.() ?? data.createdAt;
         setLead({
-          id: leadSnap.id,
-          ...data,
-          inquiryDate: (data.inquiryDate as any).toDate(),
-          deadline: data.deadline ? (data.deadline as any).toDate() : undefined,
-          communicationMessages: data.communicationMessages?.map(msg => ({
+          id: caseSnap.id,
+          title: data.title,
+          projectName: data.title,
+          clientName: data.clientName ?? '',
+          value: data.budget?.totalBudget ?? data.value ?? 0,
+          inquiryDate: createdAt ? new Date(createdAt) : new Date(),
+          assignedTo: data.assignedSales,
+          status: mapCaseStatusToLeadStatus(data.status),
+          _caseStatus: data.status,
+          communicationMessages: (data.communicationMessages || []).map((msg: any) => ({
             ...msg,
-            timestamp: (msg.timestamp as any).toDate(),
-          })) || [],
-          files: data.files?.map(file => ({
+            timestamp: msg.timestamp?.toDate?.() ?? msg.timestamp ?? new Date(),
+          })),
+          files: (data.files || []).map((file: any) => ({
             ...file,
-            uploadedAt: (file.uploadedAt as any).toDate(),
-          })) || [],
-          milestones: data.milestones?.map(milestone => ({
+            uploadedAt: file.uploadedAt?.toDate?.() ?? file.uploadedAt ?? new Date(),
+          })),
+          milestones: (data.milestones || []).map((milestone: any) => ({
             ...milestone,
-            deadline: milestone.deadline ? (milestone.deadline as any).toDate() : undefined,
-            completedAt: milestone.completedAt ? (milestone.completedAt as any).toDate() : undefined,
-            updatedAt: milestone.updatedAt ? (milestone.updatedAt as any).toDate() : undefined,
-          })) || [],
-        });
+            deadline: milestone.deadline?.toDate?.() ?? milestone.deadline,
+            completedAt: milestone.completedAt?.toDate?.() ?? milestone.completedAt,
+            updatedAt: milestone.updatedAt?.toDate?.() ?? milestone.updatedAt,
+          })),
+        } as Lead);
       }
     } catch (error) {
       console.error('Error fetching lead:', error);
@@ -117,8 +125,8 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
         read: false,
       };
 
-      const leadRef = doc(db, 'leads', leadId);
-      await updateDoc(leadRef, {
+      const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, leadId);
+      await updateDoc(caseRef, {
         communicationMessages: arrayUnion({
           ...message,
           timestamp: serverTimestamp(),
@@ -168,8 +176,8 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
           uploadedAt: new Date(),
         };
 
-        const leadRef = doc(db, 'leads', leadId);
-        await updateDoc(leadRef, {
+        const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, leadId);
+        await updateDoc(caseRef, {
           files: arrayUnion({
             ...leadFile,
             uploadedAt: serverTimestamp(),
@@ -210,11 +218,11 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
         updatedAt: new Date(),
       };
 
-      const leadRef = doc(db, 'leads', leadId);
+      const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, leadId);
 
       // Get existing milestones
-      const leadSnap = await getDoc(leadRef);
-      const existingMilestones = (leadSnap.data()?.milestones || []) as ProjectMilestone[];
+      const caseSnap = await getDoc(caseRef);
+      const existingMilestones = (caseSnap.data()?.milestones || []) as ProjectMilestone[];
 
       // Update or add milestone
       const milestoneIndex = existingMilestones.findIndex(m => m.stage === selectedStage);
@@ -234,7 +242,7 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
         } as any);
       }
 
-      await updateDoc(leadRef, {
+      await updateDoc(caseRef, {
         milestones: existingMilestones,
         currentStage: selectedStage,
       });
@@ -256,9 +264,11 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
     if (!leadId) return;
 
     try {
-      const leadRef = doc(db, 'leads', leadId);
-      await updateDoc(leadRef, {
-        status: newStatus,
+      const { mapLeadStatusToCaseStatus } = await import('../../hooks/useLeads');
+      const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, leadId);
+      await updateDoc(caseRef, {
+        status: mapLeadStatusToCaseStatus(newStatus),
+        updatedAt: serverTimestamp(),
       });
       await fetchLead();
     } catch (error) {

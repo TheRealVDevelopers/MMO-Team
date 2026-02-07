@@ -35,6 +35,8 @@ export const mapCaseStatusToLeadStatus = (status: CaseStatus | string): LeadPipe
       return LeadPipelineStatus.WAITING_FOR_QUOTATION;
     case CaseStatus.QUOTATION:
       return LeadPipelineStatus.QUOTATION_SENT;
+    case 'QUOTATION_SUBMITTED':
+      return LeadPipelineStatus.QUOTATION_SENT;
     case CaseStatus.NEGOTIATION:
       return LeadPipelineStatus.NEGOTIATION;
     case CaseStatus.WAITING_FOR_PAYMENT:

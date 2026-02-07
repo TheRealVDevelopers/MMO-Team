@@ -99,10 +99,8 @@ const CasesManagementPage: React.FC = () => {
     };
 
     const performDeleteCase = async (caseItem: Case, batch: any) => {
-        // 1. Delete the case/lead/project document
+        // 1. Delete the case document (case-centric: lead/project are the same case; no separate leads/projects collections)
         batch.delete(doc(db, FIRESTORE_COLLECTIONS.CASES, caseItem.id));
-        batch.delete(doc(db, FIRESTORE_COLLECTIONS.LEADS, caseItem.id));
-        batch.delete(doc(db, FIRESTORE_COLLECTIONS.PROJECTS, caseItem.id));
 
         // 2. Delete subcollections of cases
         const subcollections = ['drawings', 'boqs', 'quotations', 'milestones'];

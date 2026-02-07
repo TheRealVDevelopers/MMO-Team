@@ -181,13 +181,16 @@ export const useCases = (options: UseCasesOptions = {}) => {
       if (!db) throw new Error('Database not initialized');
 
       try {
-        // FLAT STRUCTURE: cases at root level
-        const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, caseId);
+        // Firestore does not allow undefined; strip undefined values from payload
+        const cleanUpdates: Record<string, unknown> = { updatedAt: serverTimestamp() };
+        for (const [key, value] of Object.entries(updates)) {
+          if (value !== undefined) {
+            cleanUpdates[key] = value;
+          }
+        }
 
-        await updateDoc(caseRef, {
-          ...updates,
-          updatedAt: serverTimestamp(),
-        });
+        const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, caseId);
+        await updateDoc(caseRef, cleanUpdates);
 
         // Log activity
         const action = updates.status

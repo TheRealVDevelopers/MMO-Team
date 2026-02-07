@@ -478,13 +478,42 @@ const QuotationBuilderModal: React.FC<{
             const taskRef = doc(db!, FIRESTORE_COLLECTIONS.CASES, task.caseId, FIRESTORE_COLLECTIONS.TASKS, task.id);
             const caseRef = doc(db!, FIRESTORE_COLLECTIONS.CASES, task.caseId);
 
-            // Update case status to QUOTATION_SUBMITTED (not completed yet)
+            // 1) Write to quotations subcollection FIRST so Procurement Audit page can list it (auditStatus='pending')
+            const quotationForAudit: Record<string, unknown> = {
+                caseId: task.caseId,
+                boqId: '',
+                items: quotationItems.map((item) => ({
+                    itemName: String(item.itemName ?? ''),
+                    quantity: Number(item.quantity) || 0,
+                    unit: String(item.unit ?? 'pcs'),
+                    rate: Number(item.rate) || 0,
+                    total: Number(item.amount ?? item.quantity * item.rate) || 0,
+                })),
+                subtotal: Number(subtotal) || 0,
+                taxRate: Number(taxRate) || 0,
+                taxAmount: Number(taxAmount) || 0,
+                discount: Number(discount) || 0,
+                discountAmount: Number(discountAmount) || 0,
+                grandTotal: Number(totalAmount) || 0,
+                notes: String(notes ?? ''),
+                createdBy: currentUser.id,
+                createdAt: serverTimestamp(),
+                auditStatus: 'pending',
+                pdfUrl: '',
+            };
+            const quotRef = await addDoc(
+                collection(db!, FIRESTORE_COLLECTIONS.CASES, task.caseId, FIRESTORE_COLLECTIONS.QUOTATIONS),
+                quotationForAudit
+            );
+            console.log('[Quotation] Written to cases/' + task.caseId + '/quotations/' + quotRef.id + ' (auditStatus=pending) – should appear in Procurement Audit');
+
+            // 2) Update case status to QUOTATION_SUBMITTED
             await updateDoc(caseRef, {
                 status: 'QUOTATION_SUBMITTED',
                 updatedAt: serverTimestamp()
             });
 
-            // Save quotation as DRAFT document (without PR)
+            // 3) Save quotation as DRAFT document (without PR)
             const quotationDoc = {
                 type: 'QUOTATION_DRAFT',
                 caseId: task.caseId,
@@ -498,7 +527,7 @@ const QuotationBuilderModal: React.FC<{
                 taxRate,
                 taxAmount,
                 totalAmount,
-                notes,
+                notes: notes ?? '',
                 status: 'PENDING_AUDIT'
             };
 

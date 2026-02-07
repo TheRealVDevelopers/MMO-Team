@@ -47,11 +47,13 @@ const ProcurementAuditPageNew: React.FC = () => {
     const [pendingQuotations, setPendingQuotations] = useState<QuotationWithCase[]>([]);
     const [selectedQuotation, setSelectedQuotation] = useState<QuotationWithCase | null>(null);
     const [processing, setProcessing] = useState(false);
+    const [queryError, setQueryError] = useState<string | null>(null);
 
-    // Load all pending quotations across all cases
+    // Load all pending quotations across all cases (collectionGroup: cases/*/quotations)
     useEffect(() => {
         if (!db || !currentUser) return;
 
+        setQueryError(null);
         console.log('[Procurement Audit] Setting up listener for pending quotations...');
         console.log('[Procurement Audit] Collection name:', FIRESTORE_COLLECTIONS.QUOTATIONS);
 
@@ -64,7 +66,8 @@ const ProcurementAuditPageNew: React.FC = () => {
             quotQuery,
             async (snapshot) => {
                 console.log('[Procurement Audit] Query snapshot received:', snapshot.size, 'documents');
-                
+                setQueryError(null);
+
                 const quotations: QuotationWithCase[] = [];
 
                 for (const quotDoc of snapshot.docs) {
@@ -90,14 +93,12 @@ const ProcurementAuditPageNew: React.FC = () => {
                 console.log('[Procurement Audit] Total pending quotations:', quotations.length);
                 setPendingQuotations(quotations);
             },
-            (error) => {
+            (error: { message?: string }) => {
                 console.error('[Procurement Audit] Query error:', error);
-                
-                // Check if it's an index error
-                if (error.message.includes('index')) {
-                    console.error('[Procurement Audit] FIRESTORE INDEX REQUIRED!');
-                    console.error('[Procurement Audit] Create index at:', error.message);
-                    alert('⚠️ Firestore index required! Check console for link to create index.');
+                const msg = error?.message || String(error);
+                setQueryError(msg);
+                if (msg.includes('index')) {
+                    console.error('[Procurement Audit] Deploy indexes: firebase deploy --only firestore:indexes');
                 }
             }
         );
@@ -234,11 +235,28 @@ const ProcurementAuditPageNew: React.FC = () => {
                     <p className="text-gray-600 mt-2">Review and approve/reject quotations</p>
                 </div>
 
+                {queryError && (
+                    <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                        <p className="text-amber-800 font-medium">Could not load pending quotations</p>
+                        <p className="text-amber-700 text-sm mt-1">{queryError}</p>
+                        {queryError.includes('index') && (
+                            <p className="text-amber-700 text-sm mt-2">
+                                Deploy Firestore indexes: <code className="bg-amber-100 px-1">firebase deploy --only firestore:indexes</code>
+                            </p>
+                        )}
+                    </div>
+                )}
                 <div className="bg-white rounded-xl shadow-md overflow-hidden">
-                    {pendingQuotations.length === 0 ? (
+                    {queryError ? (
+                        <div className="text-center py-12">
+                            <p className="text-amber-700">Cannot load list. See the message above and fix the issue (e.g. deploy Firestore indexes).</p>
+                        </div>
+                    ) : pendingQuotations.length === 0 ? (
                         <div className="text-center py-12">
                             <CheckCircleIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
                             <p className="text-gray-500">No quotations pending audit</p>
+                            <p className="text-gray-400 text-sm mt-2">Quotation team submits via &quot;Submit to Audit&quot; on a quotation task.</p>
+                            <p className="text-gray-400 text-xs mt-1">After submitting, refresh this page. Ensure Firestore index is deployed: <code className="bg-gray-200 px-1 rounded">firebase deploy --only firestore:indexes</code></p>
                         </div>
                     ) : (
                         <table className="w-full">
