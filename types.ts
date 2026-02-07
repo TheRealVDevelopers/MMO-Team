@@ -25,6 +25,8 @@ export enum UserRole {
 
 export enum CaseStatus {
   LEAD = "lead",
+  CONTACTED = "contacted",
+  SITE_VISIT = "site_visit",
   DRAWING = "drawing",
   BOQ = "boq",
   QUOTATION = "quotation",
@@ -539,19 +541,36 @@ export interface CaseActivity {
   metadata?: Record<string, any>;
 }
 
-// Path: organizations/{orgId}/cases/{caseId}/payments/{paymentId}
+// Path: cases/{caseId}/payments/{paymentId}
 export interface CasePayment {
   id: string;
   caseId: string;
   amount: number;
-  utr: string;
+  method: 'UPI' | 'BANK' | 'CASH' | 'CHEQUE'; // Payment method
+  utr: string; // UTR / Reference number
+  attachmentUrl?: string; // Receipt screenshot URL
   submittedBy: string; // User ID (Sales)
+  submittedByName?: string; // Display name
   submittedAt: Date;
   verified: boolean;
+  verifiedAmount?: number; // Actual amount confirmed by accountant
   verifiedBy?: string; // User ID (Accountant)
+  verifiedByName?: string; // Display name
   verifiedAt?: Date;
+  status: 'pending' | 'approved' | 'rejected' | 'waiting'; // Payment request status
+  rejectionReason?: string;
   notes?: string;
-  receiptUrl?: string; // Storage URL
+  receiptUrl?: string; // Storage URL (legacy alias for attachmentUrl)
+  // Payment terms (for reference, entered by Sales)
+  paymentTerms?: {
+    totalProjectValue: number;
+    advancePercent: number;
+    secondPercent: number;
+    finalPercent: number;
+    advanceAmount: number;
+    secondAmount: number;
+    finalAmount: number;
+  };
 }
 
 // Path: organizations/{orgId}/cases/{caseId}/dailyUpdates/{updateId}
@@ -703,6 +722,8 @@ export interface StaffUser {
   region?: string;
   currentTask?: string;
   lastUpdateTimestamp?: Date;
+  // Admin settings
+  showUserSelector?: boolean; // Toggle to show/hide user selector dropdown in header (Admin only)
 }
 
 // Path: staffUsers/{userId}/notifications/{notificationId}

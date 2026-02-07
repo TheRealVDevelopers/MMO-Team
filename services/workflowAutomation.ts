@@ -345,7 +345,11 @@ export const onQuotationApproved = async (
 
 /**
  * Trigger: Payment verified by accounts
- * Action: Convert to project + create execution task
+ * Action: Move to WAITING_FOR_PLANNING (NOT direct project conversion)
+ * 
+ * HARD RULE: Payment verification does NOT create a project.
+ * It only moves the case to WAITING_FOR_PLANNING status.
+ * A manager must then explicitly convert to project.
  */
 export const onPaymentVerified = async (
   organizationId: string,
@@ -355,20 +359,20 @@ export const onPaymentVerified = async (
   if (!db) return;
 
   try {
-    // Update case to project
+    // HARD RULE: Payment verification moves to WAITING_FOR_PLANNING, NOT project
+    // Project conversion requires explicit manager action
     const caseRef = doc(
       db,
-      FIRESTORE_COLLECTIONS.ORGANIZATIONS,
-      organizationId,
       FIRESTORE_COLLECTIONS.CASES,
       caseId
     );
     
     await updateDoc(caseRef, {
-      isProject: true,
-      status: CaseStatus.EXECUTION,
+      // DO NOT set isProject: true here - that requires explicit conversion
+      status: CaseStatus.WAITING_FOR_PLANNING,
       'workflow.paymentVerified': true,
-      'workflow.currentStage': CaseStatus.EXECUTION,
+      'workflow.currentStage': CaseStatus.WAITING_FOR_PLANNING,
+      'financial.paymentVerified': true,
       updatedAt: serverTimestamp(),
     });
 

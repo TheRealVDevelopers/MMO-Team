@@ -292,9 +292,28 @@ export class ApprovalWorkflowService {
 
   /**
    * Converts case to project after payment approval
+   * HARD RULE: Only converts if payment has been verified by accountant
    */
   private static async convertToProject(caseId: string): Promise<void> {
     const caseRef = doc(db, 'cases', caseId);
+    const caseSnap = await getDoc(caseRef);
+    
+    if (!caseSnap.exists()) {
+      throw new Error(`Case ${caseId} not found`);
+    }
+    
+    const caseData = caseSnap.data();
+    
+    // HARD RULE: No project before payment verification
+    if (!caseData.financial?.paymentVerified) {
+      throw new Error('BLOCKED: Cannot convert to project - payment not verified by accountant');
+    }
+    
+    // HARD RULE: Must be in WAITING_FOR_PLANNING status
+    if (caseData.status !== 'waiting_for_planning') {
+      throw new Error(`BLOCKED: Cannot convert to project - invalid status: ${caseData.status}. Must be WAITING_FOR_PLANNING.`);
+    }
+    
     await updateDoc(caseRef, {
       isProject: true,
       projectStartDate: serverTimestamp(),

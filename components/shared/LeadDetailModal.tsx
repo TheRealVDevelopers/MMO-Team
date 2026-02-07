@@ -1,19 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Modal from './Modal';
-import { Case, LeadPipelineStatus, LeadHistory, Reminder, UserRole, TaskStatus, ProjectStatus } from '../../types';
+import { Case, CaseStatus, LeadPipelineStatus, LeadHistory, Reminder, UserRole, TaskStatus, ProjectStatus } from '../../types';
 import LeadHistoryView from './LeadHistoryView';
 import { useAuth } from '../../context/AuthContext';
 import { PlusIcon, BellIcon, MapPinIcon, PaintBrushIcon, CalculatorIcon, TruckIcon, WrenchScrewdriverIcon, CreditCardIcon, PhoneIcon, ChatBubbleLeftRightIcon, BanknotesIcon, CalendarIcon, UserCircleIcon, FireIcon, PaperClipIcon, XMarkIcon, CheckCircleIcon } from '../icons/IconComponents';
 import RaiseRequestModal from '../dashboard/sales-team/RaiseRequestModal';
 import DirectAssignTaskModal from '../dashboard/super-admin/DirectAssignTaskModal';
 import { addTask } from '../../hooks/useMyDayTasks';
-import { updateLead } from '../../hooks/useLeads';
+import { updateLead, mapLeadStatusToCaseStatus, CASE_STATUS_DISPLAY_LABELS } from '../../hooks/useLeads';
 import { formatLargeNumberINR, formatDateTime } from '../../constants';
 import SmartDateTimePicker from './SmartDateTimePicker';
 import { uploadMultipleLeadAttachments, formatFileSize } from '../../services/leadAttachmentService';
 import { LeadHistoryAttachment } from '../../types';
 import { useActivities } from '../../hooks/useActivities';
+import { doc, onSnapshot, Timestamp } from 'firebase/firestore';
+import { db } from '../../firebase';
+import { FIRESTORE_COLLECTIONS } from '../../constants';
 
 interface LeadDetailModalProps {
     isOpen: boolean;
@@ -30,7 +33,27 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
     const { activities, addActivity } = useActivities(caseItem.id);
     
     const [newNote, setNewNote] = useState('');
-    const [newStatus, setNewStatus] = useState(caseItem.status);
+    
+    // CRITICAL FIX: Resolve the incoming status to CaseStatus
+    // The caseItem may come from useLeads (LeadPipelineStatus) or useCases (CaseStatus)
+    const resolveInitialCaseStatus = (status: any): CaseStatus => {
+        // Check if it's already a valid CaseStatus
+        const caseStatusValues = Object.values(CaseStatus) as string[];
+        if (caseStatusValues.includes(status)) {
+            return status as CaseStatus;
+        }
+        // Check _caseStatus field (set by useLeads)
+        if ((caseItem as any)._caseStatus) {
+            return (caseItem as any)._caseStatus as CaseStatus;
+        }
+        // Reverse-map from LeadPipelineStatus
+        return mapLeadStatusToCaseStatus(status);
+    };
+
+    const [newStatus, setNewStatus] = useState<CaseStatus>(resolveInitialCaseStatus(caseItem.status));
+    
+    // Real-time case data from Firestore
+    const [liveCaseData, setLiveCaseData] = useState<Case | null>(null);
 
     const [reminderNote, setReminderNote] = useState('');
     const [reminderDate, setReminderDate] = useState('');
@@ -40,12 +63,42 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
     const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
     const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
 
-    // Determine available statuses based on whether it's a lead or project
-    const availableStatuses = Object.values(caseItem.status.constructor);
-
-    // Sync newStatus with caseItem.status when it changes
+    // CRITICAL FIX: Subscribe to real-time updates for this case
     useEffect(() => {
-        setNewStatus(caseItem.status);
+        if (!db || !caseItem?.id || !isOpen) return;
+
+        const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, caseItem.id);
+        const unsubscribe = onSnapshot(caseRef, (snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.data();
+                const liveCase = {
+                    ...data,
+                    id: snapshot.id,
+                    createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
+                    updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : data.updatedAt ? new Date(data.updatedAt) : undefined,
+                } as Case;
+                setLiveCaseData(liveCase);
+            }
+        }, (error) => {
+            console.error('[LeadDetailModal] Real-time listener error:', error);
+        });
+
+        return () => unsubscribe();
+    }, [caseItem?.id, isOpen]);
+
+    // Use live data if available, otherwise fall back to props
+    const currentCase = liveCaseData || caseItem;
+
+    // Sync newStatus when live data changes
+    useEffect(() => {
+        if (liveCaseData?.status) {
+            setNewStatus(resolveInitialCaseStatus(liveCaseData.status));
+        }
+    }, [liveCaseData?.status]);
+
+    // Also sync when props change (for backward compat)
+    useEffect(() => {
+        setNewStatus(resolveInitialCaseStatus(caseItem.status));
     }, [caseItem.status]);
 
 
@@ -53,7 +106,12 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
 
     const handleLogActivity = async (e: React.FormEvent) => {
         e.preventDefault();
-        if ((!newNote.trim() && newStatus === caseItem.status && selectedFiles.length === 0) || isUploading) return;
+        
+        // Resolve current case status to CaseStatus for comparison
+        const currentCaseStatus = resolveInitialCaseStatus(currentCase.status);
+        const statusChanged = newStatus !== currentCaseStatus;
+        
+        if ((!newNote.trim() && !statusChanged && selectedFiles.length === 0) || isUploading) return;
         if (!currentUser) return;
 
         setIsUploading(true);
@@ -63,18 +121,20 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
 
             // Upload files if any
             if (selectedFiles.length > 0) {
-                uploadedAttachmentUrls = await uploadMultipleLeadAttachments(caseItem.id, selectedFiles);
+                uploadedAttachmentUrls = await uploadMultipleLeadAttachments(currentCase.id, selectedFiles);
             }
 
             // Log status change activity
-            if (newStatus !== caseItem.status) {
+            if (statusChanged) {
+                const oldLabel = CASE_STATUS_DISPLAY_LABELS[currentCaseStatus] || currentCaseStatus;
+                const newLabel = CASE_STATUS_DISPLAY_LABELS[newStatus] || newStatus;
                 await addActivity({
                     type: 'status_change',
-                    action: `Status changed from ${caseItem.status} to ${newStatus}`,
+                    action: `Status changed from ${oldLabel} to ${newLabel}`,
                     userId: currentUser.id,
                     userName: currentUser.name,
                     metadata: {
-                        oldStatus: caseItem.status,
+                        oldStatus: currentCaseStatus,
                         newStatus: newStatus,
                     }
                 });
@@ -107,10 +167,10 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
                 });
             }
 
-            // Update Case status only (remove any undefined fields)
+            // CRITICAL FIX: Use CaseStatus value (not LeadPipelineStatus) when updating
             const updatedCase: Case = {
-                ...caseItem,
-                status: newStatus,
+                ...currentCase,
+                status: newStatus, // This is now a CaseStatus value
                 updatedAt: new Date(),
             };
 
@@ -119,6 +179,7 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
                 Object.entries(updatedCase).filter(([_, v]) => v !== undefined)
             ) as Case;
 
+            console.log(`[LeadDetailModal] Updating case ${currentCase.id} with CaseStatus: "${newStatus}"`);
             onUpdate(cleanedCase);
             setNewNote('');
             setSelectedFiles([]);
@@ -155,10 +216,10 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
 
         // Update case with the new reminder
         const updatedCase = {
-            ...caseItem,
-            reminders: [...(caseItem.reminders || []), newReminder],
+            ...currentCase,
+            reminders: [...((currentCase as any).reminders || []), newReminder],
             history: [
-                ...caseItem.history,
+                ...((currentCase as any).history || []),
                 {
                     action: 'Reminder set',
                     user: currentUser?.name || 'Unknown',
@@ -175,7 +236,7 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
 
             try {
                 await addTask({
-                    title: `[Reminder] ${caseItem.clientName}: ${reminderNote}`,
+                    title: `[Reminder] ${currentCase.clientName}: ${reminderNote}`,
                     userId: currentUser.id,
                     assignedTo: currentUser.id, // Required field
                     status: TaskStatus.PENDING,
@@ -185,7 +246,7 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
                     deadline: reminderDate,
                     isPaused: false,
                     date: dateStr,
-                    description: `${caseItem.isProject ? 'Project' : 'Lead'}: ${caseItem.clientName} - ${caseItem.projectName}`,
+                    description: `${currentCase.isProject ? 'Project' : 'Lead'}: ${currentCase.clientName} - ${(currentCase as any).projectName || currentCase.title}`,
                     createdAt: new Date(),
                     createdBy: currentUser.id,
                     createdByName: currentUser.name,
@@ -201,12 +262,12 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
     };
 
     const handleToggleReminder = (reminderId: string) => {
-        const updatedReminders = caseItem.reminders?.map(r =>
+        const updatedReminders = (currentCase as any).reminders?.map((r: any) =>
             r.id === reminderId ? { ...r, completed: !r.completed } : r
         );
 
-        const updatedCase = { ...caseItem, reminders: updatedReminders };
-        onUpdate(updatedCase);
+        const updatedCase = { ...currentCase, reminders: updatedReminders };
+        onUpdate(updatedCase as any);
     };
 
     const isSalesperson = currentUser?.role === UserRole.SALES_TEAM_MEMBER;
@@ -222,7 +283,7 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
 
     return (
         <>
-            <Modal isOpen={isOpen} onClose={onClose} title={`Activity for ${caseItem.clientName}`} size="4xl">
+            <Modal isOpen={isOpen} onClose={onClose} title={`Activity for ${currentCase.clientName}`} size="4xl">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-8 gap-y-6">
                     {/* Project Details Section */}
                     <div className="lg:col-span-3 pb-6 border-b border-border mb-2">
@@ -234,7 +295,7 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
                             <button
                                 onClick={() => {
                                     onClose();
-                                    navigate(`/projects/${caseItem.id}`);
+                                    navigate(`/projects/${currentCase.id}`);
                                 }}
                                 className="px-3 py-1.5 bg-subtle-background text-primary text-xs font-bold uppercase tracking-wider rounded-lg border border-primary/20 hover:bg-primary hover:text-white transition-all shadow-sm"
                             >
@@ -256,56 +317,56 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
                                     <MapPinIcon className="w-4 h-4" />
                                     Project Name
                                 </div>
-                                <p className="text-sm font-bold text-text-primary">{caseItem.projectName}</p>
+                                <p className="text-sm font-bold text-text-primary">{currentCase.projectName || currentCase.title}</p>
                             </div>
                             <div className="bg-subtle-background p-3 rounded-xl">
                                 <div className="flex items-center gap-2 text-text-tertiary text-xs font-medium mb-1">
                                     <UserCircleIcon className="w-4 h-4" />
                                     Client Name
                                 </div>
-                                <p className="text-sm font-bold text-text-primary">{caseItem.clientName}</p>
+                                <p className="text-sm font-bold text-text-primary">{currentCase.clientName}</p>
                             </div>
                             <div className="bg-subtle-background p-3 rounded-xl">
                                 <div className="flex items-center gap-2 text-text-tertiary text-xs font-medium mb-1">
                                     <PhoneIcon className="w-4 h-4" />
                                     Contact Number
                                 </div>
-                                <p className="text-sm font-bold text-text-primary">{caseItem.clientMobile || 'N/A'}</p>
+                                <p className="text-sm font-bold text-text-primary">{(currentCase as any).clientMobile || currentCase.clientPhone || 'N/A'}</p>
                             </div>
                             <div className="bg-subtle-background p-3 rounded-xl">
                                 <div className="flex items-center gap-2 text-text-tertiary text-xs font-medium mb-1">
                                     <ChatBubbleLeftRightIcon className="w-4 h-4" />
                                     Email
                                 </div>
-                                <p className="text-sm font-bold text-text-primary truncate">{caseItem.clientEmail || 'N/A'}</p>
+                                <p className="text-sm font-bold text-text-primary truncate">{currentCase.clientEmail || 'N/A'}</p>
                             </div>
                             <div className="bg-subtle-background p-3 rounded-xl">
                                 <div className="flex items-center gap-2 text-text-tertiary text-xs font-medium mb-1">
                                     <BanknotesIcon className="w-4 h-4" />
                                     Project Value
                                 </div>
-                                <p className="text-sm font-bold text-primary">{formatLargeNumberINR(caseItem.isProject ? (caseItem.budget || 0) : (caseItem.value || 0))}</p>
+                                <p className="text-sm font-bold text-primary">{formatLargeNumberINR(currentCase.isProject ? ((currentCase as any).budget || 0) : ((currentCase as any).value || currentCase.financial?.totalBudget || 0))}</p>
                             </div>
                             <div className="bg-subtle-background p-3 rounded-xl">
                                 <div className="flex items-center gap-2 text-text-tertiary text-xs font-medium mb-1">
                                     <CalendarIcon className="w-4 h-4" />
                                     Inquiry Date
                                 </div>
-                                <p className="text-sm font-bold text-text-primary">{formatDateTime(caseItem.inquiryDate)}</p>
+                                <p className="text-sm font-bold text-text-primary">{formatDateTime((currentCase as any).inquiryDate || currentCase.createdAt)}</p>
                             </div>
                             <div className="bg-subtle-background p-3 rounded-xl">
                                 <div className="flex items-center gap-2 text-text-tertiary text-xs font-medium mb-1">
                                     <FireIcon className="w-4 h-4" />
                                     Source
                                 </div>
-                                <p className="text-sm font-bold text-text-primary">{caseItem.source || 'N/A'}</p>
+                                <p className="text-sm font-bold text-text-primary">{(currentCase as any).source || 'N/A'}</p>
                             </div>
                             <div className="bg-subtle-background p-3 rounded-xl">
                                 <div className="flex items-center gap-2 text-text-tertiary text-xs font-medium mb-1">
                                     <BellIcon className="w-4 h-4" />
                                     Current Status
                                 </div>
-                                <p className="text-sm font-bold text-accent">{caseItem.status}</p>
+                                <p className="text-sm font-bold text-accent">{CASE_STATUS_DISPLAY_LABELS[currentCase.status] || currentCase.status}</p>
                             </div>
                         </div>
                     </div>
@@ -320,11 +381,13 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
                                     <select
                                         id="lead-status"
                                         value={newStatus}
-                                        onChange={(e) => setNewStatus(e.target.value as LeadPipelineStatus | ProjectStatus)}
+                                        onChange={(e) => setNewStatus(e.target.value as CaseStatus)}
                                         className="mt-1 block w-full rounded-md border-border shadow-sm focus:border-primary focus:ring-primary sm:text-sm bg-surface"
                                     >
-                                        {Object.values(LeadPipelineStatus).map(status => (
-                                            <option key={status} value={status}>{status}</option>
+                                        {Object.values(CaseStatus).map(status => (
+                                            <option key={status} value={status}>
+                                                {CASE_STATUS_DISPLAY_LABELS[status] || status}
+                                            </option>
                                         ))}
                                     </select>
                                 </div>
@@ -386,7 +449,7 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
                                 <button
                                     type="submit"
                                     className="w-full inline-flex justify-center items-center rounded-md border border-transparent bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
-                                    disabled={(!newNote.trim() && newStatus === caseItem.status && selectedFiles.length === 0) || isUploading}
+                                    disabled={(!newNote.trim() && newStatus === resolveInitialCaseStatus(currentCase.status) && selectedFiles.length === 0) || isUploading}
                                 >
                                     <PlusIcon className="w-4 h-4 mr-2" />
                                     {isUploading ? 'Uploading...' : 'Log Activity'}
@@ -480,8 +543,8 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
                                 <button type="submit" className="w-full text-sm font-medium bg-primary/20 text-primary py-1.5 rounded-md hover:bg-primary/30 disabled:opacity-50" disabled={!reminderDate || !reminderNote}>Add Reminder</button>
                             </form>
                             <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
-                                {caseItem.reminders && caseItem.reminders.length > 0 ? (
-                                    [...caseItem.reminders]
+                                {(currentCase as any).reminders && (currentCase as any).reminders.length > 0 ? (
+                                    [...(currentCase as any).reminders]
                                         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
                                         .map(reminder => (
                                             <div key={reminder.id} className="flex items-start p-2 bg-subtle-background rounded-md">
@@ -522,9 +585,9 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
                     <RaiseRequestModal
                         isOpen={isRequestModalOpen}
                         onClose={() => setIsRequestModalOpen(false)}
-                        leadId={caseItem.id}
-                        clientName={caseItem.clientName}
-                        projectId={caseItem.projectName}
+                        leadId={currentCase.id}
+                        clientName={currentCase.clientName}
+                        projectId={(currentCase as any).projectName || currentCase.title}
                     />
                 )
             }
@@ -544,72 +607,72 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
                         createdByName: currentUser?.name || '',
                         createdAt: new Date(),
                         // Ensure context is passed if not already in task object (though it should be)
-                        contextId: task.contextId || caseItem.id,
-                        contextType: task.contextType || (caseItem.isProject ? 'project' : 'lead')
+                        contextId: task.contextId || currentCase.id,
+                        contextType: task.contextType || (currentCase.isProject ? 'project' : 'lead')
                     } as any, currentUser?.id || '');
 
                     // 2. CRITICAL: Update the lead/project status based on task type
                     // This ensures the item appears in the correct workflow column
                     const title = (task.title || '').toLowerCase();
                     const assigneeId = task.userId;
-                    const contextType = task.contextType || (caseItem.isProject ? 'project' : 'lead');
-                    const contextId = task.contextId || caseItem.id;
+                    const contextType = task.contextType || (currentCase.isProject ? 'project' : 'lead');
+                    const contextId = task.contextId || currentCase.id;
 
                     console.log('[LeadDetailModal] Task assigned:', title, 'to:', assigneeId, 'context:', contextType, contextId);
 
                     if (contextType === 'lead') {
-                        // Determine status based on task title
-                        let newStatus: LeadPipelineStatus;
+                        // CRITICAL FIX: Use CaseStatus values (not LeadPipelineStatus)
+                        let taskCaseStatus: CaseStatus;
                         if (title.includes('drawing') || title.includes('design')) {
-                            newStatus = LeadPipelineStatus.WAITING_FOR_DRAWING;
-                        } else if (title.includes('quotation')) {
-                            newStatus = LeadPipelineStatus.WAITING_FOR_QUOTATION;
+                            taskCaseStatus = CaseStatus.DRAWING;
+                        } else if (title.includes('quotation') || title.includes('boq')) {
+                            taskCaseStatus = CaseStatus.BOQ;
                         } else {
                             // Default: Site Visit for any other task type
-                            newStatus = LeadPipelineStatus.SITE_VISIT_SCHEDULED;
+                            taskCaseStatus = CaseStatus.SITE_VISIT;
                         }
 
-                        console.log('[LeadDetailModal] Updating lead status to:', newStatus, 'assignedTo:', assigneeId);
+                        console.log('[LeadDetailModal] Updating lead CaseStatus to:', taskCaseStatus, 'assignedTo:', assigneeId);
                         await updateLead(contextId, {
-                            status: newStatus,
+                            status: taskCaseStatus as any,
                             assignedTo: assigneeId
                         });
 
                         // Also update local state so UI reflects the change
                         onUpdate({
-                            ...caseItem,
-                            status: newStatus,
-                            assignedTo: assigneeId
-                        });
+                            ...currentCase,
+                            status: taskCaseStatus,
+                            assignedSales: assigneeId
+                        } as any);
                     } else if (contextType === 'project') {
                         // CRITICAL: Update project status for workflow visibility
                         try {
-                            const { doc, updateDoc } = await import('firebase/firestore');
-                            const { db } = await import('../../firebase');
+                            const { doc: docRef, updateDoc: updateDocFn } = await import('firebase/firestore');
+                            const { db: database } = await import('../../firebase');
 
-                            let newProjectStatus: ProjectStatus;
+                            let newProjectStatus: CaseStatus;
                             if (title.includes('site') && (title.includes('visit') || title.includes('inspection'))) {
-                                newProjectStatus = ProjectStatus.SITE_VISIT_PENDING;
+                                newProjectStatus = CaseStatus.SITE_VISIT;
                             } else if (title.includes('drawing') || title.includes('design')) {
-                                newProjectStatus = ProjectStatus.DRAWING_PENDING;
+                                newProjectStatus = CaseStatus.DRAWING;
                             } else if (title.includes('quotation') || title.includes('boq')) {
-                                newProjectStatus = ProjectStatus.BOQ_PENDING;
+                                newProjectStatus = CaseStatus.BOQ;
                             } else {
-                                newProjectStatus = ProjectStatus.SITE_VISIT_PENDING; // Default
+                                newProjectStatus = CaseStatus.SITE_VISIT; // Default
                             }
 
-                            console.log('[LeadDetailModal] Updating project status to:', newProjectStatus, 'assignedTo:', assigneeId);
-                            const projectRef = doc(db, 'cases', contextId);
-                            await updateDoc(projectRef, {
+                            console.log('[LeadDetailModal] Updating project CaseStatus to:', newProjectStatus, 'assignedTo:', assigneeId);
+                            const projectRef = docRef(database, 'cases', contextId);
+                            await updateDocFn(projectRef, {
                                 status: newProjectStatus,
                                 assignedEngineerId: assigneeId
                             });
 
                             // Update local state
                             onUpdate({
-                                ...caseItem,
-                                status: newProjectStatus as any
-                            });
+                                ...currentCase,
+                                status: newProjectStatus
+                            } as any);
                         } catch (error) {
                             console.error('[LeadDetailModal] Failed to update project status:', error);
                         }
@@ -619,8 +682,8 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
                     alert('✅ Mission Deployed Successfully - Status updated!');
                     setIsAddTaskModalOpen(false);
                 }}
-                initialContextId={caseItem.id}
-                initialContextType={caseItem.isProject ? 'project' : 'lead'}
+                initialContextId={currentCase.id}
+                initialContextType={currentCase.isProject ? 'project' : 'lead'}
             />
         </>
     );

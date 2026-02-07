@@ -3,13 +3,11 @@ import { motion } from 'framer-motion';
 import { doc, getDoc, collection, query, where, onSnapshot, writeBatch, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import { PlusIcon, BuildingOfficeIcon, MagnifyingGlassIcon, UserIcon, MapPinIcon, XMarkIcon, CurrencyRupeeIcon, UserCircleIcon, MapIcon, CheckCircleIcon, PencilIcon, RocketLaunchIcon, BanknotesIcon, ClockIcon, ArrowPathIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import { Organization, ProjectStatus, Project, ExecutionStage, PaymentTerm, Case, CaseStatus } from '../../../types';
+import { Organization, ProjectStatus, Project, ExecutionStage, PaymentTerm, Case, CaseStatus, CasePayment } from '../../../types';
 import { useProjects } from '../../../hooks/useProjects';
 import { useLeads } from '../../../hooks/useLeads';
 import { formatCurrencyINR } from '../../../constants';
 import CreateOrganizationModal from './CreateOrganizationModal';
-import ConvertFromLeadModal from './ConvertFromLeadModal';
-import CreateFreshProjectModal from './CreateFreshProjectModal';
 import VerifyWithAccountantModal from './VerifyWithAccountantModal';
 import Modal from '../../shared/Modal';
 
@@ -25,10 +23,7 @@ import { FIRESTORE_COLLECTIONS } from '../../../constants';
 const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage }) => {
     const { currentUser } = useAuth();
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [isProjectLauncherOpen, setIsProjectLauncherOpen] = useState(false);
-    const [isConvertLeadModalOpen, setIsConvertLeadModalOpen] = useState(false);
     const [isVerifyAccountantModalOpen, setIsVerifyAccountantModalOpen] = useState(false);
-    const [isFreshProjectModalOpen, setIsFreshProjectModalOpen] = useState(false);
     const [selectedOrgId, setSelectedOrgId] = useState<string>('');
     const [searchQuery, setSearchQuery] = useState('');
     const [organizationToEdit, setOrganizationToEdit] = useState<Organization | null>(null);
@@ -39,7 +34,7 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
     const [isProjectDetailOpen, setIsProjectDetailOpen] = useState(false);
 
     // Payment-gated flow states
-    const [waitingForAccountant, setWaitingForAccountant] = useState<Case[]>([]);
+    const [waitingForAccountant, setWaitingForAccountant] = useState<(Case & { pendingPaymentData?: any })[]>([]);
     const [readyToConvert, setReadyToConvert] = useState<Case[]>([]);
     const [loadingPaymentCases, setLoadingPaymentCases] = useState(true);
     const [convertingCaseId, setConvertingCaseId] = useState<string | null>(null);
@@ -233,7 +228,7 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                     <button
                         onClick={() => {
                             setSelectedOrgId('');
-                            setIsProjectLauncherOpen(true);
+                            setIsVerifyAccountantModalOpen(true);
                         }}
                         className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl transition-colors shadow-lg shadow-green-600/30 font-bold text-lg"
                     >
@@ -278,27 +273,55 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                         </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {waitingForAccountant.map((caseItem) => (
-                            <div key={caseItem.id} className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-orange-200 dark:border-orange-700">
-                                <div className="flex justify-between items-start mb-2">
-                                    <h3 className="font-bold text-text-primary">{caseItem.title}</h3>
-                                    <span className="text-xs font-bold px-2 py-1 bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-200 rounded-full">
-                                        Pending Verification
-                                    </span>
+                        {waitingForAccountant.map((caseItem) => {
+                            const pendingPayment = (caseItem as any).pendingPayment;
+                            return (
+                                <div key={caseItem.id} className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-orange-200 dark:border-orange-700">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <h3 className="font-bold text-text-primary">{caseItem.title}</h3>
+                                        <span className="text-xs font-bold px-2 py-1 bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-200 rounded-full">
+                                            Pending Verification
+                                        </span>
+                                    </div>
+                                    <p className="text-sm text-text-secondary mb-1">{caseItem.clientName}</p>
+                                    
+                                    {/* Payment Details */}
+                                    {pendingPayment && (
+                                        <div className="space-y-1 mt-2">
+                                            <div className="flex items-center gap-2 text-sm">
+                                                <CurrencyRupeeIcon className="w-4 h-4 text-orange-600" />
+                                                <span className="text-text-secondary">Amount:</span>
+                                                <span className="font-bold text-orange-700">{formatCurrencyINR(pendingPayment.amount || 0)}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-sm">
+                                                <BanknotesIcon className="w-4 h-4 text-orange-600" />
+                                                <span className="text-text-secondary">UTR:</span>
+                                                <span className="font-mono font-medium text-text-primary">{pendingPayment.utr || 'N/A'}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-sm">
+                                                <span className="text-text-secondary">Method:</span>
+                                                <span className="font-medium text-text-primary">{pendingPayment.method || 'N/A'}</span>
+                                            </div>
+                                            {pendingPayment.submittedBy && (
+                                                <div className="flex items-center gap-2 text-sm">
+                                                    <span className="text-text-secondary">Submitted by:</span>
+                                                    <span className="font-medium text-text-primary">
+                                                        {users.find(u => u.id === pendingPayment.submittedBy)?.name || pendingPayment.submittedBy}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                                        <p className="text-xs text-orange-600 flex items-center gap-1">
+                                            <ExclamationTriangleIcon className="w-4 h-4" />
+                                            Conversion blocked until payment verified
+                                        </p>
+                                    </div>
                                 </div>
-                                <p className="text-sm text-text-secondary mb-2">{caseItem.clientName}</p>
-                                <div className="flex items-center gap-2 text-sm text-text-tertiary">
-                                    <BanknotesIcon className="w-4 h-4" />
-                                    <span>Payment submitted - awaiting accountant</span>
-                                </div>
-                                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                                    <p className="text-xs text-orange-600 flex items-center gap-1">
-                                        <ExclamationTriangleIcon className="w-4 h-4" />
-                                        Conversion blocked until payment verified
-                                    </p>
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             )}
@@ -407,7 +430,7 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     setSelectedOrgId(org.id);
-                                    setIsProjectLauncherOpen(true);
+                                    setIsVerifyAccountantModalOpen(true);
                                 }}
                                 className="text-sm font-medium text-primary hover:text-primary/80"
                             >
@@ -428,48 +451,9 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                 initialData={organizationToEdit}
             />
 
-            {/* New Project Launcher Modal */}
-            {isProjectLauncherOpen && (
-                <Modal
-                    isOpen={isProjectLauncherOpen}
-                    onClose={() => setIsProjectLauncherOpen(false)}
-                    title="Create New Project"
-                    size="lg"
-                >
-                    <div className="space-y-6 p-4">
-                        <p className="text-text-secondary text-center">Choose how you want to create this project:</p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <button
-                                onClick={() => {
-                                    setIsProjectLauncherOpen(false);
-                                    setIsVerifyAccountantModalOpen(true);
-                                }}
-                                className="p-6 bg-subtle-background hover:bg-primary/10 border-2 border-border hover:border-primary rounded-xl transition-all text-left group"
-                            >
-                                <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-lg w-fit mb-4">
-                                    <BanknotesIcon className="w-8 h-8 text-orange-600" />
-                                </div>
-                                <h3 className="text-lg font-bold text-text-primary group-hover:text-primary">Convert From Lead</h3>
-                                <p className="text-sm text-text-secondary mt-1">Select lead and verify payment with accountant first</p>
-                                <p className="text-xs text-orange-600 mt-2">⚠️ Requires accountant approval</p>
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setIsProjectLauncherOpen(false);
-                                    setIsFreshProjectModalOpen(true);
-                                }}
-                                className="p-6 bg-subtle-background hover:bg-primary/10 border-2 border-border hover:border-primary rounded-xl transition-all text-left group"
-                            >
-                                <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg w-fit mb-4">
-                                    <RocketLaunchIcon className="w-8 h-8 text-green-600" />
-                                </div>
-                                <h3 className="text-lg font-bold text-text-primary group-hover:text-primary">Create Fresh Project</h3>
-                                <p className="text-sm text-text-secondary mt-1">Start a brand new project from scratch</p>
-                            </button>
-                        </div>
-                    </div>
-                </Modal>
-            )}
+            {/* REMOVED: Project Launcher Modal with "Create Fresh Project" bypass.
+                HARD RULE: All projects must go through payment-gated flow.
+                "New Project" now opens VerifyWithAccountantModal directly. */}
 
             {/* Enhanced Projects Modal */}
             {isProjectsModalOpen && (
@@ -736,27 +720,9 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                 }}
             />
 
-            {/* Legacy Convert From Lead Modal (DEPRECATED - kept for reference) */}
-            {/* <ConvertFromLeadModal
-                isOpen={isConvertLeadModalOpen}
-                onClose={() => setIsConvertLeadModalOpen(false)}
-                organizationId={selectedOrgId}
-                onProjectCreated={(caseId) => {
-                    setIsConvertLeadModalOpen(false);
-                    handleProjectCreated(caseId);
-                }}
-            /> */}
-
-            {/* Create Fresh Project Modal */}
-            <CreateFreshProjectModal
-                isOpen={isFreshProjectModalOpen}
-                onClose={() => setIsFreshProjectModalOpen(false)}
-                organizationId={selectedOrgId}
-                onProjectCreated={(caseId) => {
-                    setIsFreshProjectModalOpen(false);
-                    handleProjectCreated(caseId);
-                }}
-            />
+            {/* REMOVED: ConvertFromLeadModal and CreateFreshProjectModal
+                HARD RULE: No direct lead → project conversion.
+                All project creation MUST go through VerifyWithAccountantModal → Accountant Approval → Convert. */}
 
             {/* Convert to Project Modal (PAYMENT-GATED - Only for WAITING_FOR_PLANNING) */}
             {isConvertModalOpen && caseToConvert && (

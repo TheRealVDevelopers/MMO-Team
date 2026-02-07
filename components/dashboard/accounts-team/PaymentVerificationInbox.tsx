@@ -20,7 +20,8 @@ import {
     ClockIcon,
     BanknotesIcon,
     EyeIcon,
-    UserIcon
+    UserIcon,
+    PauseCircleIcon
 } from '@heroicons/react/24/outline';
 
 interface PaymentRequest {
@@ -243,6 +244,50 @@ const PaymentVerificationInbox: React.FC = () => {
         }
     };
 
+    // Put on Waiting - Accountant needs more time/info
+    const handlePutWaiting = async () => {
+        if (!selectedPayment || !currentUser || !db) return;
+
+        setProcessing(true);
+
+        try {
+            const batch = writeBatch(db);
+
+            // Update payment status to 'waiting'
+            const paymentRef = doc(
+                db,
+                FIRESTORE_COLLECTIONS.CASES,
+                selectedPayment.caseId,
+                FIRESTORE_COLLECTIONS.PAYMENTS,
+                selectedPayment.id
+            );
+            batch.update(paymentRef, {
+                status: 'waiting',
+                updatedAt: serverTimestamp(),
+                updatedBy: currentUser.id,
+            });
+
+            // Log activity
+            const activityRef = doc(collection(db, FIRESTORE_COLLECTIONS.CASES, selectedPayment.caseId, FIRESTORE_COLLECTIONS.ACTIVITIES));
+            batch.set(activityRef, {
+                caseId: selectedPayment.caseId,
+                action: `Payment put on WAITING by accountant - more info needed`,
+                by: currentUser.id,
+                timestamp: serverTimestamp()
+            });
+
+            await batch.commit();
+
+            alert('Payment marked as waiting. Sales team will be notified.');
+            setSelectedPayment(null);
+        } catch (error) {
+            console.error('[PaymentVerification] Error putting on waiting:', error);
+            alert('Failed to update payment status.');
+        } finally {
+            setProcessing(false);
+        }
+    };
+
     const formatDate = (timestamp: any) => {
         if (!timestamp) return 'N/A';
         const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
@@ -448,7 +493,7 @@ const PaymentVerificationInbox: React.FC = () => {
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-3 pt-4 border-t">
+                                <div className="grid grid-cols-3 gap-3 pt-4 border-t">
                                     <button
                                         onClick={handleReject}
                                         disabled={processing}
@@ -456,6 +501,15 @@ const PaymentVerificationInbox: React.FC = () => {
                                     >
                                         <XCircleIcon className="w-5 h-5" />
                                         Reject
+                                    </button>
+
+                                    <button
+                                        onClick={handlePutWaiting}
+                                        disabled={processing}
+                                        className="px-4 py-3 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50 font-bold flex items-center justify-center gap-2"
+                                    >
+                                        <PauseCircleIcon className="w-5 h-5" />
+                                        Waiting
                                     </button>
 
                                     <button
@@ -469,7 +523,8 @@ const PaymentVerificationInbox: React.FC = () => {
                                 </div>
 
                                 <p className="text-xs text-gray-500 text-center">
-                                    Approval will make this lead eligible for project conversion
+                                    Approval will make this lead eligible for project conversion.
+                                    All financial writes use transactions.
                                 </p>
                             </div>
                         </div>

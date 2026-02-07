@@ -145,12 +145,20 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
   const handleLeadUpdate = async (updatedLead: Lead) => {
     try {
       // Convert Lead updates to Case updates
-      // The updatedLead contains the full case object due to the spread we added
       const caseUpdates: any = {
         ...updatedLead,
         title: updatedLead.projectName || updatedLead.title,
         assignedSales: updatedLead.assignedTo,
       };
+
+      // CRITICAL FIX: Reverse-map status if it's a LeadPipelineStatus string
+      // The LeadDetailModal now sends CaseStatus values, but handle both for safety
+      if (caseUpdates.status) {
+        const { mapLeadStatusToCaseStatus } = await import('../../hooks/useLeads');
+        const mappedStatus = mapLeadStatusToCaseStatus(caseUpdates.status);
+        console.log(`[SalesTeamDashboard] Status mapping: "${caseUpdates.status}" → "${mappedStatus}"`);
+        caseUpdates.status = mappedStatus;
+      }
 
       // Remove Lead-specific fields that don't belong in Case
       delete caseUpdates.estimatedValue;
@@ -161,6 +169,11 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
       delete caseUpdates.priority;
       delete caseUpdates.tasks;
       delete caseUpdates.reminders;
+      delete caseUpdates._caseStatus;
+      delete caseUpdates.projectName;
+      delete caseUpdates.value;
+      delete caseUpdates.inquiryDate;
+      delete caseUpdates.assignedTo;
 
       await updateCase(updatedLead.id, caseUpdates);
       console.log('Case updated successfully:', updatedLead.id);

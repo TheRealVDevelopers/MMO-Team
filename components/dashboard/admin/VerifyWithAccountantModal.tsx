@@ -118,7 +118,10 @@ const VerifyWithAccountantModal: React.FC<Props> = ({
                 const snapshot = await getDocs(q);
                 const leads = snapshot.docs
                     .map(doc => ({ id: doc.id, ...doc.data() } as Case))
-                    .filter(lead => lead.status !== CaseStatus.WAITING_FOR_PAYMENT);
+                    .filter(lead => 
+                        lead.status !== CaseStatus.WAITING_FOR_PAYMENT &&
+                        lead.status !== CaseStatus.WAITING_FOR_PLANNING
+                    );
 
                 console.log('[VerifyWithAccountant] Eligible leads:', leads.length);
                 setAvailableLeads(leads);

@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { UserCircleIcon, CameraIcon, CheckIcon, XMarkIcon, PhoneIcon, MapPinIcon, PencilSquareIcon } from '../icons/IconComponents';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { UserRole } from '../../types';
 
 const ProfileCard: React.FC = () => {
   const { currentUser, setCurrentUser, updateCurrentUserAvatar } = useAuth();

@@ -221,21 +221,34 @@ export const useCases = (options: UseCasesOptions = {}) => {
   );
 
   // Convert lead to project
+  // HARD RULE: Only converts if payment has been verified (status === WAITING_FOR_PLANNING)
   const convertToProject = useCallback(
     async (caseId: string, userId: string) => {
       if (!db || !options.organizationId) throw new Error('Database or organization not initialized');
+
+      // HARD RULE: Verify the case is in WAITING_FOR_PLANNING status
+      const targetCase = cases.find((c) => c.id === caseId);
+      if (!targetCase) throw new Error('Case not found');
+      
+      if (targetCase.status !== CaseStatus.WAITING_FOR_PLANNING) {
+        throw new Error(`BLOCKED: Cannot convert to project. Status must be WAITING_FOR_PLANNING, but is ${targetCase.status}`);
+      }
+      
+      if (!targetCase.financial?.paymentVerified) {
+        throw new Error('BLOCKED: Cannot convert to project - payment not verified by accountant');
+      }
 
       try {
         await updateCase(caseId, {
           isProject: true,
           status: CaseStatus.ACTIVE,
           workflow: {
-            ...cases.find((c) => c.id === caseId)?.workflow!,
+            ...targetCase.workflow,
             paymentVerified: true,
           },
         });
 
-        await logActivity(caseId, 'Converted to project', userId);
+        await logActivity(caseId, 'Converted to project (payment-gated)', userId);
       } catch (err: any) {
         console.error('Error converting to project:', err);
         throw err;
