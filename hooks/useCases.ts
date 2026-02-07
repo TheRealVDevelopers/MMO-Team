@@ -294,30 +294,175 @@ export const addCaseQuotation = async () => {
   console.warn('addCaseQuotation is deprecated - use useCaseDocuments instead');
 };
 
-export const useCaseQuotations = () => ({
-  quotations: [],
-  loading: false,
-});
+export const useCaseQuotations = (caseId?: string) => {
+  const [quotations, setQuotations] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-export const useCaseBOQs = () => ({
-  boqs: [],
-  loading: false,
-});
+  useEffect(() => {
+    if (!db || !caseId) {
+      setQuotations([]);
+      setLoading(false);
+      return;
+    }
 
-export const useCaseDrawings = () => ({
-  drawings: [],
-  loading: false,
-});
+    const quotationsRef = collection(db, FIRESTORE_COLLECTIONS.CASES, caseId, FIRESTORE_COLLECTIONS.QUOTATIONS);
+    const q = query(quotationsRef, orderBy('createdAt', 'desc'));
 
-export const useCaseSiteVisits = () => ({
-  siteVisits: [],
-  loading: false,
-});
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt instanceof Timestamp ? doc.data().createdAt.toDate() : new Date(doc.data().createdAt || Date.now())
+      }));
+      console.log(`[useCaseQuotations] Loaded ${data.length} quotations for case ${caseId}`, data);
+      setQuotations(data);
+      setLoading(false);
+    }, (error) => {
+      console.error('[useCaseQuotations] Error:', error);
+      setLoading(false);
+    });
 
-export const useCaseTasks = () => ({
-  tasks: [],
-  loading: false,
-});
+    return () => unsubscribe();
+  }, [caseId]);
+
+  return { quotations, loading };
+};
+
+export const useCaseBOQs = (caseId?: string) => {
+  const [boqs, setBOQs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!db || !caseId) {
+      setBOQs([]);
+      setLoading(false);
+      return;
+    }
+
+    const boqsRef = collection(db, FIRESTORE_COLLECTIONS.CASES, caseId, 'boq');
+    const q = query(boqsRef, orderBy('createdAt', 'desc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt instanceof Timestamp ? doc.data().createdAt.toDate() : new Date(doc.data().createdAt || Date.now())
+      }));
+      console.log(`[useCaseBOQs] Loaded ${data.length} BOQs for case ${caseId}`, data);
+      setBOQs(data);
+      setLoading(false);
+    }, (error) => {
+      console.error('[useCaseBOQs] Error:', error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [caseId]);
+
+  return { boqs, loading };
+};
+
+export const useCaseDrawings = (caseId?: string) => {
+  const [drawings, setDrawings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!db || !caseId) {
+      setDrawings([]);
+      setLoading(false);
+      return;
+    }
+
+    const drawingsRef = collection(db, FIRESTORE_COLLECTIONS.CASES, caseId, 'drawings');
+    const q = query(drawingsRef, orderBy('uploadedAt', 'desc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        uploadedAt: doc.data().uploadedAt instanceof Timestamp ? doc.data().uploadedAt.toDate() : new Date(doc.data().uploadedAt || Date.now())
+      }));
+      console.log(`[useCaseDrawings] Loaded ${data.length} drawings for case ${caseId}`, data);
+      setDrawings(data);
+      setLoading(false);
+    }, (error) => {
+      console.error('[useCaseDrawings] Error:', error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [caseId]);
+
+  return { drawings, loading };
+};
+
+export const useCaseSiteVisits = (caseId?: string) => {
+  const [siteVisits, setSiteVisits] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!db || !caseId) {
+      setSiteVisits([]);
+      setLoading(false);
+      return;
+    }
+
+    const siteVisitsRef = collection(db, FIRESTORE_COLLECTIONS.CASES, caseId, 'siteVisits');
+    const q = query(siteVisitsRef, orderBy('scheduledDate', 'desc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        scheduledDate: doc.data().scheduledDate instanceof Timestamp ? doc.data().scheduledDate.toDate() : new Date(doc.data().scheduledDate || Date.now())
+      }));
+      console.log(`[useCaseSiteVisits] Loaded ${data.length} site visits for case ${caseId}`, data);
+      setSiteVisits(data);
+      setLoading(false);
+    }, (error) => {
+      console.error('[useCaseSiteVisits] Error:', error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [caseId]);
+
+  return { siteVisits, loading };
+};
+
+export const useCaseTasks = (caseId?: string) => {
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!db || !caseId) {
+      setTasks([]);
+      setLoading(false);
+      return;
+    }
+
+    const tasksRef = collection(db, FIRESTORE_COLLECTIONS.CASES, caseId, FIRESTORE_COLLECTIONS.TASKS);
+    const q = query(tasksRef, orderBy('createdAt', 'desc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt instanceof Timestamp ? doc.data().createdAt.toDate() : new Date(doc.data().createdAt || Date.now())
+      }));
+      console.log(`[useCaseTasks] Loaded ${data.length} tasks for case ${caseId}`, data);
+      setTasks(data);
+      setLoading(false);
+    }, (error) => {
+      console.error('[useCaseTasks] Error:', error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [caseId]);
+
+  return { tasks, loading };
+};
 
 export const createCaseTask = async () => {
   console.warn('createCaseTask stub - use useCaseTasks hook instead');

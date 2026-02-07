@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useCases } from '../../hooks/useCases';
 import ExecutionOverview from './execution-team/ExecutionOverview';
-import ExecutionPlanning from './execution-team/ExecutionPlanning';
+import ExecutionPlanningNew from './execution-team/ExecutionPlanningNew';
 import ExecutionTimeline from './execution-team/ExecutionTimeline';
 import ExecutionTasks from './execution-team/ExecutionTasks';
 import ExecutionDailyUpdates from './execution-team/ExecutionDailyUpdates';
@@ -10,6 +10,7 @@ import ExecutionMaterials from './execution-team/ExecutionMaterials';
 import ExecutionIssues from './execution-team/ExecutionIssues';
 import ExecutionDocuments from './execution-team/ExecutionDocuments';
 import ExecutionJMS from './execution-team/ExecutionJMS';
+import ExecutionProjectPlanningPanel from './execution-team/ExecutionProjectPlanningPanel';
 import { CaseStatus } from '../../types';
 
 interface Props {
@@ -44,6 +45,9 @@ const ExecutionTeamDashboard: React.FC<Props> = ({ currentPage, setCurrentPage }
   // Use param if present (highest priority), otherwise fallback to saved state
   const selectedCaseId = paramId || activeProjectId;
 
+  const selectedCase = cases.find(c => c.id === selectedCaseId);
+  const showProjectPlan = selectedCase?.isProject && (selectedCase.status === CaseStatus.WAITING_FOR_PLANNING || selectedCase.status === CaseStatus.ACTIVE);
+
   const handleSetSelectedCase = (caseId: string) => {
     // Navigate with param to update URL and trigger effect
     navigate(`/planning?project=${caseId}`);
@@ -70,7 +74,15 @@ const ExecutionTeamDashboard: React.FC<Props> = ({ currentPage, setCurrentPage }
       case 'overview':
         return <ExecutionOverview setSelectedCase={handleSetSelectedCase} setCurrentPage={setCurrentPage} />;
       case 'planning':
-        return <ExecutionPlanning caseId={selectedCaseId} setCurrentPage={setCurrentPage} />;
+        return selectedCaseId ? (
+          <ExecutionPlanningNew caseId={selectedCaseId} onBack={() => setCurrentPage('overview')} />
+        ) : (
+          <div className="p-6 bg-yellow-50 rounded-lg">
+            <p className="text-yellow-700">Please select a project from Overview first</p>
+          </div>
+        );
+      case 'project-plan':
+        return <ExecutionProjectPlanningPanel caseId={selectedCaseId} />;
       case 'timeline':
         return <ExecutionTimeline caseId={selectedCaseId} />;
       case 'tasks':
@@ -165,6 +177,17 @@ const ExecutionTeamDashboard: React.FC<Props> = ({ currentPage, setCurrentPage }
         >
           📋 Projects
         </button>
+        {showProjectPlan && (
+          <button
+            onClick={() => setCurrentPage('project-plan')}
+            className={`px-4 py-2 rounded-lg whitespace-nowrap ${currentPage === 'project-plan'
+              ? 'bg-primary text-white'
+              : 'bg-surface hover:bg-background'
+              }`}
+          >
+            🚀 Master Plan
+          </button>
+        )}
         <button
           onClick={() => setCurrentPage('planning')}
           className={`px-4 py-2 rounded-lg whitespace-nowrap ${currentPage === 'planning'

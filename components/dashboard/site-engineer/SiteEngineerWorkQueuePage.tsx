@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../../context/AuthContext';
+import DrawingCompletionModal from '../drawing-team/DrawingCompletionModal';
 import { db } from '../../../firebase';
 import { 
     collectionGroup, 
@@ -44,6 +45,7 @@ const DrawingWorkQueuePage: React.FC = () => {
     const [statusFilter, setStatusFilter] = useState<'ALL' | TaskStatus>('ALL');
     const [selectedTask, setSelectedTask] = useState<TaskWithCase | null>(null);
     const [showEndVisitModal, setShowEndVisitModal] = useState(false);
+    const [showDrawingCompletionModal, setShowDrawingCompletionModal] = useState(false);
 
     // FETCH BOTH SITE_VISIT AND DRAWING_TASK
     useEffect(() => {
@@ -260,63 +262,11 @@ const DrawingWorkQueuePage: React.FC = () => {
         }
     };
 
-    // DRAWING: End Task (direct, no modal)
-    const handleEndDrawing = async (task: TaskWithCase) => {
-        console.log('[Work Queue] Ending drawing task:', task.id);
-        
-        try {
-            const taskRef = doc(db!, FIRESTORE_COLLECTIONS.CASES, task.caseId, FIRESTORE_COLLECTIONS.TASKS, task.id);
-
-            await updateDoc(taskRef, {
-                status: TaskStatus.COMPLETED,
-                completedAt: serverTimestamp()
-            });
-
-            await addDoc(
-                collection(db!, FIRESTORE_COLLECTIONS.CASES, task.caseId, FIRESTORE_COLLECTIONS.ACTIVITIES),
-                {
-                    caseId: task.caseId,
-                    action: `Drawing task completed by ${currentUser!.name || currentUser!.email}`,
-                    by: currentUser!.id,
-                    timestamp: serverTimestamp()
-                }
-            );
-
-            // Get case for quotation team assignment
-            const caseDoc = await getDoc(doc(db!, FIRESTORE_COLLECTIONS.CASES, task.caseId));
-            if (caseDoc.exists()) {
-                const caseData = caseDoc.data() as Case;
-                const quotationTeamId = (caseData as any).assignedQuotationTeam || currentUser!.id;
-
-                // Create QUOTATION_TASK
-                await addDoc(
-                    collection(db!, FIRESTORE_COLLECTIONS.CASES, task.caseId, FIRESTORE_COLLECTIONS.TASKS),
-                    {
-                        caseId: task.caseId,
-                        type: TaskType.QUOTATION_TASK,
-                        assignedTo: quotationTeamId,
-                        assignedBy: currentUser!.id,
-                        status: TaskStatus.PENDING,
-                        createdAt: serverTimestamp()
-                    }
-                );
-
-                await addDoc(
-                    collection(db!, FIRESTORE_COLLECTIONS.CASES, task.caseId, FIRESTORE_COLLECTIONS.ACTIVITIES),
-                    {
-                        caseId: task.caseId,
-                        action: 'Quotation task created automatically',
-                        by: currentUser!.id,
-                        timestamp: serverTimestamp()
-                    }
-                );
-
-                console.log('[Work Queue] ✅ Drawing completed → QUOTATION_TASK created');
-            }
-        } catch (error) {
-            console.error('[Work Queue] Error ending drawing task:', error);
-            alert('Failed to end drawing task. Please try again.');
-        }
+    // DRAWING: End Task (open modal with BOQ requirement)
+    const handleEndDrawing = (task: TaskWithCase) => {
+        console.log('[Work Queue] Opening drawing completion modal:', task.id);
+        setSelectedTask(task);
+        setShowDrawingCompletionModal(true);
     };
 
     if (loading) {
@@ -486,11 +436,24 @@ const DrawingWorkQueuePage: React.FC = () => {
             </div>
 
             {/* End Visit Modal */}
-            {selectedTask && (
+            {selectedTask && showEndVisitModal && (
                 <EndVisitModal
                     isOpen={showEndVisitModal}
                     onClose={() => {
                         setShowEndVisitModal(false);
+                        setSelectedTask(null);
+                    }}
+                    task={selectedTask}
+                    currentUser={currentUser}
+                />
+            )}
+
+            {/* Drawing Completion Modal */}
+            {selectedTask && showDrawingCompletionModal && (
+                <DrawingCompletionModal
+                    isOpen={showDrawingCompletionModal}
+                    onClose={() => {
+                        setShowDrawingCompletionModal(false);
                         setSelectedTask(null);
                     }}
                     task={selectedTask}
@@ -653,11 +616,19 @@ const EndVisitModal: React.FC<{
 
         try {
             const taskRef = doc(db!, FIRESTORE_COLLECTIONS.CASES, task.caseId, FIRESTORE_COLLECTIONS.TASKS, task.id);
+            const caseRef = doc(db!, FIRESTORE_COLLECTIONS.CASES, task.caseId);
 
+            // Complete site visit task
             await updateDoc(taskRef, {
                 status: TaskStatus.COMPLETED,
                 completedAt: serverTimestamp(),
                 kmTravelled: parseFloat(kmTravelled)
+            });
+
+            // Update case status to WAITING_FOR_DRAWING
+            await updateDoc(caseRef, {
+                status: 'WAITING_FOR_DRAWING',
+                updatedAt: serverTimestamp()
             });
 
             await addDoc(

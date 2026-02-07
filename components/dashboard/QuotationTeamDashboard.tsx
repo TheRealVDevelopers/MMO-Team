@@ -7,6 +7,7 @@ import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
 import { ContentCard, SectionHeader } from './shared/DashboardUI';
 import WorkQueuePage from './shared/WorkQueuePage';
+import QuotationWorkQueuePage from './quotation-team/QuotationWorkQueuePage';
 import NegotiationsBoardPage from './quotation-team/NegotiationsBoardPage';
 import ItemsCatalogPage from './quotation-team/ItemsCatalogPage';
 import ProjectTemplatesPage from './quotation-team/ProjectTemplatesPage';
@@ -37,7 +38,7 @@ const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (p
       case 'my-day':
         return <MyDayPage />;
       case 'work-queue':
-        return <WorkQueuePage />;
+        return <QuotationWorkQueuePage />;
       case 'negotiations':
         return <NegotiationsBoardPage
           projects={[]}

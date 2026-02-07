@@ -280,6 +280,9 @@ export interface Case {
     completedAt?: Date;
     completedBy?: string; // User ID
   };
+
+  // Master Project PDF (generated after execution plan approval)
+  masterProjectPdfUrl?: string;
 }
 
 // ... (Keep existing interfaces) ...
@@ -1303,6 +1306,62 @@ export enum AttendanceType {
   LEAVE = "leave",
 }
 
+// ========================================
+// BOQ & QUOTATION TYPES (Firestore-Driven)
+// ========================================
+
+// BOQ Document: cases/{caseId}/boq/{boqId}
+export interface CaseBOQ {
+  id: string;
+  caseId: string;
+  items: BOQItemData[];
+  subtotal: number;
+  createdBy: string;
+  createdAt: Date | any; // Timestamp
+  pdfUrl?: string; // Generated PDF URL
+}
+
+export interface BOQItemData {
+  catalogItemId: string; // Reference to catalog
+  name: string; // Item name from catalog
+  unit: string; // From catalog (pcs, sqft, etc.)
+  quantity: number;
+  rate: number; // Price per unit
+  total: number; // quantity * rate
+}
+
+// Quotation Document: cases/{caseId}/quotations/{quotationId}
+export interface CaseQuotation {
+  id: string;
+  caseId: string;
+  boqId: string; // Reference to BOQ
+  items: QuotationItemData[];
+  subtotal: number;
+  taxRate: number; // GST percentage
+  taxAmount: number;
+  discount: number; // Percentage
+  discountAmount: number;
+  grandTotal: number;
+  internalPRCode?: string; // Visible only to Admin/Quotation/Sales GM
+  notes?: string;
+  createdBy: string;
+  createdAt: Date | any; // Timestamp
+  pdfUrl?: string; // Generated PDF URL
+  auditStatus: 'pending' | 'approved' | 'rejected';
+  auditedBy?: string;
+  auditedAt?: Date | any;
+}
+
+export interface QuotationItemData {
+  catalogItemId: string;
+  name: string;
+  unit: string;
+  quantity: number;
+  rate: number;
+  total: number;
+}
+
+// Legacy types (DEPRECATED - use CaseBOQ and CaseQuotation)
 export interface BOQ {
   id: string;
   projectId: string;
@@ -1319,8 +1378,6 @@ export interface BOQItem {
   amount: number;
   [key: string]: any;
 }
-
-export interface CaseBOQ extends BOQ { }
 export interface CaseDrawing {
   id: string;
   caseId: string;
@@ -1329,13 +1386,14 @@ export interface CaseDrawing {
   [key: string]: any;
 }
 
-export interface CaseQuotation {
-  id: string;
-  caseId: string;
-  amount: number;
-  items: any[];
-  [key: string]: any;
-}
+// DEPRECATED: Use new CaseQuotation defined above
+// export interface CaseQuotation {
+//   id: string;
+//   caseId: string;
+//   amount: number;
+//   items: any[];
+//   [key: string]: any;
+// }
 
 export interface ChecklistItem {
   id: string;

@@ -14,6 +14,8 @@ import ServicesPage from './ServicesPage';
 import StartProjectPage from './StartProjectPage';
 import ClientLoginPage from './ClientLoginPage';
 import ClientDashboardPage from './ClientDashboardPage';
+import ClientChangePasswordPage from '../client-portal/ClientChangePasswordPage';
+import ClientProjectSelector from '../client-portal/ClientProjectSelector';
 
 /**
  * Utility function to merge tailwind classes
@@ -29,9 +31,9 @@ interface LandingPageProps {
 const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [loginModalType, setLoginModalType] = useState<'staff' | 'vendor'>('staff');
-  const [currentView, setCurrentView] = useState<'home' | 'services' | 'portfolio' | 'about' | 'contact' | 'start-project' | 'client-login' | 'client-dashboard'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'services' | 'portfolio' | 'about' | 'contact' | 'start-project' | 'client-login' | 'client-dashboard' | 'client-change-password' | 'client-project-selector'>('home');
   const [isScrolled, setIsScrolled] = useState(false);
-  const [clientUser, setClientUser] = useState<{ uid: string, email: string, isFirstLogin: boolean } | null>(null);
+  const [clientUser, setClientUser] = useState<{ uid: string, email: string, isFirstLogin: boolean, cases?: any[], selectedCaseId?: string | null } | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Scroll to top when view changes
@@ -65,9 +67,44 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
     setCurrentView(page as any);
   };
 
-  const handleClientLogin = (user: any, isFirstLogin: boolean) => {
-    setClientUser({ uid: user.uid, email: user.email, isFirstLogin });
-    setCurrentView('client-dashboard');
+  const handleClientLogin = async (user: any, isFirstLogin: boolean) => {
+    // Fetch client's cases
+    const { getClientCases } = await import('../../services/authService');
+    const cases = await getClientCases(user.uid);
+
+    setClientUser({
+      uid: user.uid,
+      email: user.email,
+      isFirstLogin,
+      cases,
+      selectedCaseId: cases.length === 1 ? cases[0].id : null
+    });
+
+    if (isFirstLogin) {
+      setCurrentView('client-change-password');
+    } else if (cases.length > 1) {
+      setCurrentView('client-project-selector');
+    } else {
+      setCurrentView('client-dashboard');
+    }
+  };
+
+  const handleClientPasswordChanged = () => {
+    if (clientUser) {
+      setClientUser({ ...clientUser, isFirstLogin: false });
+      if (clientUser.cases && clientUser.cases.length > 1) {
+        setCurrentView('client-project-selector');
+      } else {
+        setCurrentView('client-dashboard');
+      }
+    }
+  };
+
+  const handleClientProjectSelect = (caseId: string) => {
+    if (clientUser) {
+      setClientUser({ ...clientUser, selectedCaseId: caseId });
+      setCurrentView('client-dashboard');
+    }
   };
 
   const handleClientLogout = () => {
@@ -83,7 +120,19 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
       case 'contact': return <ContactPage />;
       case 'start-project': return <StartProjectPage />;
       case 'client-login': return <ClientLoginPage onLoginSuccess={handleClientLogin} />;
-      case 'client-dashboard': return <ClientDashboardPage clientUser={clientUser} onLogout={handleClientLogout} />;
+      case 'client-change-password':
+        return <ClientChangePasswordPage onPasswordChanged={handleClientPasswordChanged} />;
+      case 'client-project-selector':
+        return <ClientProjectSelector
+          projects={clientUser?.cases || []}
+          onSelectProject={handleClientProjectSelect}
+          clientName={clientUser?.email}
+        />;
+      case 'client-dashboard':
+        return <ClientDashboardPage
+          clientUser={clientUser}
+          onLogout={handleClientLogout}
+        />;
       default: return <HomePage onNavigate={handleNavigate} />;
     }
   };

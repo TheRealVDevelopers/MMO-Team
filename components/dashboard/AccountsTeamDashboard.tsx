@@ -25,6 +25,7 @@ import AccountsTasksPage from './accounts-team/AccountsTasksPage';
 import { Invoice, VendorBill, Expense, Project, LeadPipelineStatus, ProjectStatus, ProjectLifecycleStatus } from '../../types';
 
 import GeneralLedgerPage from './accounts-team/GeneralLedgerPage';
+import PaymentVerificationInbox from './accounts-team/PaymentVerificationInbox';
 
 // Placeholder for new pages
 const ComingSoonPage: React.FC<{ title: string }> = ({ title }) => (
@@ -181,6 +182,10 @@ const AccountsTeamDashboard: React.FC<AccountsTeamDashboardProps> = ({ currentPa
 
     case 'general-ledger':
       return <GeneralLedgerPage />;
+
+    // Payment Verification (PAYMENT-GATED PROJECT CREATION)
+    case 'payment-verification':
+      return <PaymentVerificationInbox />;
 
     // Shared / Misc
     case 'reports':

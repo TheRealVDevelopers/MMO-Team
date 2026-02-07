@@ -587,6 +587,25 @@ export const signInClient = async (
         if (clientDoc.exists()) {
             const data = clientDoc.data();
             isFirstLogin = data.isFirstLogin === true;
+        } else {
+            // FALLBACK: If Firestore profile missing but Auth successful, create it on-the-fly
+            // This handles legacy users or race conditions in creation
+            console.warn(`Client profile missing for ${user.uid}, creating default profile.`);
+            try {
+                await setDoc(doc(db, 'clients', user.uid), {
+                    id: user.uid,
+                    name: user.displayName || 'Valued Client',
+                    email: user.email,
+                    isFirstLogin: true, // Force password reset to be safe
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp(),
+                });
+                isFirstLogin = true;
+            } catch (err) {
+                console.error("Failed to auto-create client profile:", err);
+                // Allow login to proceed even if profile creation fails, 
+                // preventing "User found in Auth but missing in Firestore" blocker
+            }
         }
 
         return { user, isFirstLogin };
@@ -724,4 +743,27 @@ export const onAuthStateChange = (callback: (user: User | null) => void) => {
             callback(null);
         }
     });
+};
+
+/**
+ * Get all cases for a client by their UID
+ */
+export const getClientCases = async (clientUid: string): Promise<any[]> => {
+    try {
+        if (!db) throw new Error("Firebase not initialized");
+
+        const casesQuery = query(
+            collection(db, 'cases'),
+            where('clientUid', '==', clientUid)
+        );
+        const snapshot = await getDocs(casesQuery);
+
+        return snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+    } catch (error) {
+        console.error('Error fetching client cases:', error);
+        return [];
+    }
 };

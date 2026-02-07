@@ -44,9 +44,8 @@ export const useClientCase = (clientId: string | undefined) => {
 
         // 1. Query for the Case assigned to this Client
         const casesRef = collection(db, 'cases');
-        // Assuming 'clientId' field exists on Case, or we use 'clientEmail' if that's how it's linked
-        // The implementation plan said we added 'clientId' to Case.
-        const q = query(casesRef, where('clientId', '==', clientId));
+        // Consistent with CreateLeadModal and authService, use 'clientUid'
+        const q = query(casesRef, where('clientUid', '==', clientId));
 
         const unsubscribeCase = onSnapshot(q, (snapshot) => {
             if (snapshot.empty) {
@@ -62,7 +61,7 @@ export const useClientCase = (clientId: string | undefined) => {
 
             // 2. Setup Subcollection Listeners
             // Delegate to helper
-            setupSubListeners(caseDoc.ref, caseData, setProject);
+            setupSubListeners(caseDoc.ref, caseData, setProject, () => setLoading(false));
 
         }, (err) => {
             console.error("Error fetching case:", err);
@@ -80,7 +79,8 @@ export const useClientCase = (clientId: string | undefined) => {
 const setupSubListeners = (
     caseRef: any,
     caseData: Case,
-    setProject: (p: ClientProject) => void
+    setProject: (p: ClientProject) => void,
+    onDataLoaded?: () => void
 ) => {
     // We'll use a local state object to aggregate data
     let approvals: ApprovalRequest[] = [];
@@ -93,6 +93,7 @@ const setupSubListeners = (
     const update = () => {
         const mappedProject = mapToClientProject(caseData, approvals, payments, documents, updates, invoices);
         setProject(mappedProject);
+        if (onDataLoaded) onDataLoaded();
     };
 
     // 1. Approvals
@@ -245,6 +246,8 @@ const mapToClientProject = (
         projectType: 'Office Interior',
         area: 'N/A', // c.area
         budget: c.financial?.totalBudget ? `₹${(c.financial.totalBudget / 100000).toFixed(2)} Lakhs` : 'TBD',
+        startDate: c.executionPlan?.startDate ? (c.executionPlan.startDate instanceof Timestamp ? c.executionPlan.startDate.toDate() : new Date(c.executionPlan.startDate)) : new Date(),
+        expectedCompletion: c.executionPlan?.endDate ? (c.executionPlan.endDate instanceof Timestamp ? c.executionPlan.endDate.toDate() : new Date(c.executionPlan.endDate)) : new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // Default +60 days
         currentStageId: 1,
         stages: stages,
         consultant: {

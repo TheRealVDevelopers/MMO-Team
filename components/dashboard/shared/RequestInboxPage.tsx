@@ -201,10 +201,12 @@ const RequestInboxPage: React.FC = () => {
 
             await updateDoc(taskRef, {
                 assignedTo: selectedUserId,
-                status: TaskStatus.STARTED,
+                status: TaskStatus.PENDING,
                 notes: editedNotes,
                 deadline: editedDeadline ? new Date(editedDeadline) : null,
-                assignedAt: new Date()
+                assignedAt: new Date(),
+                startedAt: null,
+                completedAt: null
             });
 
             setShowAssignModal(false);

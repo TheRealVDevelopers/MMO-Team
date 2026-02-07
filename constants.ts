@@ -25,6 +25,8 @@ export const FIRESTORE_COLLECTIONS = {
   PAYMENTS: 'payments',
   JMS: 'jms',
   APPROVALS: 'approvals', // New Unified Approvals
+  BOQ: 'boq', // Bill of Quantities
+  QUOTATIONS: 'quotations', // Quotations with audit status
 
   // Subcollections under organizations/{orgId}
   PURCHASE_INVOICES: 'purchaseInvoices',

@@ -16,6 +16,7 @@ import UnifiedRequestInbox from './shared/UnifiedRequestInbox';
 import UnifiedProjectsPage from './shared/UnifiedProjectsPage';
 import CasesManagementPage from './super-admin/CasesManagementPage';
 import TimesheetReportsPage from './super-admin/TimesheetReportsPage';
+import ExecutionPlanApprovalPage from './super-admin/ExecutionPlanApprovalPage';
 
 interface SuperAdminDashboardProps {
     currentPage: string;
@@ -78,6 +79,8 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ currentPage, 
             return <CasesManagementPage />;
         case 'timesheet-reports':
             return <TimesheetReportsPage />;
+        case 'execution-plan-approvals':
+            return <ExecutionPlanApprovalPage />;
         default:
             return <OverviewDashboard setCurrentPage={setCurrentPage} />;
     }

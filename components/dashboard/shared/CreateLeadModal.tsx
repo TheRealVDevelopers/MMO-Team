@@ -166,6 +166,44 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
 
             console.log('✅ Case created:', caseId);
 
+            // Auto-create client auth user if clientEmail is provided
+            if (formData.clientEmail.trim()) {
+                try {
+                    const { createClientAccount } = await import('../../../services/authService');
+                    const { doc, updateDoc, getDocs, query, where } = await import('firebase/firestore');
+
+                    try {
+                        const clientUid = await createClientAccount(
+                            formData.clientEmail.trim(),
+                            '123456',  // Default password
+                            formData.clientName.trim(),
+                            caseId
+                        );
+                        // Update case with clientUid
+                        await updateDoc(doc(db!, FIRESTORE_COLLECTIONS.CASES, caseId), { clientUid });
+                        console.log('✅ Client auth user created:', clientUid);
+                    } catch (authErr: any) {
+                        if (authErr.code === 'auth/email-already-in-use') {
+                            // Existing user - fetch uid from clients collection by email
+                            const clientsQuery = query(
+                                collection(db!, 'clients'),
+                                where('email', '==', formData.clientEmail.trim())
+                            );
+                            const clientsSnap = await getDocs(clientsQuery);
+                            if (!clientsSnap.empty) {
+                                const existingUid = clientsSnap.docs[0].id;
+                                await updateDoc(doc(db!, FIRESTORE_COLLECTIONS.CASES, caseId), { clientUid: existingUid });
+                                console.log('✅ Reused existing client uid:', existingUid);
+                            }
+                        } else {
+                            console.warn('⚠️ Client auth creation failed:', authErr.message);
+                        }
+                    }
+                } catch (importErr) {
+                    console.warn('⚠️ Could not create client auth:', importErr);
+                }
+            }
+
             // Trigger system automations
             await triggerLeadCreationAutomations(caseId, formData.assignedSales, currentUser!.id, formData.title);
 

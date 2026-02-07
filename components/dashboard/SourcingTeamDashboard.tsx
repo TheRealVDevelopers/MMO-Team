@@ -7,7 +7,7 @@ import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
 import QuotationBuilderPage from './sourcing-team/QuotationBuilderPage';
 import SimpleItemsCatalog from './sourcing-team/SimpleItemsCatalog';
-import QuotationAuditPage from './sourcing-team/QuotationAuditPage';
+import QuotationAuditPage from './sourcing-team/ProcurementAuditPageNew';
 import WorkQueuePage from './shared/WorkQueuePage';
 
 const ProcurementTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
