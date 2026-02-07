@@ -27,7 +27,10 @@ import {
     CheckCircleIcon, 
     PlayIcon,
     StopIcon,
-    ExclamationTriangleIcon
+    ExclamationTriangleIcon,
+    MagnifyingGlassIcon,
+    CalendarIcon,
+    FunnelIcon
 } from '@heroicons/react/24/outline';
 import { Dialog } from '@headlessui/react';
 
@@ -53,6 +56,12 @@ const WorkQueuePage: React.FC = () => {
     const [selectedTask, setSelectedTask] = useState<TaskWithCase | null>(null);
     const [showCompletionModal, setShowCompletionModal] = useState(false);
 
+    // FILTERS
+    const [statusFilter, setStatusFilter] = useState<'ALL' | TaskStatus>('ALL');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [taskTypeFilter, setTaskTypeFilter] = useState<'ALL' | TaskType>('ALL');
+    const [dateFilter, setDateFilter] = useState<'ALL' | 'TODAY' | 'OVERDUE'>('ALL');
+
     // Permission check
     if (!currentUser || !ALLOWED_ROLES.includes(currentUser.role)) {
         return (
@@ -66,7 +75,7 @@ const WorkQueuePage: React.FC = () => {
         );
     }
 
-    // Fetch tasks using collectionGroup
+    // Fetch tasks using collectionGroup - SINGLE SOURCE OF TRUTH
     useEffect(() => {
         if (!db || !currentUser) {
             setLoading(false);
@@ -75,6 +84,7 @@ const WorkQueuePage: React.FC = () => {
 
         try {
             // CRITICAL: collectionGroup query with assignedTo filter
+            // NO client-side filtering, NO role-based filtering, NO organization filtering
             const tasksQuery = query(
                 collectionGroup(db, FIRESTORE_COLLECTIONS.TASKS),
                 where('assignedTo', '==', currentUser.id)
@@ -133,6 +143,63 @@ const WorkQueuePage: React.FC = () => {
         }
     }, [currentUser]);
 
+    // FILTERED TASKS (client-side for UI only, NOT for data fetching)
+    const filteredTasks = useMemo(() => {
+        let filtered = [...tasks];
+
+        // Status filter
+        if (statusFilter !== 'ALL') {
+            filtered = filtered.filter(t => t.status === statusFilter);
+        }
+
+        // Search filter
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            filtered = filtered.filter(t => 
+                t.projectName?.toLowerCase().includes(query) ||
+                t.clientName?.toLowerCase().includes(query)
+            );
+        }
+
+        // Task type filter
+        if (taskTypeFilter !== 'ALL') {
+            filtered = filtered.filter(t => t.type === taskTypeFilter);
+        }
+
+        // Date filter
+        if (dateFilter === 'TODAY') {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+
+            filtered = filtered.filter(t => 
+                (t.deadline && t.deadline >= today && t.deadline < tomorrow) ||
+                (t.startedAt && t.startedAt >= today && t.startedAt < tomorrow)
+            );
+        } else if (dateFilter === 'OVERDUE') {
+            const now = new Date();
+            filtered = filtered.filter(t => 
+                t.deadline && t.deadline < now && t.status !== TaskStatus.COMPLETED
+            );
+        }
+
+        return filtered;
+    }, [tasks, statusFilter, searchQuery, taskTypeFilter, dateFilter]);
+
+    // TODAY'S TASKS (deadline today OR started today)
+    const todaysTasks = useMemo(() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        return tasks.filter(t => 
+            (t.deadline && t.deadline >= today && t.deadline < tomorrow) ||
+            (t.startedAt && t.startedAt >= today && t.startedAt < tomorrow)
+        );
+    }, [tasks]);
+
     // Task summaries
     const taskSummary = useMemo(() => {
         return {
@@ -144,6 +211,12 @@ const WorkQueuePage: React.FC = () => {
 
     // Universal START TASK
     const handleStartTask = async (task: TaskWithCase) => {
+        // SECURITY: Check ownership
+        if (task.assignedTo !== currentUser.id) {
+            alert('❌ This task is not assigned to you.');
+            return;
+        }
+
         try {
             const taskRef = doc(
                 db!,
@@ -170,6 +243,12 @@ const WorkQueuePage: React.FC = () => {
 
     // Universal END TASK (opens modal)
     const handleEndTask = (task: TaskWithCase) => {
+        // SECURITY: Check ownership
+        if (task.assignedTo !== currentUser.id) {
+            alert('❌ This task is not assigned to you.');
+            return;
+        }
+
         setSelectedTask(task);
         setShowCompletionModal(true);
     };
@@ -188,31 +267,6 @@ const WorkQueuePage: React.FC = () => {
             );
         } catch (error) {
             console.error('Error logging activity:', error);
-        }
-    };
-
-    // Helper: Send notification
-    const sendNotification = async (
-        userId: string,
-        title: string,
-        message: string,
-        actionUrl?: string
-    ) => {
-        try {
-            await addDoc(
-                collection(db!, FIRESTORE_COLLECTIONS.STAFF_USERS, userId, FIRESTORE_COLLECTIONS.NOTIFICATIONS),
-                {
-                    userId,
-                    title,
-                    message,
-                    type: 'info',
-                    read: false,
-                    createdAt: serverTimestamp(),
-                    ...(actionUrl && { actionUrl })
-                }
-            );
-        } catch (error) {
-            console.error('Error sending notification:', error);
         }
     };
 
@@ -270,16 +324,122 @@ const WorkQueuePage: React.FC = () => {
                 </div>
             </div>
 
+            {/* TODAY'S TASKS */}
+            {todaysTasks.length > 0 && (
+                <div className="mb-8">
+                    <div className="flex items-center gap-2 mb-4">
+                        <CalendarIcon className="w-6 h-6 text-blue-600" />
+                        <h2 className="text-xl font-bold text-gray-900">Today's Tasks</h2>
+                        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-bold">
+                            {todaysTasks.length}
+                        </span>
+                    </div>
+                    <div className="space-y-4">
+                        {todaysTasks.map((task) => (
+                            <TaskCard
+                                key={task.id}
+                                task={task}
+                                currentUser={currentUser}
+                                onStart={handleStartTask}
+                                onEnd={handleEndTask}
+                            />
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* FILTERS */}
+            <div className="bg-white border-2 border-gray-200 rounded-xl p-6 mb-8">
+                <div className="flex items-center gap-2 mb-4">
+                    <FunnelIcon className="w-5 h-5 text-gray-600" />
+                    <h3 className="font-bold text-gray-900">Filters</h3>
+                </div>
+
+                <div className="grid grid-cols-4 gap-4">
+                    {/* Status Filter */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value as any)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="ALL">All</option>
+                            <option value={TaskStatus.PENDING}>Pending</option>
+                            <option value={TaskStatus.STARTED}>Ongoing</option>
+                            <option value={TaskStatus.COMPLETED}>Completed</option>
+                        </select>
+                    </div>
+
+                    {/* Task Type Filter */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Task Type</label>
+                        <select
+                            value={taskTypeFilter}
+                            onChange={(e) => setTaskTypeFilter(e.target.value as any)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="ALL">All Types</option>
+                            <option value={TaskType.SALES_CONTACT}>Sales Contact</option>
+                            <option value={TaskType.SITE_INSPECTION}>Site Inspection</option>
+                            <option value={TaskType.DRAWING_TASK}>Drawing Task</option>
+                            <option value={TaskType.QUOTATION_TASK}>Quotation</option>
+                            <option value={TaskType.PROCUREMENT_AUDIT}>Procurement Audit</option>
+                            <option value={TaskType.PROCUREMENT_BIDDING}>Procurement Bidding</option>
+                            <option value={TaskType.EXECUTION_TASK}>Execution</option>
+                        </select>
+                    </div>
+
+                    {/* Date Filter */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                        <select
+                            value={dateFilter}
+                            onChange={(e) => setDateFilter(e.target.value as any)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="ALL">All Dates</option>
+                            <option value="TODAY">Today</option>
+                            <option value="OVERDUE">Overdue</option>
+                        </select>
+                    </div>
+
+                    {/* Search */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                        <div className="relative">
+                            <MagnifyingGlassIcon className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
+                            <input
+                                type="text"
+                                placeholder="Project or Client"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* ALL TASKS */}
+            <div className="mb-4">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">All Tasks</h2>
+            </div>
+
             {/* Task Cards */}
             <div className="space-y-4">
-                {tasks.length === 0 ? (
+                {filteredTasks.length === 0 ? (
                     <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-12 text-center">
                         <CheckCircleIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-xl font-bold text-gray-700 mb-2">No Tasks Assigned</h3>
-                        <p className="text-gray-500">You have no tasks in your work queue at the moment.</p>
+                        <h3 className="text-xl font-bold text-gray-700 mb-2">No Tasks Found</h3>
+                        <p className="text-gray-500">
+                            {statusFilter !== 'ALL' || searchQuery || taskTypeFilter !== 'ALL' || dateFilter !== 'ALL'
+                                ? 'No tasks match your filters. Try adjusting them.'
+                                : 'You have no tasks in your work queue at the moment.'}
+                        </p>
                     </div>
                 ) : (
-                    tasks
+                    filteredTasks
                         .sort((a, b) => {
                             // Sort: Started > Pending > Completed
                             const statusOrder = { [TaskStatus.STARTED]: 1, [TaskStatus.PENDING]: 2, [TaskStatus.COMPLETED]: 3 };
@@ -289,6 +449,7 @@ const WorkQueuePage: React.FC = () => {
                             <TaskCard
                                 key={task.id}
                                 task={task}
+                                currentUser={currentUser}
                                 onStart={handleStartTask}
                                 onEnd={handleEndTask}
                             />
@@ -315,19 +476,45 @@ const WorkQueuePage: React.FC = () => {
 // Task Card Component
 const TaskCard: React.FC<{
     task: TaskWithCase;
+    currentUser: any;
     onStart: (task: TaskWithCase) => void;
     onEnd: (task: TaskWithCase) => void;
-}> = ({ task, onStart, onEnd }) => {
-    const isOverdue = task.deadline && new Date() > task.deadline;
+}> = ({ task, currentUser, onStart, onEnd }) => {
+    const isOverdue = task.deadline && new Date() > task.deadline && task.status !== TaskStatus.COMPLETED;
+    const isOwner = task.assignedTo === currentUser.id;
+    
     const statusColors = {
         [TaskStatus.PENDING]: 'bg-yellow-100 text-yellow-800 border-yellow-300',
         [TaskStatus.STARTED]: 'bg-blue-100 text-blue-800 border-blue-300',
         [TaskStatus.COMPLETED]: 'bg-green-100 text-green-800 border-green-300'
     };
 
+    // Calculate time remaining
+    const getTimeRemaining = () => {
+        if (!task.deadline) return null;
+        const now = new Date();
+        const diff = task.deadline.getTime() - now.getTime();
+        
+        if (diff < 0) return 'OVERDUE';
+        
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        
+        if (hours > 24) {
+            const days = Math.floor(hours / 24);
+            return `${days}d ${hours % 24}h`;
+        }
+        return `${hours}h ${minutes}m`;
+    };
+
+    const timeRemaining = getTimeRemaining();
+
+    // SPECIAL: Drawing Team has NO Start button
+    const isDrawingTask = task.type === TaskType.DRAWING_TASK && currentUser.role === UserRole.DRAWING_TEAM;
+
     return (
         <div className={`border-2 rounded-xl p-6 ${
-            isOverdue && task.status !== TaskStatus.COMPLETED
+            isOverdue
                 ? 'border-red-300 bg-red-50'
                 : 'border-gray-200 bg-white'
         }`}>
@@ -340,6 +527,11 @@ const TaskCard: React.FC<{
                         <span className={`px-3 py-1 rounded-full text-xs font-bold border ${statusColors[task.status]}`}>
                             {task.status.toUpperCase()}
                         </span>
+                        {!isOwner && (
+                            <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-bold">
+                                NOT YOUR TASK
+                            </span>
+                        )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-4">
@@ -350,10 +542,16 @@ const TaskCard: React.FC<{
                             <span className="font-medium">Task Type:</span> {task.type.replace('_', ' ').toUpperCase()}
                         </div>
                         {task.deadline && (
-                            <div className={isOverdue && task.status !== TaskStatus.COMPLETED ? 'text-red-600 font-bold' : ''}>
+                            <div className={isOverdue ? 'text-red-600 font-bold' : ''}>
                                 <span className="font-medium">Deadline:</span> {task.deadline.toLocaleString()}
-                                {isOverdue && task.status !== TaskStatus.COMPLETED && (
-                                    <ExclamationTriangleIcon className="w-4 h-4 inline ml-2" />
+                                {timeRemaining && (
+                                    <span className={`ml-2 px-2 py-1 rounded text-xs font-bold ${
+                                        timeRemaining === 'OVERDUE' 
+                                            ? 'bg-red-100 text-red-800' 
+                                            : 'bg-blue-100 text-blue-800'
+                                    }`}>
+                                        {timeRemaining}
+                                    </span>
                                 )}
                             </div>
                         )}
@@ -366,26 +564,46 @@ const TaskCard: React.FC<{
                 </div>
 
                 <div className="flex gap-2">
-                    {task.status === TaskStatus.PENDING && (
+                    {/* PENDING: Show Start button (except for Drawing Team) */}
+                    {task.status === TaskStatus.PENDING && !isDrawingTask && (
                         <button
                             onClick={() => onStart(task)}
-                            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                            disabled={!isOwner}
+                            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title={!isOwner ? 'This task is not assigned to you' : ''}
                         >
                             <PlayIcon className="w-5 h-5" />
                             Start Task
                         </button>
                     )}
 
+                    {/* STARTED: Show End button */}
                     {task.status === TaskStatus.STARTED && (
                         <button
                             onClick={() => onEnd(task)}
-                            className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                            disabled={!isOwner}
+                            className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title={!isOwner ? 'This task is not assigned to you' : ''}
                         >
                             <StopIcon className="w-5 h-5" />
                             End Task
                         </button>
                     )}
 
+                    {/* DRAWING TEAM PENDING: Show Submit button instead */}
+                    {task.status === TaskStatus.PENDING && isDrawingTask && (
+                        <button
+                            onClick={() => onEnd(task)}
+                            disabled={!isOwner}
+                            className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title={!isOwner ? 'This task is not assigned to you' : ''}
+                        >
+                            <CheckCircleIcon className="w-5 h-5" />
+                            Submit Drawing
+                        </button>
+                    )}
+
+                    {/* COMPLETED: Show badge */}
                     {task.status === TaskStatus.COMPLETED && (
                         <div className="px-6 py-3 bg-green-100 text-green-800 rounded-lg flex items-center gap-2">
                             <CheckCircleIcon className="w-5 h-5" />
@@ -397,8 +615,6 @@ const TaskCard: React.FC<{
         </div>
     );
 };
-
-// Continue in next part...
 
 // Task Completion Modal - ROLE-SPECIFIC LOGIC
 interface TaskCompletionModalProps {
@@ -424,12 +640,12 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
         setSubmitting(true);
 
         try {
-            // ROLE 1: SALES_TEAM - SALES_CONTACT
+            // ROLE 1: SALES_TEAM - SALES_CONTACT or LEAD_ASSIGNED
             if (
                 currentUser.role === UserRole.SALES_TEAM_MEMBER &&
-                task.type === TaskType.SALES_CONTACT
+                (task.type === TaskType.SALES_CONTACT || task.type === 'lead_assigned' as TaskType)
             ) {
-                await completeSalesContact(task);
+                await completeSalesTask(task);
             }
 
             // ROLE 2: SITE ENGINEER - SITE_INSPECTION
@@ -445,7 +661,7 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
                 await completeSiteInspection(task, parseFloat(kmTravelled));
             }
 
-            // ROLE 2: DRAWING TEAM - DRAWING_TASK
+            // ROLE 3: DRAWING TEAM - DRAWING_TASK
             else if (
                 currentUser.role === UserRole.DRAWING_TEAM &&
                 task.type === TaskType.DRAWING_TASK
@@ -458,7 +674,7 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
                 await completeDrawingTask(task);
             }
 
-            // ROLE 3: QUOTATION TEAM - QUOTATION_TASK
+            // ROLE 4: QUOTATION TEAM - QUOTATION_TASK
             else if (
                 currentUser.role === UserRole.QUOTATION_TEAM &&
                 task.type === TaskType.QUOTATION_TASK
@@ -466,7 +682,7 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
                 await completeQuotationTask(task);
             }
 
-            // ROLE 4: PROCUREMENT TEAM - PROCUREMENT_AUDIT or PROCUREMENT_BIDDING
+            // ROLE 5: PROCUREMENT TEAM - PROCUREMENT_AUDIT or PROCUREMENT_BIDDING
             else if (
                 currentUser.role === UserRole.PROCUREMENT_TEAM &&
                 (task.type === TaskType.PROCUREMENT_AUDIT || task.type === TaskType.PROCUREMENT_BIDDING)
@@ -474,7 +690,7 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
                 await completeProcurementTask(task);
             }
 
-            // ROLE 5: EXECUTION TEAM - EXECUTION_TASK
+            // ROLE 6: EXECUTION TEAM - EXECUTION_TASK
             else if (
                 currentUser.role === UserRole.EXECUTION_TEAM &&
                 task.type === TaskType.EXECUTION_TASK
@@ -498,8 +714,8 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
         }
     };
 
-    // AUTOMATION 1: SALES_CONTACT → SITE_INSPECTION
-    const completeSalesContact = async (task: TaskWithCase) => {
+    // AUTOMATION 1: SALES_CONTACT or LEAD_ASSIGNED → SITE_INSPECTION
+    const completeSalesTask = async (task: TaskWithCase) => {
         const taskRef = doc(
             db!,
             FIRESTORE_COLLECTIONS.CASES,
@@ -515,17 +731,14 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
         });
 
         // Log activity
-        await logActivity(task.caseId, 'Sales contact completed', currentUser.id);
+        await logActivity(task.caseId, `${task.type} completed`, currentUser.id);
 
         // Get case to find site engineer
         const caseDoc = await getDoc(doc(db!, FIRESTORE_COLLECTIONS.CASES, task.caseId));
         if (!caseDoc.exists()) throw new Error('Case not found');
 
         const caseData = caseDoc.data() as Case;
-
-        // Find a site engineer (you may need to adjust this logic based on your assignment strategy)
-        // For now, we'll need the case to have an assignedSiteEngineer field
-        const siteEngineerId = (caseData as any).assignedSiteEngineer || currentUser.id; // Fallback
+        const siteEngineerId = (caseData as any).assignedSiteEngineer || currentUser.id;
 
         // Auto-create SITE_INSPECTION task
         await addDoc(
@@ -540,10 +753,8 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
             }
         );
 
-        // Log activity
         await logActivity(task.caseId, 'Site inspection task created', currentUser.id);
 
-        // Notify site engineer
         await sendNotification(
             siteEngineerId,
             'New Site Inspection Task',
@@ -551,7 +762,7 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
             `/cases/${task.caseId}`
         );
 
-        console.log('✅ SALES_CONTACT completed → SITE_INSPECTION created');
+        console.log('✅ SALES task completed → SITE_INSPECTION created');
     };
 
     // AUTOMATION 2: SITE_INSPECTION → DRAWING_TASK
@@ -571,7 +782,6 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
             kmTravelled: km
         });
 
-        // Log activity
         await logActivity(
             task.caseId,
             `Site inspection completed (${km} km travelled)`,
@@ -586,7 +796,7 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
         if (!caseDoc.exists()) throw new Error('Case not found');
 
         const caseData = caseDoc.data() as Case;
-        const drawingTeamId = (caseData as any).assignedDrawingTeam || currentUser.id; // Fallback
+        const drawingTeamId = (caseData as any).assignedDrawingTeam || currentUser.id;
 
         // Auto-create DRAWING_TASK
         await addDoc(
@@ -602,10 +812,8 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
             }
         );
 
-        // Log activity
-        await logActivity(task.caseId, 'Drawing task created', currentUser.id);
+        await logActivity(task.caseId, 'Drawing task created with 4-hour deadline', currentUser.id);
 
-        // Notify drawing team
         await sendNotification(
             drawingTeamId,
             'New Drawing Task',
@@ -632,7 +840,6 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
             completedAt: serverTimestamp()
         });
 
-        // Log activity
         await logActivity(task.caseId, 'Drawing task completed (BOQ uploaded)', currentUser.id);
 
         // Get case to find quotation team member
@@ -640,7 +847,7 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
         if (!caseDoc.exists()) throw new Error('Case not found');
 
         const caseData = caseDoc.data() as Case;
-        const quotationTeamId = (caseData as any).assignedQuotationTeam || currentUser.id; // Fallback
+        const quotationTeamId = (caseData as any).assignedQuotationTeam || currentUser.id;
 
         // Auto-create QUOTATION_TASK
         await addDoc(
@@ -655,10 +862,8 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
             }
         );
 
-        // Log activity
         await logActivity(task.caseId, 'Quotation task created', currentUser.id);
 
-        // Notify quotation team
         await sendNotification(
             quotationTeamId,
             'New Quotation Task',
@@ -679,23 +884,19 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
             task.id
         );
 
-        // Mark task as completed
         await updateDoc(taskRef, {
             status: TaskStatus.COMPLETED,
             completedAt: serverTimestamp()
         });
 
-        // Log activity
         await logActivity(task.caseId, 'Quotation task completed', currentUser.id);
 
-        // Get case to find procurement team member
         const caseDoc = await getDoc(doc(db!, FIRESTORE_COLLECTIONS.CASES, task.caseId));
         if (!caseDoc.exists()) throw new Error('Case not found');
 
         const caseData = caseDoc.data() as Case;
-        const procurementTeamId = (caseData as any).assignedProcurementTeam || currentUser.id; // Fallback
+        const procurementTeamId = (caseData as any).assignedProcurementTeam || currentUser.id;
 
-        // Auto-create PROCUREMENT_AUDIT
         await addDoc(
             collection(db!, FIRESTORE_COLLECTIONS.CASES, task.caseId, FIRESTORE_COLLECTIONS.TASKS),
             {
@@ -708,10 +909,8 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
             }
         );
 
-        // Log activity
         await logActivity(task.caseId, 'Procurement audit task created', currentUser.id);
 
-        // Notify procurement team
         await sendNotification(
             procurementTeamId,
             'New Procurement Audit Task',
@@ -732,20 +931,16 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
             task.id
         );
 
-        // Mark task as completed
         await updateDoc(taskRef, {
             status: TaskStatus.COMPLETED,
             completedAt: serverTimestamp()
         });
 
-        // Log activity
         await logActivity(task.caseId, `${task.type} completed`, currentUser.id);
 
-        // Find admin user to notify
-        // TODO: Replace with actual admin lookup logic
-        const adminId = 'admin-user-id'; // Placeholder
+        // TODO: Find actual admin to notify
+        const adminId = 'admin-user-id';
 
-        // Notify admin
         await sendNotification(
             adminId,
             'Procurement Task Completed',
@@ -766,13 +961,11 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
             task.id
         );
 
-        // Mark task as completed
         await updateDoc(taskRef, {
             status: TaskStatus.COMPLETED,
             completedAt: serverTimestamp()
         });
 
-        // Log activity
         await logActivity(task.caseId, 'Execution task completed', currentUser.id);
 
         console.log('✅ EXECUTION_TASK completed (no automation)');
@@ -787,8 +980,9 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
         while (workingHoursToAdd > 0) {
             deadline.setHours(deadline.getHours() + 1);
 
-            // Working hours: 10:00-19:00
             const hour = deadline.getHours();
+            
+            // Count this hour if it's within working hours (10:00-19:00)
             if (hour >= 10 && hour < 19) {
                 workingHoursToAdd--;
             }
@@ -850,6 +1044,9 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
         }
     };
 
+    // DRAWING TEAM: Special UI (no Start/End workflow, direct submit)
+    const isDrawingTask = currentUser.role === UserRole.DRAWING_TEAM && task.type === TaskType.DRAWING_TASK;
+
     return (
         <Dialog open={isOpen} onClose={onClose} className="relative z-50">
             <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
@@ -857,7 +1054,7 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
             <div className="fixed inset-0 flex items-center justify-center p-4">
                 <Dialog.Panel className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
                     <Dialog.Title className="text-2xl font-bold text-gray-900 mb-4">
-                        Complete Task
+                        {isDrawingTask ? 'Submit Drawing Task' : 'Complete Task'}
                     </Dialog.Title>
 
                     <div className="mb-6">
@@ -885,14 +1082,19 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     placeholder="Enter distance"
                                 />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Stored in task.kmTravelled
+                                </p>
                             </div>
                         )}
 
                     {/* DRAWING TASK: Upload Checklist */}
-                    {currentUser.role === UserRole.DRAWING_TEAM &&
-                        task.type === TaskType.DRAWING_TASK && (
+                    {isDrawingTask && (
                             <div className="mb-6 space-y-3">
                                 <p className="text-sm font-medium text-gray-700 mb-2">Upload Requirements:</p>
+                                <p className="text-xs text-gray-500 mb-3">
+                                    Documents stored in cases/{`{caseId}`}/documents
+                                </p>
                                 <label className="flex items-center gap-2">
                                     <input
                                         type="checkbox"
@@ -939,7 +1141,7 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
                             disabled={submitting}
                             className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
                         >
-                            {submitting ? 'Submitting...' : 'Complete Task'}
+                            {submitting ? 'Submitting...' : (isDrawingTask ? 'Submit' : 'Complete Task')}
                         </button>
                     </div>
                 </Dialog.Panel>
@@ -949,4 +1151,3 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
 };
 
 export default WorkQueuePage;
-

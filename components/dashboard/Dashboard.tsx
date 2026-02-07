@@ -11,7 +11,7 @@ import DrawingTeamDashboard from './DrawingTeamDashboard';
 import QuotationTeamDashboard from './QuotationTeamDashboard';
 import SiteEngineerDashboard from './SiteEngineerDashboard';
 import ProcurementTeamDashboard from './SourcingTeamDashboard';
-import ExecutionTeamDashboard from './execution-team/ExecutionDashboard';
+import ExecutionTeamDashboard from './ExecutionTeamDashboard';
 import AccountsTeamDashboard from './AccountsTeamDashboard';
 import SuperAdminDashboard from './SuperAdminDashboard';
 import VendorDashboard from './vendor/VendorDashboard';
@@ -59,9 +59,9 @@ const Dashboard: React.FC<{ currentPage: string; setCurrentPage: (page: string) 
       case UserRole.SALES_GENERAL_MANAGER:
         return <SalesGeneralManagerDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.DRAWING_TEAM:
+        return <DrawingTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.SITE_ENGINEER:
-        // Drawing Team and Site Engineers see the combined dashboard
-        return <DesignAndSiteEngineeringDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
+        return <SiteEngineerDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.QUOTATION_TEAM:
         return <QuotationTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.PROCUREMENT_TEAM:

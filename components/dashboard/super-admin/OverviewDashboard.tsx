@@ -30,7 +30,7 @@ import { usePerformanceMonitor } from '../../../hooks/usePerformanceMonitor';
 import FinanceOverview from './FinanceOverview';
 import { useTeamTimeEntries } from '../../../hooks/useTimeTracking';
 
-import RedFlagsHeader from '../admin/RedFlagsHeader';
+
 import ProjectDetailModal from '../admin/ProjectDetailModal';
 import FunnelDetailModal from '../admin/FunnelDetailModal';
 
@@ -289,10 +289,6 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage, o
                             </div>
                         }
                     />
-
-                    {/* Critical Alerts Header */}
-                    <RedFlagsHeader onNavigateToMember={onNavigateToMember} />
-
 
                     {/* Primary Calendar View - Moved to Top */}
                     <DashboardCalendar />

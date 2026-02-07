@@ -7,6 +7,11 @@ import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
 import { ContentCard, SectionHeader } from './shared/DashboardUI';
 import WorkQueuePage from './shared/WorkQueuePage';
+import NegotiationsBoardPage from './quotation-team/NegotiationsBoardPage';
+import ItemsCatalogPage from './quotation-team/ItemsCatalogPage';
+import ProjectTemplatesPage from './quotation-team/ProjectTemplatesPage';
+import PriceAnalyticsPage from './quotation-team/PriceAnalyticsPage';
+import MyPerformancePage from './quotation-team/MyPerformancePage';
 
 const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string, params?: any) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
@@ -33,6 +38,26 @@ const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (p
         return <MyDayPage />;
       case 'work-queue':
         return <WorkQueuePage />;
+      case 'negotiations':
+        return <NegotiationsBoardPage 
+          projects={[]} 
+          onProjectSelect={() => {}} 
+          setCurrentPage={setCurrentPage} 
+          onCreateProject={() => {}} 
+        />;
+      case 'catalog':
+        return <ItemsCatalogPage setCurrentPage={setCurrentPage} />;
+      case 'templates':
+        return <ProjectTemplatesPage 
+          templates={[]} 
+          setCurrentPage={setCurrentPage} 
+          onAddTemplate={() => {}} 
+          onUseTemplate={() => {}} 
+        />;
+      case 'analytics':
+        return <PriceAnalyticsPage setCurrentPage={setCurrentPage} />;
+      case 'performance':
+        return <MyPerformancePage setCurrentPage={setCurrentPage} />;
       case 'communication':
         return <CommunicationDashboard />;
       case 'escalate-issue':

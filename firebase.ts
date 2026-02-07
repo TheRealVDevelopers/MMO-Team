@@ -46,6 +46,11 @@ if (!DEMO_MODE) {
     auth = getAuth(app);
     storage = getStorage(app);
 
+    console.log('🔥 Firebase Initialized:');
+    console.log('  Project ID:', firebaseConfig.projectId);
+    console.log('  Using Emulator:', USE_EMULATOR);
+    console.log('  Firestore instance:', db ? 'Connected' : 'Failed');
+
     // Connect to emulators if enabled
     if (USE_EMULATOR) {
       console.log('🔧 Connecting to Firebase Emulators...');
@@ -53,6 +58,8 @@ if (!DEMO_MODE) {
       connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
       connectStorageEmulator(storage, 'localhost', 9199);
       console.log('✅ Connected to Firebase Emulators');
+    } else {
+      console.log('☁️  Using Production Firebase (kurchi-app)');
     }
 
     // Configure Auth Persistence
