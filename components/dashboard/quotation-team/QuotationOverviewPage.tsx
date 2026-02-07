@@ -7,9 +7,8 @@ import { formatCurrencyINR, formatDate } from '../../../constants';
 const QuotationOverviewPage: React.FC<{
     projects: Project[];
     onProjectSelect: (project: Project) => void;
-    onCreateProject: () => void;
     onReset?: () => void;
-}> = ({ projects, onProjectSelect, onCreateProject, onReset }) => {
+}> = ({ projects, onProjectSelect, onReset }) => {
     const { currentUser } = useAuth();
     const [activeTab, setActiveTab] = useState<'live' | 'completed'>('live');
 
@@ -65,13 +64,6 @@ const QuotationOverviewPage: React.FC<{
                     <h2 className="text-2xl font-black text-text-primary tracking-tight">Quotation Dashboard</h2>
                     <p className="text-sm text-text-secondary">Manage and track your active pricing requests.</p>
                 </div>
-                <button
-                    onClick={onCreateProject}
-                    className="flex items-center space-x-2 bg-primary text-white px-6 py-3 rounded-xl text-sm font-black shadow-xl shadow-primary/20 hover:bg-secondary transition-all hover:-translate-y-0.5"
-                >
-                    <PlusIcon className="w-5 h-5" />
-                    <span>Create New Quotation</span>
-                </button>
             </div>
 
             {/* Simplified Tabs */}
@@ -146,7 +138,7 @@ const QuotationOverviewPage: React.FC<{
                     </tbody>
                 </table>
             </div>
-        </div>
+        </div >
     );
 };
 

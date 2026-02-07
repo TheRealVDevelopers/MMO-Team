@@ -281,6 +281,7 @@ export interface TeamTimeAnalytics {
   teamTotals: {
     totalDaysWorked: number;
     totalActiveHours: number;
+    totalBreakHours: number;
     totalLoggedHours: number;
     avgProductivity: number;
     activeUsers: number;
@@ -369,6 +370,7 @@ export const useTeamTimeAnalytics = (
         teamTotals: {
           totalDaysWorked: 0,
           totalActiveHours: 0,
+          totalBreakHours: 0,
           totalLoggedHours: 0,
           avgProductivity: 0,
           activeUsers: 0
@@ -399,11 +401,13 @@ export const useTeamTimeAnalytics = (
     const users: TeamTimeAnalytics['users'] = [];
     let teamTotalDays = 0;
     let teamTotalActiveSeconds = 0;
+    let teamTotalBreakSeconds = 0;
     let teamTotalLoggedSeconds = 0;
     let activeUsersCount = 0;
 
     for (const [userId, userData] of userMap) {
       let userActiveSeconds = 0;
+      let userBreakSeconds = 0;
       let userLoggedSeconds = 0;
       let userDays = 0;
       let currentStatus: TimeTrackingStatus | null = null;
@@ -415,6 +419,16 @@ export const useTeamTimeAnalytics = (
         
         userLoggedSeconds += durationInSeconds(clockIn, sessionEnd);
         
+        // Calculate break time
+        for (const breakItem of entry.breaks) {
+          if (breakItem.endTime) {
+            userBreakSeconds += durationInSeconds(breakItem.startTime, breakItem.endTime);
+          } else if (!clockOut) {
+            userBreakSeconds += durationInSeconds(breakItem.startTime, new Date());
+          }
+        }
+        
+        // Calculate active time from activities
         for (const activity of entry.activities) {
           if (activity.endTime) {
             userActiveSeconds += durationInSeconds(activity.startTime, activity.endTime);
@@ -450,6 +464,7 @@ export const useTeamTimeAnalytics = (
 
       teamTotalDays += userDays;
       teamTotalActiveSeconds += userActiveSeconds;
+      teamTotalBreakSeconds += userBreakSeconds;
       teamTotalLoggedSeconds += userLoggedSeconds;
       if (currentStatus === TimeTrackingStatus.CLOCKED_IN) {
         activeUsersCount++;
@@ -461,6 +476,7 @@ export const useTeamTimeAnalytics = (
       teamTotals: {
         totalDaysWorked: teamTotalDays,
         totalActiveHours: parseFloat((teamTotalActiveSeconds / 3600).toFixed(2)),
+        totalBreakHours: parseFloat((teamTotalBreakSeconds / 3600).toFixed(2)),
         totalLoggedHours: parseFloat((teamTotalLoggedSeconds / 3600).toFixed(2)),
         avgProductivity: teamTotalLoggedSeconds > 0
           ? parseFloat(((teamTotalActiveSeconds / teamTotalLoggedSeconds) * 100).toFixed(1))

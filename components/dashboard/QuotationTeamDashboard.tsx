@@ -15,7 +15,7 @@ import MyPerformancePage from './quotation-team/MyPerformancePage';
 
 const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string, params?: any) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
-  
+
   // Get BOQ and Quotation tasks
   const { tasks: boqTasks, loading: boqLoading } = useCaseTasks({
     organizationId: currentUser?.organizationId,
@@ -39,20 +39,19 @@ const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (p
       case 'work-queue':
         return <WorkQueuePage />;
       case 'negotiations':
-        return <NegotiationsBoardPage 
-          projects={[]} 
-          onProjectSelect={() => {}} 
-          setCurrentPage={setCurrentPage} 
-          onCreateProject={() => {}} 
+        return <NegotiationsBoardPage
+          projects={[]}
+          onProjectSelect={() => { }}
+          setCurrentPage={setCurrentPage}
         />;
       case 'catalog':
         return <ItemsCatalogPage setCurrentPage={setCurrentPage} />;
       case 'templates':
-        return <ProjectTemplatesPage 
-          templates={[]} 
-          setCurrentPage={setCurrentPage} 
-          onAddTemplate={() => {}} 
-          onUseTemplate={() => {}} 
+        return <ProjectTemplatesPage
+          templates={[]}
+          setCurrentPage={setCurrentPage}
+          onAddTemplate={() => { }}
+          onUseTemplate={() => { }}
         />;
       case 'analytics':
         return <PriceAnalyticsPage setCurrentPage={setCurrentPage} />;
@@ -84,11 +83,10 @@ const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (p
                           <p className="text-xs text-text-secondary mt-1">{task.notes}</p>
                         )}
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                        task.status === TaskStatus.PENDING ? 'bg-error/10 text-error' :
-                        task.status === TaskStatus.STARTED ? 'bg-warning/10 text-warning' :
-                        'bg-success/10 text-success'
-                      }`}>
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${task.status === TaskStatus.PENDING ? 'bg-error/10 text-error' :
+                          task.status === TaskStatus.STARTED ? 'bg-warning/10 text-warning' :
+                            'bg-success/10 text-success'
+                        }`}>
                         {task.status}
                       </span>
                     </div>

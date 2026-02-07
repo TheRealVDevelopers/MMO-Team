@@ -23,7 +23,7 @@ import { ContentCard, cn, staggerContainer } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTeamTasks } from '../../../hooks/useTeamTasks';
 import { TaskStatus, Attendance, AttendanceStatus, TimeTrackingStatus } from '../../../types';
-import { useTimeEntries } from '../../../hooks/useTimeTracking';
+import { useTimeAnalytics } from '../../../hooks/useTimeAnalytics';
 import DailyDeploymentTimeline from './DailyDeploymentTimeline';
 import ExportDeploymentReportModal from '../shared/ExportDeploymentReportModal'; // Import Modal // Import Timeline Component
 
@@ -162,138 +162,50 @@ const TeamMemberDetailView: React.FC<{ user: User; initialTab?: 'history'; initi
         return { startDate, endDate };
     }, [dateRange, customStartDate, customEndDate]);
 
-    const { entries: timeEntries } = useTimeEntries(user.id, getDateRangeBounds.startDate, getDateRangeBounds.endDate);
+    // Use unified time analytics hook - SINGLE SOURCE OF TRUTH
+    const { 
+      totalDaysWorked,
+      totalActiveHours,
+      totalIdleHours,
+      totalBreakHours,
+      totalLoggedHours,
+      avgDailyHours,
+      entries: timeEntries,
+      loading: timeAnalyticsLoading
+    } = useTimeAnalytics(user.id, user.organizationId);
 
-    // Calculate time tracking metrics
+    // Calculate time tracking metrics from unified hook
     const timeMetrics = useMemo(() => {
-        let totalLoggedMins = 0;
-        let totalActiveMins = 0;
-        let totalBreakMins = 0;
-
-        const now = new Date();
-        const todayStr = now.toLocaleDateString('en-CA');
-
-        timeEntries.forEach(entry => {
-            const isToday = entry.date === todayStr;
-            let entryEffectiveClockOut: Date | null = null;
-
-            // Helper to safely parse dates
-            const safeDate = (val: any) => {
-                if (!val) return null;
-                if (val instanceof Date) return val;
-                if (typeof val.toDate === 'function') return val.toDate();
-                if (val.seconds) return new Date(val.seconds * 1000);
-                return new Date(val);
-            };
-
-            const clockIn = safeDate(entry.clockIn);
-            let clockOut = safeDate(entry.clockOut);
-
-            // Determine effective Clock Out
-            if (clockIn) {
-                if (clockOut) {
-                    // Normal clock out exists
-                    entryEffectiveClockOut = clockOut;
-                } else if (isToday) {
-                    // Still working today
-                    entryEffectiveClockOut = now;
-                } else {
-                    // Past day, forgot to clock out. 
-                    // Recover by finding the latest end time of any activity or break
-                    let maxTime = clockIn.getTime();
-
-                    (entry.activities || []).forEach(a => {
-                        const end = safeDate(a.endTime);
-                        if (end && end.getTime() > maxTime) maxTime = end.getTime();
-                        // If activity started but didn't end, use start time as fallback for maxTime 
-                        // (can't assume duration for unfinished past tasks)
-                        const start = safeDate(a.startTime);
-                        if (start && start.getTime() > maxTime) maxTime = start.getTime();
-                    });
-
-                    (entry.breaks || []).forEach(b => {
-                        const end = safeDate(b.endTime);
-                        if (end && end.getTime() > maxTime) maxTime = end.getTime();
-                        const start = safeDate(b.startTime);
-                        if (start && start.getTime() > maxTime) maxTime = start.getTime();
-                    });
-
-                    entryEffectiveClockOut = new Date(maxTime);
-                }
-
-                if (entryEffectiveClockOut && entryEffectiveClockOut > clockIn) {
-                    totalLoggedMins += (entryEffectiveClockOut.getTime() - clockIn.getTime()) / (1000 * 60);
-                }
-            }
-
-            // Active time: Sum of all activities
-            (entry.activities || []).forEach(a => {
-                const start = safeDate(a.startTime);
-                if (start) {
-                    // If activity has no end time:
-                    // - If today: use now
-                    // - If past: assume it ended at the fallback 'entryEffectiveClockOut' we calculated (or 0 if that's safer, but let's try to be generous if it makes sense, OR strict 0.
-                    // Strict 0 for past unfinished tasks is usually safer than fabricating hours, BUT
-                    // if we extended `totalLoggedMins` to encompass "Last Event", we should consistent.
-                    // However, standard tasks normally have end times. Let's stick to: End || (isToday ? Now : Start)
-
-                    let end = safeDate(a.endTime);
-                    if (!end) {
-                        if (isToday) {
-                            end = now;
-                        } else {
-                            // Unfinished past task. 
-                            // It doesn't contribute to active time effectively (0 duration)
-                            end = start;
-                        }
-                    }
-
-                    if (end && end > start) {
-                        totalActiveMins += (end.getTime() - start.getTime()) / (1000 * 60);
-                    }
-                }
-            });
-
-            // Break time: Sum of all breaks (For reference, even though user wants it in Idle)
-            (entry.breaks || []).forEach(b => {
-                const start = safeDate(b.startTime);
-                if (start) {
-                    let end = safeDate(b.endTime);
-                    if (!end) {
-                        end = isToday ? now : start;
-                    }
-                    if (end && end > start) {
-                        totalBreakMins += (end.getTime() - start.getTime()) / (1000 * 60);
-                    }
-                }
-            });
-        });
-
-        const loggedHours = (totalLoggedMins / 60).toFixed(1);
-        const activeHours = (totalActiveMins / 60).toFixed(1);
-
-        // Idle = Logged - Active. (User specified Breaks should count as Idle)
-        // If we subtracted breaks, it would be: Logged - Active - Break. 
-        // But "Break goes to idle" means Idle bucket includes break time.
-        const idleMins = Math.max(0, totalLoggedMins - totalActiveMins);
-        const idleHours = (idleMins / 60).toFixed(1);
-
-        return { loggedHours, activeHours, idleHours };
-    }, [timeEntries]);
+        return {
+            loggedHours: timeAnalyticsLoading ? '0.0' : totalLoggedHours.toFixed(1),
+            activeHours: timeAnalyticsLoading ? '0.0' : totalActiveHours.toFixed(1),
+            idleHours: timeAnalyticsLoading ? '0.0' : totalIdleHours.toFixed(1),
+            breakHours: timeAnalyticsLoading ? '0.0' : totalBreakHours.toFixed(1),
+            avgDailyHours: timeAnalyticsLoading ? '0.0' : avgDailyHours.toFixed(1),
+            totalDays: timeAnalyticsLoading ? 0 : totalDaysWorked,
+        };
+    }, [totalLoggedHours, totalActiveHours, totalIdleHours, totalBreakHours, avgDailyHours, totalDaysWorked, timeAnalyticsLoading]);
 
     // Find entry for selected date in History tab
     const selectedDateEntry = useMemo(() => {
-        return timeEntries.find(e => e.date === selectedDate);
+        return timeEntries.find(e => e.dateKey === selectedDate);
     }, [timeEntries, selectedDate]);
 
     const attendanceForMonth: Attendance[] = useMemo(() => {
         return timeEntries.map(entry => {
             let status = AttendanceStatus.ABSENT;
+            
+            // Calculate logged hours dynamically
+            const clockIn = entry.clockIn;
+            const clockOut = entry.clockOut;
+            const loggedHours = clockOut 
+                ? (clockOut.getTime() - clockIn.getTime()) / (1000 * 60 * 60)
+                : (new Date().getTime() - clockIn.getTime()) / (1000 * 60 * 60);
 
             // Determine status based on time
-            if (entry.totalWorkHours && entry.totalWorkHours >= 8) {
+            if (loggedHours >= 8) {
                 status = AttendanceStatus.PRESENT;
-            } else if (entry.totalWorkHours && entry.totalWorkHours >= 4) {
+            } else if (loggedHours >= 4) {
                 status = AttendanceStatus.HALF_DAY;
             } else if (entry.status === TimeTrackingStatus.CLOCKED_IN || entry.status === TimeTrackingStatus.ON_BREAK) {
                 status = AttendanceStatus.PRESENT; // Currently working
@@ -309,7 +221,7 @@ const TeamMemberDetailView: React.FC<{ user: User; initialTab?: 'history'; initi
             };
 
             return {
-                date: new Date(entry.date), // entry.date is YYYY-MM-DD string
+                date: new Date(entry.dateKey), // entry.dateKey is YYYY-MM-DD string
                 status,
                 clockIn: formatTime(entry.clockIn),
                 clockOut: formatTime(entry.clockOut)

@@ -9,7 +9,11 @@ import {
   exportCaseTimesheet,
   exportOrganizationTimesheet,
   exportRawTimeEntries,
-  exportTimesheetSummary
+  exportTimesheetSummary,
+  exportTimeAnalytics,
+  exportTimeAudit,
+  exportTimeDiscrepancyReport,
+  exportPaymentProcessing
 } from '../../../services/timesheetExportService';
 import { ContentCard } from '../shared/DashboardUI';
 import { 
@@ -18,7 +22,11 @@ import {
   BuildingOfficeIcon, 
   FolderIcon,
   TableCellsIcon,
-  ChartBarIcon
+  ChartBarIcon,
+  PresentationChartLineIcon,
+  ClipboardDocumentCheckIcon,
+  ExclamationTriangleIcon,
+  BanknotesIcon
 } from '@heroicons/react/24/outline';
 
 interface StaffUser {
@@ -53,6 +61,7 @@ const TimesheetReportsPage: React.FC = () => {
   const [endDate, setEndDate] = useState<string>(() => {
     return new Date().toISOString().split('T')[0];
   });
+  const [expectedHours, setExpectedHours] = useState<number>(8);
 
   // Permission check
   const canAccess = useMemo(() => {
@@ -199,6 +208,54 @@ const TimesheetReportsPage: React.FC = () => {
     }
   };
 
+  const handleExportTimeAnalytics = async () => {
+    setExporting(true);
+    try {
+      await exportTimeAnalytics(startDate, endDate, selectedOrgId || undefined);
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Failed to export. Check console for details.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportTimeAudit = async () => {
+    setExporting(true);
+    try {
+      await exportTimeAudit(startDate, endDate, selectedOrgId || undefined, expectedHours);
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Failed to export. Check console for details.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportDiscrepancyReport = async () => {
+    setExporting(true);
+    try {
+      await exportTimeDiscrepancyReport(startDate, endDate, selectedOrgId || undefined);
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Failed to export. Check console for details.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportPaymentProcessing = async () => {
+    setExporting(true);
+    try {
+      await exportPaymentProcessing(startDate, endDate, selectedOrgId || undefined);
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Failed to export. Check console for details.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (!canAccess) {
     return (
       <div className="p-6">
@@ -292,6 +349,17 @@ const TimesheetReportsPage: React.FC = () => {
             >
               This Month
             </button>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Expected Daily Hours</label>
+            <input
+              type="number"
+              min="1"
+              max="24"
+              value={expectedHours}
+              onChange={(e) => setExpectedHours(parseInt(e.target.value) || 8)}
+              className="w-full px-3 py-2 border border-border rounded-lg"
+            />
           </div>
         </div>
       </ContentCard>
@@ -451,6 +519,102 @@ const TimesheetReportsPage: React.FC = () => {
             {exporting ? 'Exporting...' : 'Download Summary Report'}
           </button>
         </ContentCard>
+
+        {/* Time Analytics */}
+        <ContentCard>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-3 bg-indigo-100 rounded-xl">
+              <PresentationChartLineIcon className="w-6 h-6 text-indigo-600" />
+            </div>
+            <h3 className="text-lg font-semibold">Time Analytics</h3>
+          </div>
+          
+          <p className="text-sm text-text-secondary mb-4">
+            Comprehensive analytics: Days worked, hours breakdown (logged/active/break/idle), 
+            productivity metrics, and session counts per user.
+          </p>
+          
+          <button
+            onClick={handleExportTimeAnalytics}
+            disabled={exporting}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+          >
+            <DocumentArrowDownIcon className="w-5 h-5" />
+            {exporting ? 'Exporting...' : 'Download Analytics'}
+          </button>
+        </ContentCard>
+
+        {/* Time Audit */}
+        <ContentCard>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-3 bg-cyan-100 rounded-xl">
+              <ClipboardDocumentCheckIcon className="w-6 h-6 text-cyan-600" />
+            </div>
+            <h3 className="text-lg font-semibold">Time Audit</h3>
+          </div>
+          
+          <p className="text-sm text-text-secondary mb-4">
+            Compliance audit with expected hours, actual hours, variance analysis, 
+            break tracking, and compliance status for payment processing.
+          </p>
+          
+          <button
+            onClick={handleExportTimeAudit}
+            disabled={exporting}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 disabled:opacity-50"
+          >
+            <DocumentArrowDownIcon className="w-5 h-5" />
+            {exporting ? 'Exporting...' : 'Download Audit Report'}
+          </button>
+        </ContentCard>
+
+        {/* Discrepancy Report */}
+        <ContentCard>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-3 bg-rose-100 rounded-xl">
+              <ExclamationTriangleIcon className="w-6 h-6 text-rose-600" />
+            </div>
+            <h3 className="text-lg font-semibold">Discrepancy Report</h3>
+          </div>
+          
+          <p className="text-sm text-text-secondary mb-4">
+            Automated detection of time anomalies: Missing clock-outs, excessive hours, 
+            short shifts, no activities, and compliance violations with severity levels.
+          </p>
+          
+          <button
+            onClick={handleExportDiscrepancyReport}
+            disabled={exporting}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-rose-600 text-white rounded-lg hover:bg-rose-700 disabled:opacity-50"
+          >
+            <DocumentArrowDownIcon className="w-5 h-5" />
+            {exporting ? 'Exporting...' : 'Download Discrepancy Report'}
+          </button>
+        </ContentCard>
+
+        {/* Payment Processing */}
+        <ContentCard>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-3 bg-emerald-100 rounded-xl">
+              <BanknotesIcon className="w-6 h-6 text-emerald-600" />
+            </div>
+            <h3 className="text-lg font-semibold">Payment Processing</h3>
+          </div>
+          
+          <p className="text-sm text-text-secondary mb-4">
+            Payroll-ready export: Regular hours, overtime calculation (1.5x after 8h/day), 
+            pay calculation, and payment status for each employee.
+          </p>
+          
+          <button
+            onClick={handleExportPaymentProcessing}
+            disabled={exporting}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+          >
+            <DocumentArrowDownIcon className="w-5 h-5" />
+            {exporting ? 'Exporting...' : 'Download Payment Data'}
+          </button>
+        </ContentCard>
       </div>
 
       {/* Info Box */}
@@ -465,6 +629,32 @@ const TimesheetReportsPage: React.FC = () => {
         <p className="text-sm text-blue-600 mt-3">
           <strong>Note:</strong> Data is generated live from timeEntries. Nothing is stored.
         </p>
+      </ContentCard>
+
+      {/* Report Types Info */}
+      <ContentCard className="mt-6 bg-slate-50 border-slate-200">
+        <h3 className="font-semibold text-slate-800 mb-2">Report Types Guide</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-700">
+          <div>
+            <h4 className="font-semibold text-slate-800 mb-1">Standard Reports</h4>
+            <ul className="space-y-1 list-disc list-inside">
+              <li><strong>User Report:</strong> Detailed sessions for a specific user</li>
+              <li><strong>Project Report:</strong> Time spent on a specific project/case</li>
+              <li><strong>Organization Report:</strong> All time entries for an organization</li>
+              <li><strong>Raw Logs:</strong> Complete time entry data with derived sessions</li>
+              <li><strong>Summary Report:</strong> Aggregated metrics by user</li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="font-semibold text-slate-800 mb-1">Analytics & Audit Reports</h4>
+            <ul className="space-y-1 list-disc list-inside">
+              <li><strong>Time Analytics:</strong> Productivity metrics, hours breakdown, session counts</li>
+              <li><strong>Time Audit:</strong> Compliance checking against expected hours</li>
+              <li><strong>Discrepancy Report:</strong> Automated anomaly detection with severity levels</li>
+              <li><strong>Payment Processing:</strong> Payroll-ready data with overtime calculations</li>
+            </ul>
+          </div>
+        </div>
       </ContentCard>
     </div>
   );

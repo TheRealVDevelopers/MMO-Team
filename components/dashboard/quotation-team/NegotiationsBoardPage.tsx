@@ -73,8 +73,7 @@ const NegotiationsBoardPage: React.FC<{
     projects: Project[];
     onProjectSelect: (project: Project) => void;
     setCurrentPage: (page: string) => void;
-    onCreateProject: () => void;
-}> = ({ projects, onProjectSelect, setCurrentPage, onCreateProject }) => {
+}> = ({ projects, onProjectSelect, setCurrentPage }) => {
     const { currentUser } = useAuth();
     if (!currentUser) return null;
 
@@ -95,13 +94,6 @@ const NegotiationsBoardPage: React.FC<{
                     </button>
                     <h2 className="text-2xl font-black text-text-primary tracking-tight">Negotiations Control</h2>
                 </div>
-                <button
-                    onClick={onCreateProject}
-                    className="flex items-center space-x-2 bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-black shadow-xl shadow-primary/30 hover:bg-secondary hover:-translate-y-0.5 transition-all active:translate-y-0"
-                >
-                    <PlusIcon className="w-5 h-5" />
-                    <span>Create New Quotation</span>
-                </button>
             </div>
 
             {/* Industry Standard Stats Bar */}

@@ -294,7 +294,7 @@ export const clockIn = async (userId: string, userName: string, organizationId?:
 // Clock Out
 export const clockOut = async (entryId: string) => {
   try {
-    const entryRef = doc(db, 'timeEntries', entryId);
+    const entryRef = doc(db, FIRESTORE_COLLECTIONS.TIME_ENTRIES, entryId);
 
     // Get current entry data using getDoc
     const { getDoc } = await import('firebase/firestore');
@@ -305,38 +305,23 @@ export const clockOut = async (entryId: string) => {
     }
 
     const data = docSnapshot.data();
-    const userId = data.userId; // Get userId from entry
-    const clockInTime = (data.clockIn as Timestamp).toDate();
-    const clockOutTime = new Date();
+    const userId = data.userId;
 
-    // Calculate total work hours
-    const totalMs = clockOutTime.getTime() - clockInTime.getTime();
-    const totalBreakMs = (data.breaks || []).reduce((acc: number, b: any) => {
-      if (b.endTime) {
-        return acc + (b.endTime.toDate().getTime() - b.startTime.toDate().getTime());
-      }
-      return acc;
-    }, 0);
-
-    const totalWorkMs = totalMs - totalBreakMs;
-    const totalWorkHours = totalWorkMs / (1000 * 60 * 60);
-    const totalBreakMinutes = totalBreakMs / (1000 * 60);
-
+    // Update with clockOut - NO stored totals (computed dynamically)
     await updateDoc(entryRef, {
       clockOut: serverTimestamp(),
-      totalWorkHours: parseFloat(totalWorkHours.toFixed(2)),
-      totalBreakMinutes: Math.round(totalBreakMinutes),
       status: TimeTrackingStatus.CLOCKED_OUT,
+      updatedAt: serverTimestamp(),
     });
 
     // SYNC: Update User Status
     if (userId) {
-      const userRef = doc(db, 'staffUsers', userId);
+      const userRef = doc(db, FIRESTORE_COLLECTIONS.STAFF_USERS, userId);
       await updateDoc(userRef, {
         attendanceStatus: 'CLOCKED_OUT',
         isOnline: false,
         lastUpdateTimestamp: serverTimestamp(),
-        currentTask: '', // Clear current task
+        currentTask: '',
         currentTaskDetails: null
       });
     }
@@ -350,7 +335,7 @@ export const clockOut = async (entryId: string) => {
 // Start Break
 export const startBreak = async (entryId: string) => {
   try {
-    const entryRef = doc(db, 'timeEntries', entryId);
+    const entryRef = doc(db, FIRESTORE_COLLECTIONS.TIME_ENTRIES, entryId);
 
     const { getDoc } = await import('firebase/firestore');
     const docSnapshot = await getDoc(entryRef);
@@ -377,11 +362,12 @@ export const startBreak = async (entryId: string) => {
     await updateDoc(entryRef, {
       breaks,
       status: TimeTrackingStatus.ON_BREAK,
+      updatedAt: serverTimestamp(),
     });
 
     // SYNC: Update User Status
     if (userId) {
-      const userRef = doc(db, 'staffUsers', userId);
+      const userRef = doc(db, FIRESTORE_COLLECTIONS.STAFF_USERS, userId);
       await updateDoc(userRef, {
         attendanceStatus: 'ON_BREAK',
         currentTask: 'On Break',
@@ -398,7 +384,7 @@ export const startBreak = async (entryId: string) => {
 // End Break
 export const endBreak = async (entryId: string) => {
   try {
-    const entryRef = doc(db, 'timeEntries', entryId);
+    const entryRef = doc(db, FIRESTORE_COLLECTIONS.TIME_ENTRIES, entryId);
 
     const { getDoc } = await import('firebase/firestore');
     const docSnapshot = await getDoc(entryRef);
@@ -417,28 +403,24 @@ export const endBreak = async (entryId: string) => {
       throw new Error('No active break found');
     }
 
-    const activeBreak = breaks[activeBreakIndex];
-    const startTime = (activeBreak.startTime as Timestamp).toDate();
-    const endTime = new Date();
-    const durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60));
-
     breaks[activeBreakIndex] = {
-      ...activeBreak,
+      ...breaks[activeBreakIndex],
       endTime: new Date(),
-      durationMinutes,
+      // NO durationMinutes stored - computed dynamically
     };
 
     await updateDoc(entryRef, {
       breaks,
       status: TimeTrackingStatus.CLOCKED_IN,
+      updatedAt: serverTimestamp(),
     });
 
     // SYNC: Update User Status
     if (userId) {
-      const userRef = doc(db, 'staffUsers', userId);
+      const userRef = doc(db, FIRESTORE_COLLECTIONS.STAFF_USERS, userId);
       await updateDoc(userRef, {
-        attendanceStatus: 'CLOCKED_IN', // Back to work
-        currentTask: 'Available', // Or retain previous? Defaulting to Available
+        attendanceStatus: 'CLOCKED_IN',
+        currentTask: 'Available',
         lastUpdateTimestamp: serverTimestamp()
       });
     }
@@ -506,15 +488,23 @@ export const getTimeTrackingSummary = (entries: TimeEntry[]) => {
 };
 
 // Add an activity to today's time entry (for task tracking in timeline)
-export const addActivity = async (userId: string, userName: string, activityName: string, isComplete: boolean = false) => {
+export const addActivity = async (
+  userId: string, 
+  userName: string, 
+  activityName: string, 
+  isComplete: boolean = false,
+  organizationId?: string,
+  caseId?: string,
+  taskId?: string
+) => {
   try {
     const today = new Date().toLocaleDateString('en-CA');
 
     // Find today's time entry
     const q = query(
-      collection(db, 'timeEntries'),
+      collection(db, FIRESTORE_COLLECTIONS.TIME_ENTRIES),
       where('userId', '==', userId),
-      where('date', '==', today)
+      where('dateKey', '==', today)
     );
     const snapshot = await getDocs(q);
 
@@ -523,20 +513,34 @@ export const addActivity = async (userId: string, userName: string, activityName
 
     if (snapshot.empty) {
       // Auto clock-in if not clocked in yet (starting first task starts the day)
+      
+      // Fetch org if not provided
+      let orgId = organizationId;
+      if (!orgId) {
+        const { getDoc } = await import('firebase/firestore');
+        const userRef = doc(db, FIRESTORE_COLLECTIONS.STAFF_USERS, userId);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          orgId = userSnap.data().organizationId;
+        }
+      }
+      
       const newEntry = {
         userId,
-        userName,
+        userName: userName || 'Unknown',
+        organizationId: orgId || 'unknown',
+        dateKey: today,
         clockIn: serverTimestamp(),
-        date: today,
         breaks: [],
         activities: [],
         status: TimeTrackingStatus.CLOCKED_IN,
+        createdAt: serverTimestamp(),
       };
-      const docRef = await addDoc(collection(db, 'timeEntries'), newEntry);
+      const docRef = await addDoc(collection(db, FIRESTORE_COLLECTIONS.TIME_ENTRIES), newEntry);
       entryId = docRef.id;
 
       // SYNC: Update User Status for Auto Clock-in
-      const userRef = doc(db, 'users', userId);
+      const userRef = doc(db, FIRESTORE_COLLECTIONS.STAFF_USERS, userId);
       await updateDoc(userRef, {
         attendanceStatus: 'CLOCKED_IN',
         isOnline: true,
@@ -549,6 +553,8 @@ export const addActivity = async (userId: string, userName: string, activityName
       activities = snapshot.docs[0].data().activities || [];
     }
 
+    const entryRef = doc(db, FIRESTORE_COLLECTIONS.TIME_ENTRIES, entryId);
+
     // If marking complete, find the active activity and update it
     if (isComplete) {
       const activeIndex = activities.findIndex((a: any) => a.name === activityName && !a.endTime);
@@ -559,10 +565,15 @@ export const addActivity = async (userId: string, userName: string, activityName
         };
       }
 
+      await updateDoc(entryRef, { 
+        activities,
+        updatedAt: serverTimestamp(),
+      });
+
       // SYNC: Status when complete
-      const userRef = doc(db, 'staffUsers', userId);
+      const userRef = doc(db, FIRESTORE_COLLECTIONS.STAFF_USERS, userId);
       await updateDoc(userRef, {
-        currentTask: 'Available', // Or 'Task Completed'
+        currentTask: 'Available',
         currentTaskDetails: null,
         lastUpdateTimestamp: serverTimestamp()
       });
@@ -574,24 +585,30 @@ export const addActivity = async (userId: string, userName: string, activityName
         name: activityName,
         startTime: new Date(),
         tags: ['task'],
+        caseId,
+        taskId,
+      });
+      
+      await updateDoc(entryRef, { 
+        activities,
+        currentCaseId: caseId,
+        currentTaskId: taskId,
+        updatedAt: serverTimestamp(),
       });
 
       // SYNC: Status when started
-      const userRef = doc(db, 'staffUsers', userId);
+      const userRef = doc(db, FIRESTORE_COLLECTIONS.STAFF_USERS, userId);
       await updateDoc(userRef, {
         currentTask: activityName,
         currentTaskDetails: {
           title: activityName,
           status: 'In Progress',
-          type: 'Desk Work', // Detailed type can be passed if needed
+          type: 'Desk Work',
           startTime: new Date()
         },
         lastUpdateTimestamp: serverTimestamp()
       });
     }
-
-    const entryRef = doc(db, 'timeEntries', entryId);
-    await updateDoc(entryRef, { activities });
 
     console.log(isComplete ? `Activity completed: ${activityName}` : `Activity started: ${activityName}`);
     return entryId;

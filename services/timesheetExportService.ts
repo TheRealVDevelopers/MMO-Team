@@ -729,3 +729,587 @@ export const exportTimesheetSummary = async (
   
   XLSX.writeFile(workbook, `Timesheet_Summary_${startDate}_to_${endDate}.xlsx`);
 };
+
+// ========================================
+// TIME ANALYTICS EXPORT
+// ========================================
+
+export interface TimeAnalyticsRow {
+  'User Name': string;
+  'Role': string;
+  'Organization': string;
+  'Period': string;
+  'Total Days Worked': number;
+  'Total Logged Hours': string;
+  'Total Active Hours': string;
+  'Total Break Hours': string;
+  'Total Idle Hours': string;
+  'Avg Daily Hours': string;
+  'Productivity %': string;
+  'Active Sessions': number;
+  'Break Sessions': number;
+  'Task Sessions': number;
+}
+
+export const exportTimeAnalytics = async (
+  startDate: string,
+  endDate: string,
+  organizationId?: string
+): Promise<void> => {
+  const entries = await fetchTimeEntries(startDate, endDate, undefined, organizationId);
+  
+  if (entries.length === 0) {
+    alert('No time entries found in the selected date range.');
+    return;
+  }
+  
+  const userIds = [...new Set(entries.map(e => e.userId))];
+  const userData = await fetchUserData(userIds);
+  const orgIds = [...userData.values()].map(u => u.organizationId).filter(Boolean) as string[];
+  const orgNames = await fetchOrganizationNames(orgIds);
+  
+  // Group entries by user
+  const userEntries = new Map<string, TimeEntryData[]>();
+  for (const entry of entries) {
+    if (!userEntries.has(entry.userId)) {
+      userEntries.set(entry.userId, []);
+    }
+    userEntries.get(entry.userId)!.push(entry);
+  }
+  
+  const analyticsRows: TimeAnalyticsRow[] = [];
+  
+  for (const [userId, userEntriesList] of userEntries) {
+    const user = userData.get(userId) || {
+      id: userId,
+      name: 'Unknown',
+      role: 'N/A'
+    };
+    const orgName = user.organizationId ? orgNames.get(user.organizationId) || 'N/A' : 'N/A';
+    
+    let totalLoggedMinutes = 0;
+    let totalActiveMinutes = 0;
+    let totalBreakMinutes = 0;
+    let activeSessions = 0;
+    let breakSessions = 0;
+    let taskSessions = 0;
+    const daysWorked = new Set(userEntriesList.map(e => e.date)).size;
+    
+    for (const entry of userEntriesList) {
+      const clockIn = safeDate(entry.clockIn);
+      const clockOut = safeDate(entry.clockOut);
+      
+      if (clockIn) {
+        const sessionEnd = clockOut || new Date();
+        totalLoggedMinutes += calculateDuration(clockIn, sessionEnd);
+      }
+      
+      // Count sessions
+      (entry.activities || []).forEach(a => {
+        const start = safeDate(a.startTime);
+        const end = safeDate(a.endTime);
+        if (start && end && end > start) {
+          totalActiveMinutes += calculateDuration(start, end);
+          taskSessions++;
+        }
+      });
+      
+      (entry.breaks || []).forEach(b => {
+        const start = safeDate(b.startTime);
+        const end = safeDate(b.endTime);
+        if (start && end && end > start) {
+          totalBreakMinutes += calculateDuration(start, end);
+          breakSessions++;
+        }
+      });
+      
+      if (clockIn && clockOut) {
+        activeSessions++;
+      }
+    }
+    
+    const totalLoggedHours = totalLoggedMinutes / 60;
+    const totalActiveHours = totalActiveMinutes / 60;
+    const totalBreakHours = totalBreakMinutes / 60;
+    const totalIdleHours = Math.max(0, totalLoggedHours - totalActiveHours - totalBreakHours);
+    const avgDailyHours = daysWorked > 0 ? totalLoggedHours / daysWorked : 0;
+    const productivity = totalLoggedHours > 0 ? (totalActiveHours / totalLoggedHours) * 100 : 0;
+    
+    analyticsRows.push({
+      'User Name': user.name,
+      'Role': user.role,
+      'Organization': orgName,
+      'Period': `${startDate} to ${endDate}`,
+      'Total Days Worked': daysWorked,
+      'Total Logged Hours': totalLoggedHours.toFixed(2),
+      'Total Active Hours': totalActiveHours.toFixed(2),
+      'Total Break Hours': totalBreakHours.toFixed(2),
+      'Total Idle Hours': totalIdleHours.toFixed(2),
+      'Avg Daily Hours': avgDailyHours.toFixed(2),
+      'Productivity %': productivity.toFixed(1),
+      'Active Sessions': activeSessions,
+      'Break Sessions': breakSessions,
+      'Task Sessions': taskSessions
+    });
+  }
+  
+  const worksheet = XLSX.utils.json_to_sheet(analyticsRows);
+  worksheet['!cols'] = [
+    { wch: 20 }, { wch: 15 }, { wch: 20 }, { wch: 25 },
+    { wch: 15 }, { wch: 18 }, { wch: 18 }, { wch: 18 },
+    { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 15 },
+    { wch: 15 }, { wch: 15 }
+  ];
+  
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Time Analytics');
+  
+  XLSX.writeFile(workbook, `Time_Analytics_${startDate}_to_${endDate}.xlsx`);
+};
+
+// ========================================
+// TIME AUDITING EXPORT
+// ========================================
+
+export interface TimeAuditRow {
+  'Date': string;
+  'User Name': string;
+  'Clock In': string;
+  'Clock Out': string;
+  'Expected Hours': number;
+  'Actual Hours': string;
+  'Variance': string;
+  'Status': string;
+  'Break Count': number;
+  'Total Break Minutes': number;
+  'Activity Count': number;
+  'Compliance Status': string;
+  'Notes': string;
+}
+
+export const exportTimeAudit = async (
+  startDate: string,
+  endDate: string,
+  organizationId?: string,
+  expectedDailyHours: number = 8
+): Promise<void> => {
+  const entries = await fetchTimeEntries(startDate, endDate, undefined, organizationId);
+  
+  if (entries.length === 0) {
+    alert('No time entries found in the selected date range.');
+    return;
+  }
+  
+  const userIds = [...new Set(entries.map(e => e.userId))];
+  const userData = await fetchUserData(userIds);
+  const orgIds = [...userData.values()].map(u => u.organizationId).filter(Boolean) as string[];
+  const orgNames = await fetchOrganizationNames(orgIds);
+  
+  const auditRows: TimeAuditRow[] = [];
+  
+  for (const entry of entries) {
+    const user = userData.get(entry.userId) || {
+      id: entry.userId,
+      name: entry.userName || 'Unknown',
+      role: 'N/A'
+    };
+    
+    const clockIn = safeDate(entry.clockIn);
+    const clockOut = safeDate(entry.clockOut);
+    
+    if (!clockIn) continue;
+    
+    const sessionEnd = clockOut || new Date();
+    const actualMinutes = calculateDuration(clockIn, sessionEnd);
+    const actualHours = actualMinutes / 60;
+    const expectedMinutes = expectedDailyHours * 60;
+    const varianceMinutes = actualMinutes - expectedMinutes;
+    const varianceHours = varianceMinutes / 60;
+    
+    // Determine status
+    let status = 'Complete';
+    if (!clockOut) {
+      status = 'In Progress';
+    } else if (actualHours < expectedDailyHours * 0.5) {
+      status = 'Incomplete';
+    } else if (actualHours < expectedDailyHours * 0.875) {
+      status = 'Partial';
+    }
+    
+    // Calculate break time
+    let totalBreakMinutes = 0;
+    let breakCount = 0;
+    (entry.breaks || []).forEach(b => {
+      const start = safeDate(b.startTime);
+      const end = safeDate(b.endTime);
+      if (start && end && end > start) {
+        totalBreakMinutes += calculateDuration(start, end);
+        breakCount++;
+      }
+    });
+    
+    // Activity count
+    const activityCount = (entry.activities || []).length;
+    
+    // Compliance check
+    let complianceStatus = 'Compliant';
+    let notes = '';
+    
+    if (!clockOut) {
+      complianceStatus = 'Pending';
+      notes = 'Not clocked out';
+    } else if (actualHours > 12) {
+      complianceStatus = 'Review Required';
+      notes = 'Excessive hours logged';
+    } else if (actualHours < 4) {
+      complianceStatus = 'Review Required';
+      notes = 'Insufficient hours logged';
+    } else if (breakCount === 0 && actualHours > 6) {
+      complianceStatus = 'Non-Compliant';
+      notes = 'No break taken for long shift';
+    } else if (totalBreakMinutes > 120) {
+      complianceStatus = 'Review Required';
+      notes = 'Excessive break time';
+    } else if (activityCount === 0 && actualHours > 2) {
+      complianceStatus = 'Review Required';
+      notes = 'No task activities recorded';
+    }
+    
+    auditRows.push({
+      'Date': entry.date,
+      'User Name': user.name,
+      'Clock In': formatTimeForExcel(clockIn),
+      'Clock Out': clockOut ? formatTimeForExcel(clockOut) : '-',
+      'Expected Hours': expectedDailyHours,
+      'Actual Hours': actualHours.toFixed(2),
+      'Variance': (varianceHours >= 0 ? '+' : '') + varianceHours.toFixed(2),
+      'Status': status,
+      'Break Count': breakCount,
+      'Total Break Minutes': totalBreakMinutes,
+      'Activity Count': activityCount,
+      'Compliance Status': complianceStatus,
+      'Notes': notes
+    });
+  }
+  
+  // Sort by date then user
+  auditRows.sort((a, b) => {
+    const dateCompare = a['Date'].localeCompare(b['Date']);
+    if (dateCompare !== 0) return dateCompare;
+    return a['User Name'].localeCompare(b['User Name']);
+  });
+  
+  const worksheet = XLSX.utils.json_to_sheet(auditRows);
+  worksheet['!cols'] = [
+    { wch: 12 }, { wch: 20 }, { wch: 12 }, { wch: 12 },
+    { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 12 },
+    { wch: 12 }, { wch: 18 }, { wch: 15 }, { wch: 18 }, { wch: 30 }
+  ];
+  
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Time Audit');
+  
+  XLSX.writeFile(workbook, `Time_Audit_${startDate}_to_${endDate}.xlsx`);
+};
+
+// ========================================
+// TIME DISCREPANCY REPORT
+// ========================================
+
+export interface DiscrepancyRow {
+  'Date': string;
+  'User Name': string;
+  'Issue Type': string;
+  'Severity': string;
+  'Details': string;
+  'Recommended Action': string;
+}
+
+export const exportTimeDiscrepancyReport = async (
+  startDate: string,
+  endDate: string,
+  organizationId?: string
+): Promise<void> => {
+  const entries = await fetchTimeEntries(startDate, endDate, undefined, organizationId);
+  
+  if (entries.length === 0) {
+    alert('No time entries found in the selected date range.');
+    return;
+  }
+  
+  const userIds = [...new Set(entries.map(e => e.userId))];
+  const userData = await fetchUserData(userIds);
+  
+  const discrepancies: DiscrepancyRow[] = [];
+  
+  for (const entry of entries) {
+    const user = userData.get(entry.userId) || {
+      id: entry.userId,
+      name: entry.userName || 'Unknown',
+      role: 'N/A'
+    };
+    
+    const clockIn = safeDate(entry.clockIn);
+    const clockOut = safeDate(entry.clockOut);
+    
+    if (!clockIn) continue;
+    
+    const sessionEnd = clockOut || new Date();
+    const totalMinutes = calculateDuration(clockIn, sessionEnd);
+    const totalHours = totalMinutes / 60;
+    
+    // Check for various discrepancies
+    
+    // 1. Missing clock out
+    if (!clockOut) {
+      const hoursSinceClockIn = (new Date().getTime() - clockIn.getTime()) / (1000 * 60 * 60);
+      if (hoursSinceClockIn > 16) {
+        discrepancies.push({
+          'Date': entry.date,
+          'User Name': user.name,
+          'Issue Type': 'Missing Clock Out',
+          'Severity': 'High',
+          'Details': `Clocked in at ${formatTimeForExcel(clockIn)} but never clocked out. ${hoursSinceClockIn.toFixed(1)} hours elapsed.`,
+          'Recommended Action': 'Contact employee to confirm actual end time and update record.'
+        });
+      }
+    }
+    
+    // 2. Excessive hours
+    if (totalHours > 14) {
+      discrepancies.push({
+        'Date': entry.date,
+        'User Name': user.name,
+        'Issue Type': 'Excessive Hours',
+        'Severity': 'High',
+        'Details': `Logged ${totalHours.toFixed(1)} hours in a single day.`,
+        'Recommended Action': 'Verify overtime authorization and check for data entry errors.'
+      });
+    }
+    
+    // 3. Very short shift
+    if (totalHours < 2 && clockOut) {
+      discrepancies.push({
+        'Date': entry.date,
+        'User Name': user.name,
+        'Issue Type': 'Short Shift',
+        'Severity': 'Medium',
+        'Details': `Only ${totalHours.toFixed(1)} hours logged.`,
+        'Recommended Action': 'Verify if this was a partial day or data entry error.'
+      });
+    }
+    
+    // 4. No activities recorded
+    const activityCount = (entry.activities || []).length;
+    if (activityCount === 0 && totalHours > 3) {
+      discrepancies.push({
+        'Date': entry.date,
+        'User Name': user.name,
+        'Issue Type': 'No Task Activities',
+        'Severity': 'Medium',
+        'Details': `${totalHours.toFixed(1)} hours logged but no task activities recorded.`,
+        'Recommended Action': 'Employee should be reminded to log task activities during work hours.'
+      });
+    }
+    
+    // 5. Excessive breaks
+    let totalBreakMinutes = 0;
+    (entry.breaks || []).forEach(b => {
+      const start = safeDate(b.startTime);
+      const end = safeDate(b.endTime);
+      if (start && end && end > start) {
+        totalBreakMinutes += calculateDuration(start, end);
+      }
+    });
+    
+    if (totalBreakMinutes > 120) {
+      discrepancies.push({
+        'Date': entry.date,
+        'User Name': user.name,
+        'Issue Type': 'Excessive Break Time',
+        'Severity': 'Medium',
+        'Details': `Total break time: ${(totalBreakMinutes / 60).toFixed(1)} hours.`,
+        'Recommended Action': 'Review break policy compliance with employee.'
+      });
+    }
+    
+    // 6. Late clock in (after 10 AM)
+    const clockInHour = clockIn.getHours();
+    if (clockInHour >= 10 && clockInHour < 14) {
+      discrepancies.push({
+        'Date': entry.date,
+        'User Name': user.name,
+        'Issue Type': 'Late Clock In',
+        'Severity': 'Low',
+        'Details': `Clocked in at ${formatTimeForExcel(clockIn)}.`,
+        'Recommended Action': 'Verify if this was approved late arrival.'
+      });
+    }
+    
+    // 7. Very early clock in (before 6 AM)
+    if (clockInHour < 6) {
+      discrepancies.push({
+        'Date': entry.date,
+        'User Name': user.name,
+        'Issue Type': 'Early Clock In',
+        'Severity': 'Low',
+        'Details': `Clocked in at ${formatTimeForExcel(clockIn)}.`,
+        'Recommended Action': 'Verify if early start was authorized.'
+      });
+    }
+  }
+  
+  if (discrepancies.length === 0) {
+    alert('No discrepancies found in the selected date range. All time entries appear compliant.');
+    return;
+  }
+  
+  // Sort by severity then date
+  const severityOrder = { 'High': 0, 'Medium': 1, 'Low': 2 };
+  discrepancies.sort((a, b) => {
+    const sevCompare = severityOrder[a['Severity'] as keyof typeof severityOrder] - severityOrder[b['Severity'] as keyof typeof severityOrder];
+    if (sevCompare !== 0) return sevCompare;
+    return a['Date'].localeCompare(b['Date']);
+  });
+  
+  const worksheet = XLSX.utils.json_to_sheet(discrepancies);
+  worksheet['!cols'] = [
+    { wch: 12 }, { wch: 20 }, { wch: 20 }, { wch: 10 },
+    { wch: 50 }, { wch: 50 }
+  ];
+  
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Discrepancies');
+  
+  XLSX.writeFile(workbook, `Time_Discrepancy_Report_${startDate}_to_${endDate}.xlsx`);
+};
+
+// ========================================
+// PAYMENT PROCESSING EXPORT
+// ========================================
+
+export interface PaymentProcessingRow {
+  'User ID': string;
+  'User Name': string;
+  'Role': string;
+  'Organization': string;
+  'Period': string;
+  'Total Hours': string;
+  'Regular Hours': string;
+  'Overtime Hours': string;
+  'Hourly Rate': string;
+  'Regular Pay': string;
+  'Overtime Pay': string;
+  'Total Pay': string;
+  'Status': string;
+}
+
+export const exportPaymentProcessing = async (
+  startDate: string,
+  endDate: string,
+  organizationId?: string,
+  hourlyRates?: Map<string, number>, // userId -> rate
+  overtimeThreshold: number = 8 // hours per day before overtime
+): Promise<void> => {
+  const entries = await fetchTimeEntries(startDate, endDate, undefined, organizationId);
+  
+  if (entries.length === 0) {
+    alert('No time entries found in the selected date range.');
+    return;
+  }
+  
+  const userIds = [...new Set(entries.map(e => e.userId))];
+  const userData = await fetchUserData(userIds);
+  const orgIds = [...userData.values()].map(u => u.organizationId).filter(Boolean) as string[];
+  const orgNames = await fetchOrganizationNames(orgIds);
+  
+  // Group entries by user
+  const userEntries = new Map<string, TimeEntryData[]>();
+  for (const entry of entries) {
+    if (!userEntries.has(entry.userId)) {
+      userEntries.set(entry.userId, []);
+    }
+    userEntries.get(entry.userId)!.push(entry);
+  }
+  
+  const paymentRows: PaymentProcessingRow[] = [];
+  
+  for (const [userId, userEntriesList] of userEntries) {
+    const user = userData.get(userId) || {
+      id: userId,
+      name: 'Unknown',
+      role: 'N/A'
+    };
+    const orgName = user.organizationId ? orgNames.get(user.organizationId) || 'N/A' : 'N/A';
+    
+    let totalHours = 0;
+    let regularHours = 0;
+    let overtimeHours = 0;
+    
+    for (const entry of userEntriesList) {
+      const clockIn = safeDate(entry.clockIn);
+      const clockOut = safeDate(entry.clockOut);
+      
+      if (!clockIn || !clockOut) continue;
+      
+      const entryHours = calculateDuration(clockIn, clockOut) / 60;
+      totalHours += entryHours;
+      
+      // Calculate regular vs overtime per day
+      if (entryHours <= overtimeThreshold) {
+        regularHours += entryHours;
+      } else {
+        regularHours += overtimeThreshold;
+        overtimeHours += (entryHours - overtimeThreshold);
+      }
+    }
+    
+    const rate = hourlyRates?.get(userId) || 0;
+    const regularPay = regularHours * rate;
+    const overtimePay = overtimeHours * (rate * 1.5); // 1.5x overtime
+    const totalPay = regularPay + overtimePay;
+    
+    // Determine status - check if any entry is incomplete
+    let status = 'Pending';
+    if (totalHours === 0) {
+      status = 'No Data';
+    } else if (userEntriesList.some(e => !e.clockOut)) {
+      status = 'Incomplete';
+    }
+    
+    paymentRows.push({
+      'User ID': userId,
+      'User Name': user.name,
+      'Role': user.role,
+      'Organization': orgName,
+      'Period': `${startDate} to ${endDate}`,
+      'Total Hours': totalHours.toFixed(2),
+      'Regular Hours': regularHours.toFixed(2),
+      'Overtime Hours': overtimeHours.toFixed(2),
+      'Hourly Rate': rate > 0 ? rate.toFixed(2) : 'N/A',
+      'Regular Pay': rate > 0 ? regularPay.toFixed(2) : 'N/A',
+      'Overtime Pay': rate > 0 ? overtimePay.toFixed(2) : 'N/A',
+      'Total Pay': rate > 0 ? totalPay.toFixed(2) : 'N/A',
+      'Status': status
+    });
+  }
+  
+  // Sort by organization then user
+  paymentRows.sort((a, b) => {
+    const orgCompare = a['Organization'].localeCompare(b['Organization']);
+    if (orgCompare !== 0) return orgCompare;
+    return a['User Name'].localeCompare(b['User Name']);
+  });
+  
+  const worksheet = XLSX.utils.json_to_sheet(paymentRows);
+  worksheet['!cols'] = [
+    { wch: 20 }, { wch: 20 }, { wch: 15 }, { wch: 20 }, { wch: 25 },
+    { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 12 }, { wch: 12 },
+    { wch: 14 }, { wch: 12 }, { wch: 12 }
+  ];
+  
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Payment Processing');
+  
+  XLSX.writeFile(workbook, `Payment_Processing_${startDate}_to_${endDate}.xlsx`);
+};

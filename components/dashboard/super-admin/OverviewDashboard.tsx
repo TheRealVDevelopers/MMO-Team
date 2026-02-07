@@ -28,7 +28,7 @@ import DashboardCalendar from './DashboardCalendar';
 import PerformanceFlagSummary from './PerformanceFlagSummary';
 import { usePerformanceMonitor } from '../../../hooks/usePerformanceMonitor';
 import FinanceOverview from './FinanceOverview';
-import { useTeamTimeEntries } from '../../../hooks/useTimeTracking';
+import { useTeamTimeAnalytics } from '../../../hooks/useTimeAnalytics';
 
 
 import ProjectDetailModal from '../admin/ProjectDetailModal';
@@ -137,63 +137,19 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage, o
         return { startDate, endDate };
     }, [dateRange, customStartDate, customEndDate]);
 
-    const { entries: teamEntries } = useTeamTimeEntries(getDateRangeBounds.startDate, getDateRangeBounds.endDate);
+    // Use unified time analytics hook - SINGLE SOURCE OF TRUTH
+    const { teamTotals, loading: timeAnalyticsLoading } = useTeamTimeAnalytics(
+      undefined, // Will use current user's org if available
+      new Date().getFullYear(),
+      new Date().getMonth()
+    );
 
-    const teamMetrics = useMemo(() => {
-        let totalLoggedMins = 0;
-        let totalActiveMins = 0;
-        let totalBreakMins = 0;
-
-        const now = new Date();
-        const todayStr = now.toLocaleDateString('en-CA');
-
-        teamEntries.forEach(entry => {
-            const isToday = entry.date === todayStr;
-
-            if (entry.clockIn) {
-                const clockIn = entry.clockIn instanceof Date ? entry.clockIn : new Date(entry.clockIn);
-                const clockOut = entry.clockOut
-                    ? (entry.clockOut instanceof Date ? entry.clockOut : new Date(entry.clockOut))
-                    : (isToday ? now : clockIn);
-
-                if (clockOut > clockIn) {
-                    totalLoggedMins += (clockOut.getTime() - clockIn.getTime()) / (1000 * 60);
-                }
-            }
-
-            (entry.activities || []).forEach(a => {
-                if (a.startTime) {
-                    const start = a.startTime instanceof Date ? a.startTime : new Date(a.startTime);
-                    const end = a.endTime
-                        ? (a.endTime instanceof Date ? a.endTime : new Date(a.endTime))
-                        : (isToday ? now : start);
-
-                    if (end > start) {
-                        totalActiveMins += (end.getTime() - start.getTime()) / (1000 * 60);
-                    }
-                }
-            });
-
-            (entry.breaks || []).forEach(b => {
-                if (b.startTime) {
-                    const start = b.startTime instanceof Date ? b.startTime : new Date(b.startTime);
-                    const end = b.endTime
-                        ? (b.endTime instanceof Date ? b.endTime : new Date(b.endTime))
-                        : (isToday ? now : start);
-
-                    if (end > start) {
-                        totalBreakMins += (end.getTime() - start.getTime()) / (1000 * 60);
-                    }
-                }
-            });
-        });
-
-        const loggedHours = (totalLoggedMins / 60).toFixed(1);
-        const activeHours = (totalActiveMins / 60).toFixed(1);
-        const idleHours = Math.max(0, (totalLoggedMins - totalActiveMins - totalBreakMins) / 60).toFixed(1);
-
-        return { loggedHours, activeHours, idleHours };
-    }, [teamEntries]);
+    // Derived metrics from unified hook (all computed, not stored)
+    const teamMetrics = useMemo(() => ({
+        loggedHours: timeAnalyticsLoading ? '0.0' : teamTotals.totalLoggedHours.toFixed(1),
+        activeHours: timeAnalyticsLoading ? '0.0' : teamTotals.totalActiveHours.toFixed(1),
+        idleHours: timeAnalyticsLoading ? '0.0' : Math.max(0, teamTotals.totalLoggedHours - teamTotals.totalActiveHours - teamTotals.totalBreakHours).toFixed(1),
+    }), [teamTotals, timeAnalyticsLoading]);
     const [funnelLeads, setFunnelLeads] = useState<Project[]>([]);
 
     // KPI Calculations

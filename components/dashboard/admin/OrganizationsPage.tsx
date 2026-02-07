@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { PlusIcon, BuildingOfficeIcon, MagnifyingGlassIcon, UserIcon, MapPinIcon, XMarkIcon, CurrencyRupeeIcon, UserCircleIcon, MapIcon, CheckCircleIcon, PencilIcon } from '@heroicons/react/24/outline';
-// import { ORGANIZATIONS } from '../../../constants';
+import { PlusIcon, BuildingOfficeIcon, MagnifyingGlassIcon, UserIcon, MapPinIcon, XMarkIcon, CurrencyRupeeIcon, UserCircleIcon, MapIcon, CheckCircleIcon, PencilIcon, RocketLaunchIcon } from '@heroicons/react/24/outline';
 import { Organization, ProjectStatus, Project, ExecutionStage, PaymentTerm } from '../../../types';
 import { useProjects } from '../../../hooks/useProjects';
 import { useLeads } from '../../../hooks/useLeads';
 import { formatCurrencyINR } from '../../../constants';
 import CreateOrganizationModal from './CreateOrganizationModal';
-import CreateProjectWizard from './CreateProjectWizard';
+import ConvertFromLeadModal from './ConvertFromLeadModal';
+import CreateFreshProjectModal from './CreateFreshProjectModal';
 import Modal from '../../shared/Modal';
 
 interface OrganizationsPageProps {
@@ -18,9 +18,10 @@ import { useOrganizations } from '../../../hooks/useOrganizations';
 import { useUsers } from '../../../hooks/useUsers';
 
 const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage }) => {
-    // const [organizations, setOrganizations] = useState<Organization[]>(ORGANIZATIONS); // Removed local state for orgs
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [isProjectWizardOpen, setIsProjectWizardOpen] = useState(false);
+    const [isProjectLauncherOpen, setIsProjectLauncherOpen] = useState(false);
+    const [isConvertLeadModalOpen, setIsConvertLeadModalOpen] = useState(false);
+    const [isFreshProjectModalOpen, setIsFreshProjectModalOpen] = useState(false);
     const [selectedOrgId, setSelectedOrgId] = useState<string>('');
     const [searchQuery, setSearchQuery] = useState('');
     const [organizationToEdit, setOrganizationToEdit] = useState<Organization | null>(null);
@@ -65,123 +66,6 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
         setIsCreateModalOpen(true);
     };
 
-    const handleCreateProject = async (projectData: any) => {
-        console.log('Creating project:', projectData);
-
-        try {
-            // Build assignedTeam object conditionally to avoid undefined values
-            const assignedTeam: any = {
-                execution: projectData.projectHeadId ? [projectData.projectHeadId] : [],
-            };
-
-            // Only add site_engineer if it has a value
-            if (projectData.siteEngineerId) {
-                assignedTeam.site_engineer = projectData.siteEngineerId;
-            }
-
-            // Only add drawing if it has a value
-            if (projectData.designerId) {
-                assignedTeam.drawing = projectData.designerId;
-            }
-
-            // Only add quotation if it has a value
-            if (projectData.quotationId) {
-                assignedTeam.quotation = projectData.quotationId;
-            }
-
-            // Map Wizard Data to Project Interface
-            const newProject: Omit<Project, 'id'> = {
-                clientName: projectData.clientName || '',
-                projectName: projectData.projectName || '',
-                status: ProjectStatus.PENDING_EXECUTION_APPROVAL, // ✅ ENFORCE: All projects start here
-                priority: 'Medium', // Default
-                budget: Number(projectData.budget) || 0,
-                advancePaid: Number(projectData.advanceAmount) || 0,
-                clientAddress: projectData.location || '',
-                clientContact: { name: projectData.clientName || '', phone: '' }, // Placeholder
-                progress: 0,
-                assignedTeam: assignedTeam,
-                milestones: [],
-                startDate: projectData.startDate ? new Date(projectData.startDate) : new Date(),
-                endDate: projectData.deadline ? new Date(projectData.deadline) : new Date(),
-                is_demo: false,
-                checklists: { daily: [], quality: [] },
-                history: [{
-                    action: 'Project Created',
-                    user: 'Admin', // Should be current user name
-                    timestamp: new Date(),
-                    notes: 'Project initialized via Admin Wizard'
-                }]
-            };
-
-            // Only add optional fields if they have values
-            if (projectData.siteEngineerId) {
-                newProject.assignedEngineerId = projectData.siteEngineerId;
-            }
-            if (projectData.designerId) {
-                newProject.drawingTeamMemberId = projectData.designerId;
-            }
-            if (projectData.salesPersonId) {
-                newProject.salespersonId = projectData.salesPersonId;
-            }
-            if (projectData.organizationId) {
-                newProject.organizationId = projectData.organizationId;
-            }
-
-            // Map Timeline to Stages only if provided
-            if (projectData.timeline && Array.isArray(projectData.timeline) && projectData.timeline.length > 0) {
-                newProject.stages = projectData.timeline.map((t: any, idx: number) => ({
-                    id: `stage-${Date.now()}-${idx}`,
-                    name: t.phase,
-                    deadline: t.date ? new Date(t.date) : new Date(),
-                    status: 'Pending',
-                } as ExecutionStage));
-            }
-
-            // Map Payment Terms only if provided
-            if (projectData.paymentTerms && Array.isArray(projectData.paymentTerms) && projectData.paymentTerms.length > 0) {
-                newProject.paymentTerms = projectData.paymentTerms.map((t: any, idx: number) => {
-                    const term: PaymentTerm = {
-                        id: `pay-${Date.now()}-${idx}`,
-                        milestone: t.milestone,
-                        percentage: t.percentage,
-                        status: 'Pending'
-                    };
-                    // Only add amount if it exists
-                    if (t.amount) {
-                        term.amount = t.amount;
-                    }
-                    // Only add dueDate if it exists
-                    if (t.dueDate) {
-                        term.dueDate = new Date(t.dueDate);
-                    }
-                    return term;
-                });
-            }
-
-            const projectId = await addProject(newProject);
-
-            // Link project to Organization
-            if (projectData.organizationId) {
-                const org = organizations.find(o => o.id === projectData.organizationId);
-                // Only update if it's a real Firestore organization (not mock)
-                // We can assume real orgs don't have IDs starting with 'org-' unless we migrated data.
-                // But for now, let's try to update. If it fails (because it's mock), we catch error.
-                if (org && !org.is_demo) {
-                    await updateOrganization(org.id, {
-                        projects: [...(org.projects || []), projectId]
-                    });
-                }
-            }
-
-            alert('Project created successfully in Firestore!');
-
-        } catch (error) {
-            console.error("Failed to create project:", error);
-            alert('Failed to create project. See console.');
-        }
-    };
-
     const handleViewProjects = (org: Organization) => {
         // Fetch real projects by organization ID
         const orgProjects = (allProjects || []).filter(p => p.organizationId === org.id);
@@ -223,13 +107,25 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Organization Management</h1>
                     <p className="text-gray-500 dark:text-gray-400">Manage client organizations and their projects</p>
                 </div>
-                <button
-                    onClick={handleOpenCreateModal}
-                    className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors shadow-sm"
-                >
-                    <PlusIcon className="w-5 h-5" />
-                    Add Organization
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => {
+                            setSelectedOrgId('');
+                            setIsProjectLauncherOpen(true);
+                        }}
+                        className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl transition-colors shadow-lg shadow-green-600/30 font-bold text-lg"
+                    >
+                        <RocketLaunchIcon className="w-6 h-6" />
+                        New Project
+                    </button>
+                    <button
+                        onClick={handleOpenCreateModal}
+                        className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors shadow-sm"
+                    >
+                        <PlusIcon className="w-5 h-5" />
+                        Add Organization
+                    </button>
+                </div>
             </div>
 
             {/* Search and Filter */}
@@ -301,7 +197,7 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     setSelectedOrgId(org.id);
-                                    setIsProjectWizardOpen(true);
+                                    setIsProjectLauncherOpen(true);
                                 }}
                                 className="text-sm font-medium text-primary hover:text-primary/80"
                             >
@@ -322,13 +218,47 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                 initialData={organizationToEdit}
             />
 
-            <CreateProjectWizard
-                isOpen={isProjectWizardOpen}
-                onClose={() => setIsProjectWizardOpen(false)}
-                onSubmit={handleCreateProject}
-                preselectedOrgId={selectedOrgId}
-                organizations={organizations}
-            />
+            {/* New Project Launcher Modal */}
+            {isProjectLauncherOpen && (
+                <Modal
+                    isOpen={isProjectLauncherOpen}
+                    onClose={() => setIsProjectLauncherOpen(false)}
+                    title="Create New Project"
+                    size="lg"
+                >
+                    <div className="space-y-6 p-4">
+                        <p className="text-text-secondary text-center">Choose how you want to create this project:</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <button
+                                onClick={() => {
+                                    setIsProjectLauncherOpen(false);
+                                    setIsConvertLeadModalOpen(true);
+                                }}
+                                className="p-6 bg-subtle-background hover:bg-primary/10 border-2 border-border hover:border-primary rounded-xl transition-all text-left group"
+                            >
+                                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg w-fit mb-4">
+                                    <UserCircleIcon className="w-8 h-8 text-blue-600" />
+                                </div>
+                                <h3 className="text-lg font-bold text-text-primary group-hover:text-primary">Convert From Lead</h3>
+                                <p className="text-sm text-text-secondary mt-1">Select an existing lead and convert it to a project</p>
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setIsProjectLauncherOpen(false);
+                                    setIsFreshProjectModalOpen(true);
+                                }}
+                                className="p-6 bg-subtle-background hover:bg-primary/10 border-2 border-border hover:border-primary rounded-xl transition-all text-left group"
+                            >
+                                <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg w-fit mb-4">
+                                    <RocketLaunchIcon className="w-8 h-8 text-green-600" />
+                                </div>
+                                <h3 className="text-lg font-bold text-text-primary group-hover:text-primary">Create Fresh Project</h3>
+                                <p className="text-sm text-text-secondary mt-1">Start a brand new project from scratch</p>
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
 
             {/* Enhanced Projects Modal */}
             {isProjectsModalOpen && (
@@ -584,6 +514,30 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                     </div>
                 </Modal>
             )}
+
+            {/* Convert From Lead Modal */}
+            <ConvertFromLeadModal
+                isOpen={isConvertLeadModalOpen}
+                onClose={() => setIsConvertLeadModalOpen(false)}
+                organizationId={selectedOrgId}
+                onSuccess={(caseId) => {
+                    setIsConvertLeadModalOpen(false);
+                    // TODO: Navigate to execution planning
+                    alert(`Lead converted to project! Case ID: ${caseId}`);
+                }}
+            />
+
+            {/* Create Fresh Project Modal */}
+            <CreateFreshProjectModal
+                isOpen={isFreshProjectModalOpen}
+                onClose={() => setIsFreshProjectModalOpen(false)}
+                organizationId={selectedOrgId}
+                onSuccess={(caseId) => {
+                    setIsFreshProjectModalOpen(false);
+                    // TODO: Navigate to execution planning
+                    alert(`Project created! Case ID: ${caseId}`);
+                }}
+            />
         </div>
     );
 };

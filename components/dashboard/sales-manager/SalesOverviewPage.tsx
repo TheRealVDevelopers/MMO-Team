@@ -22,7 +22,7 @@ import { useTeamTasks } from '../../../hooks/useTeamTasks';
 import { updateLead } from '../../../hooks/useLeads';
 import LeadDetailModal from '../../shared/LeadDetailModal';
 import { useDashboardStats } from '../../../hooks/useDashboardStats';
-import { useTeamTimeEntries } from '../../../hooks/useTimeTracking';
+import { useTeamTimeAnalytics } from '../../../hooks/useTimeAnalytics';
 
 const pipelineOrder = Object.values(LeadPipelineStatus);
 
@@ -71,63 +71,30 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; lead
         return { startDate, endDate };
     }, [dateRange, customStartDate, customEndDate]);
 
-    const { entries: teamEntries } = useTeamTimeEntries(getDateRangeBounds.startDate, getDateRangeBounds.endDate, salesTeamUserIds);
-
-    const teamMetrics = useMemo(() => {
-        let totalLoggedMins = 0;
-        let totalActiveMins = 0;
-        let totalBreakMins = 0;
-
-        const now = new Date();
-        const todayStr = now.toLocaleDateString('en-CA');
-
-        teamEntries.forEach(entry => {
-            const isToday = entry.date === todayStr;
-
-            if (entry.clockIn) {
-                const clockIn = entry.clockIn instanceof Date ? entry.clockIn : new Date(entry.clockIn);
-                const clockOut = entry.clockOut
-                    ? (entry.clockOut instanceof Date ? entry.clockOut : new Date(entry.clockOut))
-                    : (isToday ? now : clockIn);
-
-                if (clockOut > clockIn) {
-                    totalLoggedMins += (clockOut.getTime() - clockIn.getTime()) / (1000 * 60);
-                }
-            }
-
-            (entry.activities || []).forEach(a => {
-                if (a.startTime) {
-                    const start = a.startTime instanceof Date ? a.startTime : new Date(a.startTime);
-                    const end = a.endTime
-                        ? (a.endTime instanceof Date ? a.endTime : new Date(a.endTime))
-                        : (isToday ? now : start);
-
-                    if (end > start) {
-                        totalActiveMins += (end.getTime() - start.getTime()) / (1000 * 60);
-                    }
-                }
-            });
-
-            (entry.breaks || []).forEach(b => {
-                if (b.startTime) {
-                    const start = b.startTime instanceof Date ? b.startTime : new Date(b.startTime);
-                    const end = b.endTime
-                        ? (b.endTime instanceof Date ? b.endTime : new Date(b.endTime))
-                        : (isToday ? now : start);
-
-                    if (end > start) {
-                        totalBreakMins += (end.getTime() - start.getTime()) / (1000 * 60);
-                    }
-                }
-            });
-        });
-
-        const loggedHours = (totalLoggedMins / 60).toFixed(1);
-        const activeHours = (totalActiveMins / 60).toFixed(1);
-        const idleHours = Math.max(0, (totalLoggedMins - totalActiveMins - totalBreakMins) / 60).toFixed(1);
-
-        return { loggedHours, activeHours, idleHours };
-    }, [teamEntries]);
+    // Use unified time analytics hook - SINGLE SOURCE OF TRUTH
+    // Note: useTeamTimeAnalytics filters by organization, not by userIds
+    // For sales team specific metrics, we'd need to enhance the hook or filter results
+    const { teamTotals, users: teamUsers, loading: timeAnalyticsLoading } = useTeamTimeAnalytics(
+      salesTeam[0]?.organizationId,
+      new Date().getFullYear(),
+      new Date().getMonth()
+    );
+    
+    // Filter to sales team users only
+    const salesTeamMetrics = useMemo(() => {
+      const salesUserEntries = teamUsers.filter(u => salesTeamUserIds.includes(u.userId));
+      
+      const totals = salesUserEntries.reduce((acc, user) => ({
+        totalLoggedHours: acc.totalLoggedHours + user.totalLoggedHours,
+        totalActiveHours: acc.totalActiveHours + user.totalActiveHours,
+      }), { totalLoggedHours: 0, totalActiveHours: 0 });
+      
+      const loggedHours = timeAnalyticsLoading ? '0.0' : totals.totalLoggedHours.toFixed(1);
+      const activeHours = timeAnalyticsLoading ? '0.0' : totals.totalActiveHours.toFixed(1);
+      const idleHours = timeAnalyticsLoading ? '0.0' : Math.max(0, totals.totalLoggedHours - totals.totalActiveHours).toFixed(1);
+      
+      return { loggedHours, activeHours, idleHours };
+    }, [teamUsers, salesTeamUserIds, timeAnalyticsLoading]);
 
     // --- LIVE DATA CALCULATIONS ---
     const startOfMonth = new Date();
@@ -258,7 +225,7 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; lead
                             </div>
                             <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Logged Hours</p>
                         </div>
-                        <p className="text-3xl font-serif font-black text-text-primary tracking-tight">{teamMetrics.loggedHours}<span className="text-sm font-sans font-medium text-text-tertiary ml-2">hrs</span></p>
+                        <p className="text-3xl font-serif font-black text-text-primary tracking-tight">{salesTeamMetrics.loggedHours}<span className="text-sm font-sans font-medium text-text-tertiary ml-2">hrs</span></p>
                     </div>
 
                     <div className="bg-subtle-background p-6 rounded-2xl border border-border/20 group hover:border-accent/20 transition-all">
@@ -268,7 +235,7 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; lead
                             </div>
                             <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Sales Activity Time</p>
                         </div>
-                        <p className="text-3xl font-serif font-black text-text-primary tracking-tight">{teamMetrics.activeHours}<span className="text-sm font-sans font-medium text-text-tertiary ml-2">hrs</span></p>
+                        <p className="text-3xl font-serif font-black text-text-primary tracking-tight">{salesTeamMetrics.activeHours}<span className="text-sm font-sans font-medium text-text-tertiary ml-2">hrs</span></p>
                     </div>
 
                     <div className="bg-subtle-background p-6 rounded-2xl border border-border/20 group hover:border-secondary/20 transition-all">
@@ -278,7 +245,7 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; lead
                             </div>
                             <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Idle Analysis</p>
                         </div>
-                        <p className="text-3xl font-serif font-black text-text-primary tracking-tight">{teamMetrics.idleHours}<span className="text-sm font-sans font-medium text-text-tertiary ml-2">hrs</span></p>
+                        <p className="text-3xl font-serif font-black text-text-primary tracking-tight">{salesTeamMetrics.idleHours}<span className="text-sm font-sans font-medium text-text-tertiary ml-2">hrs</span></p>
                     </div>
                 </div>
             </section>
