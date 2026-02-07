@@ -32,6 +32,7 @@ const navConfig = {
       { id: 'approvals', label: 'Request Inbox', icon: <CheckCircleIcon className="w-6 h-6" /> },
       { id: 'registrations', label: 'Registrations', icon: <UsersIcon className="w-6 h-6" /> },
       { id: 'finance', label: 'Finance', icon: <BanknotesIcon className="w-6 h-6" /> },
+      { id: 'timesheet-reports', label: 'Timesheet Reports', icon: <DocumentTextIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
       { id: 'workflow', label: 'M-Workflow', icon: <PresentationChartLineIcon className="w-6 h-6" /> },
     ],

@@ -24,14 +24,14 @@ export enum UserRole {
 }
 
 export enum CaseStatus {
-  NEW = "new",
-  CONTACTED = "contacted",
-  SITE_VISIT = "site_visit",
+  LEAD = "lead",
   DRAWING = "drawing",
   BOQ = "boq",
   QUOTATION = "quotation",
-  PAYMENT_PENDING = "payment_pending",
-  ACTIVE_PROJECT = "active_project",
+  NEGOTIATION = "negotiation",
+  WAITING_FOR_PAYMENT = "waiting_for_payment",
+  WAITING_FOR_PLANNING = "waiting_for_planning",
+  ACTIVE = "active",
   COMPLETED = "completed",
 }
 
@@ -48,6 +48,16 @@ export enum TaskType {
   BOQ = "boq",
   QUOTATION = "quotation",
   EXECUTION = "execution",
+}
+
+export enum CaseTaskType {
+  SALES = "SALES",
+  SITE_VISIT = "SITE_VISIT",
+  DRAWING = "DRAWING",
+  BOQ = "BOQ",
+  QUOTATION = "QUOTATION",
+  PROCUREMENT = "PROCUREMENT",
+  EXECUTION = "EXECUTION",
 }
 
 export enum TaskStatus {
@@ -194,7 +204,7 @@ export interface Case {
 
   // Assignment
   assignedSales?: string; // User ID
-  projectHead?: string; // User ID (when converted to project)
+  projectHeadId?: string; // User ID (when converted to project)
 
   // Project Flag
   isProject: boolean; // FALSE = Lead, TRUE = Project
@@ -205,14 +215,59 @@ export interface Case {
   // Workflow State
   workflow: CaseWorkflow;
 
+  // Financial tracking (populated when payment submitted)
+  financial?: {
+    advanceAmount: number;
+    utr: string;
+    paymentVerified: boolean;
+    totalBudget?: number;
+    spentAmount?: number;
+  };
+
+  // Execution planning (populated by Project Head)
+  executionPlan?: {
+    startDate: Date;
+    endDate: Date;
+    phases: Array<{
+      id: string;
+      name: string;
+      startDate: Date;
+      endDate: Date;
+      materials: Array<{
+        name: string;
+        quantity: number;
+        unit: string;
+        estimatedCost: number;
+      }>;
+      estimatedCost: number;
+    }>;
+    approved: boolean;
+    approvedBy?: string; // User ID
+    approvedAt?: Date;
+  };
+
+  // Cost center tracking (activated when execution starts)
+  costCenter?: {
+    totalBudget: number;
+    spentAmount: number;        // REQUIRED for tracking
+    remainingAmount: number;    // REQUIRED: totalBudget - spentAmount
+    expenses: number;
+    materials: number;
+    salaries: number;
+  };
+
   // Budget (only when isProject = true)
   budget?: CaseBudget;
 
   // Execution (only when isProject = true)
   execution?: CaseExecution;
 
-  // Closure (only when completed)
-  closure?: CaseClosure;
+  // Closure tracking (populated when JMS signed)
+  closure?: {
+    jmsSigned: boolean;
+    completedAt?: Date;
+    completedBy?: string; // User ID
+  };
 }
 
 export interface CaseWorkflow {
@@ -382,6 +437,57 @@ export interface CaseActivity {
   metadata?: Record<string, any>;
 }
 
+// Path: organizations/{orgId}/cases/{caseId}/payments/{paymentId}
+export interface CasePayment {
+  id: string;
+  caseId: string;
+  amount: number;
+  utr: string;
+  submittedBy: string; // User ID (Sales)
+  submittedAt: Date;
+  verified: boolean;
+  verifiedBy?: string; // User ID (Accountant)
+  verifiedAt?: Date;
+  notes?: string;
+  receiptUrl?: string; // Storage URL
+}
+
+// Path: organizations/{orgId}/cases/{caseId}/dailyUpdates/{updateId}
+export interface CaseDailyUpdate {
+  id: string;
+  caseId: string;
+  date: Date;
+  workDescription: string;
+  completionPercent: number;
+  manpowerCount: number;
+  weather: string;
+  photos: string[]; // Storage URLs
+  createdBy: string; // User ID
+  createdAt: Date;
+  blocker?: string;
+}
+
+// Path: organizations/{orgId}/cases/{caseId}/jms/completion (single doc)
+export interface CaseJMS {
+  caseId: string;
+  clientName: string;
+  clientSignature?: string; // Storage URL
+  clientSignedAt?: Date;
+  defects: Array<{
+    id: string;
+    description: string;
+    resolved: boolean;
+  }>;
+  warranties: Array<{
+    item: string;
+    duration: string;
+    expiryDate: Date;
+  }>;
+  finalPhotos: string[]; // Storage URLs
+  completedAt?: Date;
+  completedBy?: string; // User ID
+}
+
 // ========================================
 // ORGANIZATION LEVEL TYPES
 // ========================================
@@ -495,15 +601,70 @@ export interface UserNotification {
 // GLOBAL COLLECTIONS (NOT NESTED)
 // ========================================
 
+// ========================================
+// TIME TRACKING - CANONICAL SCHEMA
 // Path: timeEntries/{entryId}
+// ========================================
+
+export enum TimeTrackingStatus {
+  CLOCKED_IN = 'clocked_in',
+  CLOCKED_OUT = 'clocked_out',
+  ON_BREAK = 'on_break',
+}
+
+export interface BreakEntry {
+  id: string;
+  startTime: Date;
+  endTime?: Date;
+}
+
+export interface TimeActivity {
+  id: string;
+  name: string;
+  startTime: Date;
+  endTime?: Date;
+  tags?: string[];
+  caseId?: string;
+  taskId?: string;
+}
+
+/**
+ * CANONICAL TIME ENTRY SCHEMA
+ * 
+ * Rules:
+ * - activeSeconds, idleSeconds, breakSeconds are DERIVED (computed, not stored)
+ * - Only clockIn/Out, breaks, activities are stored
+ * - All aggregations happen at query time
+ * - NO stored totals
+ */
 export interface TimeEntry {
+  // Identity
   id: string;
   userId: string;
-  date: string; // YYYY-MM-DD
+  userName: string;
+  organizationId: string; // REQUIRED for multi-org scoping
+  
+  // Date Key (for efficient querying)
+  dateKey: string; // Format: "YYYY-MM-DD"
+  
+  // Clock Times (raw data only)
   clockIn: Date;
   clockOut?: Date;
-  totalHours?: number;
-  status: 'clocked_in' | 'clocked_out' | 'on_break';
+  
+  // Sub-events (raw data only)
+  breaks: BreakEntry[];
+  activities: TimeActivity[];
+  
+  // Status
+  status: TimeTrackingStatus;
+  
+  // Metadata
+  createdAt: Date;
+  updatedAt?: Date;
+  
+  // Optional task/case linking
+  currentTaskId?: string;
+  currentCaseId?: string;
 }
 
 // Path: chat_channels/{channelId}
@@ -711,12 +872,6 @@ export enum QuestionCategory {
   BUDGET = "budget",
   TIMELINE = "timeline",
   OTHER = "other",
-}
-
-export enum TimeTrackingStatus {
-  CLOCKED_IN = "clocked_in",
-  CLOCKED_OUT = "clocked_out",
-  ON_BREAK = "on_break",
 }
 
 export enum ComplaintPriority {
@@ -939,13 +1094,6 @@ export interface QuotationAuditLog {
   [key: string]: any;
 }
 
-export interface BreakEntry {
-  id: string;
-  startTime: Date;
-  endTime?: Date;
-  [key: string]: any;
-}
-
 export interface CurrentTimeStatus {
   status: string;
   clockedInAt?: Date;
@@ -975,19 +1123,6 @@ export interface DailyUpdate {
   date: Date;
   description: string;
   addedBy: string;
-  [key: string]: any;
-}
-
-export interface TimeEntry {
-  id: string;
-  userId: string;
-  clockInTime: Date;
-  clockOutTime?: Date;
-  totalHours?: number;
-  totalWorkHours?: number;
-  breaks?: BreakEntry[];
-  totalBreakMinutes?: number;
-  userName?: string;
   [key: string]: any;
 }
 
@@ -1348,14 +1483,6 @@ export enum VendorBillStatus {
   PENDING = "pending",
   PAID = "paid",
   OVERDUE = "overdue",
-}
-
-export interface TimeActivity {
-  id: string;
-  userId: string;
-  activity: string;
-  timestamp: Date;
-  [key: string]: any;
 }
 
 export interface Document {

@@ -13,9 +13,21 @@ import {
   getDocs
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { TimeEntry, TimeTrackingStatus, BreakEntry, CurrentTimeStatus } from '../types';
+import { FIRESTORE_COLLECTIONS } from '../constants';
+import { TimeEntry, TimeTrackingStatus, BreakEntry, TimeActivity } from '../types';
 
-// Get current user's time status for today
+// ========================================
+// CURRENT STATUS HOOK
+// ========================================
+
+export interface CurrentTimeStatus {
+  userId: string;
+  status: TimeTrackingStatus;
+  currentEntryId?: string;
+  clockInTime?: Date;
+  currentBreakStartTime?: Date;
+}
+
 export const useCurrentTimeStatus = (userId: string) => {
   const [status, setStatus] = useState<CurrentTimeStatus>({
     userId,
@@ -29,45 +41,37 @@ export const useCurrentTimeStatus = (userId: string) => {
       return;
     }
 
-    const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
+    const today = new Date().toLocaleDateString('en-CA');
     const q = query(
-      collection(db, 'timeEntries'),
+      collection(db, FIRESTORE_COLLECTIONS.TIME_ENTRIES),
       where('userId', '==', userId),
-      where('date', '==', today)
+      where('dateKey', '==', today)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       if (!snapshot.empty) {
-        const doc = snapshot.docs[0];
-        const data = doc.data() as TimeEntry;
+        const docSnap = snapshot.docs[0];
+        const data = docSnap.data();
 
         let currentStatus: TimeTrackingStatus = TimeTrackingStatus.CLOCKED_OUT;
         let currentBreakStartTime: Date | undefined;
 
         if (!data.clockOut) {
-          // Still clocked in
-          const activeBreak = data.breaks?.find(b => !b.endTime);
+          const activeBreak = data.breaks?.find((b: any) => !b.endTime);
           if (activeBreak) {
             currentStatus = TimeTrackingStatus.ON_BREAK;
-            currentBreakStartTime = (activeBreak.startTime as any).toDate();
+            currentBreakStartTime = activeBreak.startTime?.toDate?.() || new Date(activeBreak.startTime?.seconds * 1000);
           } else {
             currentStatus = TimeTrackingStatus.CLOCKED_IN;
           }
         }
 
-        let clockInTime: Date;
-        if (data.clockIn && typeof (data.clockIn as any).toDate === 'function') {
-          clockInTime = (data.clockIn as any).toDate();
-        } else {
-          // Fallback if seconds exists or just now
-          const seconds = (data.clockIn as any)?.seconds;
-          clockInTime = seconds ? new Date(seconds * 1000) : new Date();
-        }
+        const clockInTime = data.clockIn?.toDate?.() || new Date(data.clockIn?.seconds * 1000) || new Date();
 
         setStatus({
           userId,
           status: currentStatus,
-          currentEntryId: doc.id,
+          currentEntryId: docSnap.id,
           clockInTime,
           currentBreakStartTime,
         });
@@ -122,27 +126,30 @@ export const useTimeEntries = (userId: string, startDate?: string, endDate?: str
         timeEntries.push({
           id: doc.id,
           userId: data.userId,
-          userName: data.userName,
+          userName: data.userName || 'Unknown',
+          organizationId: data.organizationId,
+          dateKey: data.dateKey || data.date,
           clockIn: (data.clockIn as Timestamp).toDate(),
           clockOut: data.clockOut ? (data.clockOut as Timestamp).toDate() : undefined,
           breaks: data.breaks?.map((b: any) => ({
             id: b.id,
             startTime: b.startTime && typeof b.startTime.toDate === 'function' ? b.startTime.toDate() : new Date(b.startTime?.seconds * 1000 || Date.now()),
             endTime: b.endTime ? (typeof b.endTime.toDate === 'function' ? b.endTime.toDate() : new Date(b.endTime.seconds * 1000)) : undefined,
-            durationMinutes: b.durationMinutes,
           })) || [],
           activities: data.activities?.map((a: any) => ({
             id: a.id,
             name: a.name,
             startTime: a.startTime && typeof a.startTime.toDate === 'function' ? a.startTime.toDate() : new Date(a.startTime?.seconds * 1000 || Date.now()),
             endTime: a.endTime ? (typeof a.endTime.toDate === 'function' ? a.endTime.toDate() : new Date(a.endTime.seconds * 1000)) : undefined,
-            durationMinutes: a.durationMinutes,
-            tags: a.tags
+            tags: a.tags || [],
+            caseId: a.caseId,
+            taskId: a.taskId
           })) || [],
-          totalWorkHours: data.totalWorkHours,
-          totalBreakMinutes: data.totalBreakMinutes,
-          date: data.date,
           status: data.status,
+          createdAt: data.createdAt?.toDate?.() || new Date(),
+          updatedAt: data.updatedAt?.toDate?.(),
+          currentTaskId: data.currentTaskId,
+          currentCaseId: data.currentCaseId
         });
       });
       setEntries(timeEntries);
@@ -191,27 +198,30 @@ export const useTeamTimeEntries = (startDate?: string, endDate?: string, userIds
         timeEntries.push({
           id: doc.id,
           userId: data.userId,
-          userName: data.userName,
-          clockIn: data.clockIn && typeof (data.clockIn as any).toDate === 'function' ? (data.clockIn as any).toDate() : (data.clockIn ? new Date((data.clockIn as any).seconds * 1000) : undefined),
+          userName: data.userName || 'Unknown',
+          organizationId: data.organizationId,
+          dateKey: data.dateKey || data.date,
+          clockIn: data.clockIn && typeof (data.clockIn as any).toDate === 'function' ? (data.clockIn as any).toDate() : (data.clockIn ? new Date((data.clockIn as any).seconds * 1000) : new Date()),
           clockOut: data.clockOut && typeof (data.clockOut as any).toDate === 'function' ? (data.clockOut as any).toDate() : (data.clockOut ? new Date((data.clockOut as any).seconds * 1000) : undefined),
           breaks: data.breaks?.map((b: any) => ({
             id: b.id,
             startTime: b.startTime && typeof b.startTime.toDate === 'function' ? b.startTime.toDate() : new Date(b.startTime?.seconds * 1000 || Date.now()),
             endTime: b.endTime ? (typeof b.endTime.toDate === 'function' ? b.endTime.toDate() : new Date(b.endTime.seconds * 1000)) : undefined,
-            durationMinutes: b.durationMinutes,
           })) || [],
           activities: data.activities?.map((a: any) => ({
             id: a.id,
             name: a.name,
             startTime: a.startTime && typeof a.startTime.toDate === 'function' ? a.startTime.toDate() : new Date(a.startTime?.seconds * 1000 || Date.now()),
             endTime: a.endTime ? (typeof a.endTime.toDate === 'function' ? a.endTime.toDate() : new Date(a.endTime.seconds * 1000)) : undefined,
-            durationMinutes: a.durationMinutes,
-            tags: a.tags
+            tags: a.tags || [],
+            caseId: a.caseId,
+            taskId: a.taskId
           })) || [],
-          totalWorkHours: data.totalWorkHours,
-          totalBreakMinutes: data.totalBreakMinutes,
-          date: data.date,
           status: data.status,
+          createdAt: data.createdAt?.toDate?.() || new Date(),
+          updatedAt: data.updatedAt?.toDate?.(),
+          currentTaskId: data.currentTaskId,
+          currentCaseId: data.currentCaseId
         });
       });
       setEntries(timeEntries);
@@ -225,15 +235,15 @@ export const useTeamTimeEntries = (startDate?: string, endDate?: string, userIds
 };
 
 // Clock In
-export const clockIn = async (userId: string, userName: string) => {
+export const clockIn = async (userId: string, userName: string, organizationId?: string) => {
   try {
-    const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
+    const today = new Date().toLocaleDateString('en-CA');
 
     // Check if already clocked in today
     const q = query(
-      collection(db, 'timeEntries'),
+      collection(db, FIRESTORE_COLLECTIONS.TIME_ENTRIES),
       where('userId', '==', userId),
-      where('date', '==', today)
+      where('dateKey', '==', today)
     );
     const snapshot = await getDocs(q);
 
@@ -241,26 +251,38 @@ export const clockIn = async (userId: string, userName: string) => {
       throw new Error('Already clocked in today');
     }
 
+    // If organizationId not provided, try to fetch from user
+    let orgId = organizationId;
+    if (!orgId) {
+      const { getDoc } = await import('firebase/firestore');
+      const userRef = doc(db, FIRESTORE_COLLECTIONS.STAFF_USERS, userId);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        orgId = userSnap.data().organizationId;
+      }
+    }
+
     const timeEntry = {
       userId,
-      userName,
+      userName: userName || 'Unknown',
+      organizationId: orgId || 'unknown',
+      dateKey: today,
       clockIn: serverTimestamp(),
-      date: today,
       breaks: [],
       activities: [],
       status: TimeTrackingStatus.CLOCKED_IN,
+      createdAt: serverTimestamp(),
     };
 
-    const docRef = await addDoc(collection(db, 'timeEntries'), timeEntry);
+    const docRef = await addDoc(collection(db, FIRESTORE_COLLECTIONS.TIME_ENTRIES), timeEntry);
 
     // SYNC: Update User Status
-    const userRef = doc(db, 'staffUsers', userId);
+    const userRef = doc(db, FIRESTORE_COLLECTIONS.STAFF_USERS, userId);
     await updateDoc(userRef, {
       attendanceStatus: 'CLOCKED_IN',
       isOnline: true,
       lastUpdateTimestamp: serverTimestamp()
     });
-
 
     return docRef.id;
   } catch (error) {
@@ -427,33 +449,57 @@ export const endBreak = async (entryId: string) => {
   }
 };
 
-// Calculate total hours for a period
+// ========================================
+// DEPRECATED: Use useTimeAnalytics hook instead
+// These functions are kept for backward compatibility
+// but should NOT be used for new code
+// ========================================
+
+/**
+ * @deprecated Use useTimeAnalytics hook instead
+ * Calculates total logged hours from entries (dynamically computed)
+ */
 export const calculateTotalHours = (entries: TimeEntry[]) => {
   return entries.reduce((total, entry) => {
-    return total + (entry.totalWorkHours || 0);
+    if (!entry.clockIn) return total;
+    const end = entry.clockOut || new Date();
+    const hours = (end.getTime() - entry.clockIn.getTime()) / (1000 * 60 * 60);
+    return total + hours;
   }, 0);
 };
 
-// Format duration (minutes to hours:minutes)
+/**
+ * Format duration in minutes to hours:minutes string
+ */
 export const formatDuration = (minutes: number): string => {
   const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
+  const mins = Math.floor(minutes % 60);
   return `${hours}h ${mins}m`;
 };
 
-// Get time tracking summary
+/**
+ * @deprecated Use useTimeAnalytics hook instead
+ * Get time tracking summary (dynamically computed)
+ */
 export const getTimeTrackingSummary = (entries: TimeEntry[]) => {
   const totalWorkHours = calculateTotalHours(entries);
-  const totalBreakMinutes = entries.reduce((total, entry) => {
-    return total + (entry.totalBreakMinutes || 0);
-  }, 0);
+  
+  // Calculate break time dynamically
+  let totalBreakMinutes = 0;
+  for (const entry of entries) {
+    for (const breakItem of entry.breaks) {
+      if (breakItem.endTime) {
+        totalBreakMinutes += (breakItem.endTime.getTime() - breakItem.startTime.getTime()) / (1000 * 60);
+      }
+    }
+  }
 
   const totalDays = entries.filter(e => e.clockOut).length;
   const averageHoursPerDay = totalDays > 0 ? totalWorkHours / totalDays : 0;
 
   return {
     totalWorkHours: parseFloat(totalWorkHours.toFixed(2)),
-    totalBreakMinutes,
+    totalBreakMinutes: Math.floor(totalBreakMinutes),
     totalDays,
     averageHoursPerDay: parseFloat(averageHoursPerDay.toFixed(2)),
   };

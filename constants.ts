@@ -21,6 +21,9 @@ export const FIRESTORE_COLLECTIONS = {
   EXPENSES: 'expenses',
   VENDOR_BILLS: 'vendorBills',
   MATERIALS: 'materials',
+  DAILY_UPDATES: 'dailyUpdates',
+  PAYMENTS: 'payments',
+  JMS: 'jms',
   
   // Subcollections under staffUsers/{userId}
   NOTIFICATIONS: 'notifications',

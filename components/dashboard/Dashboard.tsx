@@ -66,14 +66,14 @@ const Dashboard: React.FC<{ currentPage: string; setCurrentPage: (page: string) 
         return <QuotationTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.PROCUREMENT_TEAM:
         return <ProcurementTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
-      case UserRole.EXECUTION_TEAM:
-      case UserRole.PROJECT_HEAD:
-        // Project Heads and Execution Team members see the Execution Team dashboard
-        return <ExecutionTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.ACCOUNTS_TEAM:
         return <AccountsTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       case UserRole.MANAGER: // Managers go to Sales Manager dashboard
         return <SalesGeneralManagerDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
+      case UserRole.EXECUTION_TEAM:
+      case UserRole.PROJECT_HEAD:
+        // Rebuilt execution dashboard with Firestore-driven architecture
+        return <ExecutionTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       default:
         return <PlaceholderDashboard role={currentUser.role} />;
     }

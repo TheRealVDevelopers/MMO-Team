@@ -15,6 +15,7 @@ import OrganizationsPage from './admin/OrganizationsPage';
 import UnifiedRequestInbox from './shared/UnifiedRequestInbox';
 import UnifiedProjectsPage from './shared/UnifiedProjectsPage';
 import CasesManagementPage from './super-admin/CasesManagementPage';
+import TimesheetReportsPage from './super-admin/TimesheetReportsPage';
 
 interface SuperAdminDashboardProps {
     currentPage: string;
@@ -75,6 +76,8 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ currentPage, 
             return <OrganizationsPage setCurrentPage={setCurrentPage} />;
         case 'cases':
             return <CasesManagementPage />;
+        case 'timesheet-reports':
+            return <TimesheetReportsPage />;
         default:
             return <OverviewDashboard setCurrentPage={setCurrentPage} />;
     }
