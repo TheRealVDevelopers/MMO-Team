@@ -6,7 +6,7 @@ import { formatCurrencyINR } from '../../../constants';
 import { doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import { CostCenter, Project } from '../../../types';
-import ProjectFinancials from '../shared/ProjectFinancials';
+import ProjectLedgerView from './ProjectLedgerView';
 
 const ProjectPnLPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
     const { projects, loading: projectsLoading } = useProjects();
@@ -16,58 +16,23 @@ const ProjectPnLPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ 
 
     const loading = projectsLoading || financeLoading;
 
-    // Combine Projects and Cost Centers
-    const projectFinancials = projects.map(project => {
-        const costCenter = costCenters.find(cc => cc.projectId === project.id);
+    // ... (rest of the file)
 
-        // Use CostCenter data if available, enabled automatic tracking means we prefer Project.totalCollected/Expenses
-        // But for now, let's assume we want to view the consolidated view
+    // Combine Projects and Cost Centers (or just Projects with Financials)
+    const projectFinancials = projects.map(project => {
+        const p = project as any;
         return {
             ...project,
-            costCenter,
-            // Fallback to project totals if cost center is missing or out of sync (optional)
-            totalCollected: project.totalCollected || costCenter?.totalPayIn || 0,
-            totalExpenses: project.totalExpenses || costCenter?.totalPayOut || 0,
+            totalCollected: p.totalCollected || p.financial?.totalCollected || 0,
+            totalExpenses: p.totalExpenses || p.financial?.totalExpenses || 0,
         };
     });
 
-    const handleInitializeCostCenter = async (e: React.MouseEvent, projectId: string) => {
-        e.stopPropagation();
-        try {
-            setInitializing(projectId);
-            const costCenterRef = doc(db, 'costCenters', projectId);
-
-            const initialData: CostCenter = {
-                id: projectId,
-                projectId,
-                totalBudget: 0,
-                totalPayIn: 0,
-                totalPayOut: 0,
-                remainingBudget: 0,
-                profit: 0,
-                status: 'Active',
-                lastUpdated: new Date()
-            };
-
-            await setDoc(costCenterRef, {
-                ...initialData,
-                lastUpdated: serverTimestamp()
-            });
-
-        } catch (error) {
-            console.error("Error initializing cost center:", error);
-            alert("Failed to initialize Cost Center");
-        } finally {
-            setInitializing(null);
-        }
-    };
-
     if (selectedProject) {
         return (
-            <div className="p-6 bg-subtle-background min-h-full">
-                <ProjectFinancials
+            <div className="p-6 bg-gray-50 min-h-full">
+                <ProjectLedgerView
                     project={selectedProject}
-                    userRole="ACCOUNTS"
                     onBack={() => setSelectedProject(null)}
                 />
             </div>
@@ -83,50 +48,49 @@ const ProjectPnLPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ 
     }
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+        <div className="p-6 space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-2xl font-bold text-text-primary">Project P&L (Cost Centers)</h2>
-                    <p className="text-text-secondary">Track profitability and financial history. Click on a project for detailed ledger.</p>
+                    <h2 className="text-2xl font-bold text-gray-900">Project Profit & Loss</h2>
+                    <p className="text-gray-500">Real-time profitability tracking across all active projects.</p>
                 </div>
             </div>
 
-            <Card>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-border">
-                        <thead className="bg-subtle-background">
+                    <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Project Name</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Client</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">Budget</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider text-green-600">Total Inflow</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider text-red-600">Total Outflow</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">Remaining Budget</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">Profit/Loss</th>
-                                <th className="px-6 py-3 text-center text-xs font-medium text-text-secondary uppercase tracking-wider">Actions</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project Name</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Budget</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider text-green-600">Total Inflow</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider text-red-600">Total Outflow</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Remaining Budget</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Profit/Loss</th>
+                                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="bg-surface divide-y divide-border">
+                        <tbody className="bg-white divide-y divide-gray-200">
                             {projectFinancials.map((item) => {
-                                const hasCostCenter = !!item.costCenter;
-                                const budget = item.budget || item.costCenter?.totalBudget || 0;
-                                const inflow = item.totalCollected || 0;
-                                const outflow = item.totalExpenses || 0;
-                                const remainingBudget = budget - outflow; // Budget - Expenses
-                                const profitLoss = inflow - outflow; // Actual profit/loss
+                                const budget = item.budget || 0;
+                                const inflow = item.totalCollected || item.financial?.totalCollected || 0;
+                                const outflow = item.totalExpenses || item.financial?.totalExpenses || 0;
+                                const remainingBudget = budget - outflow;
+                                const profitLoss = inflow - outflow;
 
                                 return (
                                     <tr
                                         key={item.id}
-                                        onClick={() => setSelectedProject(item as unknown as Project)}
-                                        className="hover:bg-subtle-background transition-colors cursor-pointer group"
+                                        onClick={() => setSelectedProject(item)}
+                                        className="hover:bg-gray-50 transition-colors cursor-pointer group"
                                     >
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm font-medium text-text-primary font-bold group-hover:underline">{item.projectName}</div>
-                                            <div className="text-xs text-text-secondary">{item.lifecycleStatus}</div>
+                                            <div className="text-sm font-medium text-gray-900 font-bold group-hover:text-primary">{item.title}</div>
+                                            <div className="text-xs text-gray-500">{item.status}</div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">{item.clientName}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-text-primary">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.clientName}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-gray-900">
                                             {formatCurrencyINR(budget)}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-green-600 font-medium">{formatCurrencyINR(inflow)}</td>
@@ -142,17 +106,7 @@ const ProjectPnLPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ 
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                                            {!hasCostCenter ? (
-                                                <button
-                                                    onClick={(e) => handleInitializeCostCenter(e, item.id)}
-                                                    disabled={initializing === item.id}
-                                                    className="text-primary hover:text-primary-dark font-medium inline-flex items-center"
-                                                >
-                                                    {initializing === item.id ? 'Init...' : 'Initialize'}
-                                                </button>
-                                            ) : (
-                                                <span className="text-xs text-text-secondary">View Ledger</span>
-                                            )}
+                                            <span className="text-xs text-primary bg-primary/10 px-2 py-1 rounded">View Ledger</span>
                                         </td>
                                     </tr>
                                 );
@@ -160,7 +114,7 @@ const ProjectPnLPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ 
                         </tbody>
                     </table>
                 </div>
-            </Card>
+            </div>
         </div>
     );
 };

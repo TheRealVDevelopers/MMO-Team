@@ -13,7 +13,7 @@ export const FIRESTORE_COLLECTIONS = {
   CHAT_MESSAGES: 'chat_messages',
   TIME_ENTRIES: 'timeEntries',
   SYSTEM: 'system',
-  
+
   // Subcollections under cases/{caseId}
   TASKS: 'tasks',
   DOCUMENTS: 'documents',
@@ -24,10 +24,18 @@ export const FIRESTORE_COLLECTIONS = {
   DAILY_UPDATES: 'dailyUpdates',
   PAYMENTS: 'payments',
   JMS: 'jms',
-  
+  APPROVALS: 'approvals', // New Unified Approvals
+
+  // Subcollections under organizations/{orgId}
+  PURCHASE_INVOICES: 'purchaseInvoices',
+  SALES_INVOICES: 'salesInvoices',
+  GENERAL_LEDGER: 'generalLedger',
+  SALARY_LEDGER: 'salaryLedger',
+  INVENTORY: 'inventory',
+
   // Subcollections under staffUsers/{userId}
   NOTIFICATIONS: 'notifications',
-  
+
   // Legacy collections (DEPRECATED - DO NOT USE)
   LEADS: 'leads',
   PROJECTS: 'projects',

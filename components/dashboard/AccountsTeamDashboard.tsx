@@ -11,7 +11,7 @@ import AccountsOverviewPage from './accounts-team/AccountsOverviewPage';
 import SalesInvoicesPage from './accounts-team/SalesInvoicesPage';
 import ExpensesPage from './accounts-team/ExpensesPage';
 import PurchaseInvoicesPage from './accounts-team/PurchaseInvoicesPage';
-import PaymentVerificationInbox from './accounts-team/PaymentVerificationInbox';
+import ApprovalInbox from './accounts-team/ApprovalInbox';
 import ReportsPage from './accounts-team/ReportsPage';
 import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
@@ -23,7 +23,8 @@ import SalaryPage from './accounts-team/SalaryPage';
 import InventoryPage from './accounts-team/InventoryPage';
 import AccountsTasksPage from './accounts-team/AccountsTasksPage';
 import { Invoice, VendorBill, Expense, Project, LeadPipelineStatus, ProjectStatus, ProjectLifecycleStatus } from '../../types';
-import { PAYMENT_VERIFICATION_REQUESTS } from '../../constants';
+
+import GeneralLedgerPage from './accounts-team/GeneralLedgerPage';
 
 // Placeholder for new pages
 const ComingSoonPage: React.FC<{ title: string }> = ({ title }) => (
@@ -47,35 +48,6 @@ const AccountsTeamDashboard: React.FC<AccountsTeamDashboardProps> = ({ currentPa
   const { vendorBills, loading: billsLoading } = useVendorBills();
   const { projects, loading: projectsLoading } = useProjects();
   const { leads, loading: leadsLoading } = useLeads();
-
-  // Local state for payment requests
-  const [paymentRequests, setPaymentRequests] = useState(PAYMENT_VERIFICATION_REQUESTS);
-
-  const handleVerifyPayment = async (requestId: string) => {
-    const request = paymentRequests.find(r => r.id === requestId);
-    if (!request || !currentUser) return;
-
-    try {
-      const caseId = request.projectId; // Actually a case ID (or legacy lead ID)
-
-      // Convert case from lead to project using unified architecture
-      await convertLeadToProject(caseId, {
-        amount: request.amount,
-        verifiedBy: currentUser.id,
-        verifiedAt: new Date()
-      });
-
-      alert(`Payment verified! Lead converted to Project.`);
-      setPaymentRequests(prev => prev.filter(r => r.id !== requestId));
-    } catch (error) {
-      console.error("Error verifying payment:", error);
-      alert('Failed to verify payment and convert to project.');
-    }
-  };
-
-  const handleRejectPayment = (requestId: string) => {
-    setPaymentRequests(prev => prev.filter(r => r.id !== requestId));
-  };
 
   const handleAddInvoice = async (newInvoice: Omit<Invoice, 'id'>) => {
     try {
@@ -200,12 +172,15 @@ const AccountsTeamDashboard: React.FC<AccountsTeamDashboardProps> = ({ currentPa
     case 'inventory':
       return <InventoryPage />;
 
-    // Approvals
+    // Approvals - UNIFIED INBOX
     case 'approvals':
-      return <AccountsApprovalsPage />;
+      return <ApprovalInbox />;
 
     case 'budget-approvals':
-      return <AccountsBudgetApprovalPage />;
+      return <ApprovalInbox />; // Unified View (filtered by role internally)
+
+    case 'general-ledger':
+      return <GeneralLedgerPage />;
 
     // Shared / Misc
     case 'reports':

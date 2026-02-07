@@ -5,7 +5,7 @@ import { CloudArrowUpIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 interface PaymentSubmissionModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (data: { method: 'UTR' | 'Screenshot'; value: string; amount: number }) => void;
+    onSubmit: (data: { method: 'UTR' | 'Screenshot'; value: string; amount: number; file?: File }) => void;
     amount: number;
     milestoneName: string;
 }
@@ -26,8 +26,8 @@ const PaymentSubmissionModal: React.FC<PaymentSubmissionModalProps> = ({ isOpen,
             onSubmit({ method: 'UTR', value: utrNumber, amount });
         } else {
             if (!screenshot) return;
-            // In a real app, upload file here and get URL. For now, mocking it.
-            onSubmit({ method: 'Screenshot', value: URL.createObjectURL(screenshot), amount });
+            // Pass the file object so parent can upload it
+            onSubmit({ method: 'Screenshot', value: '', amount, file: screenshot });
         }
         setIsSubmitting(false);
         onClose();

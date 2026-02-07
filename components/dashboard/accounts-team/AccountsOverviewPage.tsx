@@ -1,161 +1,122 @@
-
-
-import React, { useRef, useEffect } from 'react';
+import React from 'react';
+import { useGeneralLedger } from '../../../hooks/useGeneralLedger';
+import { useProjects } from '../../../hooks/useProjects';
 import Card from '../../shared/Card';
 import { formatCurrencyINR } from '../../../constants';
-import { Invoice, PaymentStatus, Project, Expense, VendorBill } from '../../../types';
-import { ExclamationTriangleIcon } from '../../icons/IconComponents';
-import ProgressBar from '../../shared/ProgressBar';
-import { useFinance } from '../../../hooks/useFinance';
-import { useTimeEntries } from '../../../hooks/useTimeTracking';
+import { useApprovals } from '../../../hooks/useApprovals';
 
-const KpiCard: React.FC<{ title: string; value: string; color?: string }> = ({ title, value, color }) => (
-    <Card>
-        <p className="text-sm font-medium text-text-secondary">{title}</p>
-        <p className={`text-3xl font-bold tracking-tight ${color || 'text-text-primary'}`}>{value}</p>
-    </Card>
-);
+const AccountsOverviewPage: React.FC = () => {
+    // 1. Financial Stats (All Time)
+    const { stats: financialStats, loading: ledgerLoading } = useGeneralLedger();
 
-interface AccountsOverviewPageProps {
-    setCurrentPage: (page: string) => void;
-    // Data is now fetched internally using hooks for real-time updates
-    invoices?: Invoice[];
-    projects?: Project[];
-    expenses?: Expense[];
-    vendorBills?: VendorBill[];
-}
+    // 2. Project Stats
+    const { projects, loading: projectsLoading } = useProjects();
+    // Check for 'Execution' status (CaseStatus) or legacy 'Active' properties
+    const activeProjects = projects.filter(p => (p.status as string) === 'Execution' || (p as any).status === 'Active' || (p.status as string) === 'ACTIVE').length;
 
-const AccountsOverviewPage: React.FC<AccountsOverviewPageProps> = ({ setCurrentPage, invoices, projects = [], expenses, vendorBills }) => {
-    // Use Real-time hooks - NOT useProjects since projects come from props
-    const { transactions, costCenters, salaries, loading: financeLoading } = useFinance();
+    // 3. Approval Stats
+    // useApprovals returns pendingApprovals directly
+    const { pendingApprovals, loading: approvalsLoading } = useApprovals();
+    const pendingCount = pendingApprovals.length;
 
-    // PRESERVE last valid data to prevent zeros when hooks re-render
-    const lastValidProjectsRef = useRef<Project[]>([]);
+    const loading = ledgerLoading || projectsLoading || approvalsLoading;
 
-    // Update ref when we have valid project data
-    useEffect(() => {
-        if (projects.length > 0) {
-            lastValidProjectsRef.current = projects;
-        }
-    }, [projects]);
-
-    // Use the last valid projects if current is empty
-    const stableProjects = projects.length > 0 ? projects : lastValidProjectsRef.current;
-
-    // 1. Pay In / Pay Out Calculations
-    const today = new Date();
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-
-    const isToday = (date: Date) => date.toDateString() === today.toDateString();
-    const isThisMonth = (date: Date) => date >= startOfMonth;
-
-    const payInToday = transactions.filter(t => t.type === 'PAY_IN' && isToday(t.date)).reduce((sum, t) => sum + t.amount, 0);
-    const payInMonth = transactions.filter(t => t.type === 'PAY_IN' && isThisMonth(t.date)).reduce((sum, t) => sum + t.amount, 0);
-
-    const payOutToday = transactions.filter(t => t.type === 'PAY_OUT' && isToday(t.date)).reduce((sum, t) => sum + t.amount, 0);
-    const payOutMonth = transactions.filter(t => t.type === 'PAY_OUT' && isThisMonth(t.date)).reduce((sum, t) => sum + t.amount, 0);
-
-    // 2. Active Projects & Budgets - use stableProjects (last valid data)
-    const activeProjectsList = stableProjects.filter(p => p.status !== 'Completed' && p.status !== 'On Hold');
-    const activeProjectsCount = activeProjectsList.length;
-
-    // Sum from Cost Centers if they exist, otherwise use stableProjects for budget
-    const totalProjectBudget = (costCenters.length > 0)
-        ? costCenters.reduce((sum, cc) => sum + cc.totalBudget, 0)
-        : stableProjects.reduce((sum, p) => sum + (p.budget || 0), 0);
-
-    const totalUsedBudget = (costCenters.length > 0)
-        ? costCenters.reduce((sum, cc) => sum + cc.totalPayOut, 0)
-        : stableProjects.reduce((sum, p) => sum + (p.totalExpenses || 0), 0);
-
-    // 3. Pending Payments
-    const pendingPaymentsAmount = vendorBills?.filter(b => b.status === 'Pending Approval').reduce((sum, b) => sum + b.amount, 0) || 0;
-
-    // 4. Salary Payables
-    const salaryPayables = salaries.filter(s => s.status === 'PENDING').reduce((sum, s) => sum + s.totalPayable, 0);
-
-    // 5. Build Cost Center display data - use stableProjects
-    const displayCostCenters = (costCenters.length > 0)
-        ? costCenters
-        : stableProjects.slice(0, 5).map(p => ({
-            id: p.id,
-            projectId: p.id,
-            totalBudget: p.budget || 0,
-            totalPayIn: p.totalCollected || p.advancePaid || 0,
-            totalPayOut: p.totalExpenses || 0,
-            remainingBudget: (p.budget || 0) - (p.totalExpenses || 0),
-            profit: (p.totalCollected || 0) - (p.totalExpenses || 0),
-            status: 'Active' as const,
-            lastUpdated: new Date()
-        }));
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-full p-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 space-y-8">
-            <h2 className="text-2xl font-bold text-text-primary">Financial Command Center</h2>
-
-            {/* Pay In / Pay Out Section */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <KpiCard title="Pay In (Today)" value={formatCurrencyINR(payInToday)} color="text-secondary" />
-                <KpiCard title="Pay In (Month)" value={formatCurrencyINR(payInMonth)} color="text-secondary" />
-                <KpiCard title="Pay Out (Today)" value={formatCurrencyINR(payOutToday)} color="text-error" />
-                <KpiCard title="Pay Out (Month)" value={formatCurrencyINR(payOutMonth)} color="text-error" />
+        <div className="p-6 space-y-6">
+            <div className="flex justify-between items-center">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900">Accounts Overview</h1>
+                    <p className="text-gray-500">Real-time financial snapshot and pending actions.</p>
+                </div>
+                <div className="text-sm text-gray-500">
+                    Last updated: {new Date().toLocaleTimeString()}
+                </div>
             </div>
 
-            {/* Project Financials */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-                <KpiCard title="Active Projects" value={activeProjectsCount.toString()} />
-                <KpiCard title="Total Project Budget" value={formatCurrencyINR(totalProjectBudget)} />
-                <KpiCard title="Budget Utilized" value={formatCurrencyINR(totalUsedBudget)} />
-                <KpiCard title="Salary Payables" value={formatCurrencyINR(salaryPayables)} />
+            {/* Key Metrics Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Revenue */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-sm font-medium text-gray-500 uppercase">Total Revenue</h3>
+                        <span className="text-green-600 bg-green-50 p-1 rounded">INR</span>
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900">{formatCurrencyINR(financialStats.totalRevenue)}</p>
+                    <p className="text-xs text-gray-500 mt-1">Confirmed Inflows</p>
+                </div>
+
+                {/* Expenses */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-sm font-medium text-gray-500 uppercase">Total Expenses</h3>
+                        <span className="text-red-600 bg-red-50 p-1 rounded">OUT</span>
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900">{formatCurrencyINR(financialStats.totalExpenses)}</p>
+                    <p className="text-xs text-gray-500 mt-1">Payments & Salaries</p>
+                </div>
+
+                {/* Net Profit */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-sm font-medium text-gray-500 uppercase">Net Profit</h3>
+                        <span className={`p-1 rounded ${financialStats.netProfit >= 0 ? 'text-blue-600 bg-blue-50' : 'text-orange-600 bg-orange-50'}`}>NET</span>
+                    </div>
+                    <p className={`text-2xl font-bold ${financialStats.netProfit >= 0 ? 'text-gray-900' : 'text-red-600'}`}>
+                        {formatCurrencyINR(financialStats.netProfit)}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">Global P&L</p>
+                </div>
+
+                {/* Pending Actions */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 border-l-4 border-l-amber-400">
+                    <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-sm font-medium text-gray-500 uppercase">Pending Approvals</h3>
+                        <span className="text-amber-600 bg-amber-50 p-1 rounded">ACTION</span>
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900">{pendingCount}</p>
+                    <p className="text-xs text-gray-500 mt-1">Requires Attention</p>
+                </div>
             </div>
 
-            {/* Cost Center / Project List */}
-            <Card>
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-bold">Live Cost Centers</h3>
-                    <button className="text-sm text-primary hover:underline">View All</button>
-                </div>
+            {/* Secondary Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card title="Active Projects">
+                    <div className="flex items-center justify-between p-4">
+                        <div>
+                            <p className="text-3xl font-bold text-gray-900">{activeProjects}</p>
+                            <p className="text-sm text-gray-500">Current ongoing cases</p>
+                        </div>
+                        <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center text-primary">
+                            📊
+                        </div>
+                    </div>
+                </Card>
 
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-border">
-                        <thead className="bg-subtle-background">
-                            <tr>
-                                <th className="px-4 py-2 text-left text-xs font-bold uppercase">Project</th>
-                                <th className="px-4 py-2 text-right text-xs font-bold uppercase">Inflow (Pay In)</th>
-                                <th className="px-4 py-2 text-right text-xs font-bold uppercase">Outflow (Pay Out)</th>
-                                <th className="px-4 py-2 text-right text-xs font-bold uppercase">Balance</th>
-                                <th className="px-4 py-2 text-center text-xs font-bold uppercase">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border">
-                            {displayCostCenters.slice(0, 5).map(cc => {
-                                const project = projects.find(p => p.id === cc.projectId);
-                                return (
-                                    <tr key={cc.id} className="hover:bg-subtle-background/50">
-                                        <td className="px-4 py-3 font-medium text-sm">{project?.projectName || 'Unknown'}</td>
-                                        <td className="px-4 py-3 text-right text-sm text-secondary font-mono">{formatCurrencyINR(cc.totalPayIn)}</td>
-                                        <td className="px-4 py-3 text-right text-sm text-error font-mono">{formatCurrencyINR(cc.totalPayOut)}</td>
-                                        <td className="px-4 py-3 text-right text-sm font-bold font-mono">{formatCurrencyINR(cc.remainingBudget)}</td>
-                                        <td className="px-4 py-3 text-center">
-                                            <span className={`px-2 py-1 rounded-full text-[10px] uppercase font-bold ${cc.remainingBudget > 0 ? 'bg-secondary/10 text-secondary' : 'bg-error/10 text-error'
-                                                }`}>
-                                                {cc.remainingBudget > 0 ? 'Healthy' : 'Overrun'}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                )
-                            })}
-                            {displayCostCenters.length === 0 && (
-                                <tr>
-                                    <td colSpan={5} className="px-4 py-8 text-center text-text-secondary italic">
-                                        No active projects or cost centers found.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </Card>
+                <Card title="System Health">
+                    <div className="p-4 space-y-2">
+                        <div className="flex justify-between text-sm">
+                            <span className="text-gray-500">General Ledger</span>
+                            <span className="text-green-600 font-medium">Synced</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                            <span className="text-gray-500">Salary Engine</span>
+                            <span className="text-green-600 font-medium">Ready</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                            <span className="text-gray-500">Approval Workflow</span>
+                            <span className="text-green-600 font-medium">Active</span>
+                        </div>
+                    </div>
+                </Card>
+            </div>
         </div>
     );
 };

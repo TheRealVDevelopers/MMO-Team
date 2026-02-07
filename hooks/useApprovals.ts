@@ -1,189 +1,162 @@
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, query, where, orderBy, onSnapshot, doc, getDoc } from 'firebase/firestore';
-import { ApprovalRequest, ApprovalStatus, UserRole } from '../types';
-import { ApprovalWorkflowService } from '../services/approvalWorkflowService';
+import {
+  collection,
+  collectionGroup,
+  query,
+  where,
+  orderBy,
+  onSnapshot,
+  runTransaction,
+  doc,
+  serverTimestamp
+} from 'firebase/firestore';
+import { ApprovalRequest, UserRole, CaseStatus } from '../types';
+import { useAuth } from '../context/AuthContext';
+import { FIRESTORE_COLLECTIONS } from '../constants';
 
-/**
- * Hook for managing approval requests
- */
-export const useApprovals = (currentUserRole: UserRole | null, userId: string) => {
+export const useApprovals = (role?: UserRole) => {
+  const { currentUser } = useAuth();
   const [pendingApprovals, setPendingApprovals] = useState<ApprovalRequest[]>([]);
-  const [myApprovals, setMyApprovals] = useState<ApprovalRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  // Listen for pending approvals (for current user's role)
+  // 1. Listen for Pending Approvals (Collection Group)
   useEffect(() => {
-    if (!currentUserRole) {
+    if (!role) {
       setLoading(false);
       return;
     }
 
-    setLoading(true);
-    
-    // Query for approvals pending this user's role
     const q = query(
-      collection(db, 'approvals'),
-      where('requiredRoles', 'array-contains', currentUserRole),
-      where('status', '==', ApprovalStatus.PENDING),
-      orderBy('createdAt', 'desc')
-    );
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const approvals: ApprovalRequest[] = [];
-        snapshot.forEach((doc) => {
-          approvals.push({ id: doc.id, ...doc.data() } as ApprovalRequest);
-        });
-        setPendingApprovals(approvals);
-        setLoading(false);
-      },
-      (err) => {
-        console.error('Error fetching approvals:', err);
-        setError('Failed to load approvals');
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [currentUserRole]);
-
-  // Listen for approvals initiated by current user
-  useEffect(() => {
-    if (!userId) {
-      return;
-    }
-
-    const q = query(
-      collection(db, 'approvals'),
-      where('requesterId', '==', userId),
-      orderBy('createdAt', 'desc')
+      collectionGroup(db, FIRESTORE_COLLECTIONS.APPROVALS),
+      where('status', '==', 'pending'),
+      where('assignedToRole', '==', role),
+      orderBy('requestedAt', 'desc')
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const approvals: ApprovalRequest[] = [];
-      snapshot.forEach((doc) => {
-        approvals.push({ id: doc.id, ...doc.data() } as ApprovalRequest);
-      });
-      setMyApprovals(approvals);
+      const items = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as ApprovalRequest[];
+
+      setPendingApprovals(items);
+      setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [userId]);
+  }, [role]);
 
-  /**
-   * Approve a workflow stage
-   */
-  const approveStage = async (
-    approvalId: string,
-    approverName: string,
-    comments?: string
-  ): Promise<void> => {
-    if (!currentUserRole) {
-      throw new Error('User role not found');
-    }
+  // 2. Approve Request (Transactional)
+  const approveRequest = async (request: ApprovalRequest, notes?: string) => {
+    if (!currentUser) throw new Error("Unauthorized");
 
-    try {
-      await ApprovalWorkflowService.approveStage(
-        approvalId,
-        userId,
-        approverName,
-        currentUserRole,
-        comments
-      );
-    } catch (err: any) {
-      setError(err.message);
-      throw err;
-    }
-  };
+    await runTransaction(db, async (transaction) => {
+      const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, request.caseId);
+      const approvalRef = doc(db, FIRESTORE_COLLECTIONS.CASES, request.caseId, FIRESTORE_COLLECTIONS.APPROVALS, request.id);
 
-  /**
-   * Reject a workflow stage
-   */
-  const rejectStage = async (
-    approvalId: string,
-    rejectorName: string,
-    reason: string
-  ): Promise<void> => {
-    if (!currentUserRole) {
-      throw new Error('User role not found');
-    }
+      const caseDoc = await transaction.get(caseRef);
+      if (!caseDoc.exists()) throw new Error("Case not found");
+      const caseData = caseDoc.data();
 
-    try {
-      await ApprovalWorkflowService.rejectStage(
-        approvalId,
-        userId,
-        rejectorName,
-        currentUserRole,
-        reason
-      );
-    } catch (err: any) {
-      setError(err.message);
-      throw err;
-    }
-  };
+      // Common Updates: Resolve Approval
+      transaction.update(approvalRef, {
+        status: 'resolved',
+        resolvedBy: currentUser.id,
+        resolvedAt: serverTimestamp(),
+        notes: notes || ''
+      });
 
-  /**
-   * Get approval details by ID
-   */
-  const getApprovalById = async (approvalId: string): Promise<ApprovalRequest | null> => {
-    try {
-      const docSnap = await getDoc(doc(db, 'approvals', approvalId));
-      if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() } as ApprovalRequest;
+      // Type-Specific Logic
+      switch (request.type) {
+
+        // ==========================================================
+        // PAYMENT VERIFICATION
+        // ==========================================================
+        case 'PAYMENT': {
+          if (!request.payload.paymentId || !request.payload.amount) throw new Error("Invalid Payload");
+
+          const paymentRef = doc(db, FIRESTORE_COLLECTIONS.CASES, request.caseId, FIRESTORE_COLLECTIONS.PAYMENTS, request.payload.paymentId);
+
+          // 1. Mark Payment Verified
+          transaction.update(paymentRef, {
+            verified: true,
+            verifiedBy: currentUser.id,
+            verifiedAt: serverTimestamp()
+          });
+
+          // 2. Update Case Financials & Status
+          const currentAdvance = caseData.financial?.advanceAmount || 0;
+          transaction.update(caseRef, {
+            'financial.advanceAmount': currentAdvance + request.payload.amount,
+            'financial.paymentVerified': true,
+            'status': CaseStatus.WAITING_FOR_PLANNING, // STRICT STATE TRANSITION
+            'workflow.paymentVerified': true // Helper flag
+          });
+
+          // 3. Create Immutable Ledger Entry (General Ledger)
+          const orgId = caseData.organizationId;
+          const ledgerCollection = collection(db, FIRESTORE_COLLECTIONS.ORGANIZATIONS, orgId, FIRESTORE_COLLECTIONS.GENERAL_LEDGER);
+          const ledgerEntryRef = doc(ledgerCollection);
+
+          transaction.set(ledgerEntryRef, {
+            transactionId: request.payload.paymentId,
+            date: serverTimestamp(),
+            type: 'CREDIT',
+            amount: request.payload.amount,
+            description: `Payment Verification: ${request.caseId}`,
+            category: 'REVENUE',
+            sourceType: 'PAYMENT',
+            sourceId: request.payload.paymentId,
+            caseId: request.caseId,
+            createdBy: currentUser.id,
+            createdAt: serverTimestamp()
+          });
+
+          break;
+        }
+
+        // ==========================================================
+        // EXPENSE APPROVAL (If needed)
+        // ==========================================================
+        case 'EXPENSE': {
+          // Logic for expenses if they require approval
+          // ...
+          break;
+        }
       }
-      return null;
-    } catch (err) {
-      console.error('Error fetching approval:', err);
-      return null;
-    }
+    });
+  };
+
+  // 3. Reject Request
+  const rejectRequest = async (request: ApprovalRequest, reason: string) => {
+    if (!currentUser) throw new Error("Unauthorized");
+
+    // Simple update (No transaction needed unless reverting other states, but usually safe)
+    const approvalRef = doc(db, FIRESTORE_COLLECTIONS.CASES, request.caseId, FIRESTORE_COLLECTIONS.APPROVALS, request.id);
+    const paymentRef = request.payload.paymentId ? doc(db, FIRESTORE_COLLECTIONS.CASES, request.caseId, FIRESTORE_COLLECTIONS.PAYMENTS, request.payload.paymentId) : null;
+
+    await runTransaction(db, async (transaction) => {
+      transaction.update(approvalRef, {
+        status: 'rejected',
+        resolvedBy: currentUser.id,
+        resolvedAt: serverTimestamp(),
+        rejectionReason: reason
+      });
+
+      if (paymentRef && request.type === 'PAYMENT') {
+        transaction.update(paymentRef, {
+          verified: false,
+          notes: `Rejected: ${reason}`
+        });
+      }
+    });
   };
 
   return {
     pendingApprovals,
-    myApprovals,
     loading,
-    error,
-    approveStage,
-    rejectStage,
-    getApprovalById
-  };
-};
-
-/**
- * Hook for initiating approvals
- */
-export const useApprovalInitiator = () => {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  /**
-   * Initiate approval for a workflow stage
-   */
-  const initiateApproval = async (
-    caseId: string,
-    stage: string,
-    requesterId: string,
-    requesterName: string
-  ): Promise<void> => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      await ApprovalWorkflowService.initiateApproval(caseId, stage, requesterId, requesterName);
-    } catch (err: any) {
-      setError(err.message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return {
-    initiateApproval,
-    loading,
-    error
+    approveRequest,
+    rejectRequest
   };
 };

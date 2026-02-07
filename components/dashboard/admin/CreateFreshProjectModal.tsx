@@ -10,7 +10,7 @@ interface CreateFreshProjectModalProps {
     isOpen: boolean;
     onClose: () => void;
     organizationId: string;
-    onSuccess: (caseId: string) => void;
+    onProjectCreated?: (caseId: string) => void;
 }
 
 type ProjectWeight = 'S' | 'M' | 'L';
@@ -19,7 +19,7 @@ const CreateFreshProjectModal: React.FC<CreateFreshProjectModalProps> = ({
     isOpen,
     onClose,
     organizationId,
-    onSuccess,
+    onProjectCreated,
 }) => {
     const { currentUser } = useAuth();
     const { users } = useUsers();
@@ -134,7 +134,11 @@ const CreateFreshProjectModal: React.FC<CreateFreshProjectModalProps> = ({
             });
 
             resetForm();
-            onSuccess(docRef.id);
+            console.log('Project created successfully:', docRef.id);
+            // Notify parent
+            if (onProjectCreated) {
+                onProjectCreated(docRef.id);
+            }
             onClose();
         } catch (err) {
             console.error('Error creating project:', err);
@@ -205,8 +209,8 @@ const CreateFreshProjectModal: React.FC<CreateFreshProjectModalProps> = ({
                                     type="button"
                                     onClick={() => setProjectWeight(weight)}
                                     className={`flex-1 py-3 rounded-lg font-bold transition-all ${projectWeight === weight
-                                            ? 'bg-primary text-white'
-                                            : 'bg-subtle-background text-text-secondary hover:bg-primary/10'
+                                        ? 'bg-primary text-white'
+                                        : 'bg-subtle-background text-text-secondary hover:bg-primary/10'
                                         }`}
                                 >
                                     {weight === 'S' ? 'Small' : weight === 'M' ? 'Medium' : 'Large'}

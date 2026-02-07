@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../../firebase';
 import { PlusIcon, BuildingOfficeIcon, MagnifyingGlassIcon, UserIcon, MapPinIcon, XMarkIcon, CurrencyRupeeIcon, UserCircleIcon, MapIcon, CheckCircleIcon, PencilIcon, RocketLaunchIcon } from '@heroicons/react/24/outline';
 import { Organization, ProjectStatus, Project, ExecutionStage, PaymentTerm } from '../../../types';
 import { useProjects } from '../../../hooks/useProjects';
@@ -61,6 +63,19 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
         setOrganizationToEdit(null);
     };
 
+    const handleProjectCreated = async (caseId: string) => {
+        try {
+            const docRef = doc(db, 'cases', caseId);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const projectData = { id: docSnap.id, ...docSnap.data() } as Project;
+                setSelectedProject(projectData);
+                setIsProjectDetailOpen(true);
+            }
+        } catch (error) {
+            console.error("Error fetching new project:", error);
+        }
+    };
     const handleOpenCreateModal = () => {
         setOrganizationToEdit(null);
         setIsCreateModalOpen(true);
@@ -520,10 +535,9 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                 isOpen={isConvertLeadModalOpen}
                 onClose={() => setIsConvertLeadModalOpen(false)}
                 organizationId={selectedOrgId}
-                onSuccess={(caseId) => {
+                onProjectCreated={(caseId) => {
                     setIsConvertLeadModalOpen(false);
-                    // TODO: Navigate to execution planning
-                    alert(`Lead converted to project! Case ID: ${caseId}`);
+                    handleProjectCreated(caseId);
                 }}
             />
 
@@ -532,10 +546,9 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                 isOpen={isFreshProjectModalOpen}
                 onClose={() => setIsFreshProjectModalOpen(false)}
                 organizationId={selectedOrgId}
-                onSuccess={(caseId) => {
+                onProjectCreated={(caseId) => {
                     setIsFreshProjectModalOpen(false);
-                    // TODO: Navigate to execution planning
-                    alert(`Project created! Case ID: ${caseId}`);
+                    handleProjectCreated(caseId);
                 }}
             />
         </div>

@@ -4,7 +4,7 @@ import { DocumentTextIcon, FolderIcon, ArrowDownTrayIcon, ClockIcon } from '@her
 interface ArchivedDocument {
     id: string;
     name: string;
-    category: 'Invoice' | 'Warranty' | 'Contract' | 'Report' | 'Other';
+    category: 'Invoice' | 'Warranty' | 'Contract' | 'Report' | 'Drawing' | 'Other';
     date: Date;
     size: string;
     url: string;

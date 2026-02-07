@@ -31,7 +31,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
   const [loginModalType, setLoginModalType] = useState<'staff' | 'vendor'>('staff');
   const [currentView, setCurrentView] = useState<'home' | 'services' | 'portfolio' | 'about' | 'contact' | 'start-project' | 'client-login' | 'client-dashboard'>('home');
   const [isScrolled, setIsScrolled] = useState(false);
-  const [clientEmail, setClientEmail] = useState<string>('');
+  const [clientUser, setClientUser] = useState<{ uid: string, email: string, isFirstLogin: boolean } | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Scroll to top when view changes
@@ -65,13 +65,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
     setCurrentView(page as any);
   };
 
-  const handleClientLogin = (email: string) => {
-    setClientEmail(email);
+  const handleClientLogin = (user: any, isFirstLogin: boolean) => {
+    setClientUser({ uid: user.uid, email: user.email, isFirstLogin });
     setCurrentView('client-dashboard');
   };
 
   const handleClientLogout = () => {
-    setClientEmail('');
+    setClientUser(null);
     setCurrentView('home');
   };
 
@@ -83,7 +83,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
       case 'contact': return <ContactPage />;
       case 'start-project': return <StartProjectPage />;
       case 'client-login': return <ClientLoginPage onLoginSuccess={handleClientLogin} />;
-      case 'client-dashboard': return <ClientDashboardPage projectId={clientEmail} onLogout={handleClientLogout} />;
+      case 'client-dashboard': return <ClientDashboardPage clientUser={clientUser} onLogout={handleClientLogout} />;
       default: return <HomePage onNavigate={handleNavigate} />;
     }
   };

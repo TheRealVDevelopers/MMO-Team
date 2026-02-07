@@ -31,8 +31,8 @@ const NavItem: React.FC<{
                 onClick();
             }}
             className={`flex items-center p-2 text-base font-normal rounded-lg transition-colors duration-150 ${isActive
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-text-secondary hover:bg-subtle-background hover:text-text-primary'
+                ? 'bg-primary/10 text-primary'
+                : 'text-text-secondary hover:bg-subtle-background hover:text-text-primary'
                 }`}
         >
             {icon}
@@ -51,7 +51,6 @@ const SalesManagerSidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPa
         { id: 'approvals', label: 'Request Inbox', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
         { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
         { id: 'reports', label: 'Reports', icon: <ChartPieIcon className="w-6 h-6" /> },
-        { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
         { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
     ];
 

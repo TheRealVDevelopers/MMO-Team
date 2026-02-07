@@ -42,7 +42,8 @@ const ExecutionOverview: React.FC<Props> = ({ setSelectedCase, setCurrentPage })
 
   const handleSelectCase = (caseId: string) => {
     setSelectedCase(caseId);
-    setCurrentPage('planning');
+    // Navigation is handled by setSelectedCase (which calls handleSetSelectedCase in parent)
+    // Removed direct setCurrentPage call to avoid URL overwrite
   };
 
   /**

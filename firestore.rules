@@ -1,10 +1,27 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // TEMPORARY: ALLOW ALL ACCESS
-    // This completely bypasses authentication for debugging
-    match /{document=**} {
-      allow read, write: if true;
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
     }
+
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SUPER_ADMIN' ||
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN');
+    }
+
+    // BASELINE SECURITY: Require authentication for everything
+    match /{document=**} {
+      allow read: if isAuthenticated();
+      // Only allow writes if authenticated (can be tightened further)
+      allow write: if isAuthenticated();
+    }
+    
+    // Specific collection rules can be added here to override or refine
+    // e.g., match /organizations/{orgId} { allow write: if isAdmin(); }
   }
 }

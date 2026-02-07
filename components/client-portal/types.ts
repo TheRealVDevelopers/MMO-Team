@@ -189,8 +189,18 @@ export interface ClientProject {
     activities: ActivityItem[];
     requests: ClientRequest[];
     transparency: TransparencyData;
+    documents: ClientDocument[]; // Added for Documents Archive
     totalPaid: number;
     totalBudget: number;
+}
+
+export interface ClientDocument {
+    id: string;
+    name: string;
+    category: 'Contract' | 'Invoice' | 'Report' | 'Drawing' | 'Other';
+    date: Date;
+    size: string;
+    url: string;
 }
 
 /**

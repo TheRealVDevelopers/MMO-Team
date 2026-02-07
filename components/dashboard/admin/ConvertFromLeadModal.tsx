@@ -11,7 +11,7 @@ interface ConvertFromLeadModalProps {
     isOpen: boolean;
     onClose: () => void;
     organizationId: string;
-    onSuccess: (caseId: string) => void;
+    onProjectCreated?: (caseId: string) => void;
 }
 
 interface LeadOption {
@@ -27,7 +27,7 @@ const ConvertFromLeadModal: React.FC<ConvertFromLeadModalProps> = ({
     isOpen,
     onClose,
     organizationId,
-    onSuccess,
+    onProjectCreated,
 }) => {
     const { currentUser } = useAuth();
     const { users } = useUsers();
@@ -121,7 +121,10 @@ const ConvertFromLeadModal: React.FC<ConvertFromLeadModalProps> = ({
                 updatedBy: currentUser?.id,
             });
 
-            onSuccess(selectedLeadId);
+            // Notify parent
+            if (onProjectCreated) {
+                onProjectCreated(selectedLeadId);
+            }
             onClose();
         } catch (err) {
             console.error('Error converting lead:', err);

@@ -1,135 +1,99 @@
 import React, { useState } from 'react';
-import Card from '../../shared/Card';
-import { useProjects } from '../../../hooks/useProjects';
-import { useUsers } from '../../../hooks/useUsers';
-import { User, UserRole } from '../../../types';
+import { useSalarySystem, SalaryData } from '../../../hooks/useSalarySystem';
+import { formatCurrencyINR } from '../../../constants';
+import { User } from '../../../types';
 
 const SalaryPage: React.FC = () => {
-    const { projects } = useProjects();
-    const { users, loading: usersLoading } = useUsers();
-    const [openPaymentModal, setOpenPaymentModal] = useState(false);
-    const [selectedEmployee, setSelectedEmployee] = useState<User | null>(null);
-    const [selectedProject, setSelectedProject] = useState<string>('');
-    const [paymentAmount, setPaymentAmount] = useState<string>('');
-    const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString().split('T')[0]);
+    const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7)); // YYYY-MM
+    const { salaryData, loading, error, generatePayroll } = useSalarySystem(selectedMonth);
+    const [processing, setProcessing] = useState<string | null>(null);
 
-    const handlePayment = async () => {
-        if (!selectedEmployee || !paymentAmount || !paymentDate || !selectedProject) {
-            alert("Please select an employee, enter amount, date and select a project.");
-            return;
-        }
-
-        try {
-            // Import dynamically
-            const { recordOutflow } = await import('../../../services/financeService');
-
-            // 1. Record Salary Outflow against Project
-            await recordOutflow(
-                selectedProject,
-                Number(paymentAmount),
-                'Salary',
-                selectedEmployee.id || 'unknown',
-                `Salary Payment - ${selectedEmployee.name} - ${new Date(paymentDate).toLocaleString('default', { month: 'long' })}`
-            );
-
-            alert(`Salary recorded successfully for ${selectedEmployee.name}`);
-            setOpenPaymentModal(false);
-            setPaymentAmount('');
-            setSelectedProject('');
-            setSelectedEmployee(null);
-
-        } catch (error) {
-            console.error("Error processing salary:", error);
-            alert("Failed to process salary payment");
-        }
+    const handleGenerate = async (data: SalaryData) => {
+        setProcessing(data.user.id);
+        await generatePayroll(data);
+        setProcessing(null);
+        alert(`Payroll generated for ${data.user.name}`);
     };
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 space-y-6">
-            <h2 className="text-2xl font-bold text-text-primary">Salary Management</h2>
-
-            <Card className="p-6">
-                <div className="flex justify-between items-center mb-6">
-                    <div>
-                        <h3 className="font-bold text-lg text-text-primary">Process Salaries</h3>
-                        <p className="text-sm text-text-secondary">Record salary payments to assign labor costs to projects.</p>
-                    </div>
-                    <button
-                        onClick={() => setOpenPaymentModal(true)}
-                        className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-secondary transition-colors"
-                    >
-                        Process New Payment
-                    </button>
+        <div className="p-6 space-y-6">
+            <div className="flex justify-between items-center">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900">Salary System</h1>
+                    <p className="text-sm text-gray-500">Automated payroll based on time tracking and task completion.</p>
                 </div>
-
-                <div className="bg-subtle-background p-4 rounded-lg border border-border text-center">
-                    <p className="text-text-secondary">
-                        Comprehensive payroll history and management features coming soon.
-                        Use the <span className="font-bold">Process New Payment</span> button above to record immediate salary outflows to projects.
-                    </p>
+                <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium text-gray-700">Select Month:</label>
+                    <input
+                        type="month"
+                        value={selectedMonth}
+                        onChange={(e) => setSelectedMonth(e.target.value)}
+                        className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+                    />
                 </div>
-            </Card>
+            </div>
 
-            {/* Payment Modal */}
-            {openPaymentModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-surface p-6 rounded-lg w-full max-w-md space-y-4 shadow-xl border border-border">
-                        <h3 className="text-lg font-bold text-text-primary">Record Salary Payment</h3>
-
-                        <div>
-                            <label className="block text-sm font-bold text-text-secondary mb-1">Select Employee</label>
-                            <select
-                                className="w-full p-2 border border-border rounded bg-subtle-background"
-                                onChange={e => {
-                                    const emp = users.find(u => u.id === e.target.value);
-                                    setSelectedEmployee(emp || null);
-                                }}
-                                disabled={usersLoading}
-                            >
-                                <option value="">{usersLoading ? 'Loading employees...' : '-- Choose Employee --'}</option>
-                                {users.map(u => <option key={u.id} value={u.id}>{u.name} ({u.role})</option>)}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-bold text-text-secondary mb-1">Project Source (Cost Center)</label>
-                            <p className="text-xs text-text-secondary mb-1">Select the project this salary should be billed to.</p>
-                            <select
-                                className="w-full p-2 border border-border rounded bg-subtle-background"
-                                value={selectedProject}
-                                onChange={e => setSelectedProject(e.target.value)}
-                            >
-                                <option value="">-- Choose Project --</option>
-                                {projects.map(p => <option key={p.id} value={p.id}>{p.projectName} ({p.clientName})</option>)}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-bold text-text-secondary mb-1">Amount</label>
-                            <input
-                                type="number"
-                                value={paymentAmount}
-                                onChange={e => setPaymentAmount(e.target.value)}
-                                className="w-full p-2 border border-border rounded bg-subtle-background"
-                                placeholder="Enter Amount"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-bold text-text-secondary mb-1">Payment Date</label>
-                            <input
-                                type="date"
-                                value={paymentDate}
-                                onChange={e => setPaymentDate(e.target.value)}
-                                className="w-full p-2 border border-border rounded bg-subtle-background"
-                            />
-                        </div>
-
-                        <div className="flex justify-end gap-3 pt-4">
-                            <button onClick={() => setOpenPaymentModal(false)} className="text-text-secondary hover:text-text-primary px-3 py-2">Cancel</button>
-                            <button onClick={handlePayment} className="bg-primary text-white px-4 py-2 rounded hover:bg-secondary">Confirm Payment</button>
-                        </div>
-                    </div>
+            {loading ? (
+                <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                    <p className="text-gray-500">Calculating payroll data...</p>
+                </div>
+            ) : error ? (
+                <div className="bg-red-50 text-red-600 p-4 rounded-lg">{error}</div>
+            ) : (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                            <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Active Hrs</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Idle Hrs</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Distance (km)</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Est. Salary</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                            {salaryData.map((data) => (
+                                <tr key={data.user.id} className="hover:bg-gray-50">
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="flex items-center">
+                                            <div className="text-sm font-medium text-gray-900">{data.user.name}</div>
+                                            <div className="ml-2 text-xs text-gray-500">({data.user.role})</div>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                                        {data.activeHours.toFixed(1)}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-amber-600">
+                                        {data.idleHours.toFixed(1)}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-blue-600">
+                                        {data.distanceKm.toFixed(1)}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-gray-900">
+                                        {formatCurrencyINR(data.estimatedSalary)}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <button
+                                            onClick={() => handleGenerate(data)}
+                                            disabled={!!processing}
+                                            className="text-primary hover:text-indigo-900 disabled:opacity-50"
+                                        >
+                                            {processing === data.user.id ? 'Saving...' : 'Generate Payroll'}
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                            {salaryData.length === 0 && (
+                                <tr>
+                                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                                        No data found for this month.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
                 </div>
             )}
         </div>

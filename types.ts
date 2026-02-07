@@ -156,28 +156,26 @@ export enum MaterialRequestStatus {
   DELIVERED = "delivered",
 }
 
-export interface ApprovalAction {
-  userId: string;
-  userName: string;
-  role: UserRole;
-  timestamp: any; // Firestore Timestamp
-  comments?: string;
-}
-
+// Path: cases/{caseId}/approvals/{approvalId}
 export interface ApprovalRequest {
   id: string;
   caseId: string;
-  stage: string;
-  stageName: string;
-  status: ApprovalStatus;
-  requesterId: string;
-  requesterName: string;
-  requiredRoles: UserRole[];
-  approvedBy: ApprovalAction[];
-  rejectedBy: ApprovalAction[];
-  comments: string[];
-  createdAt: any; // Firestore Timestamp
-  updatedAt: any; // Firestore Timestamp
+  type: 'PAYMENT' | 'BUDGET' | 'MATERIAL' | 'EXPENSE';
+  status: 'pending' | 'approved' | 'rejected' | 'resolved';
+  payload: {
+    amount?: number;
+    paymentId?: string;
+    expenseId?: string;
+    invoiceId?: string;
+    materialId?: string;
+    notes?: string;
+  };
+  requestedBy: string; // User ID
+  requestedAt: Date;
+  assignedToRole: UserRole;
+  resolvedBy?: string; // User ID
+  resolvedAt?: Date;
+  rejectionReason?: string;
 }
 
 // ========================================
@@ -193,6 +191,7 @@ export interface Case {
   // Core Info
   title: string;
   clientName: string;
+  clientId?: string; // Link to clients collection
   clientEmail?: string;
   clientPhone: string;
   siteAddress: string;
@@ -209,19 +208,21 @@ export interface Case {
   // Project Flag
   isProject: boolean; // FALSE = Lead, TRUE = Project
 
-  // Status
+  // Status - THE SINGLE AUTHORITY
   status: CaseStatus;
 
-  // Workflow State
+  // Workflow State (Derived helpers, NOT authority)
   workflow: CaseWorkflow;
 
-  // Financial tracking (populated when payment submitted)
+  // Financial tracking (Transactional Source of Truth)
   financial?: {
-    advanceAmount: number;
-    utr: string;
-    paymentVerified: boolean;
-    totalBudget?: number;
-    spentAmount?: number;
+    totalBudget: number;
+    advanceAmount?: number;
+    paymentVerified?: boolean;
+    spentAmount?: number; // Legacy?
+    totalInvoiced?: number;
+    totalCollected?: number;
+    totalExpenses?: number;
   };
 
   // Execution planning (populated by Project Head)
@@ -240,14 +241,17 @@ export interface Case {
         estimatedCost: number;
       }>;
       estimatedCost: number;
+      laborCost: number;
+      miscCost: number;
+      expanded?: boolean;
     }>;
-    approved: boolean;
+    approved: boolean; // Moves status to ACTIVE
     approvedBy?: string; // User ID
     approvedAt?: Date;
   };
 
-  // Cost center tracking (activated when execution starts)
-  costCenter?: {
+  // Cost center tracking (Active Financials)
+  costCenter: {
     totalBudget: number;
     spentAmount: number;        // REQUIRED for tracking
     remainingAmount: number;    // REQUIRED: totalBudget - spentAmount
@@ -268,6 +272,93 @@ export interface Case {
     completedAt?: Date;
     completedBy?: string; // User ID
   };
+}
+
+// ... (Keep existing interfaces) ...
+
+// ========================================
+// ACCOUNTS TEAM TYPES (STRICT)
+// ========================================
+
+// Path: cases/{caseId}/approvals/{approvalId}
+export interface ApprovalRequest {
+  id: string;
+  caseId: string;
+  type: 'PAYMENT' | 'BUDGET' | 'MATERIAL' | 'EXPENSE';
+  status: 'pending' | 'approved' | 'rejected' | 'resolved';
+  payload: {
+    amount?: number;
+    paymentId?: string;
+    expenseId?: string;
+    invoiceId?: string;
+    materialId?: string;
+    notes?: string;
+  };
+  requestedBy: string; // User ID
+  requestedAt: Date;
+  assignedToRole: UserRole;
+  resolvedBy?: string; // User ID
+  resolvedAt?: Date;
+  rejectionReason?: string;
+}
+
+// Path: organizations/{orgId}/generalLedger/{entryId}
+export interface GeneralLedgerEntry {
+  id: string;
+  transactionId: string; // Unique Transaction ID
+  date: Date;
+
+  // Accounting
+  type: 'CREDIT' | 'DEBIT';
+  amount: number;
+  description: string;
+
+  // Categorization
+  category: 'REVENUE' | 'EXPENSE' | 'ASSET' | 'LIABILITY' | 'EQUITY';
+
+  // Audit Traceability
+  sourceType: 'PAYMENT' | 'EXPENSE' | 'SALARY' | 'PURCHASE' | 'SALES' | 'INVENTORY';
+  sourceId: string; // ID of the Payment, Expense, Invoice, etc.
+  caseId?: string; // Optional Link to Project
+
+  createdBy: string; // User ID (System or User)
+  createdAt: Date;
+}
+
+// Path: organizations/{orgId}/salaryLedger/{entryId}
+export interface SalaryLedgerEntry {
+  id: string;
+  userId: string;
+  month: string; // YYYY-MM
+
+  // Calculated Fields
+  activeHours: number;
+  idleHours: number;
+  breakHours: number;
+  taskHours: number;
+
+  // Distance
+  distanceKm: number;
+  distanceReimbursement: number;
+
+  // Financials
+  baseSalary: number;
+  incentives: number;
+  deductions: number;
+  totalSalary: number;
+
+  generatedAt: Date;
+  status: 'DRAFT' | 'APPROVED' | 'PAID';
+}
+
+// Path: organizations/{orgId}/inventory/{itemId}
+export interface InventoryItem {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  averageCost: number;
+  lastUpdated: Date;
 }
 
 export interface CaseWorkflow {
@@ -568,6 +659,22 @@ export interface Invoice {
 }
 
 // ========================================
+// CLIENT TYPES
+// Path: clients/{clientId}
+// ========================================
+
+export interface Client {
+  id: string; // matches Auth UID
+  name: string;
+  email: string;
+  phone?: string;
+  caseId?: string; // The active case for this client
+  isFirstLogin: boolean; // For forcing password reset
+  createdAt: Date;
+  updatedAt?: Date;
+}
+
+// ========================================
 // GLOBAL USER TYPES
 // ========================================
 
@@ -582,6 +689,9 @@ export interface StaffUser {
   avatar?: string;
   createdAt: Date;
   isActive: boolean;
+  region?: string;
+  currentTask?: string;
+  lastUpdateTimestamp?: Date;
 }
 
 // Path: staffUsers/{userId}/notifications/{notificationId}
@@ -643,25 +753,25 @@ export interface TimeEntry {
   userId: string;
   userName: string;
   organizationId: string; // REQUIRED for multi-org scoping
-  
+
   // Date Key (for efficient querying)
   dateKey: string; // Format: "YYYY-MM-DD"
-  
+
   // Clock Times (raw data only)
   clockIn: Date;
   clockOut?: Date;
-  
+
   // Sub-events (raw data only)
   breaks: BreakEntry[];
   activities: TimeActivity[];
-  
+
   // Status
   status: TimeTrackingStatus;
-  
+
   // Metadata
   createdAt: Date;
   updatedAt?: Date;
-  
+
   // Optional task/case linking
   currentTaskId?: string;
   currentCaseId?: string;
@@ -818,13 +928,7 @@ export interface FinanceRequest {
   [key: string]: any;
 }
 
-export interface ApprovalRequest {
-  id: string;
-  type: ApprovalRequestType;
-  status: ApprovalStatus;
-  requestedBy: string;
-  [key: string]: any;
-}
+// Duplicate ApprovalRequest removed (Legacy definition)
 
 export interface QuickClarifyQuestion {
   id: string;
@@ -1202,7 +1306,7 @@ export interface BOQItem {
   [key: string]: any;
 }
 
-export interface CaseBOQ extends BOQ {}
+export interface CaseBOQ extends BOQ { }
 export interface CaseDrawing {
   id: string;
   caseId: string;
@@ -1246,7 +1350,7 @@ export enum DrawingRequestStatus {
   COMPLETED = "completed",
 }
 
-export interface DrawingTask extends Task {}
+export interface DrawingTask extends Task { }
 
 export interface ExecutionRequest {
   id: string;

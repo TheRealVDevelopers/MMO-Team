@@ -1,12 +1,15 @@
 import {
-    createUserWithEmailAndPassword,
+    getAuth,
     signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
     signOut,
     updatePassword,
-    User as FirebaseUser,
+    sendPasswordResetEmail,
+    onAuthStateChanged,
+    Auth,
     EmailAuthProvider,
     reauthenticateWithCredential,
-    getAuth
+    User
 } from 'firebase/auth';
 import { initializeApp, deleteApp, getApp, getApps } from 'firebase/app';
 import {
@@ -32,8 +35,16 @@ const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
 export const DEFAULT_STAFF_PASSWORD = '123456';
 export const DEFAULT_CLIENT_PASSWORD = '123456';
 
+// New: Client Interface (mirroring types.ts for service usage if needed, or just use Firestore)
+interface ClientProfile {
+    id: string;
+    email: string;
+    name: string;
+    isFirstLogin: boolean;
+}
+
 // Convert Firebase User + Firestore data to our StaffUser type
-export const convertToAppUser = async (firebaseUser: FirebaseUser): Promise<StaffUser | null> => {
+export const convertToAppUser = async (firebaseUser: User): Promise<StaffUser | null> => {
     try {
         if (!db) return null;
         const userDoc = await getDoc(doc(db, FIRESTORE_COLLECTIONS.STAFF_USERS, firebaseUser.uid));
@@ -73,6 +84,9 @@ export const signInStaff = async (email: string, password: string): Promise<Staf
     //     console.log(`Simplified staff login for ${mockUser.name} (${mockUser.role})`);
     //     return {
     //         ...mockUser,
+    //         organizationId: 'org1',
+    //         createdAt: new Date(),
+    //         isActive: true,
     //         lastUpdateTimestamp: new Date(),
     //     };
     // }
@@ -383,9 +397,9 @@ export const changeStaffPassword = async (
 ): Promise<void> => {
     try {
         if (!auth || !db) throw new Error("Firebase not initialized");
-        
+
         const user = auth.currentUser;
-        
+
         // Check if this is a Firebase-authenticated user
         if (user && user.email) {
             // Firebase Auth user - use Firebase password change
@@ -405,29 +419,29 @@ export const changeStaffPassword = async (
             if (!savedUser) {
                 throw new Error('No authenticated user found');
             }
-            
+
             const currentUser = JSON.parse(savedUser);
-            
+
             // For mock users (ID length < 20), just show a message
             if (currentUser.id && currentUser.id.length < 20) {
                 throw new Error('Password change is not available for demo accounts. Please create a real account to change password.');
             }
-            
+
             // For real Firestore users without Firebase Auth
             // Verify current password by checking Firestore
             const userDoc = await getDoc(doc(db, 'staffUsers', currentUser.id));
             if (!userDoc.exists()) {
                 throw new Error('User not found');
             }
-            
+
             const userData = userDoc.data();
-            
+
             // Check if stored password exists and matches (for users created with Firestore only)
             if (userData.password) {
                 if (userData.password !== currentPassword) {
                     throw new Error('Current password is incorrect');
                 }
-                
+
                 // Update password in Firestore
                 await updateDoc(doc(db, 'staffUsers', currentUser.id), {
                     password: newPassword,
@@ -553,112 +567,141 @@ export const signInVendor = async (email: string, password: string): Promise<Ven
 
 /**
  * Verify client credentials using email and password
+ * AND check for isFirstLogin status
+ */
+export const signInClient = async (
+    email: string,
+    password: string
+): Promise<{ user: any; isFirstLogin: boolean } | null> => {
+    try {
+        if (!auth || !db) throw new Error("Firebase not initialized");
+
+        // 1. Sign in with Firebase Auth
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // 2. Fetch Client Profile to check isFirstLogin
+        const clientDoc = await getDoc(doc(db, 'clients', user.uid));
+
+        let isFirstLogin = false;
+        if (clientDoc.exists()) {
+            const data = clientDoc.data();
+            isFirstLogin = data.isFirstLogin === true;
+        }
+
+        return { user, isFirstLogin };
+    } catch (error: any) {
+        console.error('Error signing in client:', error);
+        throw error;
+    }
+};
+
+/**
+ * Legacy support for verifyClientCredentials (can probably remove, but keeping for now if used elsewhere)
  */
 export const verifyClientCredentials = async (
     email: string,
     password: string
 ): Promise<boolean> => {
-    // Simplified Auth for Development - Default client credentials - REMOVED
-    // if (email === 'client@makemyoffice.com' && password === '123456') {
-    //     return true;
-    // }
-
     try {
-        if (!db) return false;
-        const projectsRef = collection(db, 'clientProjects');
-        const q = query(projectsRef, where('clientEmail', '==', email));
-        const snapshot = await getDocs(q);
-
-        if (snapshot.empty) {
-            return false;
-        }
-
-        const projectDoc = snapshot.docs[0];
-        const projectData = projectDoc.data();
-
-        return projectData.password === password;
-    } catch (error) {
-        console.error('Error verifying client credentials:', error);
+        const result = await signInClient(email, password);
+        return !!result;
+    } catch (e) {
         return false;
     }
 };
 
 /**
- * Create a new client account/project (Registration)
+ * Create a new client account
+ * Creates Auth User + Firestore Profile
  */
 export const createClientAccount = async (
     email: string,
     password: string,
-    clientName: string
-): Promise<void> => {
+    clientName: string,
+    caseId?: string
+): Promise<string> => {
     try {
-        if (!db) throw new Error("Firebase not initialized");
+        if (!auth || !db) throw new Error("Firebase not initialized");
 
-        // Check if email already exists
-        const projectsRef = collection(db, 'clientProjects');
-        const q = query(projectsRef, where('clientEmail', '==', email));
-        const snapshot = await getDocs(q);
+        // Initialize a secondary Firebase app to create the user without logging out the current user (likely Admin/Sales)
+        let secondaryApp;
+        let secondaryAuth;
+        let newUserUid;
 
-        if (!snapshot.empty) {
-            throw new Error('An account with this email already exists.');
+        try {
+            const appName = `SecondaryApp-Client-${Date.now()}`;
+            secondaryApp = initializeApp(firebaseConfig, appName);
+            secondaryAuth = getAuth(secondaryApp);
+
+            // Create Firebase Auth account
+            const userCredential = await createUserWithEmailAndPassword(
+                secondaryAuth,
+                email,
+                password
+            );
+            newUserUid = userCredential.user.uid;
+
+            // Immediately sign out from secondary
+            await signOut(secondaryAuth);
+        } catch (authError) {
+            throw authError; // Pass up for handling
+        } finally {
+            if (secondaryApp) {
+                await deleteApp(secondaryApp);
+            }
         }
 
-        // Create a basic clientProject document
-        // In a real app, this would have more fields, but for now we follow createDemoProject structure
-        const now = new Date();
-        const projectId = email; // Using email as ID for simplicity as seen in ClientDashboardPage
-
-        await setDoc(doc(db, 'clientProjects', email), {
-            projectId: email,
-            clientEmail: email,
-            password: password,
-            clientName: clientName,
-            projectName: `${clientName}'s Project`,
-            projectType: 'Office Interior',
-            status: 'in-progress',
+        // Create Firestore Client Profile
+        await setDoc(doc(db, 'clients', newUserUid), {
+            id: newUserUid,
+            name: clientName,
+            email: email,
+            isFirstLogin: true, // Force password reset
+            caseId: caseId || null,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
-            // Minimum required for dashboard if it were real data
-            area: 'To be surveyed',
-            budget: 'To be finalized',
-            startDate: serverTimestamp(),
         });
+
+        console.log(`Client account created: ${clientName} (${email})`);
+        return newUserUid;
+
     } catch (error: any) {
         console.error('Error creating client account:', error);
-        throw new Error(error.message || 'Failed to create account');
+        throw new Error(error.message || 'Failed to create client account');
     }
 };
 
 /**
- * Change client project password
+ * Change client password and unset isFirstLogin
+ * If currentPassword is provided, it re-authenticates. 
+ * If NOT provided, it assumes session is active and valid (Force Reset case).
  */
 export const changeClientPassword = async (
-    projectId: string,
-    currentPassword: string,
-    newPassword: string
+    newPassword: string,
+    currentPassword?: string
 ): Promise<void> => {
     try {
-        if (!db) throw new Error("Firebase not initialized");
-        // First verify current password
-        const isValid = await verifyClientCredentials(projectId, currentPassword);
-        if (!isValid) {
-            throw new Error('Current password is incorrect');
+        if (!auth || !db) throw new Error("Firebase not initialized");
+        const user = auth.currentUser;
+
+        if (!user) throw new Error("No authenticated user");
+
+        // Re-authenticate if current password provided
+        if (currentPassword) {
+            const credential = EmailAuthProvider.credential(user.email!, currentPassword);
+            await reauthenticateWithCredential(user, credential);
         }
 
-        // Update password
-        const projectsRef = collection(db, 'clientProjects');
-        const q = query(projectsRef, where('projectId', '==', projectId));
-        const snapshot = await getDocs(q);
+        // Update Password
+        await updatePassword(user, newPassword);
 
-        if (snapshot.empty) {
-            throw new Error('Project not found');
-        }
-
-        const projectDoc = snapshot.docs[0];
-        await updateDoc(doc(db, 'clientProjects', projectDoc.id), {
-            password: newPassword,
-            updatedAt: serverTimestamp(),
+        // Update isFirstLogin logic in Firestore
+        await updateDoc(doc(db, 'clients', user.uid), {
+            isFirstLogin: false,
+            updatedAt: serverTimestamp()
         });
+
     } catch (error: any) {
         console.error('Error changing client password:', error);
         throw new Error(error.message || 'Failed to change password');

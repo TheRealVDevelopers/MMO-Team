@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useCases } from '../../hooks/useCases';
 import ExecutionOverview from './execution-team/ExecutionOverview';
@@ -17,10 +17,39 @@ interface Props {
   setCurrentPage: (page: string) => void;
 }
 
+import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
+
 const ExecutionTeamDashboard: React.FC<Props> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
   const { cases, loading } = useCases();
-  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  // URL param for deep linking / initial selection
+  const paramId = searchParams.get('project');
+
+  // Internal state for persistence across tab switches (sidebar navigation)
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(() => {
+    return localStorage.getItem('execution_active_project');
+  });
+
+  // Sync URL param to state/storage
+  useEffect(() => {
+    if (paramId) {
+      localStorage.setItem('execution_active_project', paramId);
+      setActiveProjectId(paramId);
+    }
+  }, [paramId]);
+
+  // Use param if present (highest priority), otherwise fallback to saved state
+  const selectedCaseId = paramId || activeProjectId;
+
+  const handleSetSelectedCase = (caseId: string) => {
+    // Navigate with param to update URL and trigger effect
+    navigate(`/planning?project=${caseId}`);
+    // Do NOT call setCurrentPage here - it triggers App.handleSetPage which overwrites URL to /planning (no params)
+    // App.tsx's useEffect will detect the route change and update current page state automatically
+  };
 
   // Filter my projects
   const myProjects = cases.filter(
@@ -31,7 +60,7 @@ const ExecutionTeamDashboard: React.FC<Props> = ({ currentPage, setCurrentPage }
   const activeProjects = myProjects.filter(c => c.status === CaseStatus.ACTIVE).length;
   const waitingPlanning = myProjects.filter(c => c.status === CaseStatus.WAITING_FOR_PLANNING).length;
   const completedProjects = myProjects.filter(c => c.status === CaseStatus.COMPLETED).length;
-  
+
   const totalBudget = myProjects.reduce((sum, p) => sum + (p.costCenter?.totalBudget || 0), 0);
   const totalSpent = myProjects.reduce((sum, p) => sum + (p.costCenter?.spentAmount || 0), 0);
   const totalRemaining = myProjects.reduce((sum, p) => sum + (p.costCenter?.remainingAmount || 0), 0);
@@ -39,7 +68,7 @@ const ExecutionTeamDashboard: React.FC<Props> = ({ currentPage, setCurrentPage }
   const renderContent = () => {
     switch (currentPage) {
       case 'overview':
-        return <ExecutionOverview setSelectedCase={setSelectedCaseId} setCurrentPage={setCurrentPage} />;
+        return <ExecutionOverview setSelectedCase={handleSetSelectedCase} setCurrentPage={setCurrentPage} />;
       case 'planning':
         return <ExecutionPlanning caseId={selectedCaseId} setCurrentPage={setCurrentPage} />;
       case 'timeline':
@@ -57,7 +86,7 @@ const ExecutionTeamDashboard: React.FC<Props> = ({ currentPage, setCurrentPage }
       case 'jms':
         return <ExecutionJMS caseId={selectedCaseId} />;
       default:
-        return <ExecutionOverview setSelectedCase={setSelectedCaseId} setCurrentPage={setCurrentPage} />;
+        return <ExecutionOverview setSelectedCase={handleSetSelectedCase} setCurrentPage={setCurrentPage} />;
     }
   };
 
@@ -75,17 +104,17 @@ const ExecutionTeamDashboard: React.FC<Props> = ({ currentPage, setCurrentPage }
           <p className="text-sm text-text-secondary">Total Projects</p>
           <p className="text-2xl font-bold mt-1">{myProjects.length}</p>
         </div>
-        
+
         <div className="bg-surface border border-border rounded-xl p-4">
           <p className="text-sm text-text-secondary">Active Projects</p>
           <p className="text-2xl font-bold mt-1 text-green-600">{activeProjects}</p>
         </div>
-        
+
         <div className="bg-surface border border-border rounded-xl p-4">
           <p className="text-sm text-text-secondary">Waiting Planning</p>
           <p className="text-2xl font-bold mt-1 text-yellow-600">{waitingPlanning}</p>
         </div>
-        
+
         <div className="bg-surface border border-border rounded-xl p-4">
           <p className="text-sm text-text-secondary">Completed</p>
           <p className="text-2xl font-bold mt-1 text-blue-600">{completedProjects}</p>
@@ -109,7 +138,7 @@ const ExecutionTeamDashboard: React.FC<Props> = ({ currentPage, setCurrentPage }
             <p className="text-xl font-bold text-green-600">₹{totalRemaining.toLocaleString()}</p>
           </div>
         </div>
-        
+
         {totalBudget > 0 && (
           <div className="mt-4">
             <div className="w-full bg-gray-200 rounded-full h-3">
@@ -129,91 +158,73 @@ const ExecutionTeamDashboard: React.FC<Props> = ({ currentPage, setCurrentPage }
       <div className="flex gap-2 mb-6 overflow-x-auto border-b border-border pb-2">
         <button
           onClick={() => setCurrentPage('overview')}
-          className={`px-4 py-2 rounded-lg whitespace-nowrap ${
-            currentPage === 'overview'
-              ? 'bg-primary text-white'
-              : 'bg-surface hover:bg-background'
-          }`}
+          className={`px-4 py-2 rounded-lg whitespace-nowrap ${currentPage === 'overview'
+            ? 'bg-primary text-white'
+            : 'bg-surface hover:bg-background'
+            }`}
         >
           📋 Projects
         </button>
         <button
           onClick={() => setCurrentPage('planning')}
-          className={`px-4 py-2 rounded-lg whitespace-nowrap ${
-            currentPage === 'planning'
-              ? 'bg-primary text-white'
-              : 'bg-surface hover:bg-background'
-          }`}
+          className={`px-4 py-2 rounded-lg whitespace-nowrap ${currentPage === 'planning'
+            ? 'bg-primary text-white'
+            : 'bg-surface hover:bg-background'
+            }`}
         >
           📝 Planning
         </button>
         <button
           onClick={() => setCurrentPage('timeline')}
-          className={`px-4 py-2 rounded-lg whitespace-nowrap ${
-            currentPage === 'timeline'
-              ? 'bg-primary text-white'
-              : 'bg-surface hover:bg-background'
-          }`}
+          className={`px-4 py-2 rounded-lg whitespace-nowrap ${currentPage === 'timeline'
+            ? 'bg-primary text-white'
+            : 'bg-surface hover:bg-background'
+            }`}
         >
           📅 Timeline
         </button>
         <button
-          onClick={() => setCurrentPage('tasks')}
-          className={`px-4 py-2 rounded-lg whitespace-nowrap ${
-            currentPage === 'tasks'
-              ? 'bg-primary text-white'
-              : 'bg-surface hover:bg-background'
-          }`}
-        >
-          ✅ Tasks
-        </button>
-        <button
           onClick={() => setCurrentPage('daily-updates')}
-          className={`px-4 py-2 rounded-lg whitespace-nowrap ${
-            currentPage === 'daily-updates'
-              ? 'bg-primary text-white'
-              : 'bg-surface hover:bg-background'
-          }`}
+          className={`px-4 py-2 rounded-lg whitespace-nowrap ${currentPage === 'daily-updates'
+            ? 'bg-primary text-white'
+            : 'bg-surface hover:bg-background'
+            }`}
         >
           📊 Daily Updates
         </button>
         <button
           onClick={() => setCurrentPage('materials')}
-          className={`px-4 py-2 rounded-lg whitespace-nowrap ${
-            currentPage === 'materials'
-              ? 'bg-primary text-white'
-              : 'bg-surface hover:bg-background'
-          }`}
+          className={`px-4 py-2 rounded-lg whitespace-nowrap ${currentPage === 'materials'
+            ? 'bg-primary text-white'
+            : 'bg-surface hover:bg-background'
+            }`}
         >
           🧱 Materials
         </button>
         <button
           onClick={() => setCurrentPage('issues')}
-          className={`px-4 py-2 rounded-lg whitespace-nowrap ${
-            currentPage === 'issues'
-              ? 'bg-primary text-white'
-              : 'bg-surface hover:bg-background'
-          }`}
+          className={`px-4 py-2 rounded-lg whitespace-nowrap ${currentPage === 'issues'
+            ? 'bg-primary text-white'
+            : 'bg-surface hover:bg-background'
+            }`}
         >
           ⚠️ Issues
         </button>
         <button
           onClick={() => setCurrentPage('documents')}
-          className={`px-4 py-2 rounded-lg whitespace-nowrap ${
-            currentPage === 'documents'
-              ? 'bg-primary text-white'
-              : 'bg-surface hover:bg-background'
-          }`}
+          className={`px-4 py-2 rounded-lg whitespace-nowrap ${currentPage === 'documents'
+            ? 'bg-primary text-white'
+            : 'bg-surface hover:bg-background'
+            }`}
         >
           📁 Documents
         </button>
         <button
           onClick={() => setCurrentPage('jms')}
-          className={`px-4 py-2 rounded-lg whitespace-nowrap ${
-            currentPage === 'jms'
-              ? 'bg-primary text-white'
-              : 'bg-surface hover:bg-background'
-          }`}
+          className={`px-4 py-2 rounded-lg whitespace-nowrap ${currentPage === 'jms'
+            ? 'bg-primary text-white'
+            : 'bg-surface hover:bg-background'
+            }`}
         >
           📋 JMS
         </button>

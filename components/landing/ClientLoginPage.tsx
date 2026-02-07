@@ -53,7 +53,7 @@ const FadeInSection: React.FC<{ children: React.ReactNode; delay?: string; class
 };
 
 interface ClientLoginPageProps {
-    onLoginSuccess: (email: string) => void;
+    onLoginSuccess: (user: any, isFirstLogin: boolean) => void;
 }
 
 const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => {
@@ -98,17 +98,24 @@ const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => 
                 setPassword('');
             } else {
                 // Verify credentials with Firebase
-                const isValid = await verifyClientCredentials(email, password);
+                // Use signInClient to get the user object and isFirstLogin status
+                const { signInClient } = await import('../../services/authService');
+                const result = await signInClient(email, password);
 
-                if (isValid) {
-                    onLoginSuccess(email);
+                if (result && result.user) {
+                    onLoginSuccess(result.user, result.isFirstLogin);
                 } else {
                     setError('Invalid email or password. Please check your credentials.');
                 }
             }
         } catch (error: any) {
-            setError(error.message || 'Unable to process request. Please try again later.');
             console.error('Client auth error:', error);
+            // specific firebase auth error handling could go here
+            if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+                setError('Invalid email or password.');
+            } else {
+                setError(error.message || 'Unable to process request. Please try again later.');
+            }
         } finally {
             setIsLoading(false);
         }
