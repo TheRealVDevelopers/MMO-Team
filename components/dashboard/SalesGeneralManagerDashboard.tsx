@@ -22,11 +22,11 @@ import { UserPlusIcon, UsersIcon, ArrowDownTrayIcon, CloudArrowDownIcon } from '
 
 const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
-  
+
   // Use Cases instead of Leads (case-centric architecture)
   // Note: Cases with isProject=false are "leads"
   const { cases, loading: casesLoading, error: casesError } = useCases({});
-  
+
   const { users, loading: usersLoading } = useUsers();
   const [isAddLeadModalOpen, setAddLeadModalOpen] = useState(false);
   const [isAssignLeadModalOpen, setAssignLeadModalOpen] = useState(false);
@@ -44,7 +44,7 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
       assignedTo: c.assignedSales || '',
       status: convertCaseStatusToLeadStatus(c.status),
       inquiryDate: c.createdAt,
-      
+
       // Additional Lead fields
       lastContacted: 'N/A',
       priority: 'Medium' as 'High' | 'Medium' | 'Low',
@@ -56,14 +56,14 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
       source: 'Direct',
       nextAction: 'Follow up',
       nextActionDate: new Date(),
-      
+
       // Pass full Case data for modal compatibility
       ...c, // Spread the entire case object to preserve all fields
     } as any));
 
   function convertCaseStatusToLeadStatus(status: CaseStatus): LeadPipelineStatus {
     switch (status) {
-      case CaseStatus.NEW:
+      case CaseStatus.LEAD:
         return LeadPipelineStatus.NEW_NOT_CONTACTED;
       case CaseStatus.CONTACTED:
         return LeadPipelineStatus.CONTACTED_CALL_DONE;
@@ -75,10 +75,10 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
         return LeadPipelineStatus.WAITING_FOR_QUOTATION;
       case CaseStatus.QUOTATION:
         return LeadPipelineStatus.QUOTATION_SENT;
-      case CaseStatus.PAYMENT_PENDING:
-        return LeadPipelineStatus.NEGOTIATION;
-      case CaseStatus.ACTIVE_PROJECT:
+      case CaseStatus.WAITING_FOR_PAYMENT:
         return LeadPipelineStatus.WON;
+      case CaseStatus.ACTIVE:
+        return LeadPipelineStatus.IN_EXECUTION;
       case CaseStatus.COMPLETED:
         return LeadPipelineStatus.WON;
       default:

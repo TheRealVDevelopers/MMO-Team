@@ -68,11 +68,11 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
 const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
-  
+
   // Use Cases instead of Leads (case-centric architecture)
   // Filter to show only cases assigned to current user where isProject=false
   const { cases, loading: casesLoading, error: casesError, updateCase } = useCases({});
-  
+
   const { users, loading: usersLoading } = useUsers();
   const [isAddLeadModalOpen, setIsAddLeadModalOpen] = useState(false);
 
@@ -86,7 +86,7 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
       return {
         // Pass full Case data first
         ...c,
-        
+
         // Override with Lead-specific fields
         projectName: c.title,
         value: c.budget?.totalBudget || 0,
@@ -108,7 +108,7 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
 
   function convertCaseStatusToLeadStatus(status: CaseStatus): LeadPipelineStatus {
     switch (status) {
-      case CaseStatus.NEW:
+      case CaseStatus.LEAD:
         return LeadPipelineStatus.NEW_NOT_CONTACTED;
       case CaseStatus.CONTACTED:
         return LeadPipelineStatus.CONTACTED_CALL_DONE;
@@ -120,10 +120,10 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
         return LeadPipelineStatus.WAITING_FOR_QUOTATION;
       case CaseStatus.QUOTATION:
         return LeadPipelineStatus.QUOTATION_SENT;
-      case CaseStatus.PAYMENT_PENDING:
-        return LeadPipelineStatus.NEGOTIATION;
-      case CaseStatus.ACTIVE_PROJECT:
+      case CaseStatus.WAITING_FOR_PAYMENT:
         return LeadPipelineStatus.WON;
+      case CaseStatus.ACTIVE:
+        return LeadPipelineStatus.IN_EXECUTION;
       case CaseStatus.COMPLETED:
         return LeadPipelineStatus.WON;
       default:

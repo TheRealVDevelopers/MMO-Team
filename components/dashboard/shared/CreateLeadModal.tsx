@@ -20,11 +20,11 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
 }) => {
     const { currentUser } = useAuth();
     const { organizations, loading: orgsLoading } = useOrganizations();
-    
+
     // State for organization selection
     const [selectedOrgId, setSelectedOrgId] = useState<string>('');
     const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
-    
+
     // Load ALL sales executives (remove isActive filter to see all users)
     const { users: allSalesUsers, loading: usersLoading } = useUsers({
         role: UserRole.SALES_TEAM_MEMBER
@@ -47,7 +47,7 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
         clientPhone: '',
         address: '',
         gst: '',
-        
+
         // Lead-specific (manual)
         title: '',
         estimatedBudget: '',
@@ -104,7 +104,7 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
         }
 
         // Permission check
-        if (currentUser?.role !== UserRole.ADMIN && 
+        if (currentUser?.role !== UserRole.ADMIN &&
             currentUser?.role !== UserRole.SALES_GENERAL_MANAGER) {
             setErrors({ submit: 'You do not have permission to create leads' });
             return;
@@ -123,7 +123,7 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
 
             // Create case document at ROOT level: cases/{caseId}
             const casesRef = collection(db, FIRESTORE_COLLECTIONS.CASES);
-            
+
             const caseData: any = {
                 organizationId: selectedOrgId,
                 title: formData.title.trim(),
@@ -135,14 +135,14 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
                 createdBy: currentUser!.id,
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
-                
+
                 // Case flags
                 isProject: false,
-                status: CaseStatus.NEW,
-                
+                status: CaseStatus.LEAD,
+
                 // Workflow state
                 workflow: {
-                    currentStage: CaseStatus.NEW,
+                    currentStage: CaseStatus.LEAD,
                     siteVisitDone: false,
                     drawingDone: false,
                     boqDone: false,
@@ -270,7 +270,7 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
         <>
             <Dialog open={isOpen} onClose={handleClose} className="relative z-50">
                 <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
-                
+
                 <div className="fixed inset-0 flex items-center justify-center p-4 overflow-y-auto">
                     <Dialog.Panel className="mx-auto max-w-4xl w-full bg-white rounded-2xl shadow-xl my-8">
                         {/* Header */}
@@ -314,9 +314,8 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
                                         <select
                                             value={selectedOrgId}
                                             onChange={(e) => setSelectedOrgId(e.target.value)}
-                                            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                                                errors.organization ? 'border-red-500' : 'border-gray-300'
-                                            }`}
+                                            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.organization ? 'border-red-500' : 'border-gray-300'
+                                                }`}
                                             disabled={orgsLoading}
                                         >
                                             <option value="">
@@ -446,9 +445,8 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
                                                 type="text"
                                                 value={formData.title}
                                                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                                                    errors.title ? 'border-red-500' : 'border-gray-300'
-                                                }`}
+                                                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.title ? 'border-red-500' : 'border-gray-300'
+                                                    }`}
                                                 placeholder="e.g., Office Interior Design"
                                             />
                                             {errors.title && (
@@ -494,9 +492,8 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
                                             <select
                                                 value={formData.assignedSales}
                                                 onChange={(e) => setFormData({ ...formData, assignedSales: e.target.value })}
-                                                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                                                    errors.assignedSales ? 'border-red-500' : 'border-gray-300'
-                                                }`}
+                                                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.assignedSales ? 'border-red-500' : 'border-gray-300'
+                                                    }`}
                                                 disabled={usersLoading}
                                             >
                                                 <option value="">

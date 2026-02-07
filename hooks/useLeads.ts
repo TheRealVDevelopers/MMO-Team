@@ -13,7 +13,7 @@ import { useAuth } from '../context/AuthContext';
 // Map CaseStatus to LeadPipelineStatus for backward compatibility
 const mapCaseStatusToLeadStatus = (status: CaseStatus): LeadPipelineStatus => {
   switch (status) {
-    case CaseStatus.NEW:
+    case CaseStatus.LEAD:
       return LeadPipelineStatus.NEW_NOT_CONTACTED;
     case CaseStatus.CONTACTED:
       return LeadPipelineStatus.CONTACTED_CALL_DONE;
@@ -25,10 +25,10 @@ const mapCaseStatusToLeadStatus = (status: CaseStatus): LeadPipelineStatus => {
       return LeadPipelineStatus.WAITING_FOR_QUOTATION;
     case CaseStatus.QUOTATION:
       return LeadPipelineStatus.QUOTATION_SENT;
-    case CaseStatus.PAYMENT_PENDING:
-      return LeadPipelineStatus.NEGOTIATION;
-    case CaseStatus.ACTIVE_PROJECT:
+    case CaseStatus.WAITING_FOR_PAYMENT:
       return LeadPipelineStatus.WON;
+    case CaseStatus.ACTIVE:
+      return LeadPipelineStatus.IN_EXECUTION;
     case CaseStatus.COMPLETED:
       return LeadPipelineStatus.WON;
     default:
@@ -48,14 +48,14 @@ export interface Lead extends Omit<Case, 'isProject' | 'status'> {
 
 export const useLeads = (organizationId?: string) => {
   const { currentUser } = useAuth();
-  
+
   // If organizationId is explicitly provided, use it
   // If not provided and currentUser has organizationId (client user), use that
   // Otherwise, fetch ALL leads (for admin/manager - no organizationId filter)
-  const orgId = organizationId !== undefined 
-    ? organizationId 
+  const orgId = organizationId !== undefined
+    ? organizationId
     : (currentUser?.organizationId || undefined);
-  
+
   const { cases, loading, error, createCase, updateCase, deleteCase } = useCases({
     organizationId: orgId, // Will be undefined for admin/manager, showing ALL leads
     isProject: false, // Only get leads

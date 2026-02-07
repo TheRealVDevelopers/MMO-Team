@@ -43,7 +43,7 @@ export const useCases = (options: UseCasesOptions = {}) => {
 
       // Build query with filters
       let constraints = [];
-      
+
       // OPTIONAL: Filter by organizationId (if not provided, show ALL cases)
       if (options.organizationId) {
         constraints.push(where('organizationId', '==', options.organizationId));
@@ -89,7 +89,7 @@ export const useCases = (options: UseCasesOptions = {}) => {
           // Client-side filtering for userId (assigned sales OR project head)
           if (options.userId) {
             casesData = casesData.filter(
-              (c) => c.assignedSales === options.userId || c.projectHead === options.userId
+              (c) => c.assignedSales === options.userId || c.projectHeadId === options.userId
             );
           }
 
@@ -127,7 +127,7 @@ export const useCases = (options: UseCasesOptions = {}) => {
         const casesRef = collection(db, FIRESTORE_COLLECTIONS.CASES);
 
         const defaultWorkflow: CaseWorkflow = {
-          currentStage: CaseStatus.NEW,
+          currentStage: CaseStatus.LEAD,
           siteVisitDone: false,
           drawingDone: false,
           boqDone: false,
@@ -139,7 +139,21 @@ export const useCases = (options: UseCasesOptions = {}) => {
         const newCase: Omit<Case, 'id'> = {
           ...caseData,
           workflow: defaultWorkflow,
-          status: CaseStatus.NEW,
+          financial: {
+            totalBudget: 0,
+            totalInvoiced: 0,
+            totalCollected: 0,
+            totalExpenses: 0,
+          },
+          costCenter: {
+            totalBudget: 0,
+            spentAmount: 0,
+            remainingAmount: 0,
+            expenses: 0,
+            materials: 0,
+            salaries: 0,
+          },
+          status: CaseStatus.LEAD,
           isProject: false,
           createdAt: new Date(),
         };
@@ -214,7 +228,7 @@ export const useCases = (options: UseCasesOptions = {}) => {
       try {
         await updateCase(caseId, {
           isProject: true,
-          status: CaseStatus.ACTIVE_PROJECT,
+          status: CaseStatus.ACTIVE,
           workflow: {
             ...cases.find((c) => c.id === caseId)?.workflow!,
             paymentVerified: true,

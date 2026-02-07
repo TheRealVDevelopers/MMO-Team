@@ -175,6 +175,15 @@ const ExecutionTeamDashboard: React.FC<Props> = ({ currentPage, setCurrentPage }
           📝 Planning
         </button>
         <button
+          onClick={() => setCurrentPage('tasks')}
+          className={`px-4 py-2 rounded-lg whitespace-nowrap ${currentPage === 'tasks'
+            ? 'bg-primary text-white'
+            : 'bg-surface hover:bg-background'
+            }`}
+        >
+          ✅ Tasks
+        </button>
+        <button
           onClick={() => setCurrentPage('timeline')}
           className={`px-4 py-2 rounded-lg whitespace-nowrap ${currentPage === 'timeline'
             ? 'bg-primary text-white'

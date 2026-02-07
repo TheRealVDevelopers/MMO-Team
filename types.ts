@@ -148,6 +148,14 @@ export enum ProjectStatus {
   BOQ_PENDING = "BOQ Pending",
 }
 
+// Vendor Bill Status for GR-IN / Purchase Invoices
+export type VendorBillStatus =
+  | 'Pending Approval'
+  | 'Approved'
+  | 'Scheduled'
+  | 'Paid'
+  | 'Overdue';
+
 export enum MaterialRequestStatus {
   PENDING = "pending",
   APPROVED = "approved",
@@ -891,8 +899,14 @@ export interface Expense {
 export interface VendorBill {
   id: string;
   vendorName: string;
+  invoiceNumber: string;
   amount: number;
-  status: string;
+  dueDate: Date;
+  status: VendorBillStatus;
+  createdAt?: Date;
+  paidAt?: Date;
+  projectId?: string;
+  description?: string;
   [key: string]: any;
 }
 

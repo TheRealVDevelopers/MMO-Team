@@ -201,7 +201,7 @@ export const convertEnquiryToLead = async (
     try {
         const { CaseStatus } = await import('../types');
         const { FIRESTORE_COLLECTIONS } = await import('../constants');
-        
+
         // Create case (not deprecated lead)
         const caseRef = await addDoc(collection(db, FIRESTORE_COLLECTIONS.CASES), {
             // Case-centric fields
@@ -215,7 +215,7 @@ export const convertEnquiryToLead = async (
             createdBy: leadData.createdBy || 'system',
             isProject: false, // It's a lead initially
             status: CaseStatus.NEW,
-            
+
             // Budget if provided
             ...(leadData.estimatedValue && {
                 budget: {
@@ -224,10 +224,10 @@ export const convertEnquiryToLead = async (
                     approved: false
                 }
             }),
-            
+
             // Workflow state
             workflow: {
-                currentStage: CaseStatus.NEW,
+                currentStage: CaseStatus.LEAD,
                 siteVisitDone: false,
                 drawingDone: false,
                 boqDone: false,
@@ -235,7 +235,7 @@ export const convertEnquiryToLead = async (
                 paymentVerified: false,
                 executionStarted: false
             },
-            
+
             // Timestamps
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
