@@ -7,6 +7,7 @@ import { ClockIcon, FireIcon, PaperClipIcon, ArrowLeftIcon, EllipsisVerticalIcon
 import BOQSubmissionModal from './BOQSubmissionModal';
 import DrawingUploadModal from './DrawingUploadModal';
 import { createNotification } from '../../../services/liveDataService';
+import { uploadDrawing, formatFileSize } from '../../../services/storageService';
 
 const KANBAN_COLUMNS: { id: string, title: string, statuses: any[] }[] = [
     { id: 'site-audit', title: 'Site Inspection', statuses: [ProjectStatus.SITE_VISIT_PENDING, 'Site Visit Scheduled'] },
@@ -235,26 +236,18 @@ const ProjectsBoardPage: React.FC<{ onProjectSelect: (project: Project) => void;
     };
 
     const handleDrawingUpload = async (file: File, type: 'pdf' | 'cad') => {
-        if (!selectedProjectForUpload) return;
+        if (!selectedProjectForUpload || !currentUser) return;
         const project = selectedProjectForUpload;
 
         try {
-            // Show loading state
             console.log(`Uploading ${type} drawing: ${file.name}...`);
 
-            // TODO: Upload to Firebase Storage
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate upload delay
+            // 1. Upload to Firebase Storage
+            const uploadResult = await uploadDrawing(project.id, file, type);
 
-            // Format file size
-            const fileSizeKB = file.size / 1024;
-            const fileSizeMB = fileSizeKB / 1024;
-            const formattedSize = fileSizeMB > 1
-                ? `${fileSizeMB.toFixed(2)} MB`
-                : `${fileSizeKB.toFixed(2)} KB`;
-
-            // Update project with drawing info
+            // 2. Update project with drawing info
             await updateProject(project.id, {
-                status: ProjectStatus.BOQ_PENDING,
+                status: ProjectStatus.BOQ_PENDING as any,
                 drawingSubmittedAt: new Date(),
                 drawingRedFlagged: false,
                 documents: [
@@ -262,10 +255,12 @@ const ProjectsBoardPage: React.FC<{ onProjectSelect: (project: Project) => void;
                     {
                         id: `doc_${Date.now()}`,
                         name: file.name,
-                        type: type === 'cad' ? 'zip' : 'pdf', // Map CAD to ZIP generic type if needed or keep mapping
-                        url: URL.createObjectURL(file), // Temporary URL
+                        type: type === 'cad' ? 'cad' : 'pdf',
+                        url: uploadResult.url,
+                        storagePath: uploadResult.path,
                         uploaded: new Date(),
-                        size: formattedSize
+                        size: formatFileSize(file.size),
+                        uploadedBy: currentUser.id
                     }
                 ]
             });
@@ -274,9 +269,9 @@ const ProjectsBoardPage: React.FC<{ onProjectSelect: (project: Project) => void;
             setSelectedProjectForUpload(null);
             alert(`Drawing "${file.name}" uploaded successfully! Project moved to BOQ Pending.`);
 
-        } catch (error) {
+        } catch (error: any) {
             console.error('Upload error:', error);
-            alert('Failed to upload drawing. Please try again.');
+            alert(`Failed to upload drawing: ${error.message || 'Please try again.'}`);
         }
     };
 

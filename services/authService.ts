@@ -24,10 +24,9 @@ import {
     getDocs,
     addDoc
 } from 'firebase/firestore';
-import { auth, db, logAgent } from '../firebase';
+import { auth, db, logAgent, firebaseConfig } from '../firebase';
 import { StaffUser, UserRole, Vendor, CaseStatus } from '../types';
-import { FIRESTORE_COLLECTIONS } from '../constants';
-import { firebaseConfig } from '../firebase';
+import { FIRESTORE_COLLECTIONS, DEFAULT_ORGANIZATION_ID } from '../constants';
 
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
 
@@ -170,6 +169,7 @@ export const createStaffAccountFromApproval = async (
     role: UserRole,
     phone: string,
     region?: string,
+    organizationId?: string,
     avatar?: string
 ): Promise<string> => {
     try {
@@ -211,6 +211,8 @@ export const createStaffAccountFromApproval = async (
             email,
             name,
             role,
+            organizationId: organizationId || DEFAULT_ORGANIZATION_ID,
+            isActive: true, // New staff accounts should be active by default
             avatar: avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
             phone: phone ?? '',
             region: region ?? null,
@@ -239,7 +241,8 @@ export const createStaffAccount = async (
     role: UserRole,
     avatar: string,
     phone: string,
-    region?: string
+    region?: string,
+    organizationId?: string
 ): Promise<string> => {
     try {
         if (!auth || !db) throw new Error("Firebase not initialized");
@@ -278,6 +281,8 @@ export const createStaffAccount = async (
             email,
             name,
             role,
+            organizationId: organizationId || DEFAULT_ORGANIZATION_ID,
+            isActive: true,
             avatar: avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
             phone: phone ?? '',
             region: region ?? null,
@@ -503,10 +508,13 @@ export const getStaffMember = async (userId: string): Promise<StaffUser | null> 
             id: userDoc.id,
             name: userData.name,
             role: userData.role as UserRole,
+            organizationId: userData.organizationId || DEFAULT_ORGANIZATION_ID,
             avatar: userData.avatar,
             email: userData.email,
             phone: userData.phone,
             region: userData.region,
+            isActive: userData.isActive !== false,
+            createdAt: userData.createdAt?.toDate() || new Date(),
             currentTask: userData.currentTask || '',
             lastUpdateTimestamp: userData.lastUpdateTimestamp?.toDate() || new Date(),
         };
@@ -529,10 +537,13 @@ export const getAllStaff = async (): Promise<StaffUser[]> => {
                 id: doc.id,
                 name: data.name,
                 role: data.role as UserRole,
+                organizationId: data.organizationId || DEFAULT_ORGANIZATION_ID,
                 avatar: data.avatar,
                 email: data.email,
                 phone: data.phone,
                 region: data.region,
+                isActive: data.isActive !== false,
+                createdAt: data.createdAt?.toDate() || new Date(),
                 currentTask: data.currentTask || '',
                 lastUpdateTimestamp: data.lastUpdateTimestamp?.toDate() || new Date(),
             };
@@ -730,7 +741,7 @@ export const changeClientPassword = async (
 /**
  * Monitor authentication state
  */
-export const onAuthStateChange = (callback: (user: User | null) => void) => {
+export const onAuthStateChange = (callback: (user: StaffUser | null) => void) => {
     if (!auth) {
         callback(null);
         return () => { };

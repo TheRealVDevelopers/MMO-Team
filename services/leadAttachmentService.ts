@@ -1,20 +1,44 @@
 /**
- * Lead Attachment Service - Stub for backward compatibility
- * @deprecated Use useCaseDocuments hook instead
+ * Lead Attachment Service
+ * Handles file uploads for leads/cases using Firebase Storage
  */
 
+import {
+  uploadLeadAttachments as uploadToStorage,
+  formatFileSize as formatSize,
+  UploadResult,
+} from './storageService';
+
+/**
+ * Upload multiple attachments for a lead
+ * @param leadId - The lead/case ID
+ * @param files - Array of files to upload
+ * @returns Array of download URLs
+ */
 export const uploadMultipleLeadAttachments = async (
   leadId: string,
   files: File[]
 ): Promise<string[]> => {
-  console.warn('uploadMultipleLeadAttachments: Please use useCaseDocuments hook instead');
-  return [];
+  if (!leadId || !files || files.length === 0) {
+    console.warn('[LeadAttachmentService] No files to upload');
+    return [];
+  }
+
+  try {
+    const results: UploadResult[] = await uploadToStorage(leadId, files);
+    return results.map((r) => r.url);
+  } catch (error: any) {
+    console.error('[LeadAttachmentService] Upload failed:', error);
+    throw new Error(error.message || 'Failed to upload attachments');
+  }
 };
 
-export const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+/**
+ * Format file size for display
+ */
+export const formatFileSize = formatSize;
+
+export default {
+  uploadMultipleLeadAttachments,
+  formatFileSize,
 };

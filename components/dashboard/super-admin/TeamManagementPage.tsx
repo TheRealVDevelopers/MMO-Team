@@ -8,9 +8,11 @@ import {
     MagnifyingGlassIcon,
     AdjustmentsHorizontalIcon,
     SignalIcon,
-    FlagIcon
+    FlagIcon,
+    UserPlusIcon
 } from '@heroicons/react/24/outline';
 import TeamMemberDetailView from './TeamMemberDetailView';
+import AddTeamMemberModal from './AddTeamMemberModal';
 import { ContentCard, cn, staggerContainer } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -19,6 +21,7 @@ const TeamManagementPage: React.FC<{ setCurrentPage: (page: string) => void; ini
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
     // Initial Selection Effect
     React.useEffect(() => {
@@ -61,16 +64,25 @@ const TeamManagementPage: React.FC<{ setCurrentPage: (page: string) => void; ini
             animate="animate"
             className="space-y-8"
         >
-            <div className="flex items-center gap-4">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => setCurrentPage('overview')}
+                        className="group flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border bg-surface hover:bg-subtle-background hover:scale-105 transition-all text-[10px] font-black uppercase tracking-widest text-text-tertiary shadow-sm"
+                    >
+                        <ArrowLeftIcon className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
+                        <span>Command</span>
+                    </button>
+                    <div className="h-6 w-px bg-border/40 mx-2" />
+                    <h2 className="text-3xl font-serif font-black text-text-primary tracking-tight">Personnel HUB</h2>
+                </div>
                 <button
-                    onClick={() => setCurrentPage('overview')}
-                    className="group flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border bg-surface hover:bg-subtle-background hover:scale-105 transition-all text-[10px] font-black uppercase tracking-widest text-text-tertiary shadow-sm"
+                    onClick={() => setIsAddModalOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:bg-primary/90 hover:scale-105 transition-all"
                 >
-                    <ArrowLeftIcon className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
-                    <span>Command</span>
+                    <UserPlusIcon className="w-4 h-4" />
+                    <span>Add Member</span>
                 </button>
-                <div className="h-6 w-px bg-border/40 mx-2" />
-                <h2 className="text-3xl font-serif font-black text-text-primary tracking-tight">Personnel HUB</h2>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 min-h-[750px] items-stretch">
@@ -215,6 +227,15 @@ const TeamManagementPage: React.FC<{ setCurrentPage: (page: string) => void; ini
                     </AnimatePresence>
                 </div>
             </div>
+
+            {/* Add Team Member Modal */}
+            <AddTeamMemberModal
+                isOpen={isAddModalOpen}
+                onClose={() => setIsAddModalOpen(false)}
+                onSuccess={() => {
+                    // Modal will close automatically, staff list will refresh via real-time listener
+                }}
+            />
         </motion.div>
     );
 };

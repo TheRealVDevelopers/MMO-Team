@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { CloudArrowUpIcon, DocumentTextIcon, XMarkIcon, ClockIcon } from '@heroicons/react/24/outline';
 import { format, addHours, differenceInHours } from 'date-fns';
+import { uploadDrawing } from '../../../services/storageService';
 
 interface RECCEDrawingUploadProps {
     leadId: string;
@@ -35,21 +36,22 @@ const RECCEDrawingUpload: React.FC<RECCEDrawingUploadProps> = ({ leadId, siteVis
         }
     };
 
-    const handleUpload = () => {
+    const handleUpload = async () => {
         if (!file) return;
         setIsUploading(true);
+        setUploadProgress(20);
 
-        // Simulate upload
-        let progress = 0;
-        const interval = setInterval(() => {
-            progress += 10;
-            setUploadProgress(progress);
-            if (progress >= 100) {
-                clearInterval(interval);
-                setIsUploading(false);
-                onUploadComplete(URL.createObjectURL(file), file.name); // Mock URL
-            }
-        }, 200);
+        try {
+            // Import uploadDrawing dynamically or at top. Using top import preferred.
+            const result = await uploadDrawing(leadId, file, 'pdf');
+            setUploadProgress(100);
+            onUploadComplete(result.url, file.name);
+        } catch (error: any) {
+            console.error('[RECCEDrawingUpload] Upload failed:', error);
+            alert(`Failed to upload drawing: ${error.message || 'Please try again.'}`);
+        } finally {
+            setIsUploading(false);
+        }
     };
 
     return (

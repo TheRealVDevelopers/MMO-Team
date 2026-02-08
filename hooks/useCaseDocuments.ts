@@ -10,10 +10,12 @@ import {
   doc,
   serverTimestamp,
   Timestamp,
+  getDoc,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { CaseDocument, DocumentType } from '../types';
 import { FIRESTORE_COLLECTIONS } from '../constants';
+import { uploadCaseDocuments, deleteFile, UploadResult } from '../services/storageService';
 
 interface UseCaseDocumentsOptions {
   organizationId: string;
@@ -131,7 +133,68 @@ export const useCaseDocuments = (options: UseCaseDocumentsOptions) => {
     [options.organizationId, options.caseId]
   );
 
-  // Delete document
+  // Upload file to Storage and then save metadata to Firestore
+  const uploadFileWithStorage = useCallback(
+    async (
+      file: File,
+      type: DocumentType,
+      uploadedBy: string,
+      additionalData?: Partial<CaseDocument>
+    ): Promise<string> => {
+      if (!db || !options.organizationId || !options.caseId) {
+        throw new Error('Database, organization, or case not initialized');
+      }
+
+      try {
+        // 1. Upload file to Firebase Storage
+        const [uploadResult] = await uploadCaseDocuments(options.caseId, [file]);
+
+        // 2. Save metadata to Firestore
+        const documentsRef = collection(
+          db,
+          FIRESTORE_COLLECTIONS.ORGANIZATIONS,
+          options.organizationId,
+          FIRESTORE_COLLECTIONS.CASES,
+          options.caseId,
+          FIRESTORE_COLLECTIONS.DOCUMENTS
+        );
+
+        const documentData: Omit<CaseDocument, 'id'> = {
+          caseId: options.caseId,
+          type,
+          fileName: file.name,
+          fileUrl: uploadResult.url,
+          storagePath: uploadResult.path,
+          fileSize: uploadResult.fileSize,
+          mimeType: uploadResult.contentType,
+          uploadedBy,
+          uploadedAt: new Date(),
+          ...additionalData,
+        };
+
+        const docRef = await addDoc(documentsRef, {
+          ...documentData,
+          uploadedAt: serverTimestamp(),
+        });
+
+        // Log activity
+        await logActivity(
+          options.organizationId,
+          options.caseId,
+          `Document uploaded: ${file.name}`,
+          uploadedBy
+        );
+
+        return docRef.id;
+      } catch (err: any) {
+        console.error('Error uploading file to storage:', err);
+        throw err;
+      }
+    },
+    [options.organizationId, options.caseId]
+  );
+
+  // Delete document from Firestore and Storage
   const deleteDocument = useCallback(
     async (documentId: string) => {
       if (!db || !options.organizationId || !options.caseId) {
@@ -148,6 +211,21 @@ export const useCaseDocuments = (options: UseCaseDocumentsOptions) => {
           FIRESTORE_COLLECTIONS.DOCUMENTS,
           documentId
         );
+
+        // Get the document to find storage path
+        const docSnap = await getDoc(documentRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          // Delete from Storage if storagePath exists
+          if (data.storagePath) {
+            try {
+              await deleteFile(data.storagePath);
+            } catch (storageErr) {
+              console.warn('Failed to delete file from storage:', storageErr);
+              // Continue with Firestore deletion even if storage deletion fails
+            }
+          }
+        }
 
         await deleteDoc(documentRef);
 
@@ -189,6 +267,7 @@ export const useCaseDocuments = (options: UseCaseDocumentsOptions) => {
     loading,
     error,
     uploadDocument,
+    uploadFileWithStorage,
     deleteDocument,
   };
 };

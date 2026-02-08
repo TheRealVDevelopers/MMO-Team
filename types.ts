@@ -486,6 +486,9 @@ export interface CaseDocument {
   type: DocumentType;
   fileName: string;
   fileUrl: string; // Storage URL
+  storagePath?: string; // Full storage path for deletion
+  fileSize?: number; // File size in bytes
+  mimeType?: string; // MIME type of the file
   uploadedBy: string; // User ID
   uploadedAt: Date;
   notes?: string;
@@ -1162,8 +1165,15 @@ export enum BidStatus {
 
 export interface LeadHistoryAttachment {
   id: string;
-  name: string;
-  url: string;
+  fileName: string;
+  fileUrl: string;
+  fileType: 'image' | 'document' | 'other';
+  fileSize?: number;
+  storagePath?: string;
+  uploadedAt?: Date;
+  // Legacy aliases for backwards compatibility
+  name?: string;
+  url?: string;
   [key: string]: any;
 }
 
