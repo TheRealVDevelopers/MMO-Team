@@ -425,12 +425,13 @@ const ProjectSlide: React.FC<{ project: any }> = ({ project }) => (
 // --- 3B. PORTFOLIO SHOWCASE SECTION ---
 const PortfolioShowcase: React.FC<{ onNavigate: (page: string) => void }> = ({ onNavigate }) => {
     const portfolioClients = [
-        { name: 'Qlar', logo: '/qlar.jfif', industry: 'Corporate' },
-        { name: 'Ola', logo: '/ola-logo.png', industry: 'Corporate' },
-        { name: 'Dezy Dental', logo: '/dezy-dental.png', industry: 'Healthcare' },
-        { name: 'Pratham Motors', logo: '/pratham-motors.png', industry: 'Automotive' },
+        { name: 'Ola', logo: '/ola.png', industry: 'Corporate' },
+        { name: 'Dezy Dental', logo: '/dezy.png', industry: 'Healthcare' },
+        { name: 'PMPL', logo: '/prathama.png', industry: 'Automotive' },
         { name: 'Apna Mart', logo: '/apna mart.jfif', industry: 'Retail' },
-        { name: 'TeamLease Digital', logo: '/teamlease-digital.png', industry: 'Co-working' }
+        { name: 'Qlar', logo: '/qlar.jfif', industry: 'Corporate' },
+        { name: 'TeamLease', logo: '/team.png', industry: 'Co-working' },
+        { name: 'Apna Mart', logo: '/apna mart.jfif', industry: 'Retail' }
     ];
 
     return (
@@ -470,7 +471,7 @@ const PortfolioShowcase: React.FC<{ onNavigate: (page: string) => void }> = ({ o
                                 <img
                                     src={client.logo}
                                     alt={client.name}
-                                    className="max-w-full max-h-full object-contain grayscale group-hover:grayscale-0 transition-all duration-500"
+                                    className="max-w-full max-h-full object-contain"
                                 />
                             </div>
                             <div className="text-center">
