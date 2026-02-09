@@ -136,7 +136,6 @@ const navConfig = {
     title: 'Procurement Hub',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
-      { id: 'work-queue', label: 'Work Queue', icon: <QueueListIcon className="w-6 h-6" /> },
       { id: 'audit', label: 'Quotation Audit', icon: <DocumentTextIcon className="w-6 h-6" /> },
       { id: 'bidding', label: 'Vendor Bidding', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       { id: 'execution-procurement', label: 'Execution Procurement', icon: <TruckIcon className="w-6 h-6" /> },

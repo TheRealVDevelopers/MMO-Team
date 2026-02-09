@@ -105,10 +105,10 @@ const CaseListItem: React.FC<{
                             onClick={(e) => { e.stopPropagation(); onSubmitForAudit(quotationToSubmit, caseItem); }}
                             disabled={submittingForAudit}
                             className="px-3 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 font-medium text-sm flex items-center gap-1.5 disabled:opacity-50"
-                            title="Submit quotation to procurement for auditing"
+                            title="Submit to procurement for auditing"
                         >
                             <PaperAirplaneIcon className="w-4 h-4" />
-                            {submittingForAudit ? 'Submitting...' : 'Submit to Audit'}
+                            {submittingForAudit ? 'Submitting...' : 'Submit for Auditing'}
                         </button>
                     )}
                     <SecondaryButton onClick={() => onSelect(caseItem)}>
@@ -635,7 +635,7 @@ const CustomerQuotationBuilder: React.FC = () => {
                                                             className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors font-medium text-sm flex items-center gap-1.5 disabled:opacity-50"
                                                         >
                                                             <PaperAirplaneIcon className="w-4 h-4" />
-                                                            {submittingForAuditCaseId === caseItem.id ? 'Submitting...' : 'Submit to Audit'}
+                                                            {submittingForAuditCaseId === caseItem.id ? 'Submitting...' : 'Submit for Auditing'}
                                                         </button>
                                                     )}
                                                     <button
