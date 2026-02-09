@@ -19,6 +19,7 @@ import RequestInboxPage from './shared/RequestInboxPage';
 import OrganizationsPage from './admin/OrganizationsPage';
 import { SectionHeader, PrimaryButton, SecondaryButton } from './shared/DashboardUI';
 import UnifiedProjectsPage from './shared/UnifiedProjectsPage';
+import RequestValidationPage from './shared/RequestValidationPage';
 import { UserPlusIcon, UsersIcon, ArrowDownTrayIcon, CloudArrowDownIcon } from '@heroicons/react/24/outline';
 
 const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
@@ -184,6 +185,8 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
         return <RequestInboxPage />;
       case 'approvals':
         return <ApprovalsPage />;
+      case 'request-validation':
+        return <RequestValidationPage />;
       case 'escalate-issue':
         return <EscalateIssuePage setCurrentPage={setCurrentPage} />;
       default:

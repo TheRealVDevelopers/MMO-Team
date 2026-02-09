@@ -22,10 +22,10 @@ export const useStaffPerformance = () => {
         const usersRef = collection(db, 'staffUsers');
         const qUsers = query(usersRef);
 
-        // 2. Fetch Today's Attendance (Real-time)
+        // 2. Fetch Today's Attendance (Real-time) - time entries use dateKey
         const today = new Date().toLocaleDateString('en-CA'); // strict YYYY-MM-DD
         const timeEntriesRef = collection(db, 'timeEntries');
-        const qTime = query(timeEntriesRef, where('date', '==', today));
+        const qTime = query(timeEntriesRef, where('dateKey', '==', today));
 
         // Use a composite listener approach or just independent listeners?
         // Independent listeners are easier to manage but might cause double renders.

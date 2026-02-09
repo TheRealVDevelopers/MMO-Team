@@ -24,6 +24,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTeamTasks } from '../../../hooks/useTeamTasks';
 import { TaskStatus, Attendance, AttendanceStatus, TimeTrackingStatus } from '../../../types';
 import { useTimeAnalytics } from '../../../hooks/useTimeAnalytics';
+import { useLiveStaffUser } from '../../../hooks/useLiveStaffUser';
 import DailyDeploymentTimeline from './DailyDeploymentTimeline';
 import ExportDeploymentReportModal from '../shared/ExportDeploymentReportModal'; // Import Modal // Import Timeline Component
 
@@ -89,12 +90,13 @@ const TeamMemberDetailView: React.FC<{ user: User; initialTab?: 'history'; initi
     const [customStartDate, setCustomStartDate] = useState('');
     const [customEndDate, setCustomEndDate] = useState('');
 
-    const { tasks, loading } = useTeamTasks();
+    const { tasks, loading } = useTeamTasks(undefined, user.id);
     const { projects } = useProjects();
     const { leads } = useLeads();
+    const liveUser = useLiveStaffUser(user.id);
 
     const userTasks = useMemo(() =>
-        tasks.filter(t => t.userId === user.id),
+        tasks.filter(t => t.assignedTo === user.id),
         [tasks, user.id]);
 
     const userActivities = useMemo(() =>
@@ -106,7 +108,7 @@ const TeamMemberDetailView: React.FC<{ user: User; initialTab?: 'history'; initi
         [userTasks]);
 
     const currentActiveTask = useMemo(() =>
-        userTasks.find(t => t.status === TaskStatus.IN_PROGRESS) || userActivities[0],
+        userTasks.find(t => t.status === TaskStatus.IN_PROGRESS || t.status === TaskStatus.STARTED) || userActivities[0],
         [userTasks, userActivities]);
 
     const userKPIs = useMemo(() => {
@@ -162,7 +164,15 @@ const TeamMemberDetailView: React.FC<{ user: User; initialTab?: 'history'; initi
         return { startDate, endDate };
     }, [dateRange, customStartDate, customEndDate]);
 
-    // Use unified time analytics hook - SINGLE SOURCE OF TRUTH
+    // Date range for analytics: include selected date so Deployment History tab has data
+    const analyticsDateRange = useMemo(() => {
+        const { startDate, endDate } = getDateRangeBounds;
+        const start = startDate < selectedDate ? startDate : selectedDate;
+        const end = endDate > selectedDate ? endDate : selectedDate;
+        return { startDateKey: start, endDateKey: end };
+    }, [dateRange, customStartDate, customEndDate, selectedDate]);
+
+    // Use unified time analytics hook with date range so metrics and deployment history reflect filter
     const { 
       totalDaysWorked,
       totalActiveHours,
@@ -172,7 +182,7 @@ const TeamMemberDetailView: React.FC<{ user: User; initialTab?: 'history'; initi
       avgDailyHours,
       entries: timeEntries,
       loading: timeAnalyticsLoading
-    } = useTimeAnalytics(user.id, user.organizationId);
+    } = useTimeAnalytics(user.id, user.organizationId, undefined, undefined, analyticsDateRange);
 
     // Calculate time tracking metrics from unified hook
     const timeMetrics = useMemo(() => {
@@ -271,14 +281,21 @@ const TeamMemberDetailView: React.FC<{ user: User; initialTab?: 'history'; initi
                                 <span className="text-xs font-semibold italic">Active profile</span>
                             </div>
                         </div>
-                        {/* Current Assignment/Task Info */}
-                        {user.currentTask && (
+                        {/* Current Assignment / Currently on task - live from Firestore, then task list */}
+                        {(liveUser.currentTask || user.currentTask || (currentActiveTask && (currentActiveTask as any).title)) && (
                             <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-primary/5 border border-primary/20 rounded-xl">
                                 <BriefcaseIcon className="w-4 h-4 text-primary flex-shrink-0" />
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-primary/60">Current Assignment</p>
-                                    <p className="text-xs font-semibold text-text-primary truncate">{user.currentTask}</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-primary/60">Currently on task</p>
+                                    <p className="text-xs font-semibold text-text-primary truncate">
+                                        {liveUser.currentTask || user.currentTask || (currentActiveTask as any)?.title || '—'}
+                                    </p>
                                 </div>
+                                {liveUser.attendanceStatus && (
+                                    <span className="text-[10px] font-bold uppercase text-primary/70 border-l border-primary/20 pl-2">
+                                        {liveUser.attendanceStatus.replace('_', ' ')}
+                                    </span>
+                                )}
                             </div>
                         )}
                     </div>
@@ -358,10 +375,12 @@ const TeamMemberDetailView: React.FC<{ user: User; initialTab?: 'history'; initi
                                     </motion.div>
                                 )}
 
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <UserMetric title="Logged Hours" value={timeMetrics.loggedHours} icon={ClockIcon} />
-                                    <UserMetric title="Active Task Hours" value={timeMetrics.activeHours} icon={CheckCircleIcon} />
-                                    <UserMetric title="Idle Analysis" value={timeMetrics.idleHours} icon={PauseCircleIcon} />
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                                    <UserMetric title="Total working hours" value={`${timeMetrics.loggedHours}h`} icon={ClockIcon} />
+                                    <UserMetric title="Active task hours" value={`${timeMetrics.activeHours}h`} icon={CheckCircleIcon} />
+                                    <UserMetric title="Idle hours" value={`${timeMetrics.idleHours}h`} icon={PauseCircleIcon} />
+                                    <UserMetric title="Break hours" value={`${timeMetrics.breakHours}h`} icon={PauseCircleIcon} />
+                                    <UserMetric title="Tasks completed" value={userTasks.filter(t => t.status === TaskStatus.COMPLETED || t.status === TaskStatus.ACKNOWLEDGED).length} icon={DocumentCheckIcon} />
                                 </div>
                             </section>
 
@@ -402,12 +421,12 @@ const TeamMemberDetailView: React.FC<{ user: User; initialTab?: 'history'; initi
                                                 </div>
 
                                                 <h3 className="text-lg font-serif font-bold text-text-primary leading-tight">
-                                                    {currentActiveTask.title}
+                                                    {(currentActiveTask as any).title || currentActiveTask.type || currentActiveTask.notes || 'Task'}
                                                 </h3>
 
-                                                {currentActiveTask.description && (
+                                                {((currentActiveTask as any).description || currentActiveTask.notes) && (
                                                     <p className="text-sm text-text-secondary line-clamp-2">
-                                                        {currentActiveTask.description}
+                                                        {(currentActiveTask as any).description || currentActiveTask.notes}
                                                     </p>
                                                 )}
                                             </>
@@ -478,8 +497,8 @@ const TeamMemberDetailView: React.FC<{ user: User; initialTab?: 'history'; initi
                                                 <div className="bg-subtle-background/40 p-4 rounded-2xl border border-border/20 group hover:border-primary/20 transition-all">
                                                     <div className="flex justify-between items-start gap-4">
                                                         <div>
-                                                            <p className="text-sm font-semibold text-text-primary leading-snug">{activity.title}</p>
-                                                            {activity.description && <p className="text-xs text-text-tertiary mt-1 line-clamp-1">{activity.description}</p>}
+                                                            <p className="text-sm font-semibold text-text-primary leading-snug">{(activity as any).title || activity.type || 'Task'}</p>
+                                                            {((activity as any).description || activity.notes) && <p className="text-xs text-text-tertiary mt-1 line-clamp-1">{(activity as any).description || activity.notes}</p>}
                                                         </div>
                                                         <span className="text-[10px] font-black uppercase tracking-tighter text-text-tertiary whitespace-nowrap">
                                                             {activity.createdAt && formatDateTime(activity.createdAt)}

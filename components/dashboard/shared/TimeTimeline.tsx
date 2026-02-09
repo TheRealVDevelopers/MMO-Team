@@ -23,6 +23,16 @@ const TimeTimeline: React.FC<TimeTimelineProps> = ({ timeEntry, onRefresh }) => 
     const activeActivity = timeEntry?.activities?.find(a => !a.endTime);
     const activeBreak = timeEntry?.breaks?.find(b => !b.endTime);
 
+    // Derive effective status from data when stored status is missing (e.g. legacy entries)
+    const effectiveStatus = (() => {
+        if (!timeEntry) return TimeTrackingStatus.CLOCKED_OUT;
+        const stored = timeEntry.status as string | undefined;
+        if (stored === TimeTrackingStatus.CLOCKED_OUT || timeEntry.clockOut) return TimeTrackingStatus.CLOCKED_OUT;
+        if (activeBreak) return TimeTrackingStatus.ON_BREAK;
+        if (timeEntry.clockIn && !timeEntry.clockOut) return TimeTrackingStatus.CLOCKED_IN;
+        return stored as TimeTrackingStatus || TimeTrackingStatus.CLOCKED_OUT;
+    })();
+
     // Live timer tick
     const [tick, setTick] = useState(0);
     useEffect(() => {
@@ -197,7 +207,7 @@ const TimeTimeline: React.FC<TimeTimelineProps> = ({ timeEntry, onRefresh }) => 
                     </p>
                 </div>
                 <div className="flex gap-2">
-                    {timeEntry?.status === TimeTrackingStatus.CLOCKED_IN && !activeActivity && !activeBreak && (
+                    {effectiveStatus === TimeTrackingStatus.CLOCKED_IN && !activeActivity && !activeBreak && (
                         <button
                             onClick={() => setIsAddingActivity(true)}
                             className="flex items-center gap-1 px-3 py-1.5 bg-accent/10 text-accent rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-accent/20 transition-colors"
@@ -213,7 +223,7 @@ const TimeTimeline: React.FC<TimeTimelineProps> = ({ timeEntry, onRefresh }) => 
                             <StopIcon className="w-4 h-4" /> Stop Task
                         </button>
                     )}
-                    {!activeBreak && timeEntry?.status !== TimeTrackingStatus.CLOCKED_OUT && (
+                    {!activeBreak && effectiveStatus !== TimeTrackingStatus.CLOCKED_OUT && (
                         <button
                             onClick={handleStartBreak}
                             className="flex items-center gap-1 px-3 py-1.5 bg-orange-100 text-orange-600 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-orange-200 transition-colors"
@@ -229,7 +239,7 @@ const TimeTimeline: React.FC<TimeTimelineProps> = ({ timeEntry, onRefresh }) => 
                             <PlayIcon className="w-4 h-4" /> Resume Work
                         </button>
                     )}
-                    {timeEntry?.status !== TimeTrackingStatus.CLOCKED_OUT && (
+                    {effectiveStatus !== TimeTrackingStatus.CLOCKED_OUT && (
                         <button
                             onClick={handleClockOut}
                             className="flex items-center gap-1 px-3 py-1.5 bg-error/10 text-error rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-error/20 transition-colors"

@@ -8,8 +8,9 @@ import { FIRESTORE_COLLECTIONS } from '../constants';
  * useTeamTasks - Fetches tasks from cases/{caseId}/tasks collection
  * Now uses collectionGroup to query across all cases
  * @param role - Optional role filter for team-specific tasks
+ * @param forUserId - When set, return ALL tasks assigned to this user (for member detail view). Otherwise only tasks assigned by others (assignedTo !== assignedBy).
  */
-export const useTeamTasks = (role?: UserRole) => {
+export const useTeamTasks = (role?: UserRole, forUserId?: string) => {
     const [tasks, setTasks] = useState<CaseTask[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
@@ -31,7 +32,7 @@ export const useTeamTasks = (role?: UserRole) => {
             const tasksData: CaseTask[] = [];
             snapshot.forEach((doc) => {
                 const data = doc.data();
-                const task: CaseTask = {
+                const task: CaseTask & { title?: string; description?: string } = {
                     id: doc.id,
                     caseId: data.caseId,
                     type: data.type,
@@ -45,11 +46,14 @@ export const useTeamTasks = (role?: UserRole) => {
                     deadline: data.deadline?.toDate(),
                     kmTravelled: data.kmTravelled,
                     notes: data.notes,
+                    title: data.title,
+                    description: data.description,
                 };
 
-                // Filter: exclude self-assigned tasks (user's own tasks should only be visible to them)
-                // Include task if assignedTo !== assignedBy (assigned by someone else)
-                if (task.assignedTo !== task.assignedBy) {
+                // Filter: when forUserId is set, include all tasks assigned to that user; otherwise exclude self-assigned
+                if (forUserId) {
+                    if (task.assignedTo === forUserId) tasksData.push(task);
+                } else if (task.assignedTo !== task.assignedBy) {
                     tasksData.push(task);
                 }
             });
@@ -66,7 +70,7 @@ export const useTeamTasks = (role?: UserRole) => {
         });
 
         return () => unsubscribe();
-    }, [role]);
+    }, [role, forUserId]);
 
     return { tasks, loading, error };
 };

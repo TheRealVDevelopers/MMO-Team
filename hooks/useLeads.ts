@@ -22,9 +22,6 @@ import { FIRESTORE_COLLECTIONS } from '../constants';
 // FORWARD MAPPING: CaseStatus → LeadPipelineStatus (for DISPLAY)
 // ========================================
 export const mapCaseStatusToLeadStatus = (status: CaseStatus | string): LeadPipelineStatus => {
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/e4336b3f-e354-4a9b-9c27-6ecee71671c2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useLeads.ts:mapCaseStatusToLeadStatus',message:'mapCaseStatusToLeadStatus entry',data:{status,typeof:typeof status},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
-  // #endregion
   switch (status) {
     case CaseStatus.LEAD:
       return LeadPipelineStatus.NEW_NOT_CONTACTED;
@@ -50,14 +47,12 @@ export const mapCaseStatusToLeadStatus = (status: CaseStatus | string): LeadPipe
       return LeadPipelineStatus.IN_EXECUTION;
     case CaseStatus.COMPLETED:
       return LeadPipelineStatus.WON;
+    case 'WAITING_FOR_DRAWING':
+      return LeadPipelineStatus.WAITING_FOR_DRAWING;
     default:
       // BACKWARD COMPAT: If the stored value is already a LeadPipelineStatus string,
       // check if it matches any LeadPipelineStatus value and return it directly
       const leadStatusValues = Object.values(LeadPipelineStatus) as string[];
-      const leadStatusKeys = Object.keys(LeadPipelineStatus) as string[];
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/e4336b3f-e354-4a9b-9c27-6ecee71671c2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useLeads.ts:default',message:'default branch',data:{status,inValues:leadStatusValues.includes(status as string),inKeys:leadStatusKeys.includes(status as string),sampleValues:leadStatusValues.slice(0,3),sampleKeys:leadStatusKeys.slice(0,3)},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
-      // #endregion
       if (leadStatusValues.includes(status as string)) {
         return status as LeadPipelineStatus;
       }

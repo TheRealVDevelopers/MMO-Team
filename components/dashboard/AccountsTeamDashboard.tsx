@@ -25,6 +25,7 @@ import AccountsTasksPage from './accounts-team/AccountsTasksPage';
 import { Invoice, Project } from '../../types';
 
 import GeneralLedgerPage from './accounts-team/GeneralLedgerPage';
+import RequestValidationPage from './shared/RequestValidationPage';
 
 // Placeholder for new pages
 const ComingSoonPage: React.FC<{ title: string }> = ({ title }) => (
@@ -86,6 +87,9 @@ const AccountsTeamDashboard: React.FC<AccountsTeamDashboardProps> = ({ currentPa
   switch (currentPage) {
     case 'my-day':
       return <MyDayPage />;
+
+    case 'request-validation':
+      return <RequestValidationPage />;
 
     case 'payment-verification':
       return <PaymentVerificationInbox />;

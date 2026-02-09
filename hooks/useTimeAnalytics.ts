@@ -56,6 +56,12 @@ const getMonthBounds = (year: number, month: number) => {
   };
 };
 
+// Optional date range override (YYYY-MM-DD). When set, overrides year/month.
+export interface TimeAnalyticsDateRange {
+  startDateKey: string;
+  endDateKey: string;
+}
+
 // ========================================
 // CORE HOOK: useTimeAnalytics
 // Returns computed metrics from timeEntries
@@ -65,16 +71,18 @@ export const useTimeAnalytics = (
   userId?: string,
   organizationId?: string,
   year?: number,
-  month?: number
+  month?: number,
+  dateRange?: TimeAnalyticsDateRange
 ): TimeAnalytics => {
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Default to current month if not specified
+  // Use explicit date range if provided; otherwise current month
   const targetYear = year ?? new Date().getFullYear();
   const targetMonth = month ?? new Date().getMonth();
-  
-  const { startDateKey, endDateKey } = getMonthBounds(targetYear, targetMonth);
+  const monthBounds = getMonthBounds(targetYear, targetMonth);
+  const startDateKey = dateRange?.startDateKey ?? monthBounds.startDateKey;
+  const endDateKey = dateRange?.endDateKey ?? monthBounds.endDateKey;
 
   useEffect(() => {
     setLoading(true);

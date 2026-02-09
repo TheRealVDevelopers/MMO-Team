@@ -2,6 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { useSalarySystem, SalaryData } from '../../../hooks/useSalarySystem';
 import { formatCurrencyINR, DEFAULT_ORGANIZATION_ID } from '../../../constants';
 import { useExpensesForOrg } from '../../../hooks/useExpensesForOrg';
+import { useValidationRequests } from '../../../hooks/useValidationRequests';
+import { useSalaryLedgerEntries, updateSalaryLedgerEntry, SalaryLedgerEntry } from '../../../hooks/useSalaryLedger';
 import { useAuth } from '../../../context/AuthContext';
 import {
     UserCircleIcon,
@@ -10,7 +12,8 @@ import {
     BanknotesIcon,
     ChevronRightIcon,
     XMarkIcon,
-    CurrencyRupeeIcon
+    CurrencyRupeeIcon,
+    PencilSquareIcon
 } from '@heroicons/react/24/outline';
 
 const SalaryPage: React.FC = () => {
@@ -19,9 +22,14 @@ const SalaryPage: React.FC = () => {
     const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7)); // YYYY-MM
     const { salaryData, loading, error, generatePayroll } = useSalarySystem(selectedMonth);
     const { expenses: orgExpenses } = useExpensesForOrg(orgId);
+    const { requests: approvedValidations } = useValidationRequests({ organizationId: orgId, status: 'APPROVED' });
     const [processing, setProcessing] = useState<string | null>(null);
     const [selectedStaff, setSelectedStaff] = useState<SalaryData | null>(null);
     const [ratePerKm, setRatePerKm] = useState<number>(10); // Editable rate per km
+    const { entries: ledgerEntries, loading: ledgerLoading } = useSalaryLedgerEntries(orgId, selectedMonth);
+    const [editingEntry, setEditingEntry] = useState<SalaryLedgerEntry | null>(null);
+    const [editForm, setEditForm] = useState<Partial<SalaryLedgerEntry>>({});
+    const [savingLedger, setSavingLedger] = useState(false);
 
     // Get expenses by user for the selected month
     const expensesByUser = useMemo(() => {
@@ -43,16 +51,33 @@ const SalaryPage: React.FC = () => {
         return result;
     }, [orgExpenses, selectedMonth]);
 
-    const handleGenerate = async (data: SalaryData & { expenseClaimed?: number; travelReimbursement?: number; totalPayable?: number }) => {
+    // Approved validation requests (expense/travel/leave) per user for selected month — add to salary
+    const validationReimbursementByUser = useMemo(() => {
+        const monthStart = `${selectedMonth}-01`;
+        const monthEnd = `${selectedMonth}-31`;
+        const byUser: Record<string, number> = {};
+        (approvedValidations || []).forEach((r) => {
+            const dateStr = r.createdAt ? r.createdAt.toISOString().slice(0, 10) : '';
+            if (dateStr >= monthStart && dateStr <= monthEnd && r.userId) {
+                const amt = r.amount ?? 0;
+                byUser[r.userId] = (byUser[r.userId] ?? 0) + amt;
+            }
+        });
+        return byUser;
+    }, [approvedValidations, selectedMonth]);
+
+    const handleGenerate = async (data: SalaryData & { expenseClaimed?: number; travelReimbursement?: number; validationReimbursement?: number; totalPayable?: number }) => {
         const expenseClaimed = data.expenseClaimed ?? expensesByUser[data.user.id]?.total ?? 0;
+        const validationReimbursement = data.validationReimbursement ?? validationReimbursementByUser[data.user.id] ?? 0;
         const travelReimbursement = data.travelReimbursement ?? data.distanceKm * ratePerKm;
-        const totalPayable = data.totalPayable ?? (data.estimatedSalary + expenseClaimed + travelReimbursement);
+        const totalPayable = data.totalPayable ?? (data.estimatedSalary + expenseClaimed + validationReimbursement + travelReimbursement);
 
         const confirm = window.confirm(
             `Generate Payroll for ${data.user.name}?\n\n` +
             `Base Salary: ${formatCurrencyINR(data.estimatedSalary)}\n` +
             `Travel Reimbursement: ${formatCurrencyINR(travelReimbursement)}\n` +
             `Expense Reimbursement: ${formatCurrencyINR(expenseClaimed)}\n` +
+            (validationReimbursement > 0 ? `Validation (approved): ${formatCurrencyINR(validationReimbursement)}\n` : '') +
             `─────────────────────────\n` +
             `Total Payable: ${formatCurrencyINR(totalPayable)}`
         );
@@ -65,23 +90,69 @@ const SalaryPage: React.FC = () => {
             travelReimbursement,
             totalPayable,
         });
+        // Note: validation reimbursement is included in totalPayable; ledger stores expense + travel + base
         setProcessing(null);
         alert(`✅ Payroll generated for ${data.user.name}`);
     };
 
-    // Enhanced salary calculation with expenses
+    const handleSaveLedgerEdit = async () => {
+        if (!editingEntry || !orgId) return;
+        setSavingLedger(true);
+        try {
+            const total = (editForm.baseSalary ?? editingEntry.baseSalary)
+                + (editForm.distanceReimbursement ?? editingEntry.distanceReimbursement)
+                + (editForm.expenseReimbursement ?? editingEntry.expenseReimbursement)
+                + (editForm.incentives ?? editingEntry.incentives)
+                - (editForm.deductions ?? editingEntry.deductions);
+            await updateSalaryLedgerEntry(orgId, editingEntry.id, {
+                baseSalary: editForm.baseSalary ?? editingEntry.baseSalary,
+                distanceReimbursement: editForm.distanceReimbursement ?? editingEntry.distanceReimbursement,
+                expenseReimbursement: editForm.expenseReimbursement ?? editingEntry.expenseReimbursement,
+                incentives: editForm.incentives ?? editingEntry.incentives,
+                deductions: editForm.deductions ?? editingEntry.deductions,
+                totalSalary: total,
+                status: editForm.status ?? editingEntry.status,
+            });
+            setEditingEntry(null);
+            setEditForm({});
+            alert('Saved.');
+        } catch (e) {
+            console.error(e);
+            alert('Failed to save');
+        } finally {
+            setSavingLedger(false);
+        }
+    };
+
+    const openEdit = (entry: SalaryLedgerEntry) => {
+        setEditingEntry(entry);
+        setEditForm({
+            baseSalary: entry.baseSalary,
+            distanceReimbursement: entry.distanceReimbursement,
+            expenseReimbursement: entry.expenseReimbursement,
+            incentives: entry.incentives,
+            deductions: entry.deductions,
+            totalSalary: entry.totalSalary,
+            status: entry.status,
+        });
+    };
+
+    // Enhanced salary calculation: expenses + approved validation reimbursements + travel
     const enhancedSalaryData = useMemo(() => {
         return salaryData.map(data => {
             const expenseClaimed = expensesByUser[data.user.id]?.total || 0;
+            const validationReimbursement = validationReimbursementByUser[data.user.id] ?? 0;
             const travelReimbursement = data.distanceKm * ratePerKm;
+            const totalReimbursement = expenseClaimed + validationReimbursement + travelReimbursement;
             return {
                 ...data,
                 expenseClaimed,
+                validationReimbursement,
                 travelReimbursement,
-                totalPayable: data.estimatedSalary + expenseClaimed + travelReimbursement
+                totalPayable: data.estimatedSalary + totalReimbursement
             };
         });
-    }, [salaryData, expensesByUser, ratePerKm]);
+    }, [salaryData, expensesByUser, validationReimbursementByUser, ratePerKm]);
 
     return (
         <div className="p-6 space-y-6">
@@ -113,6 +184,45 @@ const SalaryPage: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Generated payroll (editable by accountant) */}
+            {ledgerEntries.length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <h3 className="text-lg font-semibold text-gray-900 px-4 py-3 border-b border-gray-200">Generated payroll — editable</h3>
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">User / Month</th>
+                                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Base</th>
+                                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Travel</th>
+                                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Expense</th>
+                                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Deductions</th>
+                                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                                    <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                                {ledgerEntries.map((entry) => (
+                                    <tr key={entry.id} className="hover:bg-gray-50">
+                                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{entry.userName || entry.userId} · {entry.month}</td>
+                                        <td className="px-4 py-3 text-sm text-right text-gray-700">{formatCurrencyINR(entry.baseSalary)}</td>
+                                        <td className="px-4 py-3 text-sm text-right text-gray-700">{formatCurrencyINR(entry.distanceReimbursement)}</td>
+                                        <td className="px-4 py-3 text-sm text-right text-gray-700">{formatCurrencyINR(entry.expenseReimbursement)}</td>
+                                        <td className="px-4 py-3 text-sm text-right text-gray-700">{formatCurrencyINR(entry.deductions)}</td>
+                                        <td className="px-4 py-3 text-sm font-bold text-right text-gray-900">{formatCurrencyINR(entry.totalSalary)}</td>
+                                        <td className="px-4 py-3 text-center">
+                                            <button type="button" onClick={() => openEdit(entry)} className="p-2 rounded-lg border border-gray-300 hover:bg-gray-100 text-gray-700" title="Edit">
+                                                <PencilSquareIcon className="w-5 h-5" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
 
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -214,6 +324,15 @@ const SalaryPage: React.FC = () => {
                                             <p className="text-sm font-bold text-purple-600">{formatCurrencyINR(data.expenseClaimed)}</p>
                                         </div>
                                     </div>
+                                    {data.validationReimbursement > 0 && (
+                                        <div className="flex items-center gap-2 col-span-2">
+                                            <BanknotesIcon className="w-4 h-4 text-emerald-500" />
+                                            <div>
+                                                <p className="text-xs text-gray-500">Validation (approved)</p>
+                                                <p className="text-sm font-bold text-emerald-600">{formatCurrencyINR(data.validationReimbursement)}</p>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="pt-3 border-t border-gray-100">
@@ -348,6 +467,12 @@ const SalaryPage: React.FC = () => {
                                         <span className="text-indigo-700">Expense Reimbursement</span>
                                         <span className="font-medium text-indigo-900">{formatCurrencyINR(selectedStaff.expenseClaimed)}</span>
                                     </div>
+                                    {selectedStaff.validationReimbursement > 0 && (
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-indigo-700">Validation (approved)</span>
+                                            <span className="font-medium text-indigo-900">{formatCurrencyINR(selectedStaff.validationReimbursement)}</span>
+                                        </div>
+                                    )}
                                     <hr className="border-indigo-200" />
                                     <div className="flex justify-between text-lg font-bold">
                                         <span className="text-indigo-900">Total Payable</span>
@@ -367,6 +492,45 @@ const SalaryPage: React.FC = () => {
                             >
                                 {processing === selectedStaff.user.id ? 'Generating...' : 'Generate Payroll Entry'}
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit ledger entry modal — accountant can edit every field */}
+            {editingEntry && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => !savingLedger && setEditingEntry(null)}>
+                    <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="text-lg font-bold text-gray-900">Edit payroll entry</h3>
+                        <p className="text-sm text-gray-500">{editingEntry.userName || editingEntry.userId} · {editingEntry.month}</p>
+                        {['baseSalary', 'distanceReimbursement', 'expenseReimbursement', 'incentives', 'deductions', 'totalSalary'].map((field) => (
+                            <div key={field}>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">{field.replace(/([A-Z])/g, ' $1').trim()}</label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    value={editForm[field as keyof SalaryLedgerEntry] ?? 0}
+                                    onChange={(e) => setEditForm((f) => ({ ...f, [field]: parseFloat(e.target.value) || 0 }))}
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                                />
+                            </div>
+                        ))}
+                        <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
+                            <select
+                                value={editForm.status ?? editingEntry.status}
+                                onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))}
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                            >
+                                <option value="DRAFT">DRAFT</option>
+                                <option value="PAID">PAID</option>
+                            </select>
+                        </div>
+                        <div className="flex gap-2 pt-2">
+                            <button type="button" onClick={handleSaveLedgerEdit} disabled={savingLedger} className="flex-1 py-2 bg-primary text-white rounded-lg font-medium disabled:opacity-50">
+                                {savingLedger ? 'Saving...' : 'Save'}
+                            </button>
+                            <button type="button" onClick={() => { setEditingEntry(null); setEditForm({}); }} className="px-4 py-2 border border-gray-300 rounded-lg">Cancel</button>
                         </div>
                     </div>
                 </div>

@@ -41,6 +41,7 @@ export const FIRESTORE_COLLECTIONS = {
   GENERAL_LEDGER: 'generalLedger',
   SALARY_LEDGER: 'salaryLedger',
   INVENTORY: 'inventory',
+  VALIDATION_REQUESTS: 'validationRequests',
 
   // Subcollections under staffUsers/{userId}
   NOTIFICATIONS: 'notifications',

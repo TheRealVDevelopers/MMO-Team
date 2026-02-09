@@ -14,6 +14,7 @@ import ProjectTemplatesPage from './quotation-team/ProjectTemplatesPage';
 import PriceAnalyticsPage from './quotation-team/PriceAnalyticsPage';
 import MyPerformancePage from './quotation-team/MyPerformancePage';
 import CustomerQuotationBuilder from './quotation-team/CustomerQuotationBuilder';
+import RequestValidationPage from './shared/RequestValidationPage';
 
 const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string, params?: any) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
@@ -38,6 +39,8 @@ const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (p
     switch (currentPage) {
       case 'my-day':
         return <MyDayPage />;
+      case 'request-validation':
+        return <RequestValidationPage />;
       case 'work-queue':
         return <QuotationWorkQueuePage />;
       case 'quotations':
