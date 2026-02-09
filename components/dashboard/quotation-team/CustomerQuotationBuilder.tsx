@@ -100,6 +100,9 @@ const CaseListItem: React.FC<{
                     <p className="text-sm text-text-secondary">{caseItem.clientName} • {caseItem.clientPhone || '—'}</p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
+                    <SecondaryButton onClick={() => onSelect(caseItem)}>
+                        Create Quotation
+                    </SecondaryButton>
                     {canSubmitForAudit && quotationToSubmit && (
                         <button
                             onClick={(e) => { e.stopPropagation(); onSubmitForAudit(quotationToSubmit, caseItem); }}
@@ -108,12 +111,9 @@ const CaseListItem: React.FC<{
                             title="Submit to procurement for auditing"
                         >
                             <PaperAirplaneIcon className="w-4 h-4" />
-                            {submittingForAudit ? 'Submitting...' : 'Submit for Auditing'}
+                            {submittingForAudit ? 'Submitting...' : 'Submit to Audit'}
                         </button>
                     )}
-                    <SecondaryButton onClick={() => onSelect(caseItem)}>
-                        Create Quotation
-                    </SecondaryButton>
                 </div>
             </div>
         </Card>
