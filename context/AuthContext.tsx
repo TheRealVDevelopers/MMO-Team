@@ -85,15 +85,38 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           const userDoc = await getDoc(doc(db, FIRESTORE_COLLECTIONS.STAFF_USERS, firebaseUser.uid));
           if (userDoc.exists()) {
             const userData = userDoc.data() as StaffUser;
-            setCurrentUser({ ...userData, id: firebaseUser.uid });
+            const staffUser = { ...userData, id: firebaseUser.uid };
+            setCurrentUser(staffUser);
             console.log('User data loaded from Firestore:', userData.name);
+            // If role is VENDOR, load vendor doc and set currentVendor
+            if (userData.role === UserRole.VENDOR && userData.vendorId && userData.organizationId) {
+              const vendorRef = doc(db, FIRESTORE_COLLECTIONS.ORGANIZATIONS, userData.organizationId, 'vendors', userData.vendorId);
+              const vendorSnap = await getDoc(vendorRef);
+              if (vendorSnap.exists()) {
+                const v = vendorSnap.data();
+                setCurrentVendor({
+                  id: vendorSnap.id,
+                  name: v.name ?? '',
+                  phone: v.phone,
+                  email: v.email,
+                  category: v.category ?? '',
+                  gstNumber: v.gstNumber,
+                });
+              } else {
+                setCurrentVendor(null);
+              }
+            } else {
+              setCurrentVendor(null);
+            }
           } else {
             console.warn('User exists in Auth but not in Firestore');
             setCurrentUser(null);
+            setCurrentVendor(null);
           }
         } catch (error) {
           console.error('Error fetching user data:', error);
           setCurrentUser(null);
+          setCurrentVendor(null);
         }
       } else {
         // Check if we have a mock/local user session
@@ -116,6 +139,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         } else {
           console.log('No Firebase session -> Clearing session');
           setCurrentUser(null);
+          setCurrentVendor(null);
         }
       }
       setLoading(false);

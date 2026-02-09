@@ -163,6 +163,11 @@ export interface TransparencyData {
     originalCompletion?: Date;
 }
 
+/** Plan day date for client read-only (e.g. missing daily updates). */
+export interface ClientPlanDay {
+    date: string | Date;
+}
+
 /**
  * Complete client project data
  */
@@ -178,6 +183,8 @@ export interface ClientProject {
     expectedCompletion: Date;
     currentStageId: number;
     stages: JourneyStage[];
+    /** Day-wise plan dates for execution (read-only); used e.g. to show missing daily updates. */
+    planDays?: ClientPlanDay[];
     consultant: {
         id: string;
         name: string;

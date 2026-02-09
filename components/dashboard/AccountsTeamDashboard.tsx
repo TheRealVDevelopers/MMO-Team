@@ -1,31 +1,28 @@
 import React, { useState } from 'react';
 import UnifiedProjectsPage from './shared/UnifiedProjectsPage';
-import { useInvoices, addInvoice, updateInvoice } from '../../hooks/useInvoices';
-import { useExpenses, addExpense, updateExpense } from '../../hooks/useExpenses';
-import { useVendorBills, addVendorBill, updateVendorBill } from '../../hooks/useVendorBills';
-import { useProjects, addProject } from '../../hooks/useProjects';
-import { useLeads, updateLead } from '../../hooks/useLeads';
-import { convertLeadToProject } from '../../hooks/useCases';
+import { useSalesInvoices } from '../../hooks/useSalesInvoices';
+import { usePurchaseInvoices } from '../../hooks/usePurchaseInvoices';
+import { useExpensesForOrg } from '../../hooks/useExpensesForOrg';
+import { useProjects } from '../../hooks/useProjects';
+import { useLeads } from '../../hooks/useLeads';
 import { useAuth } from '../../context/AuthContext';
 import AccountsOverviewPage from './accounts-team/AccountsOverviewPage';
 import SalesInvoicesPage from './accounts-team/SalesInvoicesPage';
 import ExpensesPage from './accounts-team/ExpensesPage';
 import PurchaseInvoicesPage from './accounts-team/PurchaseInvoicesPage';
+import DeliveredPendingInvoicePage from './accounts-team/DeliveredPendingInvoicePage';
 import ApprovalInbox from './accounts-team/ApprovalInbox';
 import ReportsPage from './accounts-team/ReportsPage';
 import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
 import MyDayPage from './shared/MyDayPage';
 import ProjectPnLPage from './accounts-team/ProjectPnLPage';
-import AccountsApprovalsPage from './accounts-team/AccountsApprovalsPage';
-import AccountsBudgetApprovalPage from './accounts-team/AccountsBudgetApprovalPage';
 import SalaryPage from './accounts-team/SalaryPage';
 import InventoryPage from './accounts-team/InventoryPage';
 import AccountsTasksPage from './accounts-team/AccountsTasksPage';
-import { Invoice, VendorBill, Expense, Project, LeadPipelineStatus, ProjectStatus, ProjectLifecycleStatus } from '../../types';
+import { Invoice, Project } from '../../types';
 
 import GeneralLedgerPage from './accounts-team/GeneralLedgerPage';
-import PaymentVerificationInbox from './accounts-team/PaymentVerificationInbox';
 
 // Placeholder for new pages
 const ComingSoonPage: React.FC<{ title: string }> = ({ title }) => (
@@ -44,68 +41,37 @@ interface AccountsTeamDashboardProps {
 
 const AccountsTeamDashboard: React.FC<AccountsTeamDashboardProps> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
-  const { invoices, loading: invoicesLoading } = useInvoices();
-  const { expenses, loading: expensesLoading } = useExpenses();
-  const { vendorBills, loading: billsLoading } = useVendorBills();
+  const orgId = currentUser?.organizationId ?? undefined;
+  const { invoices: salesInvoices, loading: salesLoading, createSalesInvoice } = useSalesInvoices(orgId);
+  const { invoices: purchaseInvoices, loading: purchaseLoading, createPurchaseInvoice } = usePurchaseInvoices(orgId);
+  const { expenses: expensesFromLedger, loading: expensesLoading } = useExpensesForOrg(orgId);
   const { projects, loading: projectsLoading } = useProjects();
   const { leads, loading: leadsLoading } = useLeads();
 
-  const handleAddInvoice = async (newInvoice: Omit<Invoice, 'id'>) => {
+  const handleCreateSalesInvoice = async (input: { caseId: string; clientName: string; amount: number; taxAmount?: number; totalAmount: number; issueDate: Date; dueDate?: Date }) => {
     try {
-      const invoiceNumber = `INV-${new Date().getFullYear()}-${String(invoices.length + 1).padStart(3, '0')}`;
-      await addInvoice({
-        ...newInvoice,
+      const invoiceNumber = `INV-${new Date().getFullYear()}-${String(salesInvoices.length + 1).padStart(3, '0')}`;
+      await createSalesInvoice({
+        ...input,
         invoiceNumber,
       });
     } catch (error) {
-      console.error("Error adding invoice:", error);
+      console.error("Error creating sales invoice:", error);
+      throw error;
     }
   };
 
-  const handleUpdateInvoice = async (updatedInvoice: Invoice) => {
+  const handleCreatePurchaseInvoice = async (input: { caseId?: string; vendorName: string; invoiceNumber: string; amount: number; issueDate: Date; dueDate?: Date }): Promise<string> => {
     try {
-      const { id, ...data } = updatedInvoice;
-      await updateInvoice(id, data);
+      const id = await createPurchaseInvoice(input);
+      return id;
     } catch (error) {
-      console.error("Error updating invoice:", error);
+      console.error("Error creating purchase invoice:", error);
+      throw error;
     }
   };
 
-  const handleAddExpense = async (newExpense: Omit<Expense, 'id'>) => {
-    try {
-      await addExpense(newExpense);
-    } catch (error) {
-      console.error("Error adding expense:", error);
-    }
-  };
-
-  const handleUpdateExpense = async (updatedExpense: Expense) => {
-    try {
-      const { id, ...data } = updatedExpense;
-      await updateExpense(id, data);
-    } catch (error) {
-      console.error("Error updating expense:", error);
-    }
-  };
-
-  const handleAddVendorBill = async (newBill: Omit<VendorBill, 'id'>) => {
-    try {
-      await addVendorBill(newBill);
-    } catch (error) {
-      console.error("Error adding vendor bill:", error);
-    }
-  };
-
-  const handleUpdateVendorBill = async (updatedBill: VendorBill) => {
-    try {
-      const { id, ...data } = updatedBill;
-      await updateVendorBill(id, data);
-    } catch (error) {
-      console.error("Error updating vendor bill:", error);
-    }
-  };
-
-  if (invoicesLoading || expensesLoading || billsLoading || projectsLoading || leadsLoading) {
+  if (salesLoading || purchaseLoading || expensesLoading || projectsLoading || leadsLoading) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -119,48 +85,45 @@ const AccountsTeamDashboard: React.FC<AccountsTeamDashboardProps> = ({ currentPa
       return <MyDayPage />;
 
     case 'payment-verification':
-      return <PaymentVerificationInbox />;
+      return <ApprovalInbox />;
 
     case 'tasks':
       return <AccountsTasksPage />;
 
     // Overview
     case 'overview':
-      return <AccountsOverviewPage
-        setCurrentPage={setCurrentPage}
-        invoices={invoices}
-        projects={projects}
-        expenses={expenses}
-        vendorBills={vendorBills}
-      />;
+      return <AccountsOverviewPage setCurrentPage={setCurrentPage} />;
 
-    // Sales Invoices
+    // Sales Invoices (GR OUT) — org salesInvoices
     case 'sales-invoices':
       return <SalesInvoicesPage
         setCurrentPage={setCurrentPage}
-        invoices={invoices}
+        salesInvoices={salesInvoices}
         projects={projects}
-        onAddInvoice={handleAddInvoice}
-        onUpdateInvoice={handleUpdateInvoice}
+        onCreateSalesInvoice={handleCreateSalesInvoice}
       />;
 
-    // Vendor Bills (mapped from purchase-invoices)
+    // Purchase Invoices (GR IN) — org purchaseInvoices
     case 'vendor-bills':
       return <PurchaseInvoicesPage
         setCurrentPage={setCurrentPage}
-        vendorBills={vendorBills}
-        onAddVendorBill={handleAddVendorBill}
-        onUpdateVendorBill={handleUpdateVendorBill}
+        purchaseInvoices={purchaseInvoices}
+        onCreatePurchaseInvoice={handleCreatePurchaseInvoice}
       />;
 
-    // Expenses
+    // Delivered procurement plans → create purchase invoice (then mark INVOICED)
+    case 'delivered-pending-invoice':
+      return <DeliveredPendingInvoicePage
+        setCurrentPage={setCurrentPage}
+        onCreatePurchaseInvoice={handleCreatePurchaseInvoice}
+      />;
+
+    // Expenses — ledger-based list (create via Approval flow)
     case 'expenses':
       return <ExpensesPage
         setCurrentPage={setCurrentPage}
-        expenses={expenses}
+        expenses={expensesFromLedger}
         projects={projects}
-        onAddExpense={handleAddExpense}
-        onUpdateExpense={handleUpdateExpense}
       />;
 
     // New Modules

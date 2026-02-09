@@ -9,7 +9,8 @@ import {
   onSnapshot,
   runTransaction,
   doc,
-  serverTimestamp
+  serverTimestamp,
+  Timestamp,
 } from 'firebase/firestore';
 import { ApprovalRequest, UserRole, CaseStatus } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -20,36 +21,47 @@ export const useApprovals = (role?: UserRole) => {
   const [pendingApprovals, setPendingApprovals] = useState<ApprovalRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. Listen for Pending Approvals (Collection Group)
+  // 1. Listen for Pending Approvals (Collection Group); MUST filter by organizationId
   useEffect(() => {
-    if (!role) {
+    if (!role || !currentUser?.organizationId) {
       setLoading(false);
       return;
     }
 
+    const orgId = currentUser.organizationId;
     const q = query(
       collectionGroup(db, FIRESTORE_COLLECTIONS.APPROVALS),
       where('status', '==', 'pending'),
       where('assignedToRole', '==', role),
+      where('organizationId', '==', orgId),
       orderBy('requestedAt', 'desc')
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const items = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as ApprovalRequest[];
+      const items = snapshot.docs.map(d => {
+        const data = d.data();
+        return {
+          id: d.id,
+          ...data,
+          requestedAt: data.requestedAt?.toDate?.() ?? new Date(),
+        } as ApprovalRequest;
+      });
 
       setPendingApprovals(items);
+      setLoading(false);
+    }, (err) => {
+      console.error('useApprovals snapshot error:', err);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [role]);
+  }, [role, currentUser?.organizationId]);
 
-  // 2. Approve Request (Transactional)
+  // 2. Approve Request (Transactional). Use payloadSnapshot only (immutable at request time).
   const approveRequest = async (request: ApprovalRequest, notes?: string) => {
     if (!currentUser) throw new Error("Unauthorized");
+
+    const snap = request.payloadSnapshot ?? request.payload;
 
     await runTransaction(db, async (transaction) => {
       const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, request.caseId);
@@ -67,16 +79,16 @@ export const useApprovals = (role?: UserRole) => {
         notes: notes || ''
       });
 
-      // Type-Specific Logic
+      // Type-Specific Logic (use payloadSnapshot only)
       switch (request.type) {
 
         // ==========================================================
         // PAYMENT VERIFICATION
         // ==========================================================
         case 'PAYMENT': {
-          if (!request.payload.paymentId || !request.payload.amount) throw new Error("Invalid Payload");
+          if (!snap.paymentId || snap.amount == null) throw new Error("Invalid Payload (use payloadSnapshot)");
 
-          const paymentRef = doc(db, FIRESTORE_COLLECTIONS.CASES, request.caseId, FIRESTORE_COLLECTIONS.PAYMENTS, request.payload.paymentId);
+          const paymentRef = doc(db, FIRESTORE_COLLECTIONS.CASES, request.caseId, FIRESTORE_COLLECTIONS.PAYMENTS, snap.paymentId);
 
           // 1. Mark Payment Verified
           transaction.update(paymentRef, {
@@ -88,26 +100,26 @@ export const useApprovals = (role?: UserRole) => {
           // 2. Update Case Financials & Status
           const currentAdvance = caseData.financial?.advanceAmount || 0;
           transaction.update(caseRef, {
-            'financial.advanceAmount': currentAdvance + request.payload.amount,
+            'financial.advanceAmount': currentAdvance + snap.amount,
             'financial.paymentVerified': true,
             'status': CaseStatus.WAITING_FOR_PLANNING, // STRICT STATE TRANSITION
             'workflow.paymentVerified': true // Helper flag
           });
 
-          // 3. Create Immutable Ledger Entry (General Ledger)
+          // 3. Append Immutable Ledger Entry (CREDIT REVENUE per convention)
           const orgId = caseData.organizationId;
           const ledgerCollection = collection(db, FIRESTORE_COLLECTIONS.ORGANIZATIONS, orgId, FIRESTORE_COLLECTIONS.GENERAL_LEDGER);
           const ledgerEntryRef = doc(ledgerCollection);
 
           transaction.set(ledgerEntryRef, {
-            transactionId: request.payload.paymentId,
+            transactionId: snap.paymentId,
             date: serverTimestamp(),
             type: 'CREDIT',
-            amount: request.payload.amount,
+            amount: snap.amount,
             description: `Payment Verification: ${request.caseId}`,
             category: 'REVENUE',
             sourceType: 'PAYMENT',
-            sourceId: request.payload.paymentId,
+            sourceId: snap.paymentId,
             caseId: request.caseId,
             createdBy: currentUser.id,
             createdAt: serverTimestamp()
@@ -117,13 +129,89 @@ export const useApprovals = (role?: UserRole) => {
         }
 
         // ==========================================================
-        // EXPENSE APPROVAL (If needed)
+        // EXPENSE APPROVAL
         // ==========================================================
         case 'EXPENSE': {
-          // Logic for expenses if they require approval
-          // ...
+          const amount = snap.amount ?? 0;
+          if (amount <= 0) throw new Error("Invalid expense amount (payloadSnapshot)");
+
+          const expensesCol = collection(db, FIRESTORE_COLLECTIONS.CASES, request.caseId, FIRESTORE_COLLECTIONS.EXPENSES);
+          const expenseRef = snap.expenseId
+            ? doc(db, FIRESTORE_COLLECTIONS.CASES, request.caseId, FIRESTORE_COLLECTIONS.EXPENSES, snap.expenseId)
+            : doc(expensesCol);
+          const expenseId = expenseRef.id;
+
+          transaction.set(expenseRef, {
+            caseId: request.caseId,
+            amount,
+            description: snap.notes ?? `Expense ${expenseId}`,
+            category: 'misc',
+            date: serverTimestamp(),
+            status: 'Approved',
+            approvedBy: currentUser.id,
+            approvedAt: serverTimestamp(),
+            requestedBy: request.requestedBy,
+          }, { merge: true });
+
+          const cost = caseData.costCenter ?? { totalBudget: 0, spentAmount: 0, remainingAmount: 0 };
+          const newSpent = (cost.spentAmount ?? 0) + amount;
+          const remaining = (cost.totalBudget ?? 0) - newSpent;
+          transaction.update(caseRef, {
+            'costCenter.spentAmount': newSpent,
+            'costCenter.remainingAmount': remaining,
+            updatedAt: serverTimestamp(),
+          });
+
+          const orgId = caseData.organizationId;
+          const ledgerCol = collection(db, FIRESTORE_COLLECTIONS.ORGANIZATIONS, orgId, FIRESTORE_COLLECTIONS.GENERAL_LEDGER);
+          transaction.set(doc(ledgerCol), {
+            transactionId: expenseId,
+            date: serverTimestamp(),
+            type: 'DEBIT',
+            amount,
+            description: `Expense: ${request.caseId} - ${snap.notes ?? 'Approved'}`,
+            category: 'EXPENSE',
+            sourceType: 'EXPENSE',
+            sourceId: expenseId,
+            caseId: request.caseId,
+            createdBy: currentUser.id,
+            createdAt: serverTimestamp(),
+          });
+          transaction.set(doc(ledgerCol), {
+            transactionId: expenseId,
+            date: serverTimestamp(),
+            type: 'CREDIT',
+            amount,
+            description: `Payable/Cash: expense ${expenseId}`,
+            category: 'PAYABLE',
+            sourceType: 'EXPENSE',
+            sourceId: expenseId,
+            caseId: request.caseId,
+            createdBy: currentUser.id,
+            createdAt: serverTimestamp(),
+          });
           break;
         }
+
+        // ==========================================================
+        // BUDGET APPROVAL
+        // ==========================================================
+        case 'BUDGET': {
+          const totalBudget = snap.amount ?? 0;
+          const cost = caseData.costCenter ?? { totalBudget: 0, spentAmount: 0, remainingAmount: 0 };
+          const spent = cost.spentAmount ?? 0;
+          const remaining = totalBudget - spent;
+          transaction.update(caseRef, {
+            'costCenter.totalBudget': totalBudget,
+            'costCenter.remainingAmount': remaining,
+            updatedAt: serverTimestamp(),
+          });
+          break;
+        }
+
+        case 'MATERIAL':
+          // Resolve only; no financial side effects
+          break;
       }
     });
   };
@@ -134,7 +222,8 @@ export const useApprovals = (role?: UserRole) => {
 
     // Simple update (No transaction needed unless reverting other states, but usually safe)
     const approvalRef = doc(db, FIRESTORE_COLLECTIONS.CASES, request.caseId, FIRESTORE_COLLECTIONS.APPROVALS, request.id);
-    const paymentRef = request.payload.paymentId ? doc(db, FIRESTORE_COLLECTIONS.CASES, request.caseId, FIRESTORE_COLLECTIONS.PAYMENTS, request.payload.paymentId) : null;
+    const snap = request.payloadSnapshot ?? request.payload;
+    const paymentRef = snap?.paymentId ? doc(db, FIRESTORE_COLLECTIONS.CASES, request.caseId, FIRESTORE_COLLECTIONS.PAYMENTS, snap.paymentId) : null;
 
     await runTransaction(db, async (transaction) => {
       transaction.update(approvalRef, {

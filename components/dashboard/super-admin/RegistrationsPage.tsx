@@ -31,9 +31,18 @@ const RegistrationsPage: React.FC = () => {
 
   const { requests: allRequests, loading } = useApprovalRequests();
 
+  // ✅ DEBUG: Show what's happening with the data
+  useEffect(() => {
+    console.log(`[RegistrationPage] Loaded ${allRequests.length} total approval requests`);
+    const staffRequests = allRequests.filter(r => r.requestType === 'STAFF_REGISTRATION');
+    console.log(`[RegistrationPage] Found ${staffRequests.length} staff registration requests`);
+    console.log(`[RegistrationPage] All requests types:`, allRequests.map(r => r.requestType).slice(0, 10));
+    console.log(`[RegistrationPage] Loading: ${loading}`);
+  }, [allRequests, loading]);
+
   // Filter only staff registration requests
   const registrationRequests = useMemo(() => {
-    return allRequests.filter(r => r.requestType === ApprovalRequestType.STAFF_REGISTRATION);
+    return allRequests.filter(r => r.requestType === 'STAFF_REGISTRATION');
   }, [allRequests]);
 
   const filteredRequests = useMemo(() => {

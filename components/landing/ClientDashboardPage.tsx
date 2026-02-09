@@ -37,6 +37,9 @@ import PaymentSubmissionModal from '../client-portal/PaymentSubmissionModal';
 
 // Hooks
 import { useClientCase } from '../../hooks/useClientCase';
+import { usePendingJMS } from '../../hooks/usePendingJMS';
+import ClientJMSForm from '../client-portal/ClientJMSForm';
+import ClientDailyUpdatesReadOnly from '../client-portal/ClientDailyUpdatesReadOnly';
 
 // Mock Company Info
 const MOCK_COMPANY_INFO: CompanyInfo = {
@@ -76,6 +79,7 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ clientUser, o
     // 1. Data Fetching
     const { project, loading, error } = useClientCase(clientUser?.uid);
     const { invoices, loading: invoicesLoading } = useInvoices(project?.projectId || '');
+    const { pendingDoc: pendingJMS, signedDoc: signedJMS, loading: jmsLoading } = usePendingJMS(project?.projectId);
 
     // 2. UI State
     const [selectedStage, setSelectedStage] = useState<JourneyStage | null>(null);
@@ -160,19 +164,15 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ clientUser, o
     };
 
     const handleSignJMS = async () => {
-        // Simple shim for now
         if (!confirm("Are you sure you want to sign off on the project completion? This confirms all work is satisfactory.")) return;
-
         try {
             if (!project || !clientUser) return;
-            // In real app, we'd capture a signature image. For now using a placeholder.
             const signatureUrl = "https://ui-avatars.com/api/?name=" + encodeURIComponent(project.clientName) + "&background=random&length=2";
-
             const { ClientPortalService } = await import('../../services/clientPortalService');
-            await ClientPortalService.signJMS(project.projectId, signatureUrl, clientUser.uid);
+            await ClientPortalService.signJMS(project.projectId, { signatureUrl }, clientUser.uid);
             alert("Project Signed Off Successfully!");
-        } catch (error) {
-            console.error("Error signing JMS:", error);
+        } catch (err) {
+            console.error("Error signing JMS:", err);
             alert('Failed to sign off project.');
         }
     };
@@ -354,6 +354,8 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ clientUser, o
                             <TodaysWork currentStage={currentStage} />
                         </div>
 
+                        <ClientDailyUpdatesReadOnly caseId={project.projectId} planDays={project.planDays} />
+
                         {nextUnpaidMilestone && (
                             <PayAdvanceSection
                                 amount={nextUnpaidMilestone.amount}
@@ -416,8 +418,28 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ clientUser, o
                         {/* Documents Archive */}
                         <DocumentsArchive documents={project.documents} />
 
-                        {/* JMS / completion Action */}
-                        {project.currentStageId === project.stages.length && (
+                        {/* JMS: pending → form; signed/completed → message; else legacy button when at last stage */}
+                        {!jmsLoading && pendingJMS && (
+                            <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-[2rem] shadow-lg shadow-emerald-500/30 p-8 text-white">
+                                <h3 className="text-xl font-bold mb-2">Project Completion – JMS</h3>
+                                <p className="text-emerald-100 mb-6">Please fill in the details below and sign off the Joint Measurement Sheet (JMS).</p>
+                                <ClientJMSForm
+                                    caseId={project.projectId}
+                                    jmsDoc={pendingJMS}
+                                    clientId={clientUser!.uid}
+                                    clientName={project.clientName}
+                                    onSuccess={() => alert('Project signed off successfully!')}
+                                    onError={(msg) => alert(msg)}
+                                />
+                            </div>
+                        )}
+                        {!jmsLoading && signedJMS && !pendingJMS && (
+                            <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-[2rem] shadow-lg shadow-emerald-500/30 p-8 text-white text-center">
+                                <h3 className="text-xl font-bold mb-2">Project Completed</h3>
+                                <p className="text-emerald-100">JMS signed. Thank you for your collaboration.</p>
+                            </div>
+                        )}
+                        {!jmsLoading && !pendingJMS && !signedJMS && project.currentStageId === project.stages.length && (
                             <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-[2rem] shadow-lg shadow-emerald-500/30 p-8 text-white text-center">
                                 <h3 className="text-xl font-bold mb-2">Project Completion</h3>
                                 <p className="text-emerald-100 mb-6">All stages are complete. Please review and sign off the Joint Measurement Sheet (JMS).</p>

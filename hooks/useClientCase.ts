@@ -269,7 +269,10 @@ const mapToClientProject = (
             url: d.fileUrl
         })),
         totalPaid: c.financial?.totalCollected || 0,
-        totalBudget: c.financial?.totalBudget || 0
+        totalBudget: c.financial?.totalBudget || 0,
+        planDays: (c.executionPlan?.days ?? []).map((d: { date: unknown }) => ({
+            date: d.date instanceof Timestamp ? d.date.toDate() : d.date
+        })),
     };
 };
 

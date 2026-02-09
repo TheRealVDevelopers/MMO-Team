@@ -123,9 +123,13 @@ const ExecutionProjectPlanningPanel: React.FC<Props> = ({ caseId, isClientView =
     const advanceReceived = caseData?.financial?.advanceAmount || 0;
     const remainingAmount = totalBudget - advanceReceived;
 
-    // Visibility check
+    // Visibility check: show for planning and execution states (include new statuses)
     const isVisible = caseData?.isProject &&
-        (caseData?.status === CaseStatus.WAITING_FOR_PLANNING || caseData?.status === CaseStatus.ACTIVE);
+        (caseData?.status === CaseStatus.WAITING_FOR_PLANNING ||
+            caseData?.status === CaseStatus.PLANNING_IN_PROGRESS ||
+            caseData?.status === CaseStatus.ACTIVE ||
+            caseData?.status === CaseStatus.EXECUTION_ACTIVE ||
+            caseData?.status === CaseStatus.COMPLETED);
 
     // Approval state
     const approvals = executionPlan?.approvals || { projectHead: false, admin: false, client: false };
@@ -197,16 +201,18 @@ const ExecutionProjectPlanningPanel: React.FC<Props> = ({ caseId, isClientView =
                 updatedAt: serverTimestamp(),
             });
 
-            // If all approved, activate project
-            if (newApprovals.projectHead && newApprovals.admin && newApprovals.client) {
+            // When both admin and client approve → execution active (no projectHead in new spec)
+            if (newApprovals.admin && newApprovals.client) {
                 await updateDoc(caseRef, {
-                    status: CaseStatus.ACTIVE,
+                    status: CaseStatus.EXECUTION_ACTIVE,
                     'executionPlan.locked': true,
-                    'costCenter.totalBudget': totalBudget,
-                    'costCenter.remainingAmount': totalBudget,
-                    'costCenter.spentAmount': 0,
+                    ...(totalBudget > 0 && {
+                        'costCenter.totalBudget': totalBudget,
+                        'costCenter.remainingAmount': totalBudget,
+                        'costCenter.spentAmount': 0,
+                    }),
                 });
-                console.log('✅ Project activated!');
+                console.log('✅ Execution active!');
             }
 
             fetchData();

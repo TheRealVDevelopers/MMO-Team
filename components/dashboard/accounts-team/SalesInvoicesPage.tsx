@@ -1,63 +1,71 @@
 import React, { useState, useMemo } from 'react';
 import Card from '../../shared/Card';
 import { formatCurrencyINR, formatDate } from '../../../constants';
-import { Invoice, PaymentStatus, Project } from '../../../types';
+import { PaymentStatus, Project } from '../../../types';
 import StatusPill from '../../shared/StatusPill';
-import { PlusIcon, ArrowLeftIcon, ArrowUpRightIcon, TrashIcon } from '../../icons/IconComponents';
+import { PlusIcon, ArrowLeftIcon, TrashIcon } from '../../icons/IconComponents';
 import InvoiceDetailModal from './InvoiceDetailModal';
 import CreateInvoicePage from './CreateInvoicePage';
-import { deleteInvoice } from '../../../hooks/useInvoices';
+import type { SalesInvoice } from '../../../hooks/useSalesInvoices';
+import type { CreateSalesInvoiceInput } from '../../../hooks/useSalesInvoices';
+import type { Invoice } from '../../../types';
 
-const PaymentStatusPill: React.FC<{ status: PaymentStatus }> = ({ status }) => {
+const PaymentStatusPill: React.FC<{ status: string }> = ({ status }) => {
     const colorMap: Record<string, 'green' | 'amber' | 'red' | 'slate' | 'blue' | 'purple'> = {
-        [PaymentStatus.PAID]: 'green',
-        [PaymentStatus.PENDING]: 'amber',
-        [PaymentStatus.OVERDUE]: 'red',
+        paid: 'green',
+        pending: 'amber',
+        overdue: 'red',
     };
-    const color = colorMap[status] || 'slate'; // Fallback to slate for unknown statuses
+    const color = colorMap[status] || 'slate';
     return <StatusPill color={color}>{status || 'Unknown'}</StatusPill>;
 };
 
 interface SalesInvoicesPageProps {
     setCurrentPage: (page: string) => void;
-    invoices: Invoice[];
+    salesInvoices: SalesInvoice[];
     projects: Project[];
-    onAddInvoice: (newInvoice: Omit<Invoice, 'id'>) => Promise<void> | void;
-    onUpdateInvoice: (updatedInvoice: Invoice) => Promise<void> | void;
+    onCreateSalesInvoice: (input: CreateSalesInvoiceInput) => Promise<void>;
 }
 
-const SalesInvoicesPage: React.FC<SalesInvoicesPageProps> = ({ setCurrentPage, invoices, projects, onAddInvoice, onUpdateInvoice }) => {
+const SalesInvoicesPage: React.FC<SalesInvoicesPageProps> = ({ setCurrentPage, salesInvoices, projects, onCreateSalesInvoice }) => {
     const [view, setView] = useState<'list' | 'create' | 'edit'>('list');
-    const [statusFilter, setStatusFilter] = useState<PaymentStatus | 'all'>('all');
-    const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-    const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
+    const [statusFilter, setStatusFilter] = useState<string>('all');
+    const [selectedInvoice, setSelectedInvoice] = useState<SalesInvoice | null>(null);
+    const [editingInvoice, setEditingInvoice] = useState<SalesInvoice | null>(null);
 
     const filteredInvoices = useMemo(() => {
-        return invoices.filter(invoice => statusFilter === 'all' || invoice.status === statusFilter);
-    }, [statusFilter, invoices]);
+        return statusFilter === 'all' ? salesInvoices : salesInvoices.filter(inv => inv.status === statusFilter);
+    }, [statusFilter, salesInvoices]);
 
-    const handleCreateInvoice = async (newInvoice: Omit<Invoice, 'id'>) => {
-        await onAddInvoice(newInvoice);
+    const handleCreateInvoice = async (newInvoice: any) => {
+        const caseId = newInvoice.projectId || newInvoice.caseId || projects[0]?.id;
+        if (!caseId) throw new Error('Select a project/case');
+        await onCreateSalesInvoice({
+            caseId,
+            clientName: newInvoice.clientName || '',
+            amount: newInvoice.subTotal ?? newInvoice.amount ?? 0,
+            taxAmount: newInvoice.taxAmount,
+            totalAmount: newInvoice.total ?? 0,
+            issueDate: newInvoice.issueDate instanceof Date ? newInvoice.issueDate : new Date(newInvoice.issueDate),
+            dueDate: newInvoice.dueDate ? (newInvoice.dueDate instanceof Date ? newInvoice.dueDate : new Date(newInvoice.dueDate)) : undefined,
+        });
         setView('list');
-    }
+    };
 
-    const handleUpdateInvoice = async (invoice: Invoice) => {
-        await onUpdateInvoice(invoice);
+    const handleUpdateInvoice = async (_invoice: any) => {
         setEditingInvoice(null);
         setView('list');
-    }
+    };
 
-    const handleEditClick = (invoice: Invoice) => {
+    const handleEditClick = (invoice: SalesInvoice) => {
         setEditingInvoice(invoice);
         setView('edit');
-    }
+    };
 
-    const handleDeleteClick = async (e: React.MouseEvent, invoiceId: string) => {
+    const handleDeleteClick = async (e: React.MouseEvent, _invoiceId: string) => {
         e.stopPropagation();
-        if (window.confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) {
-            await deleteInvoice(invoiceId);
-        }
-    }
+        alert('Deleting sales invoices is not allowed; ledger is append-only.');
+    };
 
     if (view === 'create' || view === 'edit') {
         return (
@@ -66,7 +74,7 @@ const SalesInvoicesPage: React.FC<SalesInvoicesPageProps> = ({ setCurrentPage, i
                 onAddInvoice={handleCreateInvoice}
                 onUpdateInvoice={handleUpdateInvoice}
                 onBack={() => { setView('list'); setEditingInvoice(null); }}
-                initialInvoice={editingInvoice}
+                initialInvoice={editingInvoice ? { ...editingInvoice, projectId: editingInvoice.caseId, total: editingInvoice.totalAmount, dueDate: editingInvoice.dueDate, issueDate: editingInvoice.issueDate } : null}
             />
         );
     }
@@ -100,7 +108,7 @@ const SalesInvoicesPage: React.FC<SalesInvoicesPageProps> = ({ setCurrentPage, i
                 <Card>
                     <div className="flex flex-wrap items-center gap-2 mb-4 p-2 bg-subtle-background rounded-md border border-border">
                         <span className="text-sm font-medium mr-2">Filter by status:</span>
-                        {['all', ...Object.values(PaymentStatus)].map(status => (
+                        {['all', 'pending', 'paid', 'overdue'].map(status => (
                             <button
                                 key={status}
                                 onClick={() => setStatusFilter(status as any)}
@@ -129,13 +137,12 @@ const SalesInvoicesPage: React.FC<SalesInvoicesPageProps> = ({ setCurrentPage, i
                                         <td className="px-4 py-3 whitespace-nowrap text-sm font-mono text-primary group-hover:underline">{invoice.invoiceNumber}</td>
                                         <td className="px-4 py-3 whitespace-nowrap">
                                             <p className="text-sm font-bold text-text-primary">{invoice.clientName}</p>
-                                            <p className="text-xs text-text-secondary">{invoice.projectName}</p>
+                                            <p className="text-xs text-text-secondary">{projects.find(p => p.id === invoice.caseId)?.title ?? invoice.caseId}</p>
                                         </td>
                                         <td className="px-4 py-3 whitespace-nowrap">
-                                            <p className="text-sm font-medium text-text-primary">{formatCurrencyINR(invoice.total)}</p>
-                                            <p className="text-xs text-text-secondary">Paid: {formatCurrencyINR(invoice.paidAmount)}</p>
+                                            <p className="text-sm font-medium text-text-primary">{formatCurrencyINR(invoice.totalAmount)}</p>
                                         </td>
-                                        <td className="px-4 py-3 text-sm text-text-secondary">{formatDate(invoice.dueDate)}</td>
+                                        <td className="px-4 py-3 text-sm text-text-secondary">{invoice.dueDate ? formatDate(invoice.dueDate) : '—'}</td>
                                         <td className="px-4 py-3"><PaymentStatusPill status={invoice.status} /></td>
                                         <td className="px-4 py-3 text-right">
                                             <button
@@ -156,9 +163,9 @@ const SalesInvoicesPage: React.FC<SalesInvoicesPageProps> = ({ setCurrentPage, i
             <InvoiceDetailModal
                 isOpen={!!selectedInvoice}
                 onClose={() => setSelectedInvoice(null)}
-                invoice={selectedInvoice}
-                onUpdateInvoice={onUpdateInvoice}
-                onEditInvoice={handleEditClick}
+                invoice={selectedInvoice ? { id: selectedInvoice.id, invoiceNumber: selectedInvoice.invoiceNumber, clientName: selectedInvoice.clientName, projectId: selectedInvoice.caseId, total: selectedInvoice.totalAmount, paidAmount: 0, dueDate: selectedInvoice.dueDate, issueDate: selectedInvoice.issueDate, status: selectedInvoice.status, projectName: projects.find(p => p.id === selectedInvoice!.caseId)?.title } as unknown as Invoice : null}
+                onUpdateInvoice={handleUpdateInvoice}
+                onEditInvoice={(inv) => handleEditClick(salesInvoices.find(s => s.id === inv.id)!)}
             />
         </>
     );

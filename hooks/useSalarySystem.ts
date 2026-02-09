@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, query, where, getDocs, collectionGroup, Timestamp, doc, setDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { collection, query, where, getDocs, collectionGroup, Timestamp, doc, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { TimeEntry, User, UserRole, SalaryLedgerEntry, CaseTask, GeneralLedgerEntry } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { FIRESTORE_COLLECTIONS } from '../constants';
@@ -167,91 +167,72 @@ export const useSalarySystem = (selectedMonth: string) => {
     const generatePayroll = async (data: SalaryData) => {
         if (!currentUser?.organizationId) return;
 
-        const batch = writeBatch(db);
-
-        // 1. Salary Ledger Entry
+        const salaryRunId = `${currentUser.organizationId}-${selectedMonth}-${Date.now()}`;
         const ledgerId = `${selectedMonth}-${data.user.id}`;
-        const ledgerRef = doc(db, FIRESTORE_COLLECTIONS.ORGANIZATIONS, currentUser.organizationId, FIRESTORE_COLLECTIONS.SALARY_LEDGER, ledgerId);
 
-        const entry: SalaryLedgerEntry = {
-            id: ledgerId,
-            userId: data.user.id,
-            month: selectedMonth,
-            activeHours: data.activeHours,
-            idleHours: data.idleHours,
-            breakHours: data.breakHours,
-            taskHours: data.taskHours,
-            distanceKm: data.distanceKm,
-            distanceReimbursement: data.distanceKm * 10, // Config
-            baseSalary: data.estimatedSalary - (data.distanceKm * 10), // Back-calc base
-            incentives: 0,
-            deductions: 0,
-            totalSalary: data.estimatedSalary,
-            generatedAt: new Date(),
-            status: 'DRAFT'
-        };
+        await runTransaction(db, async (transaction) => {
+            const ledgerRef = doc(db, FIRESTORE_COLLECTIONS.ORGANIZATIONS, currentUser.organizationId, FIRESTORE_COLLECTIONS.SALARY_LEDGER, ledgerId);
 
-        batch.set(ledgerRef, entry);
-
-        // 2. General Ledger Entries (Cost Allocation)
-        // Only if estimatedSalary > 0
-        if (data.estimatedSalary > 0) {
-            // Distribute Base Salary across Cases based on Hours
-            // If idle time exists, it goes to "Overhead" (No Case ID)
-            // Or proportional? Standard practice: Idle is overhead.
-
-            const totalAllocatedHours = Object.values(data.caseAllocations).reduce((a, b) => a + b, 0);
-
-            // Loop through cases
-            Object.entries(data.caseAllocations).forEach(([caseId, hours]) => {
-                const ratio = hours / data.activeHours; // Ratio of TOTAL active time (including idle?)
-                // Or ratio of allocated time?
-                // Let's use ratio of Active Time. 
-                const amount = data.estimatedSalary * ratio;
-
-                const glRef = doc(collection(db, FIRESTORE_COLLECTIONS.ORGANIZATIONS, currentUser.organizationId, FIRESTORE_COLLECTIONS.GENERAL_LEDGER));
-                const glEntry: GeneralLedgerEntry = {
-                    id: glRef.id,
-                    transactionId: ledgerId, // Link to SalaryLedger
-                    date: new Date(), // Transaction Date
-                    type: 'DEBIT',
-                    amount: Number(amount.toFixed(2)),
-                    description: `Salary Allocation: ${data.user.name} for ${selectedMonth}`,
-                    category: 'EXPENSE',
-                    sourceType: 'SALARY',
-                    sourceId: ledgerId,
-                    caseId: caseId,
-                    createdBy: currentUser.id,
-                    createdAt: new Date()
-                };
-                batch.set(glRef, glEntry);
+            transaction.set(ledgerRef, {
+                id: ledgerId,
+                salaryRunId,
+                userId: data.user.id,
+                month: selectedMonth,
+                activeHours: data.activeHours,
+                idleHours: data.idleHours,
+                breakHours: data.breakHours,
+                taskHours: data.taskHours,
+                distanceKm: data.distanceKm,
+                distanceReimbursement: data.distanceKm * 10,
+                baseSalary: data.estimatedSalary - (data.distanceKm * 10),
+                incentives: 0,
+                deductions: 0,
+                totalSalary: data.estimatedSalary,
+                generatedAt: serverTimestamp(),
+                status: 'DRAFT',
             });
 
-            // 3. Overhead (Unallocated / Idle)
-            const allocatedAmount = Object.values(data.caseAllocations).reduce((sum, hours) => sum + ((hours / data.activeHours) * data.estimatedSalary), 0);
-            const remaining = data.estimatedSalary - allocatedAmount;
+            if (data.estimatedSalary > 0) {
+                const ledgerCol = collection(db, FIRESTORE_COLLECTIONS.ORGANIZATIONS, currentUser.organizationId, FIRESTORE_COLLECTIONS.GENERAL_LEDGER);
 
-            if (remaining > 1) { // 1 INR tolerance
-                const glRef = doc(collection(db, FIRESTORE_COLLECTIONS.ORGANIZATIONS, currentUser.organizationId, FIRESTORE_COLLECTIONS.GENERAL_LEDGER));
-                const glEntry: GeneralLedgerEntry = {
-                    id: glRef.id,
-                    transactionId: ledgerId,
-                    date: new Date(),
-                    type: 'DEBIT',
-                    amount: Number(remaining.toFixed(2)),
-                    description: `Salary Overhead (Idle/Unallocated): ${data.user.name}`,
-                    category: 'EXPENSE',
-                    sourceType: 'SALARY',
-                    sourceId: ledgerId,
-                    // No caseId for overhead
-                    createdBy: currentUser.id,
-                    createdAt: new Date()
-                };
-                batch.set(glRef, glEntry);
+                Object.entries(data.caseAllocations).forEach(([caseId, hours]) => {
+                    const ratio = hours / data.activeHours;
+                    const amount = data.estimatedSalary * ratio;
+                    transaction.set(doc(ledgerCol), {
+                        transactionId: ledgerId,
+                        salaryRunId,
+                        date: serverTimestamp(),
+                        type: 'DEBIT',
+                        amount: Number(amount.toFixed(2)),
+                        description: `Salary Allocation: ${data.user.name} for ${selectedMonth}`,
+                        category: 'EXPENSE',
+                        sourceType: 'SALARY',
+                        sourceId: ledgerId,
+                        caseId,
+                        createdBy: currentUser.id,
+                        createdAt: serverTimestamp(),
+                    });
+                });
+
+                const allocatedAmount = Object.values(data.caseAllocations).reduce((sum, hours) => sum + ((hours / data.activeHours) * data.estimatedSalary), 0);
+                const remaining = data.estimatedSalary - allocatedAmount;
+                if (remaining > 1) {
+                    transaction.set(doc(ledgerCol), {
+                        transactionId: ledgerId,
+                        salaryRunId,
+                        date: serverTimestamp(),
+                        type: 'DEBIT',
+                        amount: Number(remaining.toFixed(2)),
+                        description: `Salary Overhead (Idle/Unallocated): ${data.user.name}`,
+                        category: 'EXPENSE',
+                        sourceType: 'SALARY',
+                        sourceId: ledgerId,
+                        createdBy: currentUser.id,
+                        createdAt: serverTimestamp(),
+                    });
+                }
             }
-        }
-
-        await batch.commit();
+        });
     };
 
     return { salaryData, loading, error, generatePayroll };

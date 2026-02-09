@@ -5,11 +5,14 @@ import {
     doc,
     serverTimestamp,
     getDoc,
-    setDoc
+    setDoc,
+    getDocs,
+    query,
+    where
 } from 'firebase/firestore';
 import { db, storage } from '../firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { ApprovalStatus } from '../types';
+import { ApprovalStatus, CaseStatus } from '../types';
 
 export const ClientPortalService = {
     /**
@@ -125,30 +128,51 @@ export const ClientPortalService = {
     },
 
     /**
-     * Sign off JMS
+     * Sign off JMS: update JMS doc with client data and set case to COMPLETED.
+     * If jmsDocId is provided, updates that doc; otherwise finds first pending doc in jms subcollection, or falls back to 'completion' doc.
      */
     signJMS: async (
         caseId: string,
-        signatureUrl: string,
+        payload: {
+            jmsDocId?: string;
+            signatureUrl: string;
+            itemsDelivered?: string;
+            quantitiesReceived?: string;
+            missingItems?: string;
+        },
         clientId: string
     ) => {
         try {
             const caseRef = doc(db, 'cases', caseId);
-            const jmsRef = doc(collection(caseRef, 'jms'), 'completion');
+            const jmsCol = collection(caseRef, 'jms');
+            let jmsDocId = payload.jmsDocId;
 
-            // Upsert JMS doc
+            if (!jmsDocId) {
+                const pendingSnap = await getDocs(query(jmsCol, where('status', '==', 'pending')));
+                if (!pendingSnap.empty) {
+                    jmsDocId = pendingSnap.docs[0].id;
+                } else {
+                    jmsDocId = 'completion';
+                }
+            }
+
+            const jmsRef = doc(jmsCol, jmsDocId);
             await setDoc(jmsRef, {
                 caseId,
                 clientSignedAt: serverTimestamp(),
-                clientSignature: signatureUrl,
+                clientSignature: payload.signatureUrl,
                 signedBy: clientId,
-                status: 'SIGNED'
+                status: 'signed',
+                ...(payload.itemsDelivered != null && { itemsDelivered: payload.itemsDelivered }),
+                ...(payload.quantitiesReceived != null && { quantitiesReceived: payload.quantitiesReceived }),
+                ...(payload.missingItems != null && { missingItems: payload.missingItems }),
             }, { merge: true });
 
-            // Also update main case closure status if needed
             await updateDoc(caseRef, {
+                status: CaseStatus.COMPLETED,
                 'closure.jmsSigned': true,
-                'closure.jmsSignedAt': serverTimestamp()
+                'closure.jmsSignedAt': serverTimestamp(),
+                updatedAt: serverTimestamp(),
             });
 
             return true;

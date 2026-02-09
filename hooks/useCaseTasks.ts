@@ -8,6 +8,7 @@ import {
   addDoc,
   updateDoc,
   doc,
+  getDoc,
   serverTimestamp,
   Timestamp,
   collectionGroup,
@@ -328,4 +329,95 @@ export const useCaseTasks = (options: UseCaseTasksOptions = {}) => {
     completeTask,
     acknowledgeTask,
   };
+};
+
+// Extended task with case display info (same shape as Work Queue)
+export interface TaskWithCase extends CaseTask {
+  projectName?: string;
+  clientName?: string;
+}
+
+/**
+ * Hook: tasks assigned to a user with case details (projectName, clientName).
+ * Single source of truth for both Work Queue and My Day Execution Stream.
+ */
+export const useAssignedTasksWithCases = (userId: string | undefined) => {
+  const [tasks, setTasks] = useState<TaskWithCase[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!db || !userId) {
+      setLoading(false);
+      return;
+    }
+
+    const q = query(
+      collectionGroup(db, FIRESTORE_COLLECTIONS.TASKS),
+      where('assignedTo', '==', userId),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      async (snapshot) => {
+        const tasksData: TaskWithCase[] = [];
+        const caseIds = new Set<string>();
+
+        for (const taskDoc of snapshot.docs) {
+          const data = taskDoc.data();
+          // Path: cases/{caseId}/tasks/{taskId}
+          const pathParts = taskDoc.ref.path.split('/');
+          const caseId = pathParts[1] ?? data.caseId;
+          if (caseId) caseIds.add(caseId);
+
+          const task: TaskWithCase = {
+            ...data,
+            id: taskDoc.id,
+            caseId: caseId || data.caseId,
+            createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
+            startedAt: data.startedAt instanceof Timestamp ? data.startedAt.toDate() : data.startedAt ? new Date(data.startedAt) : undefined,
+            completedAt: data.completedAt instanceof Timestamp ? data.completedAt.toDate() : data.completedAt ? new Date(data.completedAt) : undefined,
+            deadline: data.deadline instanceof Timestamp ? data.deadline.toDate() : data.deadline ? new Date(data.deadline) : undefined,
+          } as TaskWithCase;
+          tasksData.push(task);
+        }
+
+        // Batch fetch case details for projectName, clientName
+        const caseMap: Record<string, { title?: string; clientName?: string }> = {};
+        await Promise.all(
+          Array.from(caseIds).map(async (cid) => {
+            try {
+              const caseSnap = await getDoc(doc(db, FIRESTORE_COLLECTIONS.CASES, cid));
+              if (caseSnap.exists()) {
+                const d = caseSnap.data();
+                caseMap[cid] = { title: d.title, clientName: d.clientName };
+              }
+            } catch (_) {}
+          })
+        );
+
+        tasksData.forEach((t) => {
+          const c = caseMap[t.caseId];
+          if (c) {
+            t.projectName = c.title;
+            t.clientName = c.clientName;
+          }
+        });
+
+        setTasks(tasksData);
+        setLoading(false);
+        setError(null);
+      },
+      (err) => {
+        console.error('Error fetching assigned tasks:', err);
+        setError(err.message);
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [userId]);
+
+  return { tasks, loading, error };
 };

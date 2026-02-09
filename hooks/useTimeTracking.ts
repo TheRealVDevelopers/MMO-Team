@@ -103,19 +103,18 @@ export const useTimeEntries = (userId: string, startDate?: string, endDate?: str
 
     let q;
 
-    // Optimization: If asking for a single day, use equality to avoid composite index requirements
+    // Documents use dateKey (YYYY-MM-DD), not date
     if (startDate && endDate && startDate === endDate) {
       q = query(
-        collection(db, 'timeEntries'),
+        collection(db, FIRESTORE_COLLECTIONS.TIME_ENTRIES),
         where('userId', '==', userId),
-        where('date', '==', startDate)
+        where('dateKey', '==', startDate)
       );
     } else {
-      // Fallback for ranges (requires index)
       q = query(
-        collection(db, 'timeEntries'),
+        collection(db, FIRESTORE_COLLECTIONS.TIME_ENTRIES),
         where('userId', '==', userId),
-        orderBy('date', 'desc')
+        orderBy('dateKey', 'desc')
       );
     }
 
@@ -129,8 +128,9 @@ export const useTimeEntries = (userId: string, startDate?: string, endDate?: str
           userName: data.userName || 'Unknown',
           organizationId: data.organizationId,
           dateKey: data.dateKey || data.date,
-          clockIn: (data.clockIn as Timestamp).toDate(),
-          clockOut: data.clockOut ? (data.clockOut as Timestamp).toDate() : undefined,
+          date: data.dateKey || data.date,
+          clockIn: data.clockIn && typeof (data.clockIn as any).toDate === 'function' ? (data.clockIn as Timestamp).toDate() : new Date((data.clockIn as any)?.seconds * 1000 || Date.now()),
+          clockOut: data.clockOut && typeof (data.clockOut as any).toDate === 'function' ? (data.clockOut as Timestamp).toDate() : (data.clockOut ? new Date((data.clockOut as any).seconds * 1000) : undefined),
           breaks: data.breaks?.map((b: any) => ({
             id: b.id,
             startTime: b.startTime && typeof b.startTime.toDate === 'function' ? b.startTime.toDate() : new Date(b.startTime?.seconds * 1000 || Date.now()),
@@ -276,13 +276,26 @@ export const clockIn = async (userId: string, userName: string, organizationId?:
 
     const docRef = await addDoc(collection(db, FIRESTORE_COLLECTIONS.TIME_ENTRIES), timeEntry);
 
-    // SYNC: Update User Status
-    const userRef = doc(db, FIRESTORE_COLLECTIONS.STAFF_USERS, userId);
-    await updateDoc(userRef, {
-      attendanceStatus: 'CLOCKED_IN',
-      isOnline: true,
-      lastUpdateTimestamp: serverTimestamp()
-    });
+    // SYNC: Update User Status (non-blocking; user may be in users or staffUsers)
+    try {
+      const userRef = doc(db, FIRESTORE_COLLECTIONS.STAFF_USERS, userId);
+      await updateDoc(userRef, {
+        attendanceStatus: 'CLOCKED_IN',
+        isOnline: true,
+        lastUpdateTimestamp: serverTimestamp()
+      });
+    } catch (e) {
+      try {
+        const userRefAlt = doc(db, 'users', userId);
+        await updateDoc(userRefAlt, {
+          attendanceStatus: 'CLOCKED_IN',
+          isOnline: true,
+          lastUpdateTimestamp: serverTimestamp()
+        });
+      } catch (_) {
+        console.warn('Could not update user attendance status (doc may not exist)');
+      }
+    }
 
     return docRef.id;
   } catch (error) {
@@ -314,16 +327,25 @@ export const clockOut = async (entryId: string) => {
       updatedAt: serverTimestamp(),
     });
 
-    // SYNC: Update User Status
     if (userId) {
-      const userRef = doc(db, FIRESTORE_COLLECTIONS.STAFF_USERS, userId);
-      await updateDoc(userRef, {
-        attendanceStatus: 'CLOCKED_OUT',
-        isOnline: false,
-        lastUpdateTimestamp: serverTimestamp(),
-        currentTask: '',
-        currentTaskDetails: null
-      });
+      try {
+        const userRef = doc(db, FIRESTORE_COLLECTIONS.STAFF_USERS, userId);
+        await updateDoc(userRef, {
+          attendanceStatus: 'CLOCKED_OUT',
+          isOnline: false,
+          lastUpdateTimestamp: serverTimestamp(),
+          currentTask: '',
+          currentTaskDetails: null
+        });
+      } catch (_) {
+        try {
+          await updateDoc(doc(db, 'users', userId), {
+            attendanceStatus: 'CLOCKED_OUT',
+            isOnline: false,
+            lastUpdateTimestamp: serverTimestamp()
+          });
+        } catch (__) {}
+      }
     }
 
   } catch (error) {
@@ -356,7 +378,7 @@ export const startBreak = async (entryId: string) => {
 
     breaks.push({
       id: `break-${Date.now()}`,
-      startTime: new Date(),
+      startTime: Timestamp.fromDate(new Date()),
     });
 
     await updateDoc(entryRef, {
@@ -365,14 +387,18 @@ export const startBreak = async (entryId: string) => {
       updatedAt: serverTimestamp(),
     });
 
-    // SYNC: Update User Status
     if (userId) {
-      const userRef = doc(db, FIRESTORE_COLLECTIONS.STAFF_USERS, userId);
-      await updateDoc(userRef, {
-        attendanceStatus: 'ON_BREAK',
-        currentTask: 'On Break',
-        lastUpdateTimestamp: serverTimestamp()
-      });
+      try {
+        await updateDoc(doc(db, FIRESTORE_COLLECTIONS.STAFF_USERS, userId), {
+          attendanceStatus: 'ON_BREAK',
+          currentTask: 'On Break',
+          lastUpdateTimestamp: serverTimestamp()
+        });
+      } catch (_) {
+        try {
+          await updateDoc(doc(db, 'users', userId), { attendanceStatus: 'ON_BREAK', lastUpdateTimestamp: serverTimestamp() });
+        } catch (__) {}
+      }
     }
 
   } catch (error) {
@@ -405,8 +431,7 @@ export const endBreak = async (entryId: string) => {
 
     breaks[activeBreakIndex] = {
       ...breaks[activeBreakIndex],
-      endTime: new Date(),
-      // NO durationMinutes stored - computed dynamically
+      endTime: Timestamp.fromDate(new Date()),
     };
 
     await updateDoc(entryRef, {
@@ -415,14 +440,18 @@ export const endBreak = async (entryId: string) => {
       updatedAt: serverTimestamp(),
     });
 
-    // SYNC: Update User Status
     if (userId) {
-      const userRef = doc(db, FIRESTORE_COLLECTIONS.STAFF_USERS, userId);
-      await updateDoc(userRef, {
-        attendanceStatus: 'CLOCKED_IN',
-        currentTask: 'Available',
-        lastUpdateTimestamp: serverTimestamp()
-      });
+      try {
+        await updateDoc(doc(db, FIRESTORE_COLLECTIONS.STAFF_USERS, userId), {
+          attendanceStatus: 'CLOCKED_IN',
+          currentTask: 'Available',
+          lastUpdateTimestamp: serverTimestamp()
+        });
+      } catch (_) {
+        try {
+          await updateDoc(doc(db, 'users', userId), { attendanceStatus: 'CLOCKED_IN', lastUpdateTimestamp: serverTimestamp() });
+        } catch (__) {}
+      }
     }
 
   } catch (error) {

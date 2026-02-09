@@ -32,6 +32,8 @@ export const FIRESTORE_COLLECTIONS = {
   APPROVALS: 'approvals', // New Unified Approvals
   BOQ: 'boq', // Bill of Quantities
   QUOTATIONS: 'quotations', // Quotations with audit status
+  QUOTATION_BIDS: 'quotationBids', // Vendor bidding after quotation approval
+  PROCUREMENT_PLANS: 'procurementPlans', // Execution material scheduling
 
   // Subcollections under organizations/{orgId}
   PURCHASE_INVOICES: 'purchaseInvoices',

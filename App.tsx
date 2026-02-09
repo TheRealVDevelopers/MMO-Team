@@ -131,20 +131,16 @@ const navConfig = {
   [UserRole.PROCUREMENT_TEAM]: {
     title: 'Procurement Hub',
     navItems: [
-      { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
-      { id: 'work-queue', label: 'Work Queue', icon: <QueueListIcon className="w-6 h-6" /> },
-      { id: 'audit', label: 'Audit Quotations', icon: <DocumentTextIcon className="w-6 h-6" /> },
-      { id: 'negotiations', label: 'Procurement', icon: <ViewColumnsIcon className="w-6 h-6" /> },
-      { id: 'items-catalog', label: 'Items Catalog', icon: <TagIcon className="w-6 h-6" /> },
-      { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
-      { id: 'workflow', label: 'M-Workflow', icon: <PresentationChartLineIcon className="w-6 h-6" /> },
-      // { id: 'performance', label: 'Performance', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
-      { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
+      { id: 'audit', label: 'Quotation Audit', icon: <DocumentTextIcon className="w-6 h-6" /> },
+      { id: 'bidding', label: 'Vendor Bidding', icon: <ViewColumnsIcon className="w-6 h-6" /> },
+      { id: 'execution-procurement', label: 'Execution Procurement', icon: <TruckIcon className="w-6 h-6" /> },
+      { id: 'vendors', label: 'Vendors', icon: <BuildingStorefrontIcon className="w-6 h-6" /> },
     ]
   },
   [UserRole.EXECUTION_TEAM]: {
     title: 'Execution Hub',
     navItems: [
+      { id: 'planning', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       { id: 'approvals', label: 'Approvals', icon: <CheckCircleIcon className="w-6 h-6" /> },
       { id: 'budget', label: 'Budgets', icon: <BanknotesIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
@@ -156,8 +152,9 @@ const navConfig = {
   [UserRole.PROJECT_HEAD]: {
     title: 'Execution Hub',
     navItems: [
+      { id: 'planning', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
-      { id: 'board', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
+      { id: 'board', label: 'Board', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
       { id: 'workflow', label: 'M-Workflow', icon: <PresentationChartLineIcon className="w-6 h-6" /> },
       { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
@@ -172,6 +169,7 @@ const navConfig = {
       { id: 'overview', label: 'Overview', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
       { id: 'sales-invoices', label: 'GRIN', icon: <BanknotesIcon className="w-6 h-6" /> },
       { id: 'vendor-bills', label: 'GROUT', icon: <BuildingLibraryIcon className="w-6 h-6" /> },
+      { id: 'delivered-pending-invoice', label: 'Delivered → Invoice', icon: <TruckIcon className="w-6 h-6" /> },
       { id: 'expenses', label: 'Expenses', icon: <ReceiptPercentIcon className="w-6 h-6" /> },
       { id: 'project-pnl', label: 'Project P&L', icon: <PresentationChartLineIcon className="w-6 h-6" /> },
       { id: 'salary', label: 'Salary', icon: <UsersIcon className="w-6 h-6" /> },

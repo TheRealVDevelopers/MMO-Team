@@ -2,52 +2,43 @@ import React, { useState } from 'react';
 import Card from '../../shared/Card';
 import { formatCurrencyINR, formatDate } from '../../../constants';
 import StatusPill from '../../shared/StatusPill';
-import { ArrowLeftIcon, PlusIcon, ArrowDownTrayIcon } from '../../icons/IconComponents';
-import { VendorBill, VendorBillStatus } from '../../../types';
+import { ArrowLeftIcon, PlusIcon } from '../../icons/IconComponents';
+import { VendorBillStatus } from '../../../types';
 import VendorBillModal from './VendorBillModal';
+import type { PurchaseInvoice } from '../../../hooks/usePurchaseInvoices';
 
-const BillStatusPill: React.FC<{ status: VendorBillStatus }> = ({ status }) => {
-    const color = {
-        'Pending Approval': 'amber',
-        'Approved': 'green',
-        'Scheduled': 'purple',
-        'Paid': 'green',
-        'Overdue': 'red',
-    }[status] as 'amber' | 'blue' | 'purple' | 'green' | 'red';
-    return <StatusPill color={color}>{status}</StatusPill>;
+const BillStatusPill: React.FC<{ status: string }> = ({ status }) => {
+    const color = { 'Pending Approval': 'amber', 'Approved': 'green', 'Scheduled': 'purple', 'Paid': 'green', 'Overdue': 'red' }[status] as 'amber' | 'green' | 'purple' | 'red' | undefined;
+    return <StatusPill color={color ?? 'slate'}>{status}</StatusPill>;
 };
 
 interface PurchaseInvoicesPageProps {
     setCurrentPage: (page: string) => void;
-    vendorBills: VendorBill[];
-    onAddVendorBill: (bill: Omit<VendorBill, 'id'>) => void;
-    onUpdateVendorBill: (bill: VendorBill) => void;
+    purchaseInvoices: PurchaseInvoice[];
+    onCreatePurchaseInvoice: (input: { caseId?: string; vendorName: string; invoiceNumber: string; amount: number; issueDate: Date; dueDate?: Date }) => Promise<void>;
 }
 
-const PurchaseInvoicesPage: React.FC<PurchaseInvoicesPageProps> = ({ setCurrentPage, vendorBills, onAddVendorBill, onUpdateVendorBill }) => {
-    const activeTabObj = {
-        vendors: 'Purchase Bills',
-        payroll: 'Payroll'
-    };
+const PurchaseInvoicesPage: React.FC<PurchaseInvoicesPageProps> = ({ setCurrentPage, purchaseInvoices, onCreatePurchaseInvoice }) => {
     const [activeTab, setActiveTab] = useState<'vendors' | 'payroll'>('vendors');
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedBill, setSelectedBill] = useState<VendorBill | null>(null);
+    const [selectedBill, setSelectedBill] = useState<PurchaseInvoice | null>(null);
 
-    const handleOpenModal = (bill: VendorBill | null) => {
+    const handleOpenModal = (bill: PurchaseInvoice | null) => {
         setSelectedBill(bill);
         setIsModalOpen(true);
     };
 
-    const handleSaveBill = (billData: VendorBill | Omit<VendorBill, 'id'>) => {
-        if ('id' in billData) {
-            onUpdateVendorBill(billData);
-        } else {
-            onAddVendorBill(billData);
-        }
-    };
-
-    const handleAction = (bill: VendorBill, newStatus: VendorBillStatus) => {
-        onUpdateVendorBill({ ...bill, status: newStatus });
+    const handleSaveBill = async (billData: any) => {
+        if (billData.id) return;
+        await onCreatePurchaseInvoice({
+            caseId: billData.projectId || billData.caseId || undefined,
+            vendorName: billData.vendorName ?? billData.vendor ?? '',
+            invoiceNumber: billData.invoiceNumber ?? `PI-${Date.now()}`,
+            amount: Number(billData.amount) ?? 0,
+            issueDate: billData.issueDate instanceof Date ? billData.issueDate : new Date(billData.issueDate),
+            dueDate: billData.dueDate ? (billData.dueDate instanceof Date ? billData.dueDate : new Date(billData.dueDate)) : undefined,
+        });
+        setIsModalOpen(false);
     };
 
     return (
@@ -97,24 +88,20 @@ const PurchaseInvoicesPage: React.FC<PurchaseInvoicesPageProps> = ({ setCurrentP
                                         <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Vendor</th>
                                         <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Bill #</th>
                                         <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Amount</th>
-                                        <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Due Date</th>
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Issue / Due</th>
                                         <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Status</th>
                                         <th className="px-4 py-2 text-left text-xs font-medium text-text-secondary uppercase">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-surface divide-y divide-border">
-                                    {vendorBills.map(bill => (
+                                    {purchaseInvoices.map(bill => (
                                         <tr key={bill.id} onClick={() => handleOpenModal(bill)} className="cursor-pointer hover:bg-subtle-background group">
                                             <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-text-primary group-hover:text-primary">{bill.vendorName}</td>
                                             <td className="px-4 py-3 text-sm text-text-secondary font-mono">{bill.invoiceNumber}</td>
                                             <td className="px-4 py-3 text-sm font-bold text-text-primary">{formatCurrencyINR(bill.amount)}</td>
-                                            <td className="px-4 py-3 text-sm text-text-secondary">{formatDate(bill.dueDate)}</td>
+                                            <td className="px-4 py-3 text-sm text-text-secondary">{formatDate(bill.issueDate)} {bill.dueDate ? ` / ${formatDate(bill.dueDate)}` : ''}</td>
                                             <td className="px-4 py-3"><BillStatusPill status={bill.status} /></td>
-                                            <td className="px-4 py-3 space-x-2" onClick={e => e.stopPropagation()}>
-                                                {bill.status === 'Pending Approval' && <button onClick={() => handleAction(bill, 'Approved')} className="px-2 py-1 text-xs font-semibold text-primary bg-primary-subtle-background rounded-md hover:bg-primary/20 transition-colors">Approve</button>}
-                                                {bill.status === 'Approved' && <button onClick={() => handleAction(bill, 'Scheduled')} className="px-2 py-1 text-xs font-semibold text-purple bg-purple-subtle-background rounded-md hover:bg-purple/20 transition-colors">Schedule</button>}
-                                                {(bill.status === 'Approved' || bill.status === 'Scheduled' || bill.status === 'Overdue') && <button onClick={() => handleAction(bill, 'Paid')} className="px-2 py-1 text-xs font-semibold text-secondary bg-secondary-subtle-background rounded-md hover:bg-secondary/20 transition-colors">Pay Now</button>}
-                                            </td>
+                                            <td className="px-4 py-3">—</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -134,7 +121,7 @@ const PurchaseInvoicesPage: React.FC<PurchaseInvoicesPageProps> = ({ setCurrentP
                 <VendorBillModal
                     isOpen={isModalOpen}
                     onClose={() => setIsModalOpen(false)}
-                    bill={selectedBill}
+                    bill={selectedBill ? { id: selectedBill.id, vendorName: selectedBill.vendorName, invoiceNumber: selectedBill.invoiceNumber, amount: selectedBill.amount, dueDate: selectedBill.dueDate ?? new Date(), status: selectedBill.status as VendorBillStatus, projectId: selectedBill.caseId } : null}
                     onSave={handleSaveBill}
                 />
             )}

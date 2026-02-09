@@ -25,7 +25,7 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ userId }) => 
       return entries;
     }
 
-    return entries.filter(entry => new Date(entry.date) >= startDate);
+    return entries.filter(entry => new Date(entry.dateKey || (entry as any).date) >= startDate);
   }, [entries, timeRange]);
 
   const summary = useMemo(() => {
@@ -33,8 +33,8 @@ const TimeTrackingSummary: React.FC<TimeTrackingSummaryProps> = ({ userId }) => 
   }, [filteredEntries]);
 
   const todayEntry = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
-    return entries.find(e => e.date === today);
+    const today = new Date().toLocaleDateString('en-CA');
+    return entries.find(e => e.dateKey === today || (e as any).date === today);
   }, [entries]);
 
   if (loading) {

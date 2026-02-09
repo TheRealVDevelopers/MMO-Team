@@ -36,7 +36,7 @@ const TimeTimeline: React.FC<TimeTimelineProps> = ({ timeEntry, onRefresh }) => 
         if (!currentUser) return;
         setLoading(true);
         try {
-            await clockIn(currentUser.id, currentUser.name);
+            await clockIn(currentUser.id, currentUser.name, (currentUser as any).organizationId);
             onRefresh?.();
         } catch (error) {
             console.error(error);

@@ -233,6 +233,21 @@ const VerifyWithAccountantModal: React.FC<Props> = ({
             };
             batch.set(paymentRef, paymentData);
 
+            // 1b. Create PAYMENT approval (Accounts Approval Center source); immutable payloadSnapshot for safe approve
+            const payloadSnapshot = { paymentId: paymentRef.id, amount: paymentDetails.amount };
+            const approvalRef = doc(collection(db, FIRESTORE_COLLECTIONS.CASES, selectedLead.id, FIRESTORE_COLLECTIONS.APPROVALS));
+            batch.set(approvalRef, {
+                caseId: selectedLead.id,
+                organizationId: selectedLead.organizationId,
+                type: 'PAYMENT',
+                status: 'pending',
+                payload: payloadSnapshot,
+                payloadSnapshot,
+                requestedBy: currentUser.id,
+                requestedAt: serverTimestamp(),
+                assignedToRole: UserRole.ACCOUNTS_TEAM,
+            });
+
             // 2. Update Case status to WAITING_FOR_PAYMENT
             const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, selectedLead.id);
             batch.update(caseRef, {

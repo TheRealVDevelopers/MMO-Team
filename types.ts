@@ -21,6 +21,7 @@ export enum UserRole {
   PROJECT_HEAD = "Project Head",
   ACCOUNTS_TEAM = "Accounts Team",
   DESIGNER = "Designer",
+  VENDOR = "Vendor",
 }
 
 export enum CaseStatus {
@@ -33,7 +34,9 @@ export enum CaseStatus {
   NEGOTIATION = "negotiation",
   WAITING_FOR_PAYMENT = "waiting_for_payment",
   WAITING_FOR_PLANNING = "waiting_for_planning",
+  PLANNING_IN_PROGRESS = "planning_in_progress",
   ACTIVE = "active",
+  EXECUTION_ACTIVE = "execution_active",
   COMPLETED = "completed",
 }
 
@@ -65,6 +68,7 @@ export enum CaseTaskType {
 export enum TaskStatus {
   PENDING = "pending",
   STARTED = "started",
+  IN_PROGRESS = "in_progress", // alias for STARTED used by TaskCard / My Day
   COMPLETED = "completed",
   ACKNOWLEDGED = "acknowledged",
   ASSIGNED = "assigned",
@@ -167,12 +171,23 @@ export enum MaterialRequestStatus {
 }
 
 // Path: cases/{caseId}/approvals/{approvalId}
+// When creating: MUST set organizationId and payloadSnapshot (immutable copy of payload at request time).
 export interface ApprovalRequest {
   id: string;
   caseId: string;
+  organizationId?: string; // Required when creating; all queries filter by org
   type: 'PAYMENT' | 'BUDGET' | 'MATERIAL' | 'EXPENSE';
   status: 'pending' | 'approved' | 'rejected' | 'resolved';
   payload: {
+    amount?: number;
+    paymentId?: string;
+    expenseId?: string;
+    invoiceId?: string;
+    materialId?: string;
+    notes?: string;
+  };
+  /** Immutable copy of payload at request time; approval executors MUST use this when present. */
+  payloadSnapshot?: {
     amount?: number;
     paymentId?: string;
     expenseId?: string;
@@ -235,29 +250,38 @@ export interface Case {
     totalExpenses?: number;
   };
 
-  // Execution planning (populated by Project Head)
+  // Execution planning (populated by Project Head) — day-wise, catalog-only
   executionPlan?: {
     startDate: Date;
     endDate: Date;
-    phases: Array<{
+    days: Array<{
+      date: Date;
+      workDescription: string;
+      labor: { count: number; type?: string };
+      materials: Array<{
+        catalogItemId: string;
+        quantity: number;
+        requiredOn: Date;
+      }>;
+    }>;
+    approvals: { admin: boolean; client: boolean };
+    createdBy?: string; // projectHeadId
+    approvedAt?: Date;
+    executionMarkedComplete?: boolean; // gates "Launch JMS"
+    // Legacy shape (phases) kept for backward compat during migration
+    phases?: Array<{
       id: string;
       name: string;
       startDate: Date;
       endDate: Date;
-      materials: Array<{
-        name: string;
-        quantity: number;
-        unit: string;
-        estimatedCost: number;
-      }>;
+      materials: Array<{ name: string; quantity: number; unit: string; estimatedCost: number }>;
       estimatedCost: number;
       laborCost: number;
       miscCost: number;
       expanded?: boolean;
     }>;
-    approved: boolean; // Moves status to ACTIVE
-    approvedBy?: string; // User ID
-    approvedAt?: Date;
+    approved?: boolean;
+    approvedBy?: string;
   };
 
   // Cost center tracking (Active Financials)
@@ -299,24 +323,19 @@ export interface Case {
 // ACCOUNTS TEAM TYPES (STRICT)
 // ========================================
 
-// Path: cases/{caseId}/approvals/{approvalId}
+// Path: cases/{caseId}/approvals/{approvalId} (duplicate def for same shape - use main one above)
 export interface ApprovalRequest {
   id: string;
   caseId: string;
+  organizationId?: string;
   type: 'PAYMENT' | 'BUDGET' | 'MATERIAL' | 'EXPENSE';
   status: 'pending' | 'approved' | 'rejected' | 'resolved';
-  payload: {
-    amount?: number;
-    paymentId?: string;
-    expenseId?: string;
-    invoiceId?: string;
-    materialId?: string;
-    notes?: string;
-  };
-  requestedBy: string; // User ID
+  payload: { amount?: number; paymentId?: string; expenseId?: string; invoiceId?: string; materialId?: string; notes?: string };
+  payloadSnapshot?: { amount?: number; paymentId?: string; expenseId?: string; invoiceId?: string; materialId?: string; notes?: string };
+  requestedBy: string;
   requestedAt: Date;
   assignedToRole: UserRole;
-  resolvedBy?: string; // User ID
+  resolvedBy?: string;
   resolvedAt?: Date;
   rejectionReason?: string;
 }
@@ -332,8 +351,8 @@ export interface GeneralLedgerEntry {
   amount: number;
   description: string;
 
-  // Categorization
-  category: 'REVENUE' | 'EXPENSE' | 'ASSET' | 'LIABILITY' | 'EQUITY';
+  // Categorization (ledger conventions: Sales = CREDIT REVENUE, DEBIT ACCOUNTS_RECEIVABLE; Expense/Purchase/Salary = DEBIT EXPENSE/COST, CREDIT CASH/PAYABLE)
+  category: 'REVENUE' | 'EXPENSE' | 'ASSET' | 'LIABILITY' | 'EQUITY' | 'ACCOUNTS_RECEIVABLE' | 'PAYABLE';
 
   // Audit Traceability
   sourceType: 'PAYMENT' | 'EXPENSE' | 'SALARY' | 'PURCHASE' | 'SALES' | 'INVENTORY';
@@ -347,6 +366,7 @@ export interface GeneralLedgerEntry {
 // Path: organizations/{orgId}/salaryLedger/{entryId}
 export interface SalaryLedgerEntry {
   id: string;
+  salaryRunId?: string; // Prevents double payroll; audit/rollback
   userId: string;
   month: string; // YYYY-MM
 
@@ -725,6 +745,8 @@ export interface StaffUser {
   phone: string;
   role: UserRole;
   organizationId: string;
+  /** When role is VENDOR, links to organizations/{orgId}/vendors/{vendorId} */
+  vendorId?: string;
   avatar?: string;
   createdAt: Date;
   isActive: boolean;
@@ -1396,6 +1418,76 @@ export interface QuotationItemData {
   quantity: number;
   rate: number;
   total: number;
+}
+
+// ========================================
+// PROCUREMENT: Quotation Bidding (cases/{caseId}/quotationBids)
+// ========================================
+
+export interface QuotationBidLine {
+  catalogItemId: string;
+  name: string;
+  unit: string;
+  quantity: number;
+  quotedRate: number; // From approved quotation
+  total: number;
+}
+
+export interface VendorBidEntry {
+  vendorId: string;
+  vendorName: string;
+  totalAmount: number;
+  deliveryDays: number;
+  submittedAt: Date | any;
+  linePrices?: number[]; // Optional per-line; totalAmount is source of truth
+}
+
+export interface QuotationBidDoc {
+  id: string;
+  caseId: string;
+  quotationId: string;
+  itemLines: QuotationBidLine[];
+  invitedVendorIds: string[];
+  bids: VendorBidEntry[];
+  status: 'open' | 'closed';
+  selectedVendorId?: string;
+  selectedBidAt?: Date | any;
+  adminApprovedAt?: Date | any;
+  adminApprovedBy?: string;
+  lockedAt?: Date | any;
+  createdBy: string;
+  createdAt: Date | any;
+  updatedAt?: Date | any;
+}
+
+// ========================================
+// PROCUREMENT: Material scheduling (cases/{caseId}/procurementPlans)
+// ========================================
+
+export enum ProcurementPlanStatus {
+  PLANNED = 'PLANNED',
+  DELIVERED = 'DELIVERED',
+  INVOICED = 'INVOICED',
+}
+
+export interface ProcurementPlanDoc {
+  id: string;
+  caseId: string;
+  organizationId: string;
+  catalogItemId: string;
+  itemName: string;
+  quantity: number;
+  requiredOn: Date | any; // From executionPlan.days
+  dayWorkDescription?: string;
+  vendorId: string;
+  vendorName: string;
+  expectedDeliveryDate: Date | any;
+  status: ProcurementPlanStatus;
+  deliveredAt?: Date | any;
+  purchaseInvoiceId?: string; // Set by Accounts when invoice created
+  createdBy?: string;
+  createdAt?: Date | any;
+  updatedAt?: Date | any;
 }
 
 // Legacy types (DEPRECATED - use CaseBOQ and CaseQuotation)

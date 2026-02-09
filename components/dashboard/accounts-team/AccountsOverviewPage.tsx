@@ -1,25 +1,31 @@
 import React from 'react';
+import { useAuth } from '../../../context/AuthContext';
 import { useGeneralLedger } from '../../../hooks/useGeneralLedger';
 import { useProjects } from '../../../hooks/useProjects';
+import { useInventoryOrg } from '../../../hooks/useInventoryOrg';
+import { useSalaryLedger } from '../../../hooks/useSalaryLedger';
 import Card from '../../shared/Card';
 import { formatCurrencyINR } from '../../../constants';
 import { useApprovals } from '../../../hooks/useApprovals';
 
-const AccountsOverviewPage: React.FC = () => {
-    // 1. Financial Stats (All Time)
+interface AccountsOverviewPageProps {
+    setCurrentPage?: (page: string) => void;
+}
+
+const AccountsOverviewPage: React.FC<AccountsOverviewPageProps> = () => {
+    const { currentUser } = useAuth();
+    const orgId = currentUser?.organizationId;
+
     const { stats: financialStats, loading: ledgerLoading } = useGeneralLedger();
-
-    // 2. Project Stats
     const { projects, loading: projectsLoading } = useProjects();
-    // Check for 'Execution' status (CaseStatus) or legacy 'Active' properties
-    const activeProjects = projects.filter(p => (p.status as string) === 'Execution' || (p as any).status === 'Active' || (p.status as string) === 'ACTIVE').length;
-
-    // 3. Approval Stats
-    // useApprovals returns pendingApprovals directly
     const { pendingApprovals, loading: approvalsLoading } = useApprovals();
+    const { inventoryValue, loading: inventoryLoading } = useInventoryOrg(orgId);
+    const { salaryPayable, loading: salaryLedgerLoading } = useSalaryLedger(orgId);
+
+    const activeProjects = projects.filter(p => (p.status as string) === 'Execution' || (p as any).status === 'Active' || (p.status as string) === 'ACTIVE').length;
     const pendingCount = pendingApprovals.length;
 
-    const loading = ledgerLoading || projectsLoading || approvalsLoading;
+    const loading = ledgerLoading || projectsLoading || approvalsLoading || inventoryLoading || salaryLedgerLoading;
 
     if (loading) {
         return (
@@ -83,6 +89,20 @@ const AccountsOverviewPage: React.FC = () => {
                     </div>
                     <p className="text-2xl font-bold text-gray-900">{pendingCount}</p>
                     <p className="text-xs text-gray-500 mt-1">Requires Attention</p>
+                </div>
+            </div>
+
+            {/* Inventory Value & Salary Payable */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <h3 className="text-sm font-medium text-gray-500 uppercase mb-2">Inventory Value</h3>
+                    <p className="text-2xl font-bold text-gray-900">{formatCurrencyINR(inventoryValue)}</p>
+                    <p className="text-xs text-gray-500 mt-1">Sum (qty × avgCost) from org inventory</p>
+                </div>
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <h3 className="text-sm font-medium text-gray-500 uppercase mb-2">Salary Payable</h3>
+                    <p className="text-2xl font-bold text-gray-900">{formatCurrencyINR(salaryPayable)}</p>
+                    <p className="text-xs text-gray-500 mt-1">Unpaid salaryLedger entries only</p>
                 </div>
             </div>
 
