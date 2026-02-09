@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useGeneralLedger } from '../../../hooks/useGeneralLedger';
 import { useProjects } from '../../../hooks/useProjects';
@@ -7,6 +7,7 @@ import { useSalaryLedger } from '../../../hooks/useSalaryLedger';
 import Card from '../../shared/Card';
 import { formatCurrencyINR } from '../../../constants';
 import { useApprovals } from '../../../hooks/useApprovals';
+import { useCases } from '../../../hooks/useCases';
 
 interface AccountsOverviewPageProps {
     setCurrentPage?: (page: string) => void;
@@ -21,11 +22,37 @@ const AccountsOverviewPage: React.FC<AccountsOverviewPageProps> = () => {
     const { pendingApprovals, loading: approvalsLoading } = useApprovals();
     const { inventoryValue, loading: inventoryLoading } = useInventoryOrg(orgId);
     const { salaryPayable, loading: salaryLedgerLoading } = useSalaryLedger(orgId);
+    const { cases, loading: casesLoading } = useCases();
 
     const activeProjects = projects.filter(p => (p.status as string) === 'Execution' || (p as any).status === 'Active' || (p.status as string) === 'ACTIVE').length;
     const pendingCount = pendingApprovals.length;
 
-    const loading = ledgerLoading || projectsLoading || approvalsLoading || inventoryLoading || salaryLedgerLoading;
+    // Aggregate Cost Center data from all cases
+    const costCenterStats = useMemo(() => {
+        const projectCases = cases.filter(c => c.isProject);
+        let totalBudget = 0;
+        let totalReceived = 0;
+        let totalSpent = 0;
+
+        projectCases.forEach(c => {
+            const cc = (c as any).costCenter;
+            if (cc) {
+                totalBudget += cc.totalBudget || 0;
+                totalReceived += cc.receivedAmount || 0;
+                totalSpent += cc.spentAmount || 0;
+            }
+        });
+
+        return {
+            totalBudget,
+            totalReceived,
+            totalSpent,
+            remainingBalance: totalReceived - totalSpent,
+            projectCount: projectCases.length
+        };
+    }, [cases]);
+
+    const loading = ledgerLoading || projectsLoading || approvalsLoading || inventoryLoading || salaryLedgerLoading || casesLoading;
 
     if (loading) {
         return (
@@ -89,6 +116,36 @@ const AccountsOverviewPage: React.FC<AccountsOverviewPageProps> = () => {
                     </div>
                     <p className="text-2xl font-bold text-gray-900">{pendingCount}</p>
                     <p className="text-xs text-gray-500 mt-1">Requires Attention</p>
+                </div>
+            </div>
+
+            {/* Cost Center Summary */}
+            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-xl border border-indigo-200">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-bold text-indigo-900">Cost Center Summary (All Projects)</h2>
+                    <span className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium">
+                        {costCenterStats.projectCount} Projects
+                    </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="bg-white p-4 rounded-lg border border-indigo-100">
+                        <h3 className="text-xs font-medium text-gray-500 uppercase mb-1">Total Budget</h3>
+                        <p className="text-xl font-bold text-gray-900">{formatCurrencyINR(costCenterStats.totalBudget)}</p>
+                    </div>
+                    <div className="bg-white p-4 rounded-lg border border-green-100">
+                        <h3 className="text-xs font-medium text-gray-500 uppercase mb-1">Total Received</h3>
+                        <p className="text-xl font-bold text-green-600">{formatCurrencyINR(costCenterStats.totalReceived)}</p>
+                    </div>
+                    <div className="bg-white p-4 rounded-lg border border-red-100">
+                        <h3 className="text-xs font-medium text-gray-500 uppercase mb-1">Total Spent</h3>
+                        <p className="text-xl font-bold text-red-600">{formatCurrencyINR(costCenterStats.totalSpent)}</p>
+                    </div>
+                    <div className="bg-white p-4 rounded-lg border border-blue-100">
+                        <h3 className="text-xs font-medium text-gray-500 uppercase mb-1">Remaining Balance</h3>
+                        <p className={`text-xl font-bold ${costCenterStats.remainingBalance >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                            {formatCurrencyINR(costCenterStats.remainingBalance)}
+                        </p>
+                    </div>
                 </div>
             </div>
 

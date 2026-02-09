@@ -13,30 +13,45 @@ interface InvoiceDetailModalProps {
     invoice: Invoice | null;
     onUpdateInvoice: (invoice: Invoice) => void;
     onEditInvoice?: (invoice: Invoice) => void;
+    /** When provided, status/paidAmount are persisted to the correct backend (e.g. sales invoices under org). */
+    onSaveStatusToBackend?: (invoiceId: string, status: string, paidAmount: number) => Promise<void>;
 }
 
-const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({ isOpen, onClose, invoice, onUpdateInvoice, onEditInvoice }) => {
+const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({ isOpen, onClose, invoice, onUpdateInvoice, onEditInvoice, onSaveStatusToBackend }) => {
     const [status, setStatus] = useState<PaymentStatus>(PaymentStatus.DRAFT);
     const [paidAmount, setPaidAmount] = useState(0);
+    const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         if (invoice) {
             setStatus(invoice.status);
-            setPaidAmount(invoice.paidAmount);
+            setPaidAmount(invoice.paidAmount ?? 0);
         }
     }, [invoice]);
 
     if (!invoice) return null;
 
     const handleUpdate = async () => {
-        // If marking as Paid, use the special P&L integration
-        if (status === PaymentStatus.PAID && status !== invoice.status) {
-            await updateInvoiceStatus(invoice.id, invoice.projectId, Number(paidAmount), status);
-        } else {
-            // Otherwise, just update the invoice normally
-            onUpdateInvoice({ ...invoice, status, paidAmount: Number(paidAmount) });
+        const amount = Number(paidAmount);
+        setSaving(true);
+        try {
+            if (onSaveStatusToBackend) {
+                await onSaveStatusToBackend(invoice.id, status, amount);
+            } else {
+                if (status === PaymentStatus.PAID && status !== invoice.status) {
+                    await updateInvoiceStatus(invoice.id, invoice.projectId, amount, status);
+                } else {
+                    onUpdateInvoice({ ...invoice, status, paidAmount: amount });
+                }
+            }
+            onUpdateInvoice({ ...invoice, status, paidAmount: amount });
+            onClose();
+        } catch (err) {
+            console.error('Failed to update invoice status:', err);
+            alert('Failed to update status. Please try again.');
+        } finally {
+            setSaving(false);
         }
-        onClose();
     };
 
     const handleEdit = () => {
@@ -87,7 +102,7 @@ const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({ isOpen, onClose
                                 </button>
                             )}
                             <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-text-primary bg-surface border border-border rounded-md hover:bg-subtle-background">Cancel</button>
-                            <button onClick={handleUpdate} className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-secondary">Save Changes</button>
+                            <button onClick={handleUpdate} disabled={saving} className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-secondary disabled:opacity-50">{saving ? 'Saving…' : 'Save Changes'}</button>
                         </div>
                     </div>
                 </div>

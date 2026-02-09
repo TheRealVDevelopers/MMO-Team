@@ -63,6 +63,9 @@ export const useGeneralLedger = (filters?: { startDate?: Date; endDate?: Date; c
             if (filters?.category) {
                 data = data.filter(e => e.category === filters.category);
             }
+            if (filters?.caseId) {
+                data = data.filter(e => e.caseId === filters.caseId);
+            }
 
             setEntries(data);
             setLoading(false);
@@ -73,7 +76,7 @@ export const useGeneralLedger = (filters?: { startDate?: Date; endDate?: Date; c
         });
 
         return () => unsubscribe();
-    }, [currentUser?.organizationId, filters?.startDate, filters?.endDate, filters?.category]);
+    }, [currentUser?.organizationId, filters?.startDate, filters?.endDate, filters?.category, filters?.caseId]);
 
     const stats = {
         totalRevenue: entries.filter(e => e.type === 'CREDIT' && e.category === 'REVENUE').reduce((sum, e) => sum + e.amount, 0),

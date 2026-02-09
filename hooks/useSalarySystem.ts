@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, query, where, getDocs, collectionGroup, Timestamp, doc, serverTimestamp, runTransaction } from 'firebase/firestore';
-import { TimeEntry, User, UserRole, SalaryLedgerEntry, CaseTask, GeneralLedgerEntry } from '../types';
+import { TimeEntry, User, CaseTask } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { FIRESTORE_COLLECTIONS } from '../constants';
+import { FIRESTORE_COLLECTIONS, DEFAULT_ORGANIZATION_ID } from '../constants';
 
 export interface SalaryData {
     user: User;
@@ -23,8 +23,10 @@ export const useSalarySystem = (selectedMonth: string) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const orgId = currentUser?.organizationId || DEFAULT_ORGANIZATION_ID;
+
     useEffect(() => {
-        if (!currentUser?.organizationId || !selectedMonth) return;
+        if (!orgId || !selectedMonth) return;
 
         const fetchData = async () => {
             setLoading(true);
@@ -34,26 +36,38 @@ export const useSalarySystem = (selectedMonth: string) => {
                 const startDate = new Date(year, month - 1, 1);
                 const endDate = new Date(year, month, 0, 23, 59, 59);
 
-                // 2. Fetch Users
-                const usersRef = collection(db, 'staffUsers'); // Assuming collection name
-                // Actually types says Path: staffUsers/{userId}. 
-                // In hooks/useUsers.ts it uses 'staffUsers' or 'users'? 
-                // useUsers.ts uses collection(db, 'users') usually. I should check.
-                // Step 649 (SalaryPage) used useUsers().
-                // I will use 'users' collection for now, matching useUsers.ts standard.
-                const usersSnap = await getDocs(query(collection(db, 'users'), where('organizationId', '==', currentUser.organizationId)));
+                // 2. Fetch Users (all staff - try org filter first, fall back to all)
+                let usersSnap = await getDocs(query(collection(db, FIRESTORE_COLLECTIONS.STAFF_USERS), where('organizationId', '==', orgId)));
+                
+                // If no users found with org filter, fetch ALL staff users
+                if (usersSnap.empty) {
+                    console.log('[useSalarySystem] No users found with org filter, fetching ALL staff users');
+                    usersSnap = await getDocs(collection(db, FIRESTORE_COLLECTIONS.STAFF_USERS));
+                }
+                
                 const users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() } as User));
+                console.log(`[useSalarySystem] Found ${users.length} staff users`);
 
-                // 3. Fetch Time Entries
-                const timeQuery = query(
+                // 3. Fetch Time Entries (try org filter first, fall back to date filter only)
+                let timeSnap = await getDocs(query(
                     collection(db, 'timeEntries'),
-                    where('organizationId', '==', currentUser.organizationId),
+                    where('organizationId', '==', orgId),
                     where('dateKey', '>=', selectedMonth + '-01'),
                     where('dateKey', '<=', selectedMonth + '-31')
-                );
-                // Note: String comparison on dateKey "YYYY-MM-DD" works for "YYYY-MM" filtering roughly.
-                const timeSnap = await getDocs(timeQuery);
+                ));
+                
+                // If no time entries with org filter, try without org filter
+                if (timeSnap.empty) {
+                    console.log('[useSalarySystem] No time entries found with org filter, trying date filter only');
+                    timeSnap = await getDocs(query(
+                        collection(db, 'timeEntries'),
+                        where('dateKey', '>=', selectedMonth + '-01'),
+                        where('dateKey', '<=', selectedMonth + '-31')
+                    ));
+                }
+                
                 const timeEntries = timeSnap.docs.map(d => d.data() as TimeEntry);
+                console.log(`[useSalarySystem] Found ${timeEntries.length} time entries for ${selectedMonth}`);
 
                 // 4. Fetch Completed Tasks (for Distance)
                 const taskQuery = query(
@@ -162,16 +176,25 @@ export const useSalarySystem = (selectedMonth: string) => {
         };
 
         fetchData();
-    }, [currentUser?.organizationId, selectedMonth]);
+    }, [orgId, selectedMonth]);
 
-    const generatePayroll = async (data: SalaryData) => {
-        if (!currentUser?.organizationId) return;
+    /** Options from UI: expense reimbursement, travel reimbursement, total payable (base + expense + travel) */
+    const generatePayroll = async (
+        data: SalaryData,
+        options?: { expenseReimbursement?: number; travelReimbursement?: number; totalPayable?: number }
+    ) => {
+        if (!currentUser || !orgId) return;
 
-        const salaryRunId = `${currentUser.organizationId}-${selectedMonth}-${Date.now()}`;
+        const totalPayable = options?.totalPayable ?? data.estimatedSalary;
+        const expenseReimbursement = options?.expenseReimbursement ?? 0;
+        const travelReimbursement = options?.travelReimbursement ?? (data.distanceKm * 10);
+        const baseSalary = totalPayable - expenseReimbursement - travelReimbursement;
+
+        const salaryRunId = `${orgId}-${selectedMonth}-${Date.now()}`;
         const ledgerId = `${selectedMonth}-${data.user.id}`;
 
         await runTransaction(db, async (transaction) => {
-            const ledgerRef = doc(db, FIRESTORE_COLLECTIONS.ORGANIZATIONS, currentUser.organizationId, FIRESTORE_COLLECTIONS.SALARY_LEDGER, ledgerId);
+            const ledgerRef = doc(db, FIRESTORE_COLLECTIONS.ORGANIZATIONS, orgId, FIRESTORE_COLLECTIONS.SALARY_LEDGER, ledgerId);
 
             transaction.set(ledgerRef, {
                 id: ledgerId,
@@ -183,27 +206,31 @@ export const useSalarySystem = (selectedMonth: string) => {
                 breakHours: data.breakHours,
                 taskHours: data.taskHours,
                 distanceKm: data.distanceKm,
-                distanceReimbursement: data.distanceKm * 10,
-                baseSalary: data.estimatedSalary - (data.distanceKm * 10),
+                distanceReimbursement: travelReimbursement,
+                expenseReimbursement,
+                baseSalary,
                 incentives: 0,
                 deductions: 0,
-                totalSalary: data.estimatedSalary,
+                totalSalary: totalPayable,
                 generatedAt: serverTimestamp(),
                 status: 'DRAFT',
             });
 
-            if (data.estimatedSalary > 0) {
-                const ledgerCol = collection(db, FIRESTORE_COLLECTIONS.ORGANIZATIONS, currentUser.organizationId, FIRESTORE_COLLECTIONS.GENERAL_LEDGER);
+            if (totalPayable > 0) {
+                const ledgerCol = collection(db, FIRESTORE_COLLECTIONS.ORGANIZATIONS, orgId, FIRESTORE_COLLECTIONS.GENERAL_LEDGER);
+                const activeHoursSafe = data.activeHours > 0 ? data.activeHours : 1;
+                const caseAmounts: { caseId: string; amount: number }[] = [];
 
                 Object.entries(data.caseAllocations).forEach(([caseId, hours]) => {
-                    const ratio = hours / data.activeHours;
-                    const amount = data.estimatedSalary * ratio;
+                    const ratio = hours / activeHoursSafe;
+                    const amount = Number((totalPayable * ratio).toFixed(2));
+                    caseAmounts.push({ caseId, amount });
                     transaction.set(doc(ledgerCol), {
                         transactionId: ledgerId,
                         salaryRunId,
                         date: serverTimestamp(),
                         type: 'DEBIT',
-                        amount: Number(amount.toFixed(2)),
+                        amount,
                         description: `Salary Allocation: ${data.user.name} for ${selectedMonth}`,
                         category: 'EXPENSE',
                         sourceType: 'SALARY',
@@ -214,9 +241,9 @@ export const useSalarySystem = (selectedMonth: string) => {
                     });
                 });
 
-                const allocatedAmount = Object.values(data.caseAllocations).reduce((sum, hours) => sum + ((hours / data.activeHours) * data.estimatedSalary), 0);
-                const remaining = data.estimatedSalary - allocatedAmount;
-                if (remaining > 1) {
+                const allocatedTotal = caseAmounts.reduce((sum, c) => sum + c.amount, 0);
+                const remaining = totalPayable - allocatedTotal;
+                if (remaining > 0.01) {
                     transaction.set(doc(ledgerCol), {
                         transactionId: ledgerId,
                         salaryRunId,
@@ -229,6 +256,27 @@ export const useSalarySystem = (selectedMonth: string) => {
                         sourceId: ledgerId,
                         createdBy: currentUser.id,
                         createdAt: serverTimestamp(),
+                    });
+                }
+
+                // Update each case's costCenter.spentAmount so Project P&L reflects salary spend
+                for (const { caseId, amount } of caseAmounts) {
+                    const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, caseId);
+                    const caseSnap = await transaction.get(caseRef);
+                    if (!caseSnap.exists()) continue;
+                    const caseData = caseSnap.data();
+                    const cc = caseData.costCenter || {};
+                    const received = cc.receivedAmount ?? 0;
+                    const currentSpent = cc.spentAmount ?? 0;
+                    const newSpent = currentSpent + amount;
+                    const newRemaining = received - newSpent;
+                    transaction.update(caseRef, {
+                        costCenter: {
+                            ...cc,
+                            spentAmount: newSpent,
+                            remainingAmount: newRemaining,
+                        },
+                        updatedAt: serverTimestamp(),
                     });
                 }
             }

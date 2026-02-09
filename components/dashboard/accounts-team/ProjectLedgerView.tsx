@@ -1,16 +1,19 @@
 import React, { useMemo } from 'react';
 import { useGeneralLedger } from '../../../hooks/useGeneralLedger';
 import { formatCurrencyINR } from '../../../constants';
-import { Project } from '../../../types';
+import { Project, Case } from '../../../types';
 
 interface ProjectLedgerViewProps {
-    project: Project;
+    project: Project | Case;
     onBack: () => void;
 }
 
 const ProjectLedgerView: React.FC<ProjectLedgerViewProps> = ({ project, onBack }) => {
     // Fetch GL entries for this project
     const { entries, loading, stats: summary } = useGeneralLedger({ caseId: project.id });
+
+    // PHASE 5: Cost Center from project data
+    const costCenter = (project as any).costCenter || null;
 
     // Computed breakdown
     const breakdown = useMemo(() => {
@@ -53,6 +56,39 @@ const ProjectLedgerView: React.FC<ProjectLedgerViewProps> = ({ project, onBack }
                     </p>
                 </div>
             </div>
+
+            {/* PHASE 5: Cost Center Summary (Read-Only) */}
+            {costCenter && (
+                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-xl border border-indigo-200">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-bold text-indigo-900 flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full bg-indigo-500"></span>
+                            Cost Center
+                        </h3>
+                        <span className="text-xs font-medium text-indigo-600 bg-indigo-100 px-2 py-1 rounded">Read-Only</span>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="bg-white p-4 rounded-lg border border-indigo-100">
+                            <p className="text-xs text-gray-500 uppercase mb-1">Total Project Value</p>
+                            <p className="text-lg font-bold text-gray-900">{formatCurrencyINR(costCenter.totalProjectValue || costCenter.totalBudget || 0)}</p>
+                        </div>
+                        <div className="bg-white p-4 rounded-lg border border-green-100">
+                            <p className="text-xs text-gray-500 uppercase mb-1">Total Received</p>
+                            <p className="text-lg font-bold text-green-600">{formatCurrencyINR(costCenter.receivedAmount || 0)}</p>
+                        </div>
+                        <div className="bg-white p-4 rounded-lg border border-red-100">
+                            <p className="text-xs text-gray-500 uppercase mb-1">Total Spent</p>
+                            <p className="text-lg font-bold text-red-600">{formatCurrencyINR(costCenter.spentAmount || 0)}</p>
+                        </div>
+                        <div className="bg-white p-4 rounded-lg border border-blue-100">
+                            <p className="text-xs text-gray-500 uppercase mb-1">Remaining Balance</p>
+                            <p className={`text-lg font-bold ${(costCenter.remainingAmount || 0) >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                                {formatCurrencyINR(costCenter.remainingAmount || 0)}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
