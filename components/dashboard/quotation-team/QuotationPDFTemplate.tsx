@@ -20,8 +20,6 @@ const QuotationPDFTemplate: React.FC<QuotationPDFTemplateProps> = ({ quotation, 
     const { currentUser } = useAuth();
     const { items: catalogItems } = useCatalog();
 
-    console.log('QuotationPDFTemplate rendered', { quotation, caseData, catalogItems });
-
     // Lock body scroll when modal is open
     useEffect(() => {
         document.body.style.overflow = 'hidden';
@@ -171,8 +169,10 @@ const QuotationPDFTemplate: React.FC<QuotationPDFTemplateProps> = ({ quotation, 
                             <h3 className="text-sm font-bold text-text-primary mb-2">Bill To:</h3>
                             <p className="text-base font-semibold text-text-primary">{caseData.clientName}</p>
                             <p className="text-sm text-text-secondary">{caseData.projectName}</p>
-                            <p className="text-sm text-text-secondary">Phone: {caseData.contact.phone}</p>
-                            {caseData.contact.email && <p className="text-sm text-text-secondary">Email: {caseData.contact.email}</p>}
+                            <p className="text-sm text-text-secondary">Phone: {caseData.contact?.phone || caseData.clientPhone || '—'}</p>
+                            {(caseData.contact?.email || caseData.clientEmail) && (
+                                <p className="text-sm text-text-secondary">Email: {caseData.contact?.email || caseData.clientEmail}</p>
+                            )}
                         </div>
                     </div>
 

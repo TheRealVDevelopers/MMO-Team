@@ -1,0 +1,52 @@
+rules_version = '2';
+// Firebase Storage Security Rules
+// SECURITY_NOTES: Any authenticated user can read/write. Staff/client separation is application-level.
+// To harden: set custom claim "staff: true" for staff users, then add:
+//   allow read, write: if request.auth != null && request.auth.token.staff == true;
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Case-linked documents (lead docs, drawings, quotations, BOQ)
+    match /cases/{caseId}/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+    match /leads/{leadId}/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+    match /quotations/{caseId}/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+    match /boq/{caseId}/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+    match /drawings/{caseId}/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+    match /cad/{caseId}/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+    // User avatars - own user only
+    match /users/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    // Payments (clients upload screenshots)
+    match /payments/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+    // Project/site photos, catalog, chat, finance
+    match /projects/{projectId}/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+    match /catalog/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+    match /chat/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+    match /finance/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+    match /attachments/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

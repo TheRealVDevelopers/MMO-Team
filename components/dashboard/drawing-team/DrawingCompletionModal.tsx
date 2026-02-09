@@ -75,7 +75,7 @@ const DrawingCompletionModal: React.FC<DrawingCompletionModalProps> = ({
                 updatedAt: serverTimestamp()
             });
 
-            // If files were uploaded, save them to documents
+            // If files were uploaded, save them to documents (not visible to client until approved)
             if (file2D || filePDF) {
                 const drawingDoc = {
                     type: 'DRAWING',
@@ -83,6 +83,7 @@ const DrawingCompletionModal: React.FC<DrawingCompletionModalProps> = ({
                     taskId: task.id,
                     uploadedBy: currentUser.id,
                     uploadedAt: serverTimestamp(),
+                    visibleToClient: false,
                     files: {
                         has2D: file2D !== null,
                         hasPDF: filePDF !== null,

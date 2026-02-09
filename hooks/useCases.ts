@@ -44,9 +44,9 @@ export const useCases = (options: UseCasesOptions = {}) => {
       // Build query with filters
       let constraints = [];
 
-      // OPTIONAL: Filter by organizationId (if not provided, show ALL cases)
+      // OPTIONAL: Filter by organizationId (include null for individual leads)
       if (options.organizationId) {
-        constraints.push(where('organizationId', '==', options.organizationId));
+        constraints.push(where('organizationId', 'in', [options.organizationId, null]));
       }
 
       // Apply isProject filter
@@ -81,6 +81,7 @@ export const useCases = (options: UseCasesOptions = {}) => {
             return {
               ...data,
               id: doc.id,
+              projectName: data.title ?? data.projectName,
               createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
               updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : data.updatedAt ? new Date(data.updatedAt) : undefined,
             } as Case;

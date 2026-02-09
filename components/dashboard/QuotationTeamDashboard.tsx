@@ -13,6 +13,7 @@ import ItemsCatalogPage from './quotation-team/ItemsCatalogPage';
 import ProjectTemplatesPage from './quotation-team/ProjectTemplatesPage';
 import PriceAnalyticsPage from './quotation-team/PriceAnalyticsPage';
 import MyPerformancePage from './quotation-team/MyPerformancePage';
+import CustomerQuotationBuilder from './quotation-team/CustomerQuotationBuilder';
 
 const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string, params?: any) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
@@ -39,6 +40,8 @@ const QuotationTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (p
         return <MyDayPage />;
       case 'work-queue':
         return <QuotationWorkQueuePage />;
+      case 'quotations':
+        return <CustomerQuotationBuilder />;
       case 'negotiations':
         return <NegotiationsBoardPage
           projects={[]}

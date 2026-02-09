@@ -12,6 +12,7 @@ interface TaskCardProps {
   onUpdateStatus: (taskId: string, newStatus: TaskStatus) => void;
   onStartTask?: (task: Task) => void;
   onCompleteTask?: (task: Task) => void;
+  readOnly?: boolean;  // My Day: no Start/Complete actions
 }
 
 const formatTime = (seconds: number) => {
@@ -21,7 +22,7 @@ const formatTime = (seconds: number) => {
   return `${h}:${m}:${s}`;
 };
 
-const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdateStatus, onStartTask, onCompleteTask }) => {
+const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdateStatus, onStartTask, onCompleteTask, readOnly }) => {
   const [elapsedTime, setElapsedTime] = useState(task.timeSpent);
 
   useEffect(() => {
@@ -161,37 +162,73 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdateStatus, onStartTask, 
       </div>
 
       <div className="mt-4">
-        {(task.status === TaskStatus.PENDING || task.status === TaskStatus.ASSIGNED) && (
-          <button
-            onClick={handleStartClick}
-            className="w-full flex items-center justify-center space-x-2 py-3 bg-primary text-white rounded-xl text-sm font-bold hover:bg-green-600 transition-all shadow-lg shadow-primary/20"
-          >
-            <PlayIcon className="w-4 h-4" />
-            <span>Start Task</span>
-          </button>
-        )}
-
-        {task.status === TaskStatus.IN_PROGRESS && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-center space-x-2 text-lg bg-primary/10 text-primary p-3 rounded-xl font-mono font-bold">
-              <ClockIcon className="w-5 h-5 animate-pulse" />
-              <span>{formatTime(elapsedTime)}</span>
+        {readOnly ? (
+          /* My Day read-only: status, start/end time, deadline, red-flag only */
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm text-text-secondary">
+              <span className={cn(
+                "px-2 py-0.5 rounded text-xs font-bold",
+                task.status === TaskStatus.COMPLETED ? "bg-secondary/20 text-secondary" :
+                  task.status === TaskStatus.IN_PROGRESS || task.status === TaskStatus.STARTED ? "bg-primary/20 text-primary" :
+                    "bg-subtle-background text-text-tertiary"
+              )}>
+                {task.status}
+              </span>
+              {task.startedAt && (
+                <span>Started: {new Date(task.startedAt).toLocaleTimeString()}</span>
+              )}
+              {task.status === TaskStatus.COMPLETED && (task as any).completedAt && (
+                <span>Completed: {new Date((task as any).completedAt).toLocaleTimeString()}</span>
+              )}
             </div>
-            <button
-              onClick={handleCompleteClick}
-              className="w-full flex items-center justify-center space-x-2 py-3 bg-secondary text-white rounded-xl text-sm font-bold hover:bg-primary transition-all shadow-lg shadow-secondary/20"
-            >
-              <CheckCircleIcon className="w-5 h-5" />
-              <span>Mark Complete</span>
-            </button>
+            {task.status === TaskStatus.IN_PROGRESS && (
+              <div className="flex items-center gap-2 text-lg font-mono font-bold text-primary">
+                <ClockIcon className="w-5 h-5 animate-pulse" />
+                {formatTime(elapsedTime)}
+              </div>
+            )}
+            {task.status === TaskStatus.COMPLETED && (
+              <div className="flex items-center gap-2 text-sm text-secondary font-bold">
+                <CheckCircleIcon className="w-5 h-5" />
+                Completed
+              </div>
+            )}
           </div>
-        )}
+        ) : (
+          <>
+            {(task.status === TaskStatus.PENDING || task.status === TaskStatus.ASSIGNED) && (
+              <button
+                onClick={handleStartClick}
+                className="w-full flex items-center justify-center space-x-2 py-3 bg-primary text-white rounded-xl text-sm font-bold hover:bg-green-600 transition-all shadow-lg shadow-primary/20"
+              >
+                <PlayIcon className="w-4 h-4" />
+                <span>Start Task</span>
+              </button>
+            )}
 
-        {task.status === TaskStatus.COMPLETED && (
-          <div className="flex items-center justify-center space-x-2 text-sm bg-secondary/10 text-secondary p-3 rounded-xl font-bold">
-            <CheckCircleIcon className="w-5 h-5" />
-            <span>Completed</span>
-          </div>
+            {task.status === TaskStatus.IN_PROGRESS && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-center space-x-2 text-lg bg-primary/10 text-primary p-3 rounded-xl font-mono font-bold">
+                  <ClockIcon className="w-5 h-5 animate-pulse" />
+                  <span>{formatTime(elapsedTime)}</span>
+                </div>
+                <button
+                  onClick={handleCompleteClick}
+                  className="w-full flex items-center justify-center space-x-2 py-3 bg-secondary text-white rounded-xl text-sm font-bold hover:bg-primary transition-all shadow-lg shadow-secondary/20"
+                >
+                  <CheckCircleIcon className="w-5 h-5" />
+                  <span>Mark Complete</span>
+                </button>
+              </div>
+            )}
+
+            {task.status === TaskStatus.COMPLETED && (
+              <div className="flex items-center justify-center space-x-2 text-sm bg-secondary/10 text-secondary p-3 rounded-xl font-bold">
+                <CheckCircleIcon className="w-5 h-5" />
+                <span>Completed</span>
+              </div>
+            )}
+          </>
         )}
       </div>
     </motion.div>

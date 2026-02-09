@@ -22,6 +22,7 @@ import {
     collection,
     serverTimestamp,
     getDoc,
+    getDocs,
     writeBatch
 } from 'firebase/firestore';
 import {
@@ -145,6 +146,8 @@ const ProcurementAuditPageNew: React.FC = () => {
                     caseId: quotation.caseId,
                     name: `Quotation - ${quotation.projectName}`,
                     url: quotation.pdfUrl,
+                    fileUrl: quotation.pdfUrl,
+                    visibleToClient: true,
                     uploadedBy: currentUser.id,
                     uploadedAt: serverTimestamp(),
                     quotationId: quotation.id,
@@ -163,7 +166,23 @@ const ProcurementAuditPageNew: React.FC = () => {
                 timestamp: serverTimestamp()
             });
 
+            if (quotation.boqId?.trim()) {
+                const boqRef = doc(db!, FIRESTORE_COLLECTIONS.CASES, quotation.caseId, FIRESTORE_COLLECTIONS.BOQ, quotation.boqId);
+                batch.update(boqRef, { locked: true, referencedByQuotation: quotation.id });
+            }
+
             await batch.commit();
+
+            // 4. Complete PROCUREMENT_AUDIT task (single source of truth: cases/{caseId}/tasks)
+            const tasksRef = collection(db!, FIRESTORE_COLLECTIONS.CASES, quotation.caseId, FIRESTORE_COLLECTIONS.TASKS);
+            const taskQuery = query(tasksRef, where('type', '==', 'procurement_audit'));
+            const taskSnap = await getDocs(taskQuery);
+            for (const t of taskSnap.docs) {
+                const data = t.data();
+                if (data.status === 'pending' || data.status === 'started') {
+                    await updateDoc(t.ref, { status: 'completed', completedAt: serverTimestamp() });
+                }
+            }
 
             console.log('[Procurement Audit] ✅ Quotation approved:', quotation.id);
             alert('✅ Quotation approved successfully!');

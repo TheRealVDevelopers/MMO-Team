@@ -273,8 +273,8 @@ const CreateBOQModal: React.FC<CreateBOQModalProps> = ({
     );
 };
 
-// Catalog Selector Modal
-const CatalogSelectorModal: React.FC<{
+// Catalog Selector Modal - exported for use in EditBOQModal
+export const CatalogSelectorModal: React.FC<{
     catalogItems: any[];
     onSelect: (items: any[]) => void;
     onClose: () => void;

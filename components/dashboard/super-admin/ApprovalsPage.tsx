@@ -1,13 +1,8 @@
 import React from 'react';
-import { ContentCard, SectionHeader } from '../shared/DashboardUI';
-import RequestInboxPage from '../shared/RequestInboxPage';
+import UnifiedApprovalsPage from '../shared/UnifiedApprovalsPage';
 
 const ApprovalsPage: React.FC = () => {
-  return (
-    <div className="space-y-6">
-      <RequestInboxPage />
-    </div>
-  );
+  return <UnifiedApprovalsPage />;
 };
 
 export default ApprovalsPage;

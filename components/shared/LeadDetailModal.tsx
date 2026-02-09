@@ -121,6 +121,9 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
 
             // Upload files if any
             if (selectedFiles.length > 0) {
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/e4336b3f-e354-4a9b-9c27-6ecee71671c2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'LeadDetailModal.tsx:handleLogActivity',message:'before upload',data:{leadId:currentCase.id,fileCount:selectedFiles.length,hasAuth:!!currentUser,authId:currentUser?.id},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
+                // #endregion
                 uploadedAttachmentUrls = await uploadMultipleLeadAttachments(currentCase.id, selectedFiles);
             }
 

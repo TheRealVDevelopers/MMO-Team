@@ -23,6 +23,7 @@ import {
 import UserSelector from '../../shared/UserSelector';
 import CommandPalette from './CommandPalette';
 import NotificationPopover from './NotificationPopover';
+import { ErrorBoundary } from '../../shared/ErrorBoundary';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../firebase';
 
@@ -219,7 +220,9 @@ const InternalLayout: React.FC<InternalLayoutProps> = ({
                             {isDark ? <SunIcon className="w-6 h-6" /> : <MoonIcon className="w-6 h-6" />}
                         </button>
 
-                        <NotificationPopover />
+                        <ErrorBoundary fallback={null}>
+                            <NotificationPopover />
+                        </ErrorBoundary>
 
                         <div className="h-8 w-px bg-border hidden sm:block" />
 
@@ -227,7 +230,9 @@ const InternalLayout: React.FC<InternalLayoutProps> = ({
                             {/* User Selector - Shown unless admin has disabled user switching globally */}
                             {!userSwitchingDisabled && (
                                 <div className="hidden md:block">
-                                    <UserSelector />
+                                    <ErrorBoundary fallback={null}>
+                                        <UserSelector />
+                                    </ErrorBoundary>
                                 </div>
                             )}
                             <div className="text-right hidden sm:block">

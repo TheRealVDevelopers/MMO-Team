@@ -15,6 +15,7 @@ import EscalateIssuePage from '../escalation/EscalateIssuePage';
 import { useCases } from '../../hooks/useCases';
 import { useUsers } from '../../hooks/useUsers';
 import ApprovalsPage from './super-admin/ApprovalsPage';
+import RequestInboxPage from './shared/RequestInboxPage';
 import OrganizationsPage from './admin/OrganizationsPage';
 import { SectionHeader, PrimaryButton, SecondaryButton } from './shared/DashboardUI';
 import UnifiedProjectsPage from './shared/UnifiedProjectsPage';
@@ -95,7 +96,8 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
     reports: 'Business Reports',
     // performance: 'Personal Performance',
     communication: 'Team Chat',
-    approvals: 'Request Inbox',
+    'request-inbox': 'Request Inbox',
+    approvals: 'Approvals',
     'escalate-issue': 'Issue Escalation',
   };
 
@@ -178,6 +180,8 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
         return <PerformancePage users={users} />;
       case 'communication':
         return <CommunicationDashboard />;
+      case 'request-inbox':
+        return <RequestInboxPage />;
       case 'approvals':
         return <ApprovalsPage />;
       case 'escalate-issue':

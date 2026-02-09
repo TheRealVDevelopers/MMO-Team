@@ -17,6 +17,7 @@ import {
   ClockIcon, MapPinIcon, PaintBrushIcon, CalculatorIcon, TruckIcon, WrenchScrewdriverIcon, CreditCardIcon, ChartBarSquareIcon, CalendarDaysIcon, BanknotesIcon,
   ViewColumnsIcon, TagIcon, ListBulletIcon, PresentationChartLineIcon, ReceiptPercentIcon, BuildingStorefrontIcon, BuildingLibraryIcon, CheckCircleIcon, DocumentTextIcon, CubeIcon, QueueListIcon, ShieldCheckIcon
 } from './components/icons/IconComponents';
+import { InboxIcon } from '@heroicons/react/24/outline';
 
 const navConfig = {
   [UserRole.SUPER_ADMIN]: {
@@ -28,7 +29,8 @@ const navConfig = {
       { id: 'projects', label: 'Reference', icon: <RectangleStackIcon className="w-6 h-6" /> },
       { id: 'organizations', label: 'Organizations', icon: <BuildingOfficeIcon className="w-6 h-6" /> },
       { id: 'leads', label: 'Leads', icon: <FunnelIcon className="w-6 h-6" /> },
-      { id: 'approvals', label: 'Request Inbox', icon: <CheckCircleIcon className="w-6 h-6" /> },
+      { id: 'request-inbox', label: 'Request Inbox', icon: <InboxIcon className="w-6 h-6" /> },
+      { id: 'approvals', label: 'Approvals', icon: <CheckCircleIcon className="w-6 h-6" /> },
       { id: 'registrations', label: 'Registrations', icon: <UsersIcon className="w-6 h-6" /> },
       { id: 'finance', label: 'Finance', icon: <BanknotesIcon className="w-6 h-6" /> },
       { id: 'timesheet-reports', label: 'Timesheet Reports', icon: <DocumentTextIcon className="w-6 h-6" /> },
@@ -64,7 +66,8 @@ const navConfig = {
       { id: 'leads', label: 'Leads', icon: <FunnelIcon className="w-6 h-6" /> },
       { id: 'organizations', label: 'Organizations', icon: <BuildingOfficeIcon className="w-6 h-6" /> },
       { id: 'team', label: 'Team', icon: <UsersIcon className="w-6 h-6" /> },
-      { id: 'approvals', label: 'Request Inbox', icon: <CheckCircleIcon className="w-6 h-6" /> },
+      { id: 'request-inbox', label: 'Request Inbox', icon: <InboxIcon className="w-6 h-6" /> },
+      { id: 'approvals', label: 'Approvals', icon: <CheckCircleIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
       { id: 'workflow', label: 'M-Workflow', icon: <PresentationChartLineIcon className="w-6 h-6" /> },
     ],
@@ -94,6 +97,7 @@ const navConfig = {
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
       { id: 'work-queue', label: 'Work Queue', icon: <QueueListIcon className="w-6 h-6" /> },
+      { id: 'boqs', label: 'BOQs', icon: <DocumentTextIcon className="w-6 h-6" /> },
       { id: 'projects', label: 'Reference', icon: <RectangleStackIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
       { id: 'workflow', label: 'M-Workflow', icon: <PresentationChartLineIcon className="w-6 h-6" /> },
@@ -131,6 +135,8 @@ const navConfig = {
   [UserRole.PROCUREMENT_TEAM]: {
     title: 'Procurement Hub',
     navItems: [
+      { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
+      { id: 'work-queue', label: 'Work Queue', icon: <QueueListIcon className="w-6 h-6" /> },
       { id: 'audit', label: 'Quotation Audit', icon: <DocumentTextIcon className="w-6 h-6" /> },
       { id: 'bidding', label: 'Vendor Bidding', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       { id: 'execution-procurement', label: 'Execution Procurement', icon: <TruckIcon className="w-6 h-6" /> },

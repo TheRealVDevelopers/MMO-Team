@@ -59,99 +59,85 @@ const RequestInboxPage: React.FC = () => {
     const hasAccess = currentUser?.role === UserRole.SUPER_ADMIN || 
                       currentUser?.role === UserRole.SALES_GENERAL_MANAGER;
 
-    // Fetch all staff users for assignment
+    // Fetch staff users only when assign modal opens (deferred for faster initial load)
     useEffect(() => {
+        if (!showAssignModal || !db || staffUsers.length > 0) return;
+        let cancelled = false;
         const fetchStaffUsers = async () => {
-            if (!db) return;
-            
             try {
-                const usersRef = collection(db, FIRESTORE_COLLECTIONS.STAFF_USERS);
-                const snapshot = await getDocs(usersRef);
-                const users: StaffUser[] = [];
-                
-                snapshot.forEach((doc) => {
-                    const data = doc.data();
-                    users.push({
-                        id: doc.id,
+                const snapshot = await getDocs(collection(db, FIRESTORE_COLLECTIONS.STAFF_USERS));
+                if (cancelled) return;
+                const users: StaffUser[] = snapshot.docs.map((d) => {
+                    const data = d.data();
+                    return {
+                        id: d.id,
                         name: data.name,
                         role: data.role,
                         email: data.email,
                         profilePicture: data.profilePicture
-                    });
+                    };
                 });
-                
                 setStaffUsers(users);
             } catch (err) {
                 console.error('Error fetching staff users:', err);
             }
         };
-
         fetchStaffUsers();
-    }, []);
+        return () => { cancelled = true; };
+    }, [showAssignModal]);
 
     // Fetch all tasks from cases/{caseId}/tasks
     useEffect(() => {
         if (!db || !hasAccess) {
-            console.log('RequestInbox - Early return:', { db: !!db, hasAccess });
             setLoading(false);
             return;
         }
 
-        // Debug: Log current user info
-        console.log('RequestInbox - Current User:', {
-            uid: currentUser?.id,
-            role: currentUser?.role,
-            name: currentUser?.name,
-            hasAccess
-        });
-
-        console.log('RequestInbox - Starting collectionGroup query for tasks...');
-
         try {
-            // Query all tasks using collectionGroup
             const tasksQuery = query(
                 collectionGroup(db, FIRESTORE_COLLECTIONS.TASKS)
             );
 
-            console.log('RequestInbox - Query created, setting up snapshot listener...');
-
             const unsubscribe = onSnapshot(tasksQuery, async (snapshot) => {
-                console.log('RequestInbox - Snapshot received! Document count:', snapshot.docs.length);
-                const tasksData: TaskWithCase[] = [];
+                const docs = snapshot.docs;
+                const caseIds = [...new Set(docs.map((d) => d.data().caseId).filter(Boolean))] as string[];
 
-                for (const docSnap of snapshot.docs) {
+                // Fetch all case details in parallel (one batch instead of N sequential reads)
+                const caseMap = new Map<string, Case>();
+                if (caseIds.length > 0) {
+                    const caseSnaps = await Promise.all(
+                        caseIds.map((id) => getDoc(doc(db, FIRESTORE_COLLECTIONS.CASES, id)))
+                    );
+                    caseSnaps.forEach((snap, i) => {
+                        if (snap.exists() && caseIds[i]) {
+                            caseMap.set(caseIds[i], snap.data() as Case);
+                        }
+                    });
+                }
+
+                const tasksData: TaskWithCase[] = docs.map((docSnap) => {
                     const data = docSnap.data();
                     const taskData = {
                         ...data,
                         id: docSnap.id,
-                        createdAt: data.createdAt instanceof Timestamp 
-                            ? data.createdAt.toDate() 
+                        createdAt: data.createdAt instanceof Timestamp
+                            ? data.createdAt.toDate()
                             : new Date(data.createdAt),
-                        deadline: data.deadline instanceof Timestamp 
-                            ? data.deadline.toDate() 
+                        deadline: data.deadline instanceof Timestamp
+                            ? data.deadline.toDate()
                             : data.deadline ? new Date(data.deadline) : undefined,
                     } as TaskWithCase;
 
-                    // Fetch case details for display
-                    try {
-                        const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, data.caseId);
-                        const caseDoc = await getDoc(caseRef);
-                        
-                        if (caseDoc.exists()) {
-                            const caseData = caseDoc.data() as Case;
-                            taskData.caseName = caseData.title;
-                            taskData.clientName = caseData.clientName;
-                        }
-                    } catch (err) {
-                        console.error('Error fetching case details:', err);
+                    const caseData = data.caseId ? caseMap.get(data.caseId) : undefined;
+                    if (caseData) {
+                        taskData.caseName = caseData.title;
+                        taskData.clientName = caseData.clientName;
                     }
 
-                    tasksData.push(taskData);
-                }
+                    return taskData;
+                });
 
-                // Sort by creation date (newest first)
                 tasksData.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-                
                 setTasks(tasksData);
                 setLoading(false);
             }, (error) => {

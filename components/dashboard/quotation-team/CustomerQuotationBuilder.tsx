@@ -6,11 +6,15 @@ import { useAuth } from '../../../context/AuthContext';
 import { useCases, addCaseQuotation, useCaseQuotations, useCaseBOQs } from '../../../hooks/useCases';
 import { useTargetedApprovalRequests, useAssignedApprovalRequests } from '../../../hooks/useApprovalSystem';
 import { useCatalog } from '../../../hooks/useCatalog';
-import { Case, Project, UserRole, CaseQuotation, CaseBOQ } from '../../../types';
+import { Case, Project, UserRole, CaseQuotation, CaseBOQ, TaskType, TaskStatus } from '../../../types';
 import { formatCurrencyINR, safeDate } from '../../../constants';
 import { createNotification } from '../../../services/liveDataService';
 import QuotationPDFTemplate from './QuotationPDFTemplate';
 import EditQuotationModal from './EditQuotationModal';
+import { db } from '../../../firebase';
+import { collection, doc, updateDoc, addDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { FIRESTORE_COLLECTIONS } from '../../../constants';
+import { PaperAirplaneIcon } from '@heroicons/react/24/outline';
 
 // Interface for items loaded from catalog
 interface CatalogItem {
@@ -36,9 +40,25 @@ const CaseListItem: React.FC<{
     caseItem: Case;
     isPriority: boolean;
     onSelect: (c: Case) => void;
-}> = ({ caseItem, isPriority, onSelect }) => {
+    onSubmitForAudit: (quot: any, c: Case) => Promise<void>;
+    submittingForAudit: boolean;
+}> = ({ caseItem, isPriority, onSelect, onSubmitForAudit, submittingForAudit }) => {
     const { boqs, loading: boqsLoading } = useCaseBOQs(caseItem.id);
+    const { quotations, loading: quotationsLoading } = useCaseQuotations(caseItem.id);
     const hasBoq = boqs.length > 0;
+
+    // Audit status from quotations (procurement audit)
+    const latestQuot = quotations[0]; // Already ordered by createdAt desc
+    const auditStatus = latestQuot?.auditStatus;
+    const isAudited = auditStatus === 'approved';
+    const isPendingAudit = auditStatus === 'pending';
+    const isRejected = auditStatus === 'rejected';
+    const canSubmitForAudit = quotations.some(
+        (q) => q.auditStatus !== 'pending' && q.auditStatus !== 'approved'
+    );
+    const quotationToSubmit = quotations.find(
+        (q) => q.auditStatus !== 'pending' && q.auditStatus !== 'approved'
+    );
 
     return (
         <Card>
@@ -49,7 +69,7 @@ const CaseListItem: React.FC<{
                     }`}
             >
                 <div>
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <h3 className="font-bold text-text-primary">{caseItem.projectName}</h3>
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${caseItem.isProject ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
                             }`}>
@@ -66,12 +86,35 @@ const CaseListItem: React.FC<{
                                 {hasBoq ? 'BOQ ATTACHED' : 'BOQ NOT ATTACHED'}
                             </span>
                         )}
+                        {!quotationsLoading && quotations.length > 0 && (
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                isAudited ? 'bg-green-100 text-green-700' :
+                                isPendingAudit ? 'bg-amber-100 text-amber-700' :
+                                isRejected ? 'bg-red-100 text-red-700' :
+                                'bg-gray-100 text-gray-500'
+                            }`}>
+                                {isAudited ? 'AUDITED' : isPendingAudit ? 'PENDING AUDIT' : isRejected ? 'REJECTED' : 'NOT AUDITED'}
+                            </span>
+                        )}
                     </div>
-                    <p className="text-sm text-text-secondary">{caseItem.clientName} • {caseItem.contact.phone}</p>
+                    <p className="text-sm text-text-secondary">{caseItem.clientName} • {caseItem.clientPhone || '—'}</p>
                 </div>
-                <SecondaryButton onClick={() => onSelect(caseItem)}>
-                    Create Quotation
-                </SecondaryButton>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                    {canSubmitForAudit && quotationToSubmit && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onSubmitForAudit(quotationToSubmit, caseItem); }}
+                            disabled={submittingForAudit}
+                            className="px-3 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 font-medium text-sm flex items-center gap-1.5 disabled:opacity-50"
+                            title="Submit quotation to procurement for auditing"
+                        >
+                            <PaperAirplaneIcon className="w-4 h-4" />
+                            {submittingForAudit ? 'Submitting...' : 'Submit to Audit'}
+                        </button>
+                    )}
+                    <SecondaryButton onClick={() => onSelect(caseItem)}>
+                        Create Quotation
+                    </SecondaryButton>
+                </div>
             </div>
         </Card>
     );
@@ -102,6 +145,9 @@ const CustomerQuotationBuilder: React.FC = () => {
     const [showEditModal, setShowEditModal] = useState(false);
     const [editingQuotation, setEditingQuotation] = useState<{ quotation: CaseQuotation; caseData: Case } | null>(null);
 
+    // Submit for Auditing
+    const [submittingForAuditCaseId, setSubmittingForAuditCaseId] = useState<string | null>(null);
+
     // Form inputs for adding line item
     const [selectedCatalogId, setSelectedCatalogId] = useState('');
     const [quantity, setQuantity] = useState(1);
@@ -117,17 +163,15 @@ const CustomerQuotationBuilder: React.FC = () => {
     // Fetch BOQs for selected case (used in build view)
     const { boqs: selectedCaseBOQs, loading: selectedCaseBOQsLoading } = useCaseBOQs(selectedCase?.id || '');
 
-    // Filter cases that need quotations
-    const activeCases = cases.filter(c =>
-        !c.quotationStatus || c.quotationStatus === 'NONE'
-    );
+    // Filter: ALL eligible cases (Leads + Projects where quotation is allowed)
+    const activeCases = cases.filter(c => c.status !== 'completed');
 
     // FETCH TARGETED REQUESTS FOR PRIORITY SORTING
-    const { requests: targetedRequests } = useTargetedApprovalRequests(UserRole.QUOTATION_TEAM);
-    const { assignedRequests } = useAssignedApprovalRequests(currentUser?.id || '');
+    const { requests: targetedRequests = [] } = useTargetedApprovalRequests(UserRole.QUOTATION_TEAM);
+    const { requests: assignedRequests = [] } = useAssignedApprovalRequests(currentUser?.id || '');
 
     // Identification of priority cases
-    const inputRequests = [...targetedRequests, ...assignedRequests];
+    const inputRequests = [...(targetedRequests || []), ...(assignedRequests || [])];
     const priorityCaseIds = new Set(
         inputRequests
             .filter(r =>
@@ -148,6 +192,82 @@ const CustomerQuotationBuilder: React.FC = () => {
         // Then Sort by Newest Created
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
+
+    // Submit quotation to procurement for auditing
+    const handleSubmitForAudit = async (quot: any, caseData: Case) => {
+        if (!db || !currentUser) return;
+        setSubmittingForAuditCaseId(caseData.id);
+        try {
+            const quotRef = doc(db, FIRESTORE_COLLECTIONS.CASES, caseData.id, FIRESTORE_COLLECTIONS.QUOTATIONS, quot.id);
+            const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, caseData.id);
+
+            // Normalize items for procurement (handles both old and new schema)
+            const items = (quot.items || []).map((i: any) => ({
+                name: i.name || i.itemName || i.description || 'Item',
+                quantity: Number(i.quantity) || 0,
+                unit: i.unit || 'pcs',
+                rate: Number(i.rate ?? i.unitPrice ?? 0) || 0,
+                total: Number(i.total ?? (i.quantity * (i.rate ?? i.unitPrice ?? 0))) || 0,
+            }));
+            const grandTotal = Number(quot.grandTotal ?? quot.finalAmount ?? quot.totalAmount ?? 0) || 0;
+            const subtotal = Number(quot.subtotal ?? quot.totalAmount ?? grandTotal) || grandTotal;
+            const discount = Number(quot.discount ?? 0) || 0;
+            const discountAmount = Number(quot.discountAmount ?? 0) || 0;
+            const taxRate = Number(quot.taxRate ?? 18) || 18;
+            const taxAmount = Number(quot.taxAmount ?? 0) || 0;
+
+            await updateDoc(quotRef, {
+                auditStatus: 'pending',
+                items,
+                grandTotal,
+                subtotal,
+                discount,
+                discountAmount,
+                taxRate,
+                taxAmount,
+            });
+
+            await updateDoc(caseRef, {
+                status: 'QUOTATION_SUBMITTED',
+                updatedAt: serverTimestamp(),
+            });
+
+            const caseSnap = await getDoc(caseRef);
+            const assignedProcurement = caseSnap.exists() ? (caseSnap.data() as any).assignedProcurement : null;
+
+            await addDoc(
+                collection(db, FIRESTORE_COLLECTIONS.CASES, caseData.id, FIRESTORE_COLLECTIONS.TASKS),
+                {
+                    caseId: caseData.id,
+                    type: TaskType.PROCUREMENT_AUDIT,
+                    assignedTo: assignedProcurement || currentUser.id,
+                    assignedBy: currentUser.id,
+                    status: TaskStatus.PENDING,
+                    startedAt: null,
+                    completedAt: null,
+                    notes: 'Audit quotation before admin approval',
+                    createdAt: serverTimestamp(),
+                }
+            );
+
+            await addDoc(
+                collection(db, FIRESTORE_COLLECTIONS.CASES, caseData.id, FIRESTORE_COLLECTIONS.ACTIVITIES),
+                {
+                    caseId: caseData.id,
+                    action: `Quotation submitted to procurement audit (₹${grandTotal.toLocaleString('en-IN')}) by ${currentUser.name || currentUser.email}`,
+                    by: currentUser.id,
+                    timestamp: serverTimestamp(),
+                }
+            );
+
+            alert('✅ Quotation submitted to procurement for auditing.');
+        } catch (err) {
+            console.error('[SubmitForAudit] Error:', err);
+            alert('Failed to submit for auditing. Please try again.');
+        } finally {
+            setSubmittingForAuditCaseId(null);
+        }
+    };
 
     // Render modals at component level (outside view conditionals)
     const renderModals = () => (
@@ -349,6 +469,8 @@ const CustomerQuotationBuilder: React.FC = () => {
                                     caseItem={caseItem}
                                     isPriority={priorityCaseIds.has(caseItem.id)}
                                     onSelect={handleSelectCase}
+                                    onSubmitForAudit={handleSubmitForAudit}
+                                    submittingForAudit={submittingForAuditCaseId === caseItem.id}
                                 />
                             ))
                         )}
@@ -385,7 +507,7 @@ const CustomerQuotationBuilder: React.FC = () => {
                                             {caseItem.isProject ? 'PROJECT' : 'LEAD'}
                                         </span>
                                     </div>
-                                    <p className="text-sm text-text-secondary">{caseItem.clientName} • {caseItem.contact.phone}</p>
+                                    <p className="text-sm text-text-secondary">{caseItem.clientName} • {caseItem.clientPhone || '—'}</p>
                                 </div>
                             </Card>
                         ))}
@@ -419,7 +541,7 @@ const CustomerQuotationBuilder: React.FC = () => {
                                             {caseItem.isProject ? 'PROJECT' : 'LEAD'}
                                         </span>
                                     </div>
-                                    <p className="text-sm text-text-secondary">{caseItem.clientName} • {caseItem.contact.phone}</p>
+                                    <p className="text-sm text-text-secondary">{caseItem.clientName} • {caseItem.clientPhone || '—'}</p>
                                 </div>
                                 <div className="flex items-center gap-4">
                                     <div className="text-right">
@@ -446,7 +568,7 @@ const CustomerQuotationBuilder: React.FC = () => {
                                         {caseItem.isProject ? 'PROJECT' : 'LEAD'}
                                     </span>
                                 </div>
-                                <p className="text-sm text-text-secondary">{caseItem.clientName} • {caseItem.contact.phone}</p>
+                                <p className="text-sm text-text-secondary">{caseItem.clientName} • {caseItem.clientPhone || '—'}</p>
                             </div>
                             <button
                                 onClick={() => setExpanded(false)}
@@ -472,7 +594,7 @@ const CustomerQuotationBuilder: React.FC = () => {
                                         <div key={quot.id} className="p-4 bg-subtle-background rounded-lg border border-border">
                                             <div className="flex items-start justify-between">
                                                 <div className="flex-1">
-                                                    <div className="flex items-center gap-2 mb-2">
+                                                    <div className="flex items-center gap-2 mb-2 flex-wrap">
                                                         <h5 className="font-bold text-text-primary">{quot.quotationNumber}</h5>
                                                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${quot.status === 'Approved' ? 'bg-green-100 text-green-700' :
                                                             quot.status === 'Pending Approval' ? 'bg-yellow-100 text-yellow-700' :
@@ -481,6 +603,16 @@ const CustomerQuotationBuilder: React.FC = () => {
                                                             }`}>
                                                             {quot.status}
                                                         </span>
+                                                        {quot.auditStatus && (
+                                                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                                                quot.auditStatus === 'approved' ? 'bg-green-100 text-green-700' :
+                                                                quot.auditStatus === 'pending' ? 'bg-amber-100 text-amber-700' :
+                                                                quot.auditStatus === 'rejected' ? 'bg-red-100 text-red-700' :
+                                                                'bg-gray-100 text-gray-700'
+                                                            }`}>
+                                                                {quot.auditStatus === 'approved' ? 'AUDITED' : quot.auditStatus === 'pending' ? 'PENDING AUDIT' : quot.auditStatus === 'rejected' ? 'REJECTED' : 'NOT AUDITED'}
+                                                            </span>
+                                                        )}
                                                     </div>
                                                     <p className="text-sm text-text-secondary mb-1">
                                                         {quot.items.length} items • Subtotal: {formatCurrencyINR(quot.totalAmount)}
@@ -492,11 +624,22 @@ const CustomerQuotationBuilder: React.FC = () => {
                                                 <div className="flex items-center gap-4">
                                                     <div className="text-right">
                                                         <p className="text-sm font-medium text-text-secondary">Tax: {formatCurrencyINR(quot.taxAmount)}</p>
-                                                        <p className="text-lg font-bold text-primary">{formatCurrencyINR(quot.finalAmount)}</p>
+                                                        <p className="text-lg font-bold text-primary">{formatCurrencyINR(quot.finalAmount || quot.grandTotal)}</p>
                                                     </div>
+                                                    {quot.auditStatus !== 'pending' && quot.auditStatus !== 'approved' && (
+                                                        <button
+                                                            onClick={async () => {
+                                                                await handleSubmitForAudit(quot, caseItem);
+                                                            }}
+                                                            disabled={submittingForAuditCaseId === caseItem.id}
+                                                            className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors font-medium text-sm flex items-center gap-1.5 disabled:opacity-50"
+                                                        >
+                                                            <PaperAirplaneIcon className="w-4 h-4" />
+                                                            {submittingForAuditCaseId === caseItem.id ? 'Submitting...' : 'Submit to Audit'}
+                                                        </button>
+                                                    )}
                                                     <button
                                                         onClick={() => {
-                                                            console.log('Opening PDF for quotation:', quot.quotationNumber);
                                                             setSelectedQuotation({ quotation: quot, caseData: caseItem });
                                                             setShowPDFModal(true);
                                                         }}
@@ -568,7 +711,7 @@ const CustomerQuotationBuilder: React.FC = () => {
                 return (
                     c.projectName.toLowerCase().includes(search) ||
                     c.clientName.toLowerCase().includes(search) ||
-                    c.contact.phone.includes(search)
+                    (c.clientPhone || '').includes(search)
                 );
             }
             return true;
@@ -680,7 +823,7 @@ const CustomerQuotationBuilder: React.FC = () => {
                                                     {boq.items.map((item, idx) => (
                                                         <div key={idx} className="flex justify-between items-start text-sm py-1 border-b border-border last:border-0">
                                                             <div className="flex-1">
-                                                                <p className="text-text-primary font-medium">{item.description || `Item ${idx + 1}`}</p>
+                                                                <p className="text-text-primary font-medium">{item.name || item.description || `Item ${idx + 1}`}</p>
                                                                 <p className="text-text-tertiary text-xs">Qty: {item.quantity} {item.unit}</p>
                                                             </div>
                                                             {item.estimatedCost && (

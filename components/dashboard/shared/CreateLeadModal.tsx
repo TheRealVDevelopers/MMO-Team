@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog } from '@headlessui/react';
-import { XMarkIcon, PlusIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, PlusIcon, BuildingOfficeIcon, UserIcon } from '@heroicons/react/24/outline';
 import { useOrganizations } from '../../../hooks/useOrganizations';
 import { useUsers } from '../../../hooks/useUsers';
 import { useAuth } from '../../../context/AuthContext';
 import { UserRole, Organization, StaffUser } from '../../../types';
 import CreateOrganizationModal from './CreateOrganizationModal';
+
+export type LeadType = 'organization' | 'individual';
 
 interface CreateLeadModalProps {
     isOpen: boolean;
@@ -20,6 +22,9 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
 }) => {
     const { currentUser } = useAuth();
     const { organizations, loading: orgsLoading } = useOrganizations();
+
+    // Lead type: Organization (requires org) or Individual (org optional)
+    const [leadType, setLeadType] = useState<LeadType>('organization');
 
     // State for organization selection
     const [selectedOrgId, setSelectedOrgId] = useState<string>('');
@@ -81,8 +86,8 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
     const validateForm = () => {
         const newErrors: Record<string, string> = {};
 
-        // HARD RULES
-        if (!selectedOrgId) {
+        // Organization required only when leadType is 'organization'
+        if (leadType === 'organization' && !selectedOrgId) {
             newErrors.organization = 'Organization selection is required';
         }
         if (!formData.title.trim()) {
@@ -90,6 +95,9 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
         }
         if (!formData.assignedSales) {
             newErrors.assignedSales = 'Sales executive assignment is required';
+        }
+        if (leadType === 'individual' && !formData.clientName.trim()) {
+            newErrors.clientName = 'Client name is required for individual leads';
         }
 
         setErrors(newErrors);
@@ -103,9 +111,14 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
             return;
         }
 
-        // Permission check
-        if (currentUser?.role !== UserRole.ADMIN &&
-            currentUser?.role !== UserRole.SALES_GENERAL_MANAGER) {
+        // Permission check: Admin and Sales GM can create any lead; Sales Team Member only Individual
+        const canCreateOrgLead = currentUser?.role === UserRole.ADMIN || currentUser?.role === UserRole.SALES_GENERAL_MANAGER;
+        const canCreateIndividualLead = canCreateOrgLead || currentUser?.role === UserRole.SALES_TEAM_MEMBER;
+        if (leadType === 'organization' && !canCreateOrgLead) {
+            setErrors({ submit: 'You do not have permission to create organization leads. Use Individual lead type.' });
+            return;
+        }
+        if (leadType === 'individual' && !canCreateIndividualLead) {
             setErrors({ submit: 'You do not have permission to create leads' });
             return;
         }
@@ -125,7 +138,8 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
             const casesRef = collection(db, FIRESTORE_COLLECTIONS.CASES);
 
             const caseData: any = {
-                organizationId: selectedOrgId,
+                leadType,
+                organizationId: leadType === 'individual' ? null : selectedOrgId,
                 title: formData.title.trim(),
                 clientName: formData.clientName.trim(),
                 clientEmail: formData.clientEmail.trim(),
@@ -281,6 +295,7 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
     };
 
     const handleClose = () => {
+        setLeadType('organization');
         setSelectedOrgId('');
         setSelectedOrg(null);
         setFormData({
@@ -318,7 +333,7 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
                                     Create New Lead
                                 </Dialog.Title>
                                 <p className="text-sm text-gray-500 mt-1">
-                                    Case-centric architecture • Organization required first
+                                    Case-centric architecture • Select lead type first
                                 </p>
                             </div>
                             <button
@@ -337,7 +352,48 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
                                 </div>
                             )}
 
-                            {/* STEP 1: ORGANIZATION SELECTION (MANDATORY) */}
+                            {/* STEP 0: LEAD TYPE (REQUIRED) */}
+                            <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-6">
+                                <h3 className="text-lg font-bold text-gray-900 mb-4">
+                                    Is this lead an Organization or an Individual?
+                                    <span className="text-red-500 ml-1">*</span>
+                                </h3>
+                                <div className="flex gap-4">
+                                    <label className={`flex-1 flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${leadType === 'organization' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                                        <input
+                                            type="radio"
+                                            name="leadType"
+                                            value="organization"
+                                            checked={leadType === 'organization'}
+                                            onChange={() => setLeadType('organization')}
+                                            className="sr-only"
+                                        />
+                                        <BuildingOfficeIcon className="w-8 h-8 text-blue-600" />
+                                        <div>
+                                            <p className="font-semibold text-gray-900">Organization</p>
+                                            <p className="text-sm text-gray-500">Requires organization selection</p>
+                                        </div>
+                                    </label>
+                                    <label className={`flex-1 flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${leadType === 'individual' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                                        <input
+                                            type="radio"
+                                            name="leadType"
+                                            value="individual"
+                                            checked={leadType === 'individual'}
+                                            onChange={() => setLeadType('individual')}
+                                            className="sr-only"
+                                        />
+                                        <UserIcon className="w-8 h-8 text-blue-600" />
+                                        <div>
+                                            <p className="font-semibold text-gray-900">Individual</p>
+                                            <p className="text-sm text-gray-500">No organization required</p>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            {/* STEP 1: ORGANIZATION SELECTION (MANDATORY when Organization) */}
+                            {leadType === 'organization' && (
                             <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6">
                                 <div className="flex items-center gap-3 mb-4">
                                     <BuildingOfficeIcon className="w-6 h-6 text-blue-600" />
@@ -380,7 +436,7 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
                                     </button>
                                 </div>
 
-                                {selectedOrg && (
+                                {selectedOrg && leadType === 'organization' && (
                                     <div className="mt-4 p-4 bg-white rounded-lg border border-blue-200">
                                         <p className="text-sm font-medium text-gray-700 mb-2">Selected Organization:</p>
                                         <div className="text-sm text-gray-600 space-y-1">
@@ -391,9 +447,10 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
                                     </div>
                                 )}
                             </div>
+                            )}
 
-                            {/* STEP 2: CLIENT INFORMATION (Auto-filled from Organization, Editable) */}
-                            {selectedOrgId && (
+                            {/* STEP 2: CLIENT INFORMATION (Auto-filled from Org when Organization, manual when Individual) */}
+                            {(leadType === 'individual' || selectedOrgId) && (
                                 <div className="border border-gray-200 rounded-xl p-6">
                                     <h3 className="text-lg font-bold text-gray-900 mb-4">
                                         Step 2: Client Information
@@ -405,14 +462,17 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Client Name
+                                                Client Name {leadType === 'individual' && <span className="text-red-500">*</span>}
                                             </label>
                                             <input
                                                 type="text"
                                                 value={formData.clientName}
                                                 onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
-                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.clientName ? 'border-red-500' : 'border-gray-300'}`}
                                             />
+                                            {errors.clientName && (
+                                                <p className="mt-1 text-sm text-red-500">{errors.clientName}</p>
+                                            )}
                                         </div>
 
                                         <div>
@@ -467,7 +527,7 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
                             )}
 
                             {/* STEP 3: LEAD-SPECIFIC INFORMATION (MANUAL) */}
-                            {selectedOrgId && (
+                            {(leadType === 'individual' || selectedOrgId) && (
                                 <div className="border border-gray-200 rounded-xl p-6">
                                     <h3 className="text-lg font-bold text-gray-900 mb-4">
                                         Step 3: Lead Details
@@ -578,7 +638,7 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
                                 <button
                                     type="submit"
                                     className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    disabled={isSubmitting || !selectedOrgId}
+                                    disabled={isSubmitting || (leadType === 'organization' && !selectedOrgId) || !formData.title.trim() || !formData.assignedSales}
                                 >
                                     {isSubmitting ? 'Creating Lead...' : 'Create Lead'}
                                 </button>

@@ -124,20 +124,16 @@ const setupSubListeners = (
         update();
     });
 
-    // 5. Invoices
-    // Assuming we can derive invoices path.
-    // organizations/{orgId}/invoices where caseId == ...
-    // This requires a separate query outside caseRef scope.
-    // For now, let's assume invoices are fetched or we skip real-time for them to simplify
-    // OR we put 'invoices' as a subcollection on Case for ease? No, Invoice is top-level.
-    // We'll skip real-time invoices for this version or fetch them once.
-    // Let's just fetch them once to keep it simple, or set up a listener.
-    const invoicesRef = collection(db, `organizations/${caseData.organizationId}/invoices`);
-    const invoicesQ = query(invoicesRef, where('caseId', '==', caseData.id));
-    const invoicesUnsub = onSnapshot(invoicesQ, (snap) => {
-        invoices = snap.docs.map(d => ({ id: d.id, ...d.data() } as Invoice));
-        update();
-    });
+    // 5. Invoices (skip if individual lead with null organizationId)
+    const invoicesRef = caseData.organizationId
+        ? collection(db, `organizations/${caseData.organizationId}/invoices`)
+        : null;
+    const invoicesUnsub = invoicesRef
+        ? onSnapshot(query(invoicesRef, where('caseId', '==', caseData.id)), (snap) => {
+            invoices = snap.docs.map(d => ({ id: d.id, ...d.data() } as Invoice));
+            update();
+          })
+        : () => {};
 
     // Initial update
     update();

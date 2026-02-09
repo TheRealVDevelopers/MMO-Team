@@ -7,21 +7,16 @@ import {
     BoltIcon,
     CalendarDaysIcon,
     BellIcon,
-    PlusIcon,
     CheckCircleIcon,
     ArrowPathIcon,
     ClockIcon,
-    CalendarIcon,
-    SparklesIcon
+    CalendarIcon
 } from '@heroicons/react/24/outline';
 import PersonalCalendar from './PersonalCalendar';
 import TimeTimeline from './TimeTimeline';
 import TimeTrackingSummary from '../TimeTrackingSummary';
-import RequestApprovalModal from './RequestApprovalModal';
-import AddTaskModal from './AddTaskModal';
-import { ContentCard, PrimaryButton, SecondaryButton, cn, staggerContainer } from '../shared/DashboardUI';
+import { ContentCard, cn, staggerContainer } from '../shared/DashboardUI';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Dialog } from '@headlessui/react';
 import { useTimeEntries, addActivity } from '../../../hooks/useTimeTracking';
 import { useAssignedTasksWithCases, type TaskWithCase } from '../../../hooks/useCaseTasks';
 import { db } from '../../../firebase';
@@ -140,99 +135,6 @@ const ReminderItem: React.FC<{ reminder: EnrichedReminder, onToggle: (id: string
     );
 };
 
-// Completion modal for Execution Stream (same options as Work Queue: km, BOQ, 2D, etc.)
-const ExecutionTaskCompletionModal: React.FC<{
-    isOpen: boolean;
-    onClose: () => void;
-    task: TaskWithCase;
-    currentUser: any;
-}> = ({ isOpen, onClose, task, currentUser }) => {
-    const [kmTravelled, setKmTravelled] = useState('');
-    const [boqUploaded, setBoqUploaded] = useState(false);
-    const [twoDUploaded, setTwoDUploaded] = useState(false);
-    const [pdfUploaded, setPdfUploaded] = useState(false);
-    const [submitting, setSubmitting] = useState(false);
-
-    const handleSubmit = async () => {
-        if (!db || !currentUser) return;
-        const isSite = currentUser.role === UserRole.SITE_ENGINEER && task.type === TaskType.SITE_INSPECTION;
-        const isDrawing = currentUser.role === UserRole.DRAWING_TEAM && task.type === TaskType.DRAWING_TASK;
-        if (isSite && (!kmTravelled || parseFloat(kmTravelled) <= 0)) {
-            alert('Distance travelled (km) is required for site inspection.');
-            return;
-        }
-        if (isDrawing && !boqUploaded) {
-            alert('BOQ upload is required for drawing task.');
-            return;
-        }
-        setSubmitting(true);
-        try {
-            const taskRef = doc(db, FIRESTORE_COLLECTIONS.CASES, task.caseId, FIRESTORE_COLLECTIONS.TASKS, task.id);
-            await updateDoc(taskRef, {
-                status: TaskStatus.COMPLETED,
-                completedAt: serverTimestamp(),
-                ...(isSite && { kmTravelled: parseFloat(kmTravelled) }),
-            });
-            const activitiesRef = collection(db, FIRESTORE_COLLECTIONS.CASES, task.caseId, FIRESTORE_COLLECTIONS.ACTIVITIES);
-            await addDoc(activitiesRef, { caseId: task.caseId, action: `${task.type} completed`, by: currentUser.id, timestamp: serverTimestamp() });
-            onClose();
-        } catch (e) {
-            console.error('Complete task failed', e);
-            alert('Failed to complete task.');
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    const isDrawingTask = currentUser?.role === UserRole.DRAWING_TEAM && task.type === TaskType.DRAWING_TASK;
-
-    return (
-        <Dialog open={isOpen} onClose={onClose} className="relative z-50">
-            <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
-            <div className="fixed inset-0 flex items-center justify-center p-4">
-                <Dialog.Panel className="bg-white dark:bg-surface rounded-xl shadow-2xl max-w-md w-full p-6">
-                    <Dialog.Title className="text-lg font-bold text-text-primary mb-4">
-                        {isDrawingTask ? 'Submit Drawing Task' : 'Complete Task'}
-                    </Dialog.Title>
-                    <p className="text-sm text-text-tertiary mb-2"><span className="font-medium">Project:</span> {task.projectName || task.caseId}</p>
-                    <p className="text-sm text-text-tertiary mb-4"><span className="font-medium">Task:</span> {task.type?.replace('_', ' ')}</p>
-
-                    {currentUser?.role === UserRole.SITE_ENGINEER && task.type === TaskType.SITE_INSPECTION && (
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-text-primary mb-2">Distance travelled (km) *</label>
-                            <input type="number" min={0} step={0.1} value={kmTravelled} onChange={e => setKmTravelled(e.target.value)}
-                                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary" placeholder="Enter km" />
-                        </div>
-                    )}
-                    {isDrawingTask && (
-                        <div className="mb-4 space-y-2">
-                            <label className="flex items-center gap-2">
-                                <input type="checkbox" checked={boqUploaded} onChange={e => setBoqUploaded(e.target.checked)} className="rounded text-primary" />
-                                <span className="text-sm">BOQ uploaded *</span>
-                            </label>
-                            <label className="flex items-center gap-2">
-                                <input type="checkbox" checked={twoDUploaded} onChange={e => setTwoDUploaded(e.target.checked)} className="rounded text-primary" />
-                                <span className="text-sm">2D drawing uploaded</span>
-                            </label>
-                            <label className="flex items-center gap-2">
-                                <input type="checkbox" checked={pdfUploaded} onChange={e => setPdfUploaded(e.target.checked)} className="rounded text-primary" />
-                                <span className="text-sm">PDF uploaded</span>
-                            </label>
-                        </div>
-                    )}
-
-                    <div className="flex gap-3 mt-4">
-                        <button type="button" onClick={onClose} disabled={submitting} className="flex-1 py-2 border border-border rounded-lg hover:bg-surface">Cancel</button>
-                        <button type="button" onClick={handleSubmit} disabled={submitting} className="flex-1 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50">
-                            {submitting ? 'Submitting...' : (isDrawingTask ? 'Submit' : 'Complete')}
-                        </button>
-                    </div>
-                </Dialog.Panel>
-            </div>
-        </Dialog>
-    );
-};
-
 // Augmented Task Interface to include 'source' and execution task payload
 interface UnifiedTask extends Task {
     source: 'myDay' | 'execution' | 'request';
@@ -252,10 +154,6 @@ const MyDayPage: React.FC = () => {
 
     const [reminders, setReminders] = useState<EnrichedReminder[]>([]);
     const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
-    const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
-    const [showRequestApprovalModal, setShowRequestApprovalModal] = useState(false);
-    const [completionTask, setCompletionTask] = useState<TaskWithCase | null>(null);
-    const [showCompletionModal, setShowCompletionModal] = useState(false);
 
     const todayStr = new Date().toLocaleDateString('en-CA');
     const { entries: timeEntries, loading: timeLoading } = useTimeEntries(currentUser?.id || '', todayStr, todayStr);
@@ -392,8 +290,7 @@ const MyDayPage: React.FC = () => {
                     await updateDoc(taskRef, { status: TaskStatus.STARTED, startedAt: serverTimestamp() });
                     if (todayTimeEntry?.id) await addActivity(currentUser.id, currentUser.name, `Task: ${task.title}`);
                 } else if (newStatus === TaskStatus.COMPLETED) {
-                    setCompletionTask(task.raw ?? null);
-                    setShowCompletionModal(true);
+                    // My Day is read-only; complete from Work Queue only
                 }
                 return;
             }
@@ -496,77 +393,6 @@ const MyDayPage: React.FC = () => {
     }, [selectedDate]);
 
 
-    // Start task: update Firestore (same as Work Queue) and optionally log time activity
-    const handleStartTask = async (task: Task) => {
-        const unified = task as UnifiedTask;
-        const caseId = unified.caseId ?? (unified as any).contextId;
-        const taskId = unified.originalId || unified.id?.replace(/^exec-/, '');
-        if (!db || !currentUser) return;
-
-        try {
-            if (caseId && taskId && (unified.source === 'execution' || unified.raw)) {
-                const taskRef = doc(db, FIRESTORE_COLLECTIONS.CASES, caseId, FIRESTORE_COLLECTIONS.TASKS, taskId);
-                await updateDoc(taskRef, { status: TaskStatus.STARTED, startedAt: serverTimestamp() });
-                if (todayTimeEntry?.id) {
-                    await addActivity(currentUser.id, currentUser.name, `Task: ${unified.title}`);
-                }
-                return;
-            }
-            const title = (unified.title || '').toLowerCase();
-            if (title.includes('site') && (title.includes('visit') || title.includes('inspection')) && caseId) {
-                const siteVisitsRef = collection(db, FIRESTORE_COLLECTIONS.CASES, caseId, 'siteVisits');
-                await addDoc(siteVisitsRef, {
-                    engineerId: currentUser.id,
-                    engineerName: currentUser.name,
-                    startedAt: serverTimestamp(),
-                    status: 'IN_PROGRESS',
-                    taskId: unified.originalId || unified.id
-                });
-            }
-        } catch (error) {
-            console.error('Error starting task:', error);
-            alert('Failed to start task');
-        }
-    };
-
-    // Complete task: open completion modal for execution tasks (same flow as Work Queue: km, BOQ, etc.)
-    const handleCompleteTask = async (task: Task) => {
-        const unified = task as UnifiedTask;
-        if (unified.raw) {
-            setCompletionTask(unified.raw);
-            setShowCompletionModal(true);
-            return;
-        }
-        const title = (task.title || '').toLowerCase();
-        if (title.includes('site') && (title.includes('visit') || title.includes('inspection'))) {
-            const projectId = (task as any).contextId || (task as any).caseId;
-            if (projectId) {
-                window.location.href = `/workflow?action=complete-inspection&projectId=${projectId}&taskId=${task.id}`;
-                return;
-            }
-        }
-        if (title.includes('drawing') || title.includes('boq') || title.includes('quotation') && (task as any).contextId) {
-            try {
-                const { getDoc } = await import('firebase/firestore');
-                const projectRef = doc(db, FIRESTORE_COLLECTIONS.CASES, (task as any).contextId);
-                const projectSnap = await getDoc(projectRef);
-                if (projectSnap.exists()) {
-                    const projectData = projectSnap.data();
-                    if (title.includes('drawing') && !projectData.drawingSubmittedAt && !projectData.files?.some((f: any) => f.category === 'drawing')) {
-                        alert('⚠️ Please upload the Drawing first using the Project Board.');
-                        return;
-                    }
-                    if (title.includes('boq') && (!projectData.items?.length) && !projectData.files?.some((f: any) => f.category === 'boq')) {
-                        alert('⚠️ Please submit the BOQ first using the Project Board.');
-                        return;
-                    }
-                }
-            } catch (e) {
-                console.error('Validation check failed', e);
-            }
-        }
-    };
-
     return (
         <motion.div
             variants={staggerContainer}
@@ -574,20 +400,7 @@ const MyDayPage: React.FC = () => {
             animate="animate"
             className="space-y-8"
         >
-            <div className="flex items-center gap-3">
-                <PrimaryButton
-                    onClick={() => setIsAddTaskModalOpen(true)}
-                    icon={<PlusIcon className="w-4 h-4" />}
-                >
-                    Add Task
-                </PrimaryButton>
-                <SecondaryButton
-                    onClick={() => setShowRequestApprovalModal(true)}
-                    icon={<SparklesIcon className="w-4 h-4" />}
-                >
-                    Request Validation
-                </SecondaryButton>
-            </div>
+            {/* My Day is read-only: no Add Task or Request Validation */}
 
             {/* Sales Member Real-Time Dashboard */}
             {currentUser.role === UserRole.SALES_TEAM_MEMBER && (
@@ -659,8 +472,9 @@ const MyDayPage: React.FC = () => {
                                             key={task.id}
                                             task={task}
                                             onUpdateStatus={handleUpdateStatus}
-                                            onStartTask={handleStartTask}
-                                            onCompleteTask={handleCompleteTask}
+                                            onStartTask={undefined}
+                                            onCompleteTask={undefined}
+                                            readOnly
                                         />
                                     ))
                                 ) : (
@@ -700,28 +514,8 @@ const MyDayPage: React.FC = () => {
                 </div>
             </div>
 
-            <RequestApprovalModal
-                isOpen={showRequestApprovalModal}
-                onClose={() => setShowRequestApprovalModal(false)}
-            />
 
-            <AddTaskModal
-                isOpen={isAddTaskModalOpen}
-                onClose={() => setIsAddTaskModalOpen(false)}
-                onAddTask={handleAddTask}
-                existingTaskCount={daysTasks.length}
-                currentUser={currentUser}
-            />
-
-            {/* Completion modal for Execution Stream tasks (same as Work Queue: km, BOQ, 2D, etc.) */}
-            {completionTask && (
-                <ExecutionTaskCompletionModal
-                    isOpen={showCompletionModal}
-                    onClose={() => { setShowCompletionModal(false); setCompletionTask(null); }}
-                    task={completionTask}
-                    currentUser={currentUser}
-                />
-            )}
+            {/* My Day: No Add Task or Completion modal - actions only in Work Queue */}
         </motion.div>
     );
 };

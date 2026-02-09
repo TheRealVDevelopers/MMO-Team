@@ -513,13 +513,14 @@ const QuotationBuilderModal: React.FC<{
                 updatedAt: serverTimestamp()
             });
 
-            // 3) Save quotation as DRAFT document (without PR)
+            // 3) Save quotation as DRAFT document (without PR) - not visible to client until approved
             const quotationDoc = {
                 type: 'QUOTATION_DRAFT',
                 caseId: task.caseId,
                 taskId: task.id,
                 createdBy: currentUser.id,
                 createdAt: serverTimestamp(),
+                visibleToClient: false,
                 items: quotationItems,
                 subtotal,
                 discount,

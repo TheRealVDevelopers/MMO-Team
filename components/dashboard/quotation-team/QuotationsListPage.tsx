@@ -137,7 +137,7 @@ const QuotationsListPage: React.FC = () => {
                                         </span>
                                     </div>
                                     <p className="text-sm text-text-secondary">
-                                        {caseItem.clientName} • {caseItem.contact.phone}
+                                        {caseItem.clientName} • {caseItem.clientPhone || '—'}
                                     </p>
                                 </div>
                             </div>

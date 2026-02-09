@@ -260,7 +260,7 @@ const DirectAssignTaskModal: React.FC<DirectAssignTaskModalProps> = ({ isOpen, o
                                             : "bg-surface border-border hover:bg-subtle-background hover:border-primary/20"
                                     )}
                                 >
-                                    <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full border-2 border-white/20 shadow-sm" />
+                                    <img src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || '')}&background=random`} alt={user.name} className="w-10 h-10 rounded-full border-2 border-white/20 shadow-sm" />
                                     <div className="min-w-0">
                                         <p className="text-xs font-black uppercase tracking-tight truncate">{user.name}</p>
                                         <p className={cn(

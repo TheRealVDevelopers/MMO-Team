@@ -28,7 +28,7 @@ const UnifiedRequestInbox: React.FC<UnifiedRequestInboxProps> = ({ onNavigateToP
     const { tasks: executionTasks, loading: execLoading, updateTaskStatus: updateExecutionStatus } = useExecutionTasks();
 
     // 3. Approval Requests
-    const { assignedRequests, loading: requestsLoading } = useAssignedApprovalRequests(currentUser?.id || '');
+    const { requests: assignedRequests = [], loading: requestsLoading } = useAssignedApprovalRequests(currentUser?.id || '');
 
     const isAdmin = currentUser?.role === UserRole.SUPER_ADMIN || currentUser?.role === UserRole.SALES_GENERAL_MANAGER;
 

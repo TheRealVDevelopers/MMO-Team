@@ -211,10 +211,12 @@ export interface ApprovalRequest {
 export interface Case {
   // Identifiers
   id: string;
-  organizationId: string;
+  organizationId: string | null;  // null for individual leads
+  leadType?: 'organization' | 'individual';  // Lead type for data integrity
 
   // Core Info
   title: string;
+  projectName?: string;  // Alias for title (backward compat)
   clientName: string;
   clientId?: string; // Link to clients collection
   clientEmail?: string;

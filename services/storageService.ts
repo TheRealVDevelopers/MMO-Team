@@ -99,6 +99,10 @@ export const uploadFile = async (
   const fullPath = `${storagePath}/${fileName}`;
   const storageRef = ref(storage, fullPath);
 
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/e4336b3f-e354-4a9b-9c27-6ecee71671c2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'storageService.ts:uploadFile',message:'uploadFile before upload',data:{fullPath,storagePath},timestamp:Date.now(),hypothesisId:'H6'})}).catch(()=>{});
+  // #endregion
+
   try {
     // Upload the file
     const snapshot = await uploadBytes(storageRef, file, {
@@ -120,6 +124,9 @@ export const uploadFile = async (
       contentType: file.type,
     };
   } catch (error: any) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/e4336b3f-e354-4a9b-9c27-6ecee71671c2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'storageService.ts:uploadFile:catch',message:'upload failed',data:{fullPath,errorCode:error?.code,errorMessage:error?.message},timestamp:Date.now(),hypothesisId:'H4'})}).catch(()=>{});
+    // #endregion
     console.error('[StorageService] Upload failed:', error);
     throw new Error(`Failed to upload file: ${error.message}`);
   }

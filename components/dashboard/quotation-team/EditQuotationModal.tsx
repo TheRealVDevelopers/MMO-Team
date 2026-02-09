@@ -146,7 +146,7 @@ const EditQuotationModal: React.FC<EditQuotationModalProps> = ({
                 {/* Case Info */}
                 <div className="bg-subtle-background p-4 rounded-lg">
                     <h3 className="font-bold text-text-primary mb-1">{caseData.projectName}</h3>
-                    <p className="text-sm text-text-secondary">{caseData.clientName} • {caseData.contact.phone}</p>
+                    <p className="text-sm text-text-secondary">{caseData.clientName} • {caseData.contact?.phone || caseData.clientPhone || '—'}</p>
                 </div>
 
                 {/* Add Item Form */}

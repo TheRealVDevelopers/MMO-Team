@@ -9,6 +9,7 @@ import CommunicationDashboard from '../communication/CommunicationDashboard';
 import ComplaintManagementPage from './super-admin/ComplaintManagementPage';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
 import ApprovalsPage from './super-admin/ApprovalsPage';
+import RequestInboxPage from './shared/RequestInboxPage';
 import RegistrationsPage from './super-admin/RegistrationsPage';
 import FinancePage from './super-admin/FinancePage';
 import OrganizationsPage from './admin/OrganizationsPage';
@@ -44,6 +45,8 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ currentPage, 
                 />
             );
         case 'task-requests':
+        case 'request-inbox':
+            return <RequestInboxPage />;
         case 'approvals':
             return <ApprovalsPage />;
         case 'team':
