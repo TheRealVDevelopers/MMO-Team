@@ -10,6 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useCases } from '../../hooks/useCases';
 import ExecutionProjectsPage from './execution-team/ExecutionProjectsPage';
 import ExecutionWorkspace from './execution-team/ExecutionWorkspace';
+import RequestValidationPage from './shared/RequestValidationPage';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
 interface Props {
@@ -17,11 +18,15 @@ interface Props {
   setCurrentPage: (page: string) => void;
 }
 
-const ExecutionTeamDashboard: React.FC<Props> = () => {
+const ExecutionTeamDashboard: React.FC<Props> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
   const { cases, loading } = useCases();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+
+  if (currentPage === 'request-validation') {
+    return <RequestValidationPage />;
+  }
 
   const paramId = searchParams.get('project');
   const [activeProjectId, setActiveProjectId] = useState<string | null>(() =>

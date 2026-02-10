@@ -6,12 +6,13 @@ import { useExpensesForOrg } from '../../hooks/useExpensesForOrg';
 import { useProjects } from '../../hooks/useProjects';
 import { useLeads } from '../../hooks/useLeads';
 import { useAuth } from '../../context/AuthContext';
+import { DEFAULT_ORGANIZATION_ID } from '../../constants';
 import AccountsOverviewPage from './accounts-team/AccountsOverviewPage';
 import SalesInvoicesPage from './accounts-team/SalesInvoicesPage';
 import ExpensesPage from './accounts-team/ExpensesPage';
 import PurchaseInvoicesPage from './accounts-team/PurchaseInvoicesPage';
-import DeliveredPendingInvoicePage from './accounts-team/DeliveredPendingInvoicePage';
 import ApprovalInbox from './accounts-team/ApprovalInbox';
+import PaymentVerificationInbox from './accounts-team/PaymentVerificationInbox';
 import ReportsPage from './accounts-team/ReportsPage';
 import CommunicationDashboard from '../communication/CommunicationDashboard';
 import EscalateIssuePage from '../escalation/EscalateIssuePage';
@@ -23,6 +24,7 @@ import AccountsTasksPage from './accounts-team/AccountsTasksPage';
 import { Invoice, Project } from '../../types';
 
 import GeneralLedgerPage from './accounts-team/GeneralLedgerPage';
+import RequestValidationPage from './shared/RequestValidationPage';
 
 // Placeholder for new pages
 const ComingSoonPage: React.FC<{ title: string }> = ({ title }) => (
@@ -41,8 +43,9 @@ interface AccountsTeamDashboardProps {
 
 const AccountsTeamDashboard: React.FC<AccountsTeamDashboardProps> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
-  const orgId = currentUser?.organizationId ?? undefined;
-  const { invoices: salesInvoices, loading: salesLoading, createSalesInvoice } = useSalesInvoices(orgId);
+  // Use DEFAULT_ORGANIZATION_ID as fallback when user's organizationId is missing
+  const orgId = currentUser?.organizationId || DEFAULT_ORGANIZATION_ID;
+  const { invoices: salesInvoices, loading: salesLoading, createSalesInvoice, updateSalesInvoiceStatus } = useSalesInvoices(orgId);
   const { invoices: purchaseInvoices, loading: purchaseLoading, createPurchaseInvoice } = usePurchaseInvoices(orgId);
   const { expenses: expensesFromLedger, loading: expensesLoading } = useExpensesForOrg(orgId);
   const { projects, loading: projectsLoading } = useProjects();
@@ -84,8 +87,11 @@ const AccountsTeamDashboard: React.FC<AccountsTeamDashboardProps> = ({ currentPa
     case 'my-day':
       return <MyDayPage />;
 
+    case 'request-validation':
+      return <RequestValidationPage />;
+
     case 'payment-verification':
-      return <ApprovalInbox />;
+      return <PaymentVerificationInbox />;
 
     case 'tasks':
       return <AccountsTasksPage />;
@@ -101,6 +107,7 @@ const AccountsTeamDashboard: React.FC<AccountsTeamDashboardProps> = ({ currentPa
         salesInvoices={salesInvoices}
         projects={projects}
         onCreateSalesInvoice={handleCreateSalesInvoice}
+        onUpdateSalesInvoiceStatus={updateSalesInvoiceStatus}
       />;
 
     // Purchase Invoices (GR IN) — org purchaseInvoices
@@ -108,13 +115,6 @@ const AccountsTeamDashboard: React.FC<AccountsTeamDashboardProps> = ({ currentPa
       return <PurchaseInvoicesPage
         setCurrentPage={setCurrentPage}
         purchaseInvoices={purchaseInvoices}
-        onCreatePurchaseInvoice={handleCreatePurchaseInvoice}
-      />;
-
-    // Delivered procurement plans → create purchase invoice (then mark INVOICED)
-    case 'delivered-pending-invoice':
-      return <DeliveredPendingInvoicePage
-        setCurrentPage={setCurrentPage}
         onCreatePurchaseInvoice={handleCreatePurchaseInvoice}
       />;
 
@@ -143,8 +143,7 @@ const AccountsTeamDashboard: React.FC<AccountsTeamDashboardProps> = ({ currentPa
     case 'approvals':
       return <ApprovalInbox />;
 
-    case 'budget-approvals':
-      return <ApprovalInbox />; // Unified View (filtered by role internally)
+    // budget-approvals removed - use unified ApprovalInbox instead
 
     case 'general-ledger':
       return <GeneralLedgerPage />;

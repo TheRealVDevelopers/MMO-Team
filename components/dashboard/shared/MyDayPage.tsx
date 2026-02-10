@@ -255,28 +255,44 @@ const MyDayPage: React.FC = () => {
         const all = [...unifiedMyDayTasks, ...unifiedExecutionTasks, ...unifiedRequests];
 
         // Filter by date or show always if execution/request
-        return all.filter(task => {
+        const filtered = all.filter(task => {
             if (task.source === 'execution' || task.source === 'request') {
-                // Show if Pending/InProgress. If completed, maybe filter out unless done today?
-                // For now, always show if assigned.
-                if (task.status === TaskStatus.COMPLETED) {
-                    // Only show completed if selected date matches today (assumes we want to see what we did today)
-                    // Simplified: Only hide manually. Or show always.
-                    // Let's filter out older completed items if we had a completion date mechanism.
-                    // For now, showing all helps track.
-                }
                 return true;
             }
             return task.date === selectedDate;
-        }).sort((a, b) => {
-            if (a.status !== b.status) {
-                if (a.status === TaskStatus.STARTED || a.status === TaskStatus.IN_PROGRESS) return -1;
-                if (b.status === TaskStatus.STARTED || b.status === TaskStatus.IN_PROGRESS) return 1;
-            }
-            return (a.priorityOrder || 99) - (b.priorityOrder || 99);
         });
 
+        return filtered;
     }, [assignedTasks, assignedRequests, currentUser, selectedDate]);
+
+    // Filter by status (All / Pending / Ongoing / Completed) and sort by deadline (nearest first)
+    const [executionStreamFilter, setExecutionStreamFilter] = useState<'all' | 'pending' | 'ongoing' | 'completed'>('all');
+
+    const filteredAndSortedTasks = useMemo(() => {
+        const isPending = (t: UnifiedTask) =>
+            t.status === TaskStatus.PENDING || t.status === TaskStatus.ASSIGNED;
+        const isOngoing = (t: UnifiedTask) =>
+            t.status === TaskStatus.STARTED || t.status === TaskStatus.IN_PROGRESS;
+        const isCompleted = (t: UnifiedTask) => t.status === TaskStatus.COMPLETED;
+
+        let list = daysTasks;
+        if (executionStreamFilter === 'pending') list = daysTasks.filter(isPending);
+        else if (executionStreamFilter === 'ongoing') list = daysTasks.filter(isOngoing);
+        else if (executionStreamFilter === 'completed') list = daysTasks.filter(isCompleted);
+
+        // Sort: deadline nearest first (tasks with deadline at top, by ascending deadline; no-deadline at end)
+        return [...list].sort((a, b) => {
+            const aDeadline = a.deadline ? new Date(a.deadline).getTime() : Infinity;
+            const bDeadline = b.deadline ? new Date(b.deadline).getTime() : Infinity;
+            if (aDeadline !== bDeadline) {
+                return aDeadline - bDeadline; // Sooner deadline first
+            }
+            // Same deadline or both missing: then by status (ongoing > pending > completed) then priority
+            const statusOrder = (s: string) =>
+                s === TaskStatus.STARTED || s === TaskStatus.IN_PROGRESS ? 0 : s === TaskStatus.PENDING ? 1 : 2;
+            return statusOrder(a.status) - statusOrder(b.status) || (a.priorityOrder || 99) - (b.priorityOrder || 99);
+        });
+    }, [daysTasks, executionStreamFilter]);
 
 
     const handleUpdateStatus = async (taskId: string, newStatus: TaskStatus) => {
@@ -457,17 +473,39 @@ const MyDayPage: React.FC = () => {
                     <TimeTrackingSummary userId={currentUser.id} />
 
                     <ContentCard>
-                        <div className="flex flex-col md:flex-row justify-between md:items-center gap-6 mb-8 pb-8 border-b border-border/40">
+                        <div className="flex flex-col md:flex-row justify-between md:items-center gap-6 mb-6 pb-6 border-b border-border/40">
                             <div>
                                 <h3 className="text-2xl font-serif font-bold text-text-primary tracking-tight">Execution Stream</h3>
                                 <p className="text-sm text-text-tertiary font-medium mt-1">{formattedDateHeader}</p>
+                            </div>
+                            {/* Filter: All / Pending / Ongoing / Completed */}
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-text-tertiary mr-1">Filter:</span>
+                                {(['all', 'pending', 'ongoing', 'completed'] as const).map((key) => (
+                                    <button
+                                        key={key}
+                                        type="button"
+                                        onClick={() => setExecutionStreamFilter(key)}
+                                        className={cn(
+                                            "px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-tighter transition-all border",
+                                            executionStreamFilter === key
+                                                ? key === 'all' ? "bg-text-primary text-white border-text-primary" :
+                                                    key === 'pending' ? "bg-amber-500 text-white border-amber-500" :
+                                                        key === 'ongoing' ? "bg-primary text-white border-primary" :
+                                                            "bg-green-600 text-white border-green-600"
+                                                : "bg-surface border-border text-text-secondary hover:bg-subtle-background hover:border-primary/30"
+                                        )}
+                                    >
+                                        {key === 'all' ? 'All' : key === 'pending' ? 'Pending' : key === 'ongoing' ? 'Ongoing' : 'Completed'}
+                                    </button>
+                                ))}
                             </div>
                         </div>
 
                         <div className="space-y-4">
                             <AnimatePresence mode="popLayout">
-                                {daysTasks.length > 0 ? (
-                                    daysTasks.map(task => (
+                                {filteredAndSortedTasks.length > 0 ? (
+                                    filteredAndSortedTasks.map(task => (
                                         <TaskCard
                                             key={task.id}
                                             task={task}
@@ -486,8 +524,12 @@ const MyDayPage: React.FC = () => {
                                         <div className="w-16 h-16 bg-surface rounded-2xl flex items-center justify-center mx-auto mb-4 border border-border shadow-sm">
                                             <CheckCircleIcon className="w-8 h-8 text-text-tertiary opacity-20" />
                                         </div>
-                                        <p className="text-text-secondary font-medium italic">No objectives recorded for this period.</p>
-                                        <p className="text-[10px] text-text-tertiary uppercase tracking-widest mt-2">Initialize your stream above.</p>
+                                        <p className="text-text-secondary font-medium italic">
+                                            {daysTasks.length === 0 ? 'No objectives recorded for this period.' : `No ${executionStreamFilter === 'all' ? '' : executionStreamFilter} tasks.`}
+                                        </p>
+                                        <p className="text-[10px] text-text-tertiary uppercase tracking-widest mt-2">
+                                            {daysTasks.length === 0 ? 'Initialize your stream above.' : 'Try another filter.'}
+                                        </p>
                                     </motion.div>
                                 )}
                             </AnimatePresence>

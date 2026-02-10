@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
-import { Project, Invoice, InvoiceItem, PaymentStatus } from '../../../types';
-import { BANK_DETAILS, COMPANY_DETAILS, numberToWordsINR } from '../../../constants';
+import { Project, Invoice, InvoiceItem, PaymentStatus, Case } from '../../../types';
+import { BANK_DETAILS, COMPANY_DETAILS, numberToWordsINR, formatCurrencyINR } from '../../../constants';
 import { ArrowLeftIcon, XMarkIcon, PlusIcon } from '../../icons/IconComponents';
 import InvoicePreview from './InvoicePreview';
+import type { ReceivedPayment } from './SalesInvoicesPage';
 
 interface CreateInvoicePageProps {
     projects: Project[];
@@ -11,18 +11,72 @@ interface CreateInvoicePageProps {
     onUpdateInvoice?: (invoice: Invoice) => Promise<void>;
     onBack: () => void;
     initialInvoice?: Invoice | null;
+    // PHASE 3: Dual mode support
+    selectedPayment?: ReceivedPayment | null;
+    invoiceMode?: 'auto' | 'manual';
 }
 
-const CreateInvoicePage: React.FC<CreateInvoicePageProps> = ({ projects, onAddInvoice, onUpdateInvoice, onBack, initialInvoice }) => {
+const CreateInvoicePage: React.FC<CreateInvoicePageProps> = ({ 
+    projects, 
+    onAddInvoice, 
+    onUpdateInvoice, 
+    onBack, 
+    initialInvoice,
+    selectedPayment,
+    invoiceMode = 'manual'
+}) => {
     const isEditMode = !!initialInvoice;
+    const isAutoMode = invoiceMode === 'auto' && !!selectedPayment;
 
     // Initial State Logic
-    const [invoice, setInvoice] = useState<Omit<Invoice, 'id' | 'invoiceNumber'> & { id?: string, invoiceNumber?: string }>(() => {
+    const [invoice, setInvoice] = useState<Omit<Invoice, 'id' | 'invoiceNumber'> & { id?: string, invoiceNumber?: string, paymentId?: string }>(() => {
         if (initialInvoice) {
             return {
                 ...initialInvoice,
                 issueDate: new Date(initialInvoice.issueDate),
                 dueDate: new Date(initialInvoice.dueDate),
+            };
+        }
+
+        // PHASE 3: Auto mode - pre-populate from selected payment
+        if (selectedPayment && selectedPayment.case) {
+            const project = projects.find(p => p.id === selectedPayment.caseId) || selectedPayment.case;
+            return {
+                projectId: selectedPayment.caseId,
+                projectName: project?.projectName || project?.title || '',
+                clientName: project?.clientName || '',
+                clientAddress: project?.clientAddress || '',
+                clientGstin: '',
+                clientPhone: project?.clientPhone || '',
+
+                issueDate: new Date(),
+                dueDate: new Date(new Date().setDate(new Date().getDate() + 30)),
+                items: [{ 
+                    id: `item-${Date.now()}`, 
+                    description: selectedPayment.description || `Payment received via ${selectedPayment.paymentMethod}${selectedPayment.reference ? ` (Ref: ${selectedPayment.reference})` : ''}`, 
+                    hsn: '', 
+                    quantity: 1, 
+                    rate: selectedPayment.amount, 
+                    taxRate: 0 // Can be edited manually
+                }],
+                subTotal: selectedPayment.amount,
+                discountValue: 0,
+                taxAmount: 0,
+                total: selectedPayment.amount,
+                amountInWords: numberToWordsINR(selectedPayment.amount),
+                paidAmount: selectedPayment.amount,
+                status: PaymentStatus.DRAFT,
+                terms: 'Payment is due within 30 days. Late payments are subject to a 1.5% monthly interest charge.',
+                notes: selectedPayment.description || 'Thank you for your business. We appreciate your prompt payment.',
+                bankDetails: BANK_DETAILS,
+
+                transportMode: 'Road',
+                vehicleNumber: '',
+                placeOfSupply: '',
+                poReference: '',
+
+                // Link to payment
+                paymentId: selectedPayment.id,
             };
         }
 
@@ -69,14 +123,28 @@ const CreateInvoicePage: React.FC<CreateInvoicePageProps> = ({ projects, onAddIn
     }, [invoice.items, invoice.discountValue]);
 
     const handleProjectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const project = projects.find(p => p.id === e.target.value);
+        const selectedId = e.target.value;
+        if (!selectedId) {
+            // Clear project selection
+            setInvoice(i => ({
+                ...i,
+                projectId: '',
+                projectName: '',
+                clientName: '',
+                clientAddress: '',
+            }));
+            return;
+        }
+
+        const project = projects.find(p => p.id === selectedId);
         if (project) {
             setInvoice(i => ({
                 ...i,
                 projectId: project.id,
-                projectName: project.projectName,
-                clientName: project.clientName,
-                clientAddress: project.clientAddress,
+                projectName: project.projectName || (project as any).title || '',
+                clientName: project.clientName || '',
+                clientAddress: project.clientAddress || '',
+                clientPhone: project.clientPhone || '',
             }));
         }
     }
@@ -100,12 +168,31 @@ const CreateInvoicePage: React.FC<CreateInvoicePageProps> = ({ projects, onAddIn
     };
 
     const handleSave = async () => {
-        if (isEditMode && onUpdateInvoice && invoice.id) {
-            await onUpdateInvoice(invoice as Invoice);
-        } else {
-            await onAddInvoice(invoice);
+        // Validation
+        if (!invoice.projectId) {
+            alert('Please select a project before saving the invoice.');
+            return;
         }
-        onBack();
+        if (!invoice.clientName) {
+            alert('Please enter a client name.');
+            return;
+        }
+        if (invoice.total <= 0) {
+            alert('Invoice total must be greater than zero.');
+            return;
+        }
+
+        try {
+            if (isEditMode && onUpdateInvoice && invoice.id) {
+                await onUpdateInvoice(invoice as Invoice);
+            } else {
+                await onAddInvoice(invoice);
+            }
+            onBack();
+        } catch (error: any) {
+            console.error('Error saving invoice:', error);
+            alert(`Failed to save invoice: ${error.message || 'Unknown error'}`);
+        }
     }
 
     return (
@@ -117,7 +204,25 @@ const CreateInvoicePage: React.FC<CreateInvoicePageProps> = ({ projects, onAddIn
                         <ArrowLeftIcon className="w-5 h-5" /><span>Back to Invoices</span>
                     </button>
                     <h2 className="text-2xl font-bold text-text-primary">{isEditMode ? 'Edit Invoice' : 'Create Invoice'}</h2>
+                    {isAutoMode && (
+                        <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-bold rounded-full">
+                            AUTO MODE
+                        </span>
+                    )}
                 </div>
+
+                {/* Auto Mode Indicator */}
+                {isAutoMode && selectedPayment && (
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-sm font-bold text-green-800 mb-2">Creating invoice from received payment:</p>
+                        <div className="grid grid-cols-2 gap-2 text-sm text-green-700">
+                            <div>Project: <span className="font-medium">{selectedPayment.case?.title || selectedPayment.case?.projectName}</span></div>
+                            <div>Amount: <span className="font-bold">{formatCurrencyINR(selectedPayment.amount)}</span></div>
+                            <div>Method: <span className="font-medium">{selectedPayment.paymentMethod}</span></div>
+                            {selectedPayment.reference && <div>Ref: <span className="font-mono">{selectedPayment.reference}</span></div>}
+                        </div>
+                    </div>
+                )}
 
                 {/* Invoice Number Input */}
                 <div className="p-4 bg-surface rounded-lg border border-border space-y-2">
@@ -134,9 +239,22 @@ const CreateInvoicePage: React.FC<CreateInvoicePageProps> = ({ projects, onAddIn
                 {/* Client & Dates */}
                 <div className="p-4 bg-surface rounded-lg border border-border space-y-4">
                     <h3 className="font-bold text-sm text-text-primary">Bill To</h3>
-                    <select onChange={handleProjectChange} value={invoice.projectId} disabled={isEditMode} className="w-full p-2 border border-border rounded-md bg-subtle-background">
-                        {projects.map(p => <option key={p.id} value={p.id}>{p.clientName} - {p.projectName}</option>)}
+                    <select 
+                        onChange={handleProjectChange} 
+                        value={invoice.projectId} 
+                        disabled={isEditMode || isAutoMode} 
+                        className="w-full p-2 border border-border rounded-md bg-subtle-background"
+                    >
+                        <option value="">-- Select Project --</option>
+                        {projects.map(p => (
+                            <option key={p.id} value={p.id}>
+                                {p.clientName || 'Unknown Client'} - {p.projectName || p.title || 'Unnamed Project'}
+                            </option>
+                        ))}
                     </select>
+                    {projects.length === 0 && (
+                        <p className="text-xs text-amber-600">No projects available. Please ensure projects exist before creating an invoice.</p>
+                    )}
 
                     <div className="grid grid-cols-2 gap-4">
                         <input value={invoice.clientName} onChange={e => setInvoice(i => ({ ...i, clientName: e.target.value }))} placeholder="Client Name" className="p-2 border border-border rounded-md bg-subtle-background" />

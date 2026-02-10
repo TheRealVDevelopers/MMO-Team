@@ -76,6 +76,13 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdateStatus, onStartTask, 
 
   const priorityColor = task.priority === 'High' ? 'border-l-error' : task.priority === 'Medium' ? 'border-l-accent' : 'border-l-border';
 
+  // Status-based card tint (Pending / Ongoing / Completed)
+  const statusCardStyle = cn(
+    task.status === TaskStatus.COMPLETED && "bg-green-50/60 border-green-200/60",
+    (task.status === TaskStatus.STARTED || task.status === TaskStatus.IN_PROGRESS) && "bg-blue-50/50 border-blue-200/50",
+    (task.status === TaskStatus.PENDING || task.status === TaskStatus.ASSIGNED) && "bg-amber-50/50 border-amber-200/50"
+  );
+
   const handleStartClick = () => {
     if (onStartTask) {
       onStartTask(task);
@@ -101,7 +108,8 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdateStatus, onStartTask, 
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       className={cn(
-        "bg-surface p-5 rounded-2xl border shadow-sm transition-all",
+        "p-5 rounded-2xl border shadow-sm transition-all",
+        statusCardStyle || "bg-surface border-border",
         priorityColor,
         "border-l-4",
         isOverdue && "ring-2 ring-error/50 bg-error/5"

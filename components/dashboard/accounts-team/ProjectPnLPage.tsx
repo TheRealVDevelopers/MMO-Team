@@ -1,30 +1,47 @@
 import React, { useState } from 'react';
-import Card from '../../shared/Card';
-import { useProjects } from '../../../hooks/useProjects';
-import { useFinance } from '../../../hooks/useFinance';
-import { formatCurrencyINR } from '../../../constants';
-import { doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../../firebase';
-import { CostCenter, Project } from '../../../types';
+import { useCases } from '../../../hooks/useCases';
+import { useProjectCostCenterData } from '../../../hooks/useProjectCostCenterData';
+import { useAuth } from '../../../context/AuthContext';
+import { formatCurrencyINR, DEFAULT_ORGANIZATION_ID } from '../../../constants';
+import { Case } from '../../../types';
 import ProjectLedgerView from './ProjectLedgerView';
 
 const ProjectPnLPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage }) => {
-    const { projects, loading: projectsLoading } = useProjects();
-    const { costCenters, loading: financeLoading } = useFinance();
-    const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-    const [initializing, setInitializing] = useState<string | null>(null);
+    const { currentUser } = useAuth();
+    const orgId = currentUser?.organizationId || DEFAULT_ORGANIZATION_ID;
+    // Fetch ALL cases without org filter to ensure full visibility for accounts
+    const { cases, loading: casesLoading } = useCases({});
+    const { byCaseId: costCenterByCase, loading: costCenterLoading } = useProjectCostCenterData(orgId);
+    const [selectedProject, setSelectedProject] = useState<Case | null>(null);
 
-    const loading = projectsLoading || financeLoading;
+    const loading = casesLoading || costCenterLoading;
 
-    // ... (rest of the file)
-
-    // Combine Projects and Cost Centers (or just Projects with Financials)
-    const projectFinancials = projects.map(project => {
+    // Use case.costCenter when present; otherwise fall back to aggregated data from invoices + ledger
+    // Show ALL cases so accountant can see the full financial picture
+    const projectFinancials = cases.map(project => {
         const p = project as any;
+        const cc = p.costCenter || {};
+        const aggregated = costCenterByCase[project.id] || { receivedAmount: 0, spentAmount: 0 };
+
+        const budget = cc.totalProjectValue ?? cc.totalBudget ?? p.budget ?? 0;
+        const inflow = cc.receivedAmount ?? aggregated.receivedAmount ?? p.totalCollected ?? p.financial?.totalCollected ?? 0;
+        const outflow = cc.spentAmount ?? aggregated.spentAmount ?? p.totalExpenses ?? p.financial?.totalExpenses ?? 0;
+        const remaining = cc.remainingAmount ?? (inflow - outflow);
         return {
             ...project,
-            totalCollected: p.totalCollected || p.financial?.totalCollected || 0,
-            totalExpenses: p.totalExpenses || p.financial?.totalExpenses || 0,
+            costCenter: {
+                ...cc,
+                totalProjectValue: budget,
+                totalBudget: budget,
+                receivedAmount: inflow,
+                spentAmount: outflow,
+                remainingAmount: remaining,
+            },
+            budget,
+            totalCollected: inflow,
+            totalExpenses: outflow,
+            remainingBudget: remaining,
+            profitLoss: inflow - outflow,
         };
     });
 
@@ -52,9 +69,16 @@ const ProjectPnLPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h2 className="text-2xl font-bold text-gray-900">Project Profit & Loss</h2>
-                    <p className="text-gray-500">Real-time profitability tracking across all active projects.</p>
+                    <p className="text-gray-500">Real-time profitability tracking across all cases/projects. Showing {projectFinancials.length} total.</p>
                 </div>
             </div>
+
+            {projectFinancials.length === 0 && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-center">
+                    <p className="text-yellow-800 font-medium">No cases/projects found in the system.</p>
+                    <p className="text-yellow-600 text-sm mt-1">Cases will appear here once created. All financial tracking will show ₹0 until transactions occur.</p>
+                </div>
+            )}
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div className="overflow-x-auto">
@@ -73,11 +97,11 @@ const ProjectPnLPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ 
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                             {projectFinancials.map((item) => {
-                                const budget = item.budget || 0;
-                                const inflow = item.totalCollected || item.financial?.totalCollected || 0;
-                                const outflow = item.totalExpenses || item.financial?.totalExpenses || 0;
-                                const remainingBudget = budget - outflow;
-                                const profitLoss = inflow - outflow;
+                                const budget = item.budget ?? 0;
+                                const inflow = item.totalCollected ?? 0;
+                                const outflow = item.totalExpenses ?? 0;
+                                const remainingBudget = item.remainingBudget ?? (budget - outflow);
+                                const profitLoss = item.profitLoss ?? (inflow - outflow);
 
                                 return (
                                     <tr

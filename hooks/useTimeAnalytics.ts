@@ -56,6 +56,12 @@ const getMonthBounds = (year: number, month: number) => {
   };
 };
 
+// Optional date range override (YYYY-MM-DD). When set, overrides year/month.
+export interface TimeAnalyticsDateRange {
+  startDateKey: string;
+  endDateKey: string;
+}
+
 // ========================================
 // CORE HOOK: useTimeAnalytics
 // Returns computed metrics from timeEntries
@@ -65,39 +71,43 @@ export const useTimeAnalytics = (
   userId?: string,
   organizationId?: string,
   year?: number,
-  month?: number
+  month?: number,
+  dateRange?: TimeAnalyticsDateRange
 ): TimeAnalytics => {
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Default to current month if not specified
+  // Use explicit date range if provided; otherwise current month
   const targetYear = year ?? new Date().getFullYear();
   const targetMonth = month ?? new Date().getMonth();
-  
-  const { startDateKey, endDateKey } = getMonthBounds(targetYear, targetMonth);
+  const monthBounds = getMonthBounds(targetYear, targetMonth);
+  const startDateKey = dateRange?.startDateKey ?? monthBounds.startDateKey;
+  const endDateKey = dateRange?.endDateKey ?? monthBounds.endDateKey;
 
   useEffect(() => {
     setLoading(true);
-    
-    let q;
+
     const entriesRef = collection(db, FIRESTORE_COLLECTIONS.TIME_ENTRIES);
-    
+
+    // IMPORTANT:
+    // We intentionally DO NOT filter by dateKey at the Firestore query level.
+    // Combining an equality (userId/organizationId) with a range (dateKey)
+    // would require a composite index, and if that index is missing Firestore
+    // returns an error and we end up with ALL ZERO metrics.
+    //
+    // Instead, we:
+    //   1) Filter by userId OR organizationId in Firestore
+    //   2) Apply the dateKey window in-memory when computing analytics
+    //
+    // This keeps the UI working even if indexes are not configured.
+    let q;
+
     if (userId) {
-      // Query for specific user
-      q = query(
-        entriesRef,
-        where('userId', '==', userId),
-        where('dateKey', '>=', startDateKey),
-        where('dateKey', '<=', endDateKey)
-      );
+      // Query for specific user (all time; date window applied later)
+      q = query(entriesRef, where('userId', '==', userId));
     } else if (organizationId) {
-      // Query for organization (all users)
-      q = query(
-        entriesRef,
-        where('organizationId', '==', organizationId),
-        where('dateKey', '>=', startDateKey),
-        where('dateKey', '<=', endDateKey)
-      );
+      // Query for organization (all time; date window applied later)
+      q = query(entriesRef, where('organizationId', '==', organizationId));
     } else {
       // No filters - return empty (require at least userId or orgId)
       setEntries([]);
@@ -157,8 +167,13 @@ export const useTimeAnalytics = (
   // ========================================
   
   const analytics = useMemo((): TimeAnalytics => {
+    // Apply date window in-memory so UI respects filters
+    const windowedEntries = entries.filter((entry) =>
+      entry.dateKey >= startDateKey && entry.dateKey <= endDateKey
+    );
+
     // Default: All ZEROS (fresh start)
-    if (entries.length === 0) {
+    if (windowedEntries.length === 0) {
       return {
         totalDaysWorked: 0,
         totalActiveHours: 0,
@@ -182,7 +197,7 @@ export const useTimeAnalytics = (
     let currentStatus: TimeTrackingStatus | null = null;
     let clockedInAt: Date | null = null;
 
-    for (const entry of entries) {
+    for (const entry of windowedEntries) {
       const clockIn = entry.clockIn;
       const clockOut = entry.clockOut;
       
@@ -256,7 +271,9 @@ export const useTimeAnalytics = (
       productivityPercentage,
       currentStatus,
       clockedInAt,
-      entries,
+      // Expose ONLY the windowed entries so callers (Deployment History, Attendance)
+      // see the same filtered data we used for metrics.
+      entries: windowedEntries,
       loading
     };
   }, [entries, loading]);
@@ -309,12 +326,14 @@ export const useTeamTimeAnalytics = (
     }
 
     setLoading(true);
-    
+
+    // Same pattern as useTimeAnalytics:
+    // Only filter by organizationId at query level, then
+    // apply the date window in-memory. This keeps things
+    // working even if composite indexes are missing.
     const q = query(
       collection(db, FIRESTORE_COLLECTIONS.TIME_ENTRIES),
-      where('organizationId', '==', organizationId),
-      where('dateKey', '>=', startDateKey),
-      where('dateKey', '<=', endDateKey)
+      where('organizationId', '==', organizationId)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -364,7 +383,12 @@ export const useTeamTimeAnalytics = (
   }, [organizationId, startDateKey, endDateKey]);
 
   const analytics = useMemo((): TeamTimeAnalytics => {
-    if (entries.length === 0) {
+    // Apply the month window in-memory
+    const windowedEntries = entries.filter(
+      (entry) => entry.dateKey >= startDateKey && entry.dateKey <= endDateKey
+    );
+
+    if (windowedEntries.length === 0) {
       return {
         users: [],
         teamTotals: {
@@ -386,7 +410,7 @@ export const useTeamTimeAnalytics = (
       entries: TimeEntry[];
     }>();
 
-    for (const entry of entries) {
+    for (const entry of windowedEntries) {
       if (!userMap.has(entry.userId)) {
         userMap.set(entry.userId, {
           userId: entry.userId,

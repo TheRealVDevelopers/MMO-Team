@@ -9,7 +9,18 @@ interface InvoicePreviewProps {
 }
 
 const InvoicePreview: React.FC<InvoicePreviewProps> = ({ invoice }) => {
-    
+    // Defensive defaults for optional/potentially undefined fields
+    const safeInvoice = {
+        ...invoice,
+        items: invoice.items || [],
+        subTotal: invoice.subTotal || 0,
+        taxAmount: invoice.taxAmount || 0,
+        total: invoice.total || 0,
+        paidAmount: invoice.paidAmount || 0,
+        discountValue: invoice.discountValue || 0,
+        bankDetails: invoice.bankDetails || { bank: '', accountNo: '', ifsc: '' },
+    };
+
     const handlePrint = () => {
         window.print();
     }
@@ -67,7 +78,7 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ invoice }) => {
                     </div>
                     <div className="text-right">
                         <h3 className="text-xs uppercase font-semibold text-gray-500">Payment Due</h3>
-                        <p className="text-2xl font-bold text-gray-800">{formatCurrencyINR(invoice.total - invoice.paidAmount)}</p>
+                        <p className="text-2xl font-bold text-gray-800">{formatCurrencyINR(safeInvoice.total - safeInvoice.paidAmount)}</p>
                         <p className="text-gray-500">Due on {formatDate(invoice.dueDate)}</p>
                     </div>
                 </section>
@@ -85,7 +96,7 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ invoice }) => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
-                            {invoice.items.map(item => (
+                            {safeInvoice.items.map(item => (
                                 <tr key={item.id}>
                                     <td className="p-2">{item.description}</td>
                                     <td className="p-2 text-center">{item.hsn}</td>
@@ -103,31 +114,31 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ invoice }) => {
                     <div className="w-full max-w-xs space-y-2 text-sm">
                         <div className="flex justify-between">
                             <span className="text-gray-500">Subtotal</span>
-                            <span className="font-medium text-gray-800">{formatCurrencyINR(invoice.subTotal)}</span>
+                            <span className="font-medium text-gray-800">{formatCurrencyINR(safeInvoice.subTotal)}</span>
                         </div>
-                         {invoice.discountValue > 0 && (
+                         {safeInvoice.discountValue > 0 && (
                              <div className="flex justify-between">
                                 <span className="text-gray-500">Discount</span>
-                                <span className="font-medium text-gray-800">-{formatCurrencyINR(invoice.discountValue)}</span>
+                                <span className="font-medium text-gray-800">-{formatCurrencyINR(safeInvoice.discountValue)}</span>
                             </div>
                          )}
                         <div className="flex justify-between">
                             <span className="text-gray-500">Taxes</span>
-                            <span className="font-medium text-gray-800">{formatCurrencyINR(invoice.taxAmount)}</span>
+                            <span className="font-medium text-gray-800">{formatCurrencyINR(safeInvoice.taxAmount)}</span>
                         </div>
                         <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-200">
                             <span className="text-gray-800">Total</span>
-                            <span className="text-primary">{formatCurrencyINR(invoice.total)}</span>
+                            <span className="text-primary">{formatCurrencyINR(safeInvoice.total)}</span>
                         </div>
-                         {invoice.paidAmount > 0 && (
+                         {safeInvoice.paidAmount > 0 && (
                             <div className="flex justify-between text-secondary">
                                 <span className="">Amount Paid</span>
-                                <span className="font-medium">-{formatCurrencyINR(invoice.paidAmount)}</span>
+                                <span className="font-medium">-{formatCurrencyINR(safeInvoice.paidAmount)}</span>
                             </div>
                         )}
                         <div className="flex justify-between font-bold text-lg pt-2 border-t-2 border-primary">
                             <span className="text-gray-800">Balance Due</span>
-                            <span className="text-primary">{formatCurrencyINR(invoice.total - invoice.paidAmount)}</span>
+                            <span className="text-primary">{formatCurrencyINR(safeInvoice.total - safeInvoice.paidAmount)}</span>
                         </div>
                     </div>
                 </section>
@@ -142,9 +153,9 @@ const InvoicePreview: React.FC<InvoicePreviewProps> = ({ invoice }) => {
                             <h4 className="font-semibold text-gray-600 mb-1">Notes</h4>
                             <p>{invoice.notes}</p>
                             <h4 className="font-semibold text-gray-600 mt-2 mb-1">Bank Details</h4>
-                            <p><strong>Bank:</strong> {invoice.bankDetails.bank}</p>
-                            <p><strong>A/C No:</strong> {invoice.bankDetails.accountNo}</p>
-                            <p><strong>IFSC:</strong> {invoice.bankDetails.ifsc}</p>
+                            <p><strong>Bank:</strong> {safeInvoice.bankDetails.bank}</p>
+                            <p><strong>A/C No:</strong> {safeInvoice.bankDetails.accountNo}</p>
+                            <p><strong>IFSC:</strong> {safeInvoice.bankDetails.ifsc}</p>
                         </div>
                         <div>
                              <h4 className="font-semibold text-gray-600 mb-1">Terms & Conditions</h4>

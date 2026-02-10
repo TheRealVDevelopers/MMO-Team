@@ -46,8 +46,7 @@ const ExecutionProcurementPage: React.FC = () => {
   }, [cases]);
 
   const selectedCase = useMemo(() => cases.find((c) => c.id === selectedCaseId), [cases, selectedCaseId]);
-  const orgId = selectedCase?.organizationId ?? '';
-  const { vendors } = useVendors(orgId);
+  const { vendors } = useVendors();
   const { items: catalogItems } = useCatalog();
   const { plans, loading: loadingPlans, addPlan, setDelivered } = useProcurementPlans(selectedCaseId ?? undefined);
 

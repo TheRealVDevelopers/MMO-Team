@@ -18,6 +18,7 @@ import UnifiedProjectsPage from './shared/UnifiedProjectsPage';
 import CasesManagementPage from './super-admin/CasesManagementPage';
 import TimesheetReportsPage from './super-admin/TimesheetReportsPage';
 import ExecutionPlanApprovalPage from './super-admin/ExecutionPlanApprovalPage';
+import RequestValidationPage from './shared/RequestValidationPage';
 
 interface SuperAdminDashboardProps {
     currentPage: string;
@@ -84,6 +85,8 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ currentPage, 
             return <TimesheetReportsPage />;
         case 'execution-plan-approvals':
             return <ExecutionPlanApprovalPage />;
+        case 'request-validation':
+            return <RequestValidationPage />;
         default:
             return <OverviewDashboard setCurrentPage={setCurrentPage} />;
     }

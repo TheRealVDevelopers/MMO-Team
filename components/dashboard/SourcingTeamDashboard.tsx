@@ -1,5 +1,7 @@
 import React from 'react';
 import MyDayPage from './shared/MyDayPage';
+import WorkQueuePage from './shared/WorkQueuePage';
+import RequestValidationPage from './shared/RequestValidationPage';
 import QuotationAuditPage from './sourcing-team/ProcurementAuditPageNew';
 import VendorBiddingPage from './sourcing-team/VendorBiddingPage';
 import ExecutionProcurementPage from './sourcing-team/ExecutionProcurementPage';
@@ -12,6 +14,10 @@ const ProcurementTeamDashboard: React.FC<{ currentPage: string; setCurrentPage: 
   switch (currentPage) {
     case 'my-day':
       return <MyDayPage />;
+    case 'request-validation':
+      return <RequestValidationPage />;
+    case 'work-queue':
+      return <WorkQueuePage />;
     case 'audit':
       return <QuotationAuditPage />;
     case 'bidding':

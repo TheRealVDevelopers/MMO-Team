@@ -15,7 +15,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   BuildingOfficeIcon, RectangleGroupIcon, UsersIcon, RectangleStackIcon, FunnelIcon, ChartPieIcon, ChatBubbleLeftRightIcon, ShieldExclamationIcon,
   ClockIcon, MapPinIcon, PaintBrushIcon, CalculatorIcon, TruckIcon, WrenchScrewdriverIcon, CreditCardIcon, ChartBarSquareIcon, CalendarDaysIcon, BanknotesIcon,
-  ViewColumnsIcon, TagIcon, ListBulletIcon, PresentationChartLineIcon, ReceiptPercentIcon, BuildingStorefrontIcon, BuildingLibraryIcon, CheckCircleIcon, DocumentTextIcon, CubeIcon, QueueListIcon, ShieldCheckIcon
+  ViewColumnsIcon, TagIcon, ListBulletIcon, PresentationChartLineIcon, ReceiptPercentIcon, BuildingStorefrontIcon, BuildingLibraryIcon, CheckCircleIcon, DocumentTextIcon, CubeIcon, QueueListIcon, ShieldCheckIcon, ClipboardDocumentCheckIcon
 } from './components/icons/IconComponents';
 import { InboxIcon } from '@heroicons/react/24/outline';
 
@@ -24,6 +24,7 @@ const navConfig = {
     title: 'Make My Office',
     navItems: [
       { id: 'overview', label: 'Overview', icon: <RectangleGroupIcon className="w-6 h-6" /> },
+      { id: 'request-validation', label: 'Request Validation', icon: <ClipboardDocumentCheckIcon className="w-6 h-6" /> },
       { id: 'team', label: 'Team', icon: <UsersIcon className="w-6 h-6" /> },
       { id: 'project-hub', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       { id: 'projects', label: 'Reference', icon: <RectangleStackIcon className="w-6 h-6" /> },
@@ -47,6 +48,7 @@ const navConfig = {
     title: 'Sales Manager Workspace',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
+      { id: 'request-validation', label: 'Request Validation', icon: <ClipboardDocumentCheckIcon className="w-6 h-6" /> },
       { id: 'projects', label: 'Reference', icon: <RectangleStackIcon className="w-6 h-6" /> },
       { id: 'leads', label: 'My Registry', icon: <FunnelIcon className="w-6 h-6" /> },
       { id: 'my-requests', label: 'My Requests', icon: <RectangleStackIcon className="w-6 h-6" /> },
@@ -61,6 +63,7 @@ const navConfig = {
     title: 'Sales Manager',
     navItems: [
       { id: 'overview', label: 'Dashboard', icon: <RectangleGroupIcon className="w-6 h-6" /> },
+      { id: 'request-validation', label: 'Request Validation', icon: <ClipboardDocumentCheckIcon className="w-6 h-6" /> },
       { id: 'project-hub', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       { id: 'projects', label: 'Reference', icon: <RectangleStackIcon className="w-6 h-6" /> },
       { id: 'leads', label: 'Leads', icon: <FunnelIcon className="w-6 h-6" /> },
@@ -79,6 +82,7 @@ const navConfig = {
     title: 'My Workspace',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
+      { id: 'request-validation', label: 'Request Validation', icon: <ClipboardDocumentCheckIcon className="w-6 h-6" /> },
       { id: 'work-queue', label: 'Work Queue', icon: <QueueListIcon className="w-6 h-6" /> },
       { id: 'project-hub', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       { id: 'projects', label: 'Reference', icon: <RectangleStackIcon className="w-6 h-6" /> },
@@ -96,6 +100,7 @@ const navConfig = {
     title: 'Site Engineer',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
+      { id: 'request-validation', label: 'Request Validation', icon: <ClipboardDocumentCheckIcon className="w-6 h-6" /> },
       { id: 'work-queue', label: 'Work Queue', icon: <QueueListIcon className="w-6 h-6" /> },
       { id: 'boqs', label: 'BOQs', icon: <DocumentTextIcon className="w-6 h-6" /> },
       { id: 'projects', label: 'Reference', icon: <RectangleStackIcon className="w-6 h-6" /> },
@@ -109,6 +114,7 @@ const navConfig = {
     title: 'Quotation',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
+      { id: 'request-validation', label: 'Request Validation', icon: <ClipboardDocumentCheckIcon className="w-6 h-6" /> },
       { id: 'work-queue', label: 'Work Queue', icon: <QueueListIcon className="w-6 h-6" /> },
       { id: 'projects', label: 'Reference', icon: <RectangleStackIcon className="w-6 h-6" /> },
       { id: 'requests', label: 'Requests', icon: <CheckCircleIcon className="w-6 h-6" /> },
@@ -124,6 +130,7 @@ const navConfig = {
     title: 'Site Engineer',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
+      { id: 'request-validation', label: 'Request Validation', icon: <ClipboardDocumentCheckIcon className="w-6 h-6" /> },
       { id: 'work-queue', label: 'Work Queue', icon: <QueueListIcon className="w-6 h-6" /> },
       { id: 'projects', label: 'Reference', icon: <RectangleStackIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
@@ -136,6 +143,7 @@ const navConfig = {
     title: 'Procurement Hub',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
+      { id: 'request-validation', label: 'Request Validation', icon: <ClipboardDocumentCheckIcon className="w-6 h-6" /> },
       { id: 'audit', label: 'Quotation Audit', icon: <DocumentTextIcon className="w-6 h-6" /> },
       { id: 'bidding', label: 'Vendor Bidding', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       { id: 'execution-procurement', label: 'Execution Procurement', icon: <TruckIcon className="w-6 h-6" /> },
@@ -146,6 +154,7 @@ const navConfig = {
     title: 'Execution Hub',
     navItems: [
       { id: 'planning', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
+      { id: 'request-validation', label: 'Request Validation', icon: <ClipboardDocumentCheckIcon className="w-6 h-6" /> },
       { id: 'approvals', label: 'Approvals', icon: <CheckCircleIcon className="w-6 h-6" /> },
       { id: 'budget', label: 'Budgets', icon: <BanknotesIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
@@ -158,6 +167,7 @@ const navConfig = {
     title: 'Execution Hub',
     navItems: [
       { id: 'planning', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
+      { id: 'request-validation', label: 'Request Validation', icon: <ClipboardDocumentCheckIcon className="w-6 h-6" /> },
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
       { id: 'board', label: 'Board', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
@@ -169,18 +179,16 @@ const navConfig = {
     title: 'Financial Command Center',
     navItems: [
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
+      { id: 'request-validation', label: 'Request Validation', icon: <ClipboardDocumentCheckIcon className="w-6 h-6" /> },
       { id: 'payment-verification', label: 'Payment Verification', icon: <ShieldCheckIcon className="w-6 h-6" /> },
       { id: 'projects', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       { id: 'overview', label: 'Overview', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
       { id: 'sales-invoices', label: 'GRIN', icon: <BanknotesIcon className="w-6 h-6" /> },
       { id: 'vendor-bills', label: 'GROUT', icon: <BuildingLibraryIcon className="w-6 h-6" /> },
-      { id: 'delivered-pending-invoice', label: 'Delivered → Invoice', icon: <TruckIcon className="w-6 h-6" /> },
       { id: 'expenses', label: 'Expenses', icon: <ReceiptPercentIcon className="w-6 h-6" /> },
       { id: 'project-pnl', label: 'Project P&L', icon: <PresentationChartLineIcon className="w-6 h-6" /> },
       { id: 'salary', label: 'Salary', icon: <UsersIcon className="w-6 h-6" /> },
-      { id: 'budget-approvals', label: 'Budget Approvals', icon: <BanknotesIcon className="w-6 h-6" /> },
       { id: 'inventory', label: 'Inventory', icon: <CubeIcon className="w-6 h-6" /> },
-      { id: 'approvals', label: 'Payment Requests', icon: <CheckCircleIcon className="w-6 h-6" /> },
       { id: 'communication', label: 'Communication', icon: <ChatBubbleLeftRightIcon className="w-6 h-6" /> },
       { id: 'workflow', label: 'M-Workflow', icon: <PresentationChartLineIcon className="w-6 h-6" /> },
     ]

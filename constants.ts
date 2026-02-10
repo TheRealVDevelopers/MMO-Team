@@ -18,6 +18,8 @@ export const FIRESTORE_COLLECTIONS = {
   CHAT_MESSAGES: 'chat_messages',
   TIME_ENTRIES: 'timeEntries',
   SYSTEM: 'system',
+  /** Vendors are a separate branch – not under any organization or case */
+  VENDORS: 'vendors',
 
   // Subcollections under cases/{caseId}
   TASKS: 'tasks',
@@ -41,6 +43,7 @@ export const FIRESTORE_COLLECTIONS = {
   GENERAL_LEDGER: 'generalLedger',
   SALARY_LEDGER: 'salaryLedger',
   INVENTORY: 'inventory',
+  VALIDATION_REQUESTS: 'validationRequests',
 
   // Subcollections under staffUsers/{userId}
   NOTIFICATIONS: 'notifications',

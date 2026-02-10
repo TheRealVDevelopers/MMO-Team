@@ -88,9 +88,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const staffUser = { ...userData, id: firebaseUser.uid };
             setCurrentUser(staffUser);
             console.log('User data loaded from Firestore:', userData.name);
-            // If role is VENDOR, load vendor doc and set currentVendor
-            if (userData.role === UserRole.VENDOR && userData.vendorId && userData.organizationId) {
-              const vendorRef = doc(db, FIRESTORE_COLLECTIONS.ORGANIZATIONS, userData.organizationId, 'vendors', userData.vendorId);
+            // If role is VENDOR, load vendor from root vendors collection (vendors are not per-organization)
+            if (userData.role === UserRole.VENDOR && userData.vendorId) {
+              const vendorRef = doc(db, FIRESTORE_COLLECTIONS.VENDORS, userData.vendorId);
               const vendorSnap = await getDoc(vendorRef);
               if (vendorSnap.exists()) {
                 const v = vendorSnap.data();

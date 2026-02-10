@@ -49,7 +49,13 @@ const DirectAssignTaskModal: React.FC<DirectAssignTaskModalProps> = ({ isOpen, o
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!title || !assigneeId || !deadline) return;
+        if (!title || !assigneeId) {
+            return;
+        }
+        if (!deadline || deadline.trim() === '') {
+            alert('Please set an Execution Deadline. Deadline is mandatory when assigning a task.');
+            return;
+        }
 
         setProcessing(true);
         try {
@@ -230,14 +236,15 @@ const DirectAssignTaskModal: React.FC<DirectAssignTaskModalProps> = ({ isOpen, o
                             </div>
                         </div>
 
-                        {/* Deadline */}
+                        {/* Deadline (Mandatory when assigning) */}
                         <div className="space-y-2">
                             <SmartDateTimePicker
-                                label="Execution Deadline"
+                                label="Execution Deadline (Required)"
                                 value={deadline}
                                 onChange={setDeadline}
                                 required
                             />
+                            <p className="text-[10px] text-amber-600 font-medium">Deadline is mandatory when assigning a task.</p>
                         </div>
                     </div>
 

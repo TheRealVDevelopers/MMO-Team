@@ -772,6 +772,36 @@ export interface UserNotification {
   metadata?: Record<string, any>;
 }
 
+// Path: organizations/{orgId}/validationRequests/{requestId}
+// Staff submit expense/travel/leave/other for validation → Admin approves → Accounts adds to salary
+export type ValidationRequestType = 'EXPENSE' | 'TRAVEL' | 'LEAVE' | 'OTHER';
+export type ValidationRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface ValidationRequest {
+  id: string;
+  type: ValidationRequestType;
+  userId: string;
+  userName: string;
+  userEmail?: string;
+  organizationId: string;
+  amount?: number;       // For expense / travel reimbursement
+  distanceKm?: number;  // For travel
+  description: string;
+  receiptUrl?: string;
+  leaveFrom?: string;   // YYYY-MM-DD for leave
+  leaveTo?: string;
+  status: ValidationRequestStatus;
+  createdAt: Date;
+  updatedAt?: Date;
+  approvedBy?: string;
+  approvedAt?: Date;
+  rejectedBy?: string;
+  rejectedAt?: Date;
+  rejectionReason?: string;
+  /** Set when added to salary ledger by accounts */
+  salaryLedgerId?: string;
+}
+
 // ========================================
 // GLOBAL COLLECTIONS (NOT NESTED)
 // ========================================

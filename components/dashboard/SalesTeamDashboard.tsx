@@ -15,6 +15,7 @@ import CreateLeadModal from './shared/CreateLeadModal';
 import UnifiedProjectsPage from './shared/UnifiedProjectsPage';
 import UnifiedRequestInbox from './shared/UnifiedRequestInbox';
 import WorkQueuePage from './shared/WorkQueuePage';
+import RequestValidationPage from './shared/RequestValidationPage';
 
 // Simple Error Boundary Component for internal use
 interface ErrorBoundaryProps {
@@ -224,6 +225,8 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
         case 'my-day':
           console.log('Rendering My Day Page');
           return <MyDayPage />;
+        case 'request-validation':
+          return <RequestValidationPage />;
         case 'work-queue':
           console.log('Rendering Work Queue Page');
           return <WorkQueuePage />;

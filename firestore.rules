@@ -14,6 +14,12 @@ service cloud.firestore {
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN');
     }
 
+    // Vendors: root-level collection (separate branch, not per-organization)
+    match /vendors/{vendorId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAuthenticated();
+    }
+
     // BASELINE SECURITY: Require authentication for everything
     match /{document=**} {
       allow read: if isAuthenticated();

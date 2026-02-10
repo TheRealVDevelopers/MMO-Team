@@ -7,13 +7,16 @@ import React, { useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { UserRole } from '../../../types';
 import { useNormalizedApprovals } from '../../../hooks/useNormalizedApprovals';
+import { useValidationRequests, approveValidationRequest } from '../../../hooks/useValidationRequests';
 import { ContentCard, SectionHeader } from './DashboardUI';
 import {
   EyeIcon,
   CheckCircleIcon,
   XMarkIcon,
+  ClipboardDocumentCheckIcon,
 } from '@heroicons/react/24/outline';
 import { formatCurrencyINR, safeDateTime } from '../../../constants';
+import { DEFAULT_ORGANIZATION_ID } from '../../../constants';
 import { db } from '../../../firebase';
 import {
   doc,
@@ -29,10 +32,20 @@ import {
 import { FIRESTORE_COLLECTIONS } from '../../../constants';
 import type { NormalizedApprovalItem } from '../../../hooks/useNormalizedApprovals';
 
+const TYPE_LABELS: Record<string, string> = {
+  EXPENSE: 'Expense',
+  TRAVEL: 'Travel',
+  LEAVE: 'Leave',
+  OTHER: 'Other',
+};
+
 const UnifiedApprovalsPage: React.FC = () => {
   const { currentUser } = useAuth();
+  const orgId = currentUser?.organizationId || DEFAULT_ORGANIZATION_ID;
   const { items, loading } = useNormalizedApprovals();
+  const { requests: validationRequests, loading: validationLoading } = useValidationRequests({ organizationId: orgId, status: 'PENDING' });
   const [processing, setProcessing] = useState<string | null>(null);
+  const [validationProcessing, setValidationProcessing] = useState<string | null>(null);
 
   const handleApprove = async (item: NormalizedApprovalItem) => {
     if (!currentUser || item.type !== 'quotation') return;
@@ -116,6 +129,36 @@ const UnifiedApprovalsPage: React.FC = () => {
       alert('Failed to reject');
     } finally {
       setProcessing(null);
+    }
+  };
+
+  const handleValidationApprove = async (requestId: string) => {
+    if (!currentUser) return;
+    if (!window.confirm('Approve this validation request? It will go to Accounts for salary/reimbursement.')) return;
+    setValidationProcessing(requestId);
+    try {
+      await approveValidationRequest(orgId, requestId, true, currentUser.id);
+      alert('Approved. It will appear in Accounts for salary processing.');
+    } catch (e) {
+      console.error(e);
+      alert('Failed to approve');
+    } finally {
+      setValidationProcessing(null);
+    }
+  };
+
+  const handleValidationReject = async (requestId: string) => {
+    if (!currentUser) return;
+    const reason = window.prompt('Reason for rejection (optional):');
+    setValidationProcessing(requestId);
+    try {
+      await approveValidationRequest(orgId, requestId, false, currentUser.id, reason || undefined);
+      alert('Rejected');
+    } catch (e) {
+      console.error(e);
+      alert('Failed to reject');
+    } finally {
+      setValidationProcessing(null);
     }
   };
 
@@ -207,6 +250,81 @@ const UnifiedApprovalsPage: React.FC = () => {
                           title="Reject"
                           onClick={() => handleReject(item)}
                           disabled={!!processing}
+                        >
+                          <XMarkIcon className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </ContentCard>
+      )}
+
+      {/* Validation Requests (expense / travel / leave) — once approved, go to Accounts */}
+      <SectionHeader
+        title="Request Validation"
+        subtitle="Staff expense, travel, leave requests. Approve to send to Accounts for salary/reimbursement."
+      />
+      {validationLoading ? (
+        <div className="flex justify-center py-8">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
+        </div>
+      ) : validationRequests.length === 0 ? (
+        <ContentCard>
+          <div className="flex items-center gap-3 py-6 text-text-secondary">
+            <ClipboardDocumentCheckIcon className="w-10 h-10 text-gray-300" />
+            <p className="font-medium">No pending validation requests</p>
+          </div>
+        </ContentCard>
+      ) : (
+        <ContentCard>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-3 px-4 text-xs font-bold uppercase text-text-tertiary">Type</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold uppercase text-text-tertiary">User</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold uppercase text-text-tertiary">Description</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold uppercase text-text-tertiary">Amount / Details</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold uppercase text-text-tertiary">Date</th>
+                  <th className="text-right py-3 px-4 text-xs font-bold uppercase text-text-tertiary">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {validationRequests.map((r) => (
+                  <tr key={r.id} className="border-b border-border/50 hover:bg-subtle-background/30">
+                    <td className="py-3 px-4">
+                      <span className="px-2 py-0.5 rounded text-xs font-bold bg-primary/10 text-primary">
+                        {TYPE_LABELS[r.type] || r.type}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 font-medium text-text-primary">{r.userName}</td>
+                    <td className="py-3 px-4 text-sm text-text-secondary max-w-xs truncate">{r.description}</td>
+                    <td className="py-3 px-4 text-sm">
+                      {r.amount != null && r.amount > 0 && formatCurrencyINR(r.amount)}
+                      {r.distanceKm != null && r.distanceKm > 0 && ` ${r.distanceKm} km`}
+                      {r.leaveFrom && ` Leave ${r.leaveFrom} → ${r.leaveTo || '-'}`}
+                      {!r.amount && !r.distanceKm && !r.leaveFrom && '—'}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-text-tertiary">{safeDateTime(r.createdAt)}</td>
+                    <td className="py-3 px-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          className="p-2 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 disabled:opacity-50"
+                          title="Approve"
+                          onClick={() => handleValidationApprove(r.id)}
+                          disabled={!!validationProcessing}
+                        >
+                          <CheckCircleIcon className="w-5 h-5" />
+                        </button>
+                        <button
+                          className="p-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-50"
+                          title="Reject"
+                          onClick={() => handleValidationReject(r.id)}
+                          disabled={!!validationProcessing}
                         >
                           <XMarkIcon className="w-5 h-5" />
                         </button>

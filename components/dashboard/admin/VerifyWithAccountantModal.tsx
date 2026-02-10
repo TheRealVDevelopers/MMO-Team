@@ -160,13 +160,9 @@ const VerifyWithAccountantModal: React.FC<Props> = ({
     const handleSubmit = async () => {
         if (!selectedLead || !currentUser || !db) return;
 
-        // Validate payment details
+        // Validate payment details - ONLY amount and method are required
         if (!paymentDetails.method) {
             alert('❌ Please select a payment method');
-            return;
-        }
-        if (!paymentDetails.utr) {
-            alert('❌ Please enter UTR/Reference number');
             return;
         }
         if (paymentDetails.amount <= 0) {
@@ -174,27 +170,18 @@ const VerifyWithAccountantModal: React.FC<Props> = ({
             return;
         }
 
-        // Validate payment terms
-        if (paymentTerms.totalProjectValue <= 0) {
-            alert('❌ Please enter total project value');
-            return;
-        }
-
-        const totalPercent = paymentTerms.advancePercent + paymentTerms.secondPercent + paymentTerms.finalPercent;
-        if (Math.abs(totalPercent - 100) > 0.1) {
-            alert(`❌ Installment percentages must equal 100% (currently ${totalPercent}%)`);
-            return;
-        }
+        // UTR and screenshot are OPTIONAL - do NOT require them
+        // Payment terms/timeline are NOT asked - simplified flow
 
         const confirmSubmit = window.confirm(
-            `Submit Payment Verification Request?\n\n` +
+            `Submit Payment for Verification?\n\n` +
             `Lead: ${selectedLead.title}\n` +
             `Client: ${selectedLead.clientName}\n` +
             `Amount Paid: ₹${paymentDetails.amount.toLocaleString('en-IN')}\n` +
             `Method: ${paymentDetails.method}\n` +
-            `UTR: ${paymentDetails.utr}\n\n` +
+            `UTR: ${paymentDetails.utr || '(not provided)'}\n\n` +
             `This will be sent to Accountant for verification.\n` +
-            `Project will NOT be created until approved.`
+            `Lead will NOT convert to Project until approved.`
         );
 
         if (!confirmSubmit) return;
@@ -204,24 +191,29 @@ const VerifyWithAccountantModal: React.FC<Props> = ({
         try {
             const batch = writeBatch(db);
 
-            // 1. Create Payment Request document
+            // 1. Create Payment Record - SINGLE SOURCE OF TRUTH: cases/{caseId}/payments
             const paymentRef = doc(collection(db, FIRESTORE_COLLECTIONS.CASES, selectedLead.id, FIRESTORE_COLLECTIONS.PAYMENTS));
             const paymentData = {
+                // Required fields per spec
                 amount: paymentDetails.amount,
+                paymentMethod: paymentDetails.method, // Normalized field name
+                utr: paymentDetails.utr || null, // Optional
+                proofUrl: paymentDetails.attachmentUrl || null, // Optional
+                verified: false,
+                status: 'PENDING', // UPPERCASE as per spec
+                createdBy: currentUser.id,
+                createdByName: currentUser.name,
+                createdAt: serverTimestamp(),
+                
+                // Legacy fields for backward compatibility
                 method: paymentDetails.method,
-                utr: paymentDetails.utr,
                 attachmentUrl: paymentDetails.attachmentUrl || null,
                 submittedBy: currentUser.id,
                 submittedByName: currentUser.name,
                 submittedAt: serverTimestamp(),
-                verified: false,
-                verifiedAmount: null,
-                verifiedBy: null,
-                verifiedAt: null,
-                status: 'pending', // pending | approved | rejected | waiting
                 
-                // Payment terms (for reference)
-                paymentTerms: {
+                // Payment terms (optional, for reference only)
+                paymentTerms: paymentTerms.totalProjectValue > 0 ? {
                     totalProjectValue: paymentTerms.totalProjectValue,
                     advancePercent: paymentTerms.advancePercent,
                     secondPercent: paymentTerms.secondPercent,
@@ -229,7 +221,7 @@ const VerifyWithAccountantModal: React.FC<Props> = ({
                     advanceAmount: (paymentTerms.totalProjectValue * paymentTerms.advancePercent) / 100,
                     secondAmount: (paymentTerms.totalProjectValue * paymentTerms.secondPercent) / 100,
                     finalAmount: (paymentTerms.totalProjectValue * paymentTerms.finalPercent) / 100
-                }
+                } : null
             };
             batch.set(paymentRef, paymentData);
 
@@ -469,14 +461,14 @@ const VerifyWithAccountantModal: React.FC<Props> = ({
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        UTR / Reference Number *
+                                        UTR / Reference Number (Optional)
                                     </label>
                                     <input
                                         type="text"
                                         value={paymentDetails.utr}
                                         onChange={(e) => setPaymentDetails(prev => ({ ...prev, utr: e.target.value }))}
                                         className="w-full px-4 py-3 border rounded-lg"
-                                        placeholder="Enter UTR or reference"
+                                        placeholder="Enter UTR or reference (if available)"
                                     />
                                 </div>
                             </div>
@@ -702,25 +694,26 @@ const VerifyWithAccountantModal: React.FC<Props> = ({
                         </button>
 
                         {currentStep < 3 ? (
-                            <button
-                                onClick={() => {
-                                    if (currentStep === 1 && !selectedLead) {
-                                        alert('Please select a lead');
-                                        return;
-                                    }
-                                    if (currentStep === 2) {
-                                        if (!paymentDetails.method || !paymentDetails.utr || paymentDetails.amount <= 0) {
-                                            alert('Please fill all payment details');
-                                            return;
-                                        }
-                                    }
-                                    setCurrentStep((currentStep + 1) as 1 | 2 | 3);
-                                }}
-                                disabled={currentStep === 1 && !selectedLead}
-                                className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                Continue →
-                            </button>
+                                    <button
+                                        onClick={() => {
+                                            if (currentStep === 1 && !selectedLead) {
+                                                alert('Please select a lead');
+                                                return;
+                                            }
+                                            if (currentStep === 2) {
+                                                // Only method and amount are required; UTR is optional
+                                                if (!paymentDetails.method || paymentDetails.amount <= 0) {
+                                                    alert('Please select payment method and enter amount');
+                                                    return;
+                                                }
+                                            }
+                                            setCurrentStep((currentStep + 1) as 1 | 2 | 3);
+                                        }}
+                                        disabled={currentStep === 1 && !selectedLead}
+                                        className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Continue →
+                                    </button>
                         ) : (
                             <button
                                 onClick={handleSubmit}
