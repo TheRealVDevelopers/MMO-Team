@@ -70,8 +70,7 @@ const ExecutionPlanning: React.FC<Props> = ({ caseId, setCurrentPage }) => {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'timeline' | 'materials' | 'approvals'>('timeline');
 
-  // Get org vendors
-  const { vendors } = useVendors(caseData?.organizationId);
+  const { vendors } = useVendors();
 
   // Form state
   const [projectStartDate, setProjectStartDate] = useState('');

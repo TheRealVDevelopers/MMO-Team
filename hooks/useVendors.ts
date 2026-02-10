@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
+import { FIRESTORE_COLLECTIONS } from '../constants';
 
 /**
- * Vendor type - represents a vendor in an organization's vendor list
- * Vendors are stored at: organizations/{orgId}/vendors
+ * Vendor type – vendors are a separate branch (not tied to any organization/case).
+ * Stored at root: vendors (top-level collection)
  */
 export interface Vendor {
     id: string;
@@ -40,16 +41,16 @@ interface UseVendorsReturn {
 }
 
 /**
- * Hook to manage vendors for an organization
- * Vendors live at: organizations/{orgId}/vendors
+ * Manages vendors from the root-level vendors collection.
+ * No organization or case – vendors are a separate branch.
  */
-export function useVendors(organizationId?: string): UseVendorsReturn {
+export function useVendors(): UseVendorsReturn {
     const [vendors, setVendors] = useState<Vendor[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!organizationId) {
+        if (!db) {
             setVendors([]);
             setLoading(false);
             return;
@@ -58,16 +59,16 @@ export function useVendors(organizationId?: string): UseVendorsReturn {
         setLoading(true);
         setError(null);
 
-        const vendorsRef = collection(db, 'organizations', organizationId, 'vendors');
+        const vendorsRef = collection(db, FIRESTORE_COLLECTIONS.VENDORS);
         const q = query(vendorsRef, where('isActive', '==', true));
 
         const unsubscribe = onSnapshot(
             q,
             (snapshot) => {
-                const vendorList: Vendor[] = snapshot.docs.map((doc) => {
-                    const data = doc.data();
+                const vendorList: Vendor[] = snapshot.docs.map((d) => {
+                    const data = d.data();
                     return {
-                        id: doc.id,
+                        id: d.id,
                         name: data.name || '',
                         category: data.category || 'General',
                         contactPerson: data.contactPerson,
@@ -96,34 +97,38 @@ export function useVendors(organizationId?: string): UseVendorsReturn {
         );
 
         return () => unsubscribe();
-    }, [organizationId]);
+    }, []);
+
+    /** Remove undefined values – Firestore does not accept undefined. */
+    const stripUndefined = <T extends Record<string, unknown>>(obj: T): Record<string, unknown> =>
+        Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined));
 
     const addVendor = async (vendorData: Omit<Vendor, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
-        if (!organizationId) throw new Error('Organization ID is required');
+        if (!db) throw new Error('Firebase not initialized');
 
-        const vendorsRef = collection(db, 'organizations', organizationId, 'vendors');
-        const docRef = await addDoc(vendorsRef, {
+        const vendorsRef = collection(db, FIRESTORE_COLLECTIONS.VENDORS);
+        const payload = stripUndefined({
             ...vendorData,
             createdAt: serverTimestamp(),
-        });
+        }) as Record<string, unknown>;
+        payload.createdAt = serverTimestamp();
+        const docRef = await addDoc(vendorsRef, payload);
         return docRef.id;
     };
 
     const updateVendor = async (vendorId: string, updates: Partial<Vendor>): Promise<void> => {
-        if (!organizationId) throw new Error('Organization ID is required');
+        if (!db) throw new Error('Firebase not initialized');
 
-        const vendorRef = doc(db, 'organizations', organizationId, 'vendors', vendorId);
-        await updateDoc(vendorRef, {
-            ...updates,
-            updatedAt: serverTimestamp(),
-        });
+        const vendorRef = doc(db, FIRESTORE_COLLECTIONS.VENDORS, vendorId);
+        const payload = stripUndefined({ ...updates, updatedAt: serverTimestamp() }) as Record<string, unknown>;
+        payload.updatedAt = serverTimestamp();
+        await updateDoc(vendorRef, payload);
     };
 
     const deleteVendor = async (vendorId: string): Promise<void> => {
-        if (!organizationId) throw new Error('Organization ID is required');
+        if (!db) throw new Error('Firebase not initialized');
 
-        // Soft delete by setting isActive to false
-        const vendorRef = doc(db, 'organizations', organizationId, 'vendors', vendorId);
+        const vendorRef = doc(db, FIRESTORE_COLLECTIONS.VENDORS, vendorId);
         await updateDoc(vendorRef, {
             isActive: false,
             updatedAt: serverTimestamp(),

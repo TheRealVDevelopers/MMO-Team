@@ -15,9 +15,6 @@ const ProjectPnLPage: React.FC<{ setCurrentPage: (page: string) => void }> = ({ 
     const [selectedProject, setSelectedProject] = useState<Case | null>(null);
 
     const loading = casesLoading || costCenterLoading;
-    
-    // Log for debugging
-    console.log(`[ProjectPnLPage] Loaded ${cases.length} cases, costCenterByCase keys: ${Object.keys(costCenterByCase).length}`);
 
     // Use case.costCenter when present; otherwise fall back to aggregated data from invoices + ledger
     // Show ALL cases so accountant can see the full financial picture

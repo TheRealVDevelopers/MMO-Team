@@ -18,6 +18,8 @@ export const FIRESTORE_COLLECTIONS = {
   CHAT_MESSAGES: 'chat_messages',
   TIME_ENTRIES: 'timeEntries',
   SYSTEM: 'system',
+  /** Vendors are a separate branch – not under any organization or case */
+  VENDORS: 'vendors',
 
   // Subcollections under cases/{caseId}
   TASKS: 'tasks',

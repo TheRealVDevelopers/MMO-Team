@@ -431,7 +431,6 @@ const PortfolioShowcase: React.FC<{ onNavigate: (page: string) => void }> = ({ o
         { name: 'Apna Mart', logo: '/apna mart.jfif', industry: 'Retail' },
         { name: 'Qlar', logo: '/qlar.jfif', industry: 'Corporate' },
         { name: 'TeamLease', logo: '/team.png', industry: 'Co-working' },
-        { name: 'Apna Mart', logo: '/apna mart.jfif', industry: 'Retail' }
     ];
 
     return (
@@ -461,7 +460,7 @@ const PortfolioShowcase: React.FC<{ onNavigate: (page: string) => void }> = ({ o
                 >
                     {portfolioClients.map((client, index) => (
                         <motion.div
-                            key={client.name}
+                            key={`portfolio-${index}`}
                             variants={fadeInUp}
                             whileHover={{ scale: 1.05, y: -5 }}
                             className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-500 cursor-pointer group"

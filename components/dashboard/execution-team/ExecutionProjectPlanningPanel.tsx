@@ -76,8 +76,7 @@ const ExecutionProjectPlanningPanel: React.FC<Props> = ({ caseId, isClientView =
     const [vendorAssignments, setVendorAssignments] = useState<VendorAssignment[]>([]);
     const [documents, setDocuments] = useState<ProjectDocument[]>([]);
 
-    // Org vendors
-    const { vendors } = useVendors(caseData?.organizationId);
+    const { vendors } = useVendors();
 
     useEffect(() => {
         if (!caseId) {

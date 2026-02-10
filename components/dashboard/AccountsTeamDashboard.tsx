@@ -11,7 +11,6 @@ import AccountsOverviewPage from './accounts-team/AccountsOverviewPage';
 import SalesInvoicesPage from './accounts-team/SalesInvoicesPage';
 import ExpensesPage from './accounts-team/ExpensesPage';
 import PurchaseInvoicesPage from './accounts-team/PurchaseInvoicesPage';
-import DeliveredPendingInvoicePage from './accounts-team/DeliveredPendingInvoicePage';
 import ApprovalInbox from './accounts-team/ApprovalInbox';
 import PaymentVerificationInbox from './accounts-team/PaymentVerificationInbox';
 import ReportsPage from './accounts-team/ReportsPage';
@@ -116,13 +115,6 @@ const AccountsTeamDashboard: React.FC<AccountsTeamDashboardProps> = ({ currentPa
       return <PurchaseInvoicesPage
         setCurrentPage={setCurrentPage}
         purchaseInvoices={purchaseInvoices}
-        onCreatePurchaseInvoice={handleCreatePurchaseInvoice}
-      />;
-
-    // Delivered procurement plans → create purchase invoice (then mark INVOICED)
-    case 'delivered-pending-invoice':
-      return <DeliveredPendingInvoicePage
-        setCurrentPage={setCurrentPage}
         onCreatePurchaseInvoice={handleCreatePurchaseInvoice}
       />;
 

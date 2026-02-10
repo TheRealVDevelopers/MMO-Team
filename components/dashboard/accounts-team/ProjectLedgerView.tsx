@@ -1,7 +1,19 @@
 import React, { useMemo } from 'react';
 import { useGeneralLedger } from '../../../hooks/useGeneralLedger';
+import { useCasePayments } from '../../../hooks/useCasePayments';
 import { formatCurrencyINR } from '../../../constants';
 import { Project, Case } from '../../../types';
+
+/** Unified row for transaction history (GL + payments) */
+interface TransactionRow {
+    id: string;
+    date: Date;
+    description: string;
+    type: 'CREDIT' | 'DEBIT';
+    sourceType: string;
+    source: 'ledger' | 'payment';
+    amount: number;
+}
 
 interface ProjectLedgerViewProps {
     project: Project | Case;
@@ -9,11 +21,63 @@ interface ProjectLedgerViewProps {
 }
 
 const ProjectLedgerView: React.FC<ProjectLedgerViewProps> = ({ project, onBack }) => {
-    // Fetch GL entries for this project
-    const { entries, loading, stats: summary } = useGeneralLedger({ caseId: project.id });
+    const { entries, loading: ledgerLoading, stats: summary } = useGeneralLedger({ caseId: project.id });
+    const { payments, loading: paymentsLoading } = useCasePayments(project.id);
+
+    const loading = ledgerLoading || paymentsLoading;
 
     // PHASE 5: Cost Center from project data
     const costCenter = (project as any).costCenter || null;
+
+    // Unified transaction history: GL entries + verified/approved payments (pay-ins that contribute to balance)
+    const transactionRows = useMemo((): TransactionRow[] => {
+        const rows: TransactionRow[] = [];
+
+        entries.forEach((e) => {
+            const date = e.date || (e.createdAt ? new Date((e as any).createdAt) : new Date());
+            const type = (e.type === 'INFLOW' || e.type === 'CREDIT' ? 'CREDIT' : 'DEBIT') as 'CREDIT' | 'DEBIT';
+            rows.push({
+                id: `gl-${e.id}`,
+                date,
+                description: e.description || 'Ledger entry',
+                type,
+                sourceType: e.sourceType || (e as any).category || 'LEDGER',
+                source: 'ledger',
+                amount: e.amount ?? 0,
+            });
+        });
+
+        const hasLedgerPaymentSame = (amount: number, d: Date) =>
+            entries.some(
+                (e) =>
+                    (e.type === 'CREDIT' || (e as any).type === 'INFLOW') &&
+                    ((e as any).sourceType === 'PAYMENT') &&
+                    e.amount === amount &&
+                    e.date && Math.abs(new Date(e.date).setHours(0, 0, 0, 0) - new Date(d).setHours(0, 0, 0, 0)) < 86400000
+            );
+
+        payments.forEach((p) => {
+            if (!p.verified && p.status !== 'APPROVED') return;
+            const amt = p.verifiedAmount ?? p.amount;
+            if (amt <= 0) return;
+            const date = p.verifiedAt ? new Date(p.verifiedAt) : p.createdAt;
+            if (hasLedgerPaymentSame(amt, date)) return;
+            rows.push({
+                id: `pay-${p.id}`,
+                date,
+                description: p.description
+                    ? `Pay-in: ${p.description}`
+                    : `Pay-in from client (${p.paymentMethod}${p.utr ? ` · ${p.utr}` : ''})`,
+                type: 'CREDIT',
+                sourceType: 'PAYMENT',
+                source: 'payment',
+                amount: amt,
+            });
+        });
+
+        rows.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        return rows;
+    }, [entries, payments]);
 
     // Computed breakdown
     const breakdown = useMemo(() => {
@@ -129,33 +193,31 @@ const ProjectLedgerView: React.FC<ProjectLedgerViewProps> = ({ project, onBack }
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {entries.map(entry => (
-                                <tr key={entry.id} className="hover:bg-gray-50">
+                            {transactionRows.map((row) => (
+                                <tr key={row.id} className="hover:bg-gray-50">
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {entry.date ? entry.date.toLocaleDateString() : '-'}
+                                        {row.date ? row.date.toLocaleDateString() : '-'}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                                        {entry.description}
+                                    <td className="px-6 py-4 text-sm text-gray-900 font-medium max-w-xs truncate">
+                                        {row.description}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${entry.type === 'DEBIT' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                                            }`}>
-                                            {entry.type}
+                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${row.type === 'DEBIT' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                                            {row.type}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 uppercase">
-                                        {entry.sourceType}
+                                        {row.sourceType}
                                     </td>
-                                    <td className={`px-6 py-4 whitespace-nowrap text-right text-sm font-bold ${entry.type === 'DEBIT' ? 'text-red-600' : 'text-green-600'
-                                        }`}>
-                                        {formatCurrencyINR(entry.amount)}
+                                    <td className={`px-6 py-4 whitespace-nowrap text-right text-sm font-bold ${row.type === 'DEBIT' ? 'text-red-600' : 'text-green-600'}`}>
+                                        {formatCurrencyINR(row.amount)}
                                     </td>
                                 </tr>
                             ))}
-                            {entries.length === 0 && (
+                            {transactionRows.length === 0 && !loading && (
                                 <tr>
                                     <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                                        No transactions found for this project.
+                                        No transactions found for this project. Pay-ins and ledger entries will appear here.
                                     </td>
                                 </tr>
                             )}

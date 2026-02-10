@@ -8,15 +8,17 @@ import { useApprovedQuotationsForBidding } from '../../../hooks/useApprovedQuota
 import { useQuotationBids } from '../../../hooks/useQuotationBids';
 import { useVendors } from '../../../hooks/useVendors';
 import { formatCurrencyINR } from '../../../constants';
+import { createVendorAccount } from '../../../services/authService';
 import { UserRole } from '../../../types';
 import type { QuotationBidDoc, QuotationBidLine } from '../../../types';
 import {
   DocumentTextIcon,
-  UserGroupIcon,
   CheckCircleIcon,
   LockClosedIcon,
   ChevronDownIcon,
   ChevronRightIcon,
+  PlusIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
 
 const VendorBiddingPage: React.FC = () => {
@@ -30,13 +32,84 @@ const VendorBiddingPage: React.FC = () => {
   const selectedCase = casesWithQuotations.find((c) => c.caseId === selectedCaseId);
   const selectedQuotation = selectedCase?.quotations.find((q) => q.id === selectedQuotationId);
   const orgId = selectedCase?.organizationId;
-  const { vendors } = useVendors(orgId);
+  const { vendors, addVendor } = useVendors();
 
   const [inviteVendorIds, setInviteVendorIds] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
   const [actionBusy, setActionBusy] = useState<string | null>(null);
 
+  // Add Vendor Modal state
+  const [showAddVendor, setShowAddVendor] = useState(false);
+  const [vendorName, setVendorName] = useState('');
+  const [vendorCategory, setVendorCategory] = useState('');
+  const [vendorContactPerson, setVendorContactPerson] = useState('');
+  const [vendorPhone, setVendorPhone] = useState('');
+  const [vendorEmail, setVendorEmail] = useState('');
+  const [vendorAddress, setVendorAddress] = useState('');
+  const [vendorGst, setVendorGst] = useState('');
+  const [savingVendor, setSavingVendor] = useState(false);
+
   const isSuperAdmin = currentUser?.role === UserRole.SUPER_ADMIN;
+
+  const handleAddVendor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!vendorName.trim()) {
+      alert('Vendor name is required.');
+      return;
+    }
+    if (!vendorEmail.trim()) {
+      alert('Vendor email is required for login credentials.');
+      return;
+    }
+    if (!currentUser?.id) {
+      alert('You must be logged in to add a vendor.');
+      return;
+    }
+    setSavingVendor(true);
+    try {
+      // 1) Create vendor document
+      const vendorId = await addVendor({
+        name: vendorName.trim(),
+        category: vendorCategory.trim() || 'General',
+        contactPerson: vendorContactPerson.trim() || undefined,
+        phone: vendorPhone.trim() || undefined,
+        email: vendorEmail.trim(),
+        address: vendorAddress.trim() || undefined,
+        gstNumber: vendorGst.trim() || undefined,
+        isActive: true,
+        createdBy: currentUser.id,
+      });
+
+      // 2) Create vendor login account with default password 123456
+      try {
+        await createVendorAccount({
+          email: vendorEmail.trim(),
+          name: vendorName.trim(),
+          vendorId,
+          phone: vendorPhone.trim() || '',
+        });
+        alert(`✅ Vendor "${vendorName}" created successfully!\n\nLogin credentials:\nEmail: ${vendorEmail.trim()}\nPassword: 123456\n\nVendor must change password on first login.\n\nYou have been signed out; please sign in again to continue.`);
+      } catch (authErr: any) {
+        console.error('Failed to create vendor auth account:', authErr);
+        alert(`⚠️ Vendor "${vendorName}" added to list, but login account creation failed: ${authErr.message}\n\nYou may need to create the login manually.`);
+      }
+
+      // Reset form
+      setShowAddVendor(false);
+      setVendorName('');
+      setVendorCategory('');
+      setVendorContactPerson('');
+      setVendorPhone('');
+      setVendorEmail('');
+      setVendorAddress('');
+      setVendorGst('');
+    } catch (e: any) {
+      console.error(e);
+      alert('Failed to add vendor: ' + (e.message || 'Unknown error'));
+    } finally {
+      setSavingVendor(false);
+    }
+  };
 
   const handleCreateBidRound = async () => {
     if (!selectedCaseId || !selectedQuotation || !currentUser) return;
@@ -127,12 +200,131 @@ const VendorBiddingPage: React.FC = () => {
     );
   }
 
+  // Add Vendor Modal – inlined JSX so inputs keep focus (no nested component re-creation)
+  const addVendorModal = showAddVendor && (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-surface rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <h3 className="text-lg font-bold text-text-primary">Add New Vendor</h3>
+          <button type="button" onClick={() => setShowAddVendor(false)} className="p-2 hover:bg-subtle-background rounded-lg">
+            <XMarkIcon className="w-5 h-5" />
+          </button>
+        </div>
+        <form onSubmit={handleAddVendor} className="p-4 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-1">Vendor / Company Name *</label>
+            <input
+              value={vendorName}
+              onChange={(e) => setVendorName(e.target.value)}
+              className="w-full p-3 border border-border rounded-lg bg-background"
+              placeholder="ABC Suppliers Pvt Ltd"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-1">Category</label>
+            <input
+              value={vendorCategory}
+              onChange={(e) => setVendorCategory(e.target.value)}
+              placeholder="e.g. Electrical, Furniture, Plumbing"
+              className="w-full p-3 border border-border rounded-lg bg-background"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-1">Contact Person</label>
+            <input
+              value={vendorContactPerson}
+              onChange={(e) => setVendorContactPerson(e.target.value)}
+              placeholder="John Doe"
+              className="w-full p-3 border border-border rounded-lg bg-background"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1">Mobile Number</label>
+              <input
+                value={vendorPhone}
+                onChange={(e) => setVendorPhone(e.target.value)}
+                type="tel"
+                placeholder="+91 98765 43210"
+                className="w-full p-3 border border-border rounded-lg bg-background"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1">Email * (for login)</label>
+              <input
+                value={vendorEmail}
+                onChange={(e) => setVendorEmail(e.target.value)}
+                type="email"
+                placeholder="vendor@example.com"
+                className="w-full p-3 border border-border rounded-lg bg-background"
+                required
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-1">Address</label>
+            <textarea
+              value={vendorAddress}
+              onChange={(e) => setVendorAddress(e.target.value)}
+              placeholder="Full address including city, state, PIN"
+              className="w-full p-3 border border-border rounded-lg bg-background"
+              rows={2}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-1">GST Number</label>
+            <input
+              value={vendorGst}
+              onChange={(e) => setVendorGst(e.target.value)}
+              placeholder="22AAAAA0000A1Z5"
+              className="w-full p-3 border border-border rounded-lg bg-background"
+            />
+          </div>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-sm text-blue-800">
+              <strong>Login credentials:</strong> The vendor will be able to log in using their email and default password <strong>123456</strong>. They will be required to change their password on first login.
+            </p>
+          </div>
+          <div className="flex gap-2 pt-2">
+            <button
+              type="submit"
+              disabled={savingVendor}
+              className="flex-1 py-3 bg-primary text-white rounded-xl font-medium disabled:opacity-50"
+            >
+              {savingVendor ? 'Creating Vendor…' : 'Create Vendor'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowAddVendor(false)}
+              className="px-4 py-3 border border-border rounded-xl"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+
   // Case list view
   if (!selectedCaseId) {
     return (
       <div className="p-6">
-        <h1 className="text-2xl font-bold text-text-primary mb-2">Vendor Bidding</h1>
-        <p className="text-text-secondary mb-6">Start bidding for cases with approved quotations.</p>
+        {addVendorModal}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-text-primary mb-1">Vendor Bidding</h1>
+            <p className="text-text-secondary">Start bidding for cases with approved quotations.</p>
+          </div>
+          <button
+            onClick={() => setShowAddVendor(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90"
+          >
+            <PlusIcon className="w-5 h-5" />
+            Add New Vendor
+          </button>
+        </div>
         {casesWithQuotations.length === 0 ? (
           <div className="bg-surface rounded-xl border border-border p-8 text-center text-text-secondary">
             No cases with approved quotations. Approve a quotation in Audit Quotations first.
@@ -161,12 +353,22 @@ const VendorBiddingPage: React.FC = () => {
   // Case detail: quotations + bid rounds
   return (
     <div className="p-6">
-      <button
-        onClick={() => { setSelectedCaseId(null); setSelectedQuotationId(null); setExpandedBidId(null); }}
-        className="mb-4 px-4 py-2 bg-subtle-background border border-border rounded-lg text-text-primary hover:bg-border/50"
-      >
-        ← Back to list
-      </button>
+      {addVendorModal}
+      <div className="flex items-center justify-between mb-4">
+        <button
+          onClick={() => { setSelectedCaseId(null); setSelectedQuotationId(null); setExpandedBidId(null); }}
+          className="px-4 py-2 bg-subtle-background border border-border rounded-lg text-text-primary hover:bg-border/50"
+        >
+          ← Back to list
+        </button>
+        <button
+          onClick={() => setShowAddVendor(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90"
+        >
+          <PlusIcon className="w-5 h-5" />
+          Add New Vendor
+        </button>
+      </div>
       <h1 className="text-2xl font-bold text-text-primary mb-1">{selectedCase?.caseTitle}</h1>
       <p className="text-text-secondary mb-6">{selectedCase?.clientName}</p>
 
@@ -193,7 +395,19 @@ const VendorBiddingPage: React.FC = () => {
                 </label>
               ))}
             </div>
-            {vendors.length === 0 && <p className="text-sm text-amber-600">Add vendors in the Vendors page first.</p>}
+            {vendors.length === 0 && (
+              <p className="text-sm text-amber-600">
+                No vendors available.{' '}
+                <button
+                  type="button"
+                  onClick={() => setShowAddVendor(true)}
+                  className="underline text-primary font-medium"
+                >
+                  Add a vendor
+                </button>{' '}
+                first.
+              </p>
+            )}
           </div>
           <div className="flex gap-2">
             <button

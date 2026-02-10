@@ -185,7 +185,6 @@ const navConfig = {
       { id: 'overview', label: 'Overview', icon: <ChartBarSquareIcon className="w-6 h-6" /> },
       { id: 'sales-invoices', label: 'GRIN', icon: <BanknotesIcon className="w-6 h-6" /> },
       { id: 'vendor-bills', label: 'GROUT', icon: <BuildingLibraryIcon className="w-6 h-6" /> },
-      { id: 'delivered-pending-invoice', label: 'Delivered → Invoice', icon: <TruckIcon className="w-6 h-6" /> },
       { id: 'expenses', label: 'Expenses', icon: <ReceiptPercentIcon className="w-6 h-6" /> },
       { id: 'project-pnl', label: 'Project P&L', icon: <PresentationChartLineIcon className="w-6 h-6" /> },
       { id: 'salary', label: 'Salary', icon: <UsersIcon className="w-6 h-6" /> },

@@ -557,20 +557,92 @@ export const getAllStaff = async (): Promise<StaffUser[]> => {
 // Vendor Authentication
 
 /**
+ * Create a vendor account with Firebase Auth + staffUsers doc (role: VENDOR)
+ * Default password: 123456, isFirstLogin: true
+ */
+export const createVendorAccount = async (opts: {
+    email: string;
+    name: string;
+    vendorId: string;
+    organizationId?: string; // optional – vendors are a separate branch, not tied to org
+    phone?: string;
+}): Promise<string> => {
+    const { email, name, vendorId, organizationId, phone } = opts;
+    if (!auth || !db) throw new Error("Firebase not initialized");
+
+    // Use default auth so the user is created in the same Auth context used at sign-in.
+    // Side effect: current user (e.g. procurement) will be signed out; we sign out the new vendor after so no one is logged in.
+    const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        DEFAULT_STAFF_PASSWORD
+    );
+    const uid = userCredential.user.uid;
+    await signOut(auth);
+
+    // Create staffUsers doc with role VENDOR + vendorId + isFirstLogin flag (no organizationId – vendors are separate)
+    const staffData: Record<string, unknown> = {
+        email,
+        name,
+        role: UserRole.VENDOR,
+        vendorId,
+        isActive: true,
+        phone: phone ?? '',
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+        isFirstLogin: true,
+        currentTask: '',
+        lastUpdateTimestamp: serverTimestamp(),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+    };
+    if (organizationId != null && organizationId !== '') {
+        staffData.organizationId = organizationId;
+    }
+    await setDoc(doc(db, FIRESTORE_COLLECTIONS.STAFF_USERS, uid), staffData);
+
+    console.log(`Vendor account created: ${name} (${email}), vendorId: ${vendorId}`);
+    return uid;
+};
+
+/**
  * Sign in vendor with email and password
+ * Vendors use the same staffUsers collection with role: VENDOR
  */
 export const signInVendor = async (email: string, password: string): Promise<Vendor | null> => {
-    // Simplified Auth for Vendor Portal - REMOVED
-    // Check if the email exists in our VENDORS constant - REMOVED
-    // const mockVendor = VENDORS.find(v => v.email === email);
+    try {
+        if (!auth || !db) throw new Error("Firebase not initialized");
 
-    // if (mockVendor && password === '123456') {
-    //     console.log(`Simplified vendor login for ${mockVendor.name}`);
-    //     return mockVendor;
-    // }
+        // Sign in via Firebase Auth
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const uid = userCredential.user.uid;
 
-    // In a real app, this would query a 'vendors' collection in Firestore
-    return null;
+        // Fetch staffUsers doc and verify it's a vendor
+        const userDoc = await getDoc(doc(db, FIRESTORE_COLLECTIONS.STAFF_USERS, uid));
+        if (!userDoc.exists()) {
+            await signOut(auth);
+            return null;
+        }
+
+        const userData = userDoc.data();
+        if (userData.role !== UserRole.VENDOR) {
+            // Not a vendor account
+            await signOut(auth);
+            return null;
+        }
+
+        // Return vendor info (matching Vendor type from types.ts)
+        return {
+            id: uid,
+            name: userData.name || '',
+            phone: userData.phone,
+            email: userData.email,
+            category: userData.category || 'General',
+            gstNumber: userData.gstNumber,
+        };
+    } catch (error: any) {
+        console.error('Vendor sign-in error:', error);
+        return null;
+    }
 };
 
 // Client Authentication

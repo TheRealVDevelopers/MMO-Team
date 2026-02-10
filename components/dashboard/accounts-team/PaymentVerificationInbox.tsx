@@ -11,7 +11,8 @@ import {
     writeBatch,
     serverTimestamp,
     getDoc,
-    addDoc
+    addDoc,
+    updateDoc
 } from 'firebase/firestore';
 import { Case, CaseStatus } from '../../../types';
 import { FIRESTORE_COLLECTIONS, formatCurrencyINR } from '../../../constants';
@@ -129,7 +130,45 @@ const AddReceivedPaymentModal: React.FC<AddReceivedPaymentModalProps> = ({
             };
 
             const paymentsRef = collection(db, FIRESTORE_COLLECTIONS.CASES, selectedCaseId, FIRESTORE_COLLECTIONS.PAYMENTS);
-            await addDoc(paymentsRef, paymentData);
+            const paymentDocRef = await addDoc(paymentsRef, paymentData);
+
+            const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, selectedCaseId);
+            const caseSnap = await getDoc(caseRef);
+            const caseData = caseSnap.data() || {};
+            const existingCostCenter = caseData.costCenter || {};
+            const prevReceived = existingCostCenter.receivedAmount ?? 0;
+            const prevSpent = existingCostCenter.spentAmount ?? 0;
+            const newReceived = prevReceived + amount;
+            const newRemaining = newReceived - prevSpent;
+
+            await updateDoc(caseRef, {
+                costCenter: {
+                    ...existingCostCenter,
+                    totalProjectValue: existingCostCenter.totalProjectValue ?? existingCostCenter.totalBudget ?? 0,
+                    receivedAmount: newReceived,
+                    spentAmount: prevSpent,
+                    remainingAmount: newRemaining,
+                    updatedAt: serverTimestamp(),
+                },
+                updatedAt: serverTimestamp(),
+            });
+
+            const orgId = caseData.organizationId || currentUser.organizationId;
+            if (orgId) {
+                const now = serverTimestamp();
+                await addDoc(collection(db, FIRESTORE_COLLECTIONS.ORGANIZATIONS, orgId, FIRESTORE_COLLECTIONS.GENERAL_LEDGER), {
+                    type: 'CREDIT',
+                    category: 'REVENUE',
+                    sourceType: 'PAYMENT',
+                    sourceId: paymentDocRef.id,
+                    amount,
+                    caseId: selectedCaseId,
+                    date: now,
+                    createdAt: now,
+                    createdBy: currentUser.id,
+                    description: description?.trim() ? `Pay-in (manual): ${description}` : `Pay-in from client (${paymentMethod})${reference ? ` · ${reference}` : ''}`,
+                });
+            }
 
             // Log activity
             const activityRef = collection(db, FIRESTORE_COLLECTIONS.CASES, selectedCaseId, FIRESTORE_COLLECTIONS.ACTIVITIES);
@@ -462,21 +501,26 @@ const PaymentVerificationInbox: React.FC = () => {
                 timestamp: serverTimestamp()
             });
 
-            // 5. Create General Ledger entry (credit/inflow)
+            // 5. Create General Ledger entry (CREDIT so it appears in transaction history and matches caseId filter)
             if (selectedPayment.case?.organizationId) {
                 const ledgerRef = doc(collection(db, FIRESTORE_COLLECTIONS.ORGANIZATIONS, selectedPayment.case.organizationId, FIRESTORE_COLLECTIONS.GENERAL_LEDGER));
+                const now = serverTimestamp();
                 batch.set(ledgerRef, {
-                    type: 'INFLOW',
-                    category: 'ADVANCE_PAYMENT',
+                    type: 'CREDIT',
+                    category: 'REVENUE',
+                    sourceType: 'PAYMENT',
+                    sourceId: paymentRef.id,
                     amount: verifiedAmount,
                     caseId: selectedPayment.caseId,
+                    date: now,
+                    createdAt: now,
+                    createdBy: currentUser.id,
+                    description: `Advance payment from ${selectedPayment.case?.clientName ?? 'Client'}${selectedPayment.paymentMethod ? ` (${selectedPayment.paymentMethod})` : ''}`,
                     caseTitle: selectedPayment.case?.title,
                     clientName: selectedPayment.case?.clientName,
                     paymentMethod: selectedPayment.paymentMethod,
                     utr: selectedPayment.utr,
                     verifiedBy: currentUser.id,
-                    createdAt: serverTimestamp(),
-                    description: `Advance payment from ${selectedPayment.case?.clientName}`
                 });
             }
 

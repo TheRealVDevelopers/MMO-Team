@@ -55,29 +55,54 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
                 setRegion('');
                 setRole(UserRole.SALES_TEAM_MEMBER);
             } else if (loginType === 'staff') {
-                const user = await signInStaff(email, password);
-                if (user) {
-                    onLogin(user, 'staff');
-                    onClose();
-                    // Reset form
-                    setEmail('');
-                    setPassword('');
+                try {
+                    const user = await signInStaff(email, password);
+                    if (user) {
+                        onLogin(user, 'staff');
+                        onClose();
+                        setEmail('');
+                        setPassword('');
+                        return;
+                    }
+                } catch (staffErr: any) {
+                    const code = staffErr?.code || '';
+                    const isInvalidCredential = code === 'auth/invalid-credential' || code === 'auth/wrong-password';
+                    if (isInvalidCredential) {
+                        const { signInVendor } = await import('../../services/authService');
+                        const vendor = await signInVendor(email, password);
+                        if (vendor) {
+                            onLogin(vendor, 'vendor');
+                            onClose();
+                            setEmail('');
+                            setPassword('');
+                            return;
+                        }
+                    }
+                    throw staffErr;
                 }
+                setError('Invalid email or password.');
+                return;
             } else {
                 const { signInVendor } = await import('../../services/authService');
                 const vendor = await signInVendor(email, password);
                 if (vendor) {
                     onLogin(vendor, 'vendor');
                     onClose();
-                    // Reset form
                     setEmail('');
                     setPassword('');
                 } else {
-                    throw new Error('Invalid vendor credentials. Try vendor@makemyoffice.com / 123456');
+                    throw new Error('Invalid email or password. Use the vendor email and temporary password (123456) you were given.');
                 }
             }
         } catch (err: any) {
-            setError(err.message || 'An error occurred. Please try again.');
+            const msg = err.message || 'An error occurred. Please try again.';
+            const code = err?.code || '';
+            const isInvalidCredential = code === 'auth/invalid-credential' || code === 'auth/wrong-password' || /invalid-credential|invalid credential|wrong password/i.test(msg);
+            if (isInvalidCredential && loginType === 'staff') {
+                setError('Invalid email or password for Staff. If you are a vendor, click the "Vendor" tab above and sign in with your vendor email and temporary password (123456).');
+            } else {
+                setError(msg);
+            }
         } finally {
             setLoading(false);
         }
@@ -142,6 +167,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
                             Vendor
                         </button>
                     </div>
+                    {loginType === 'staff' && (
+                        <p className="text-xs text-text-tertiary mt-2">
+                            Vendors: use the <strong>Vendor</strong> tab and sign in with your registered email and temporary password (123456).
+                        </p>
+                    )}
                 </div>
 
                 {/* Auth Form */}

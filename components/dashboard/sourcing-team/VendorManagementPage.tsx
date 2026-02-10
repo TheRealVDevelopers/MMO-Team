@@ -1,5 +1,5 @@
 /**
- * Procurement: Vendors list from organizations/{orgId}/vendors. No budget editing.
+ * Procurement: Vendors list from root vendors collection (vendors are a separate branch, not per-organization).
  */
 import React, { useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
@@ -12,8 +12,7 @@ interface VendorManagementPageProps {
 
 const VendorManagementPage: React.FC<VendorManagementPageProps> = ({ setCurrentPage }) => {
   const { currentUser } = useAuth();
-  const orgId = currentUser?.organizationId;
-  const { vendors, loading, addVendor } = useVendors(orgId);
+  const { vendors, loading, addVendor } = useVendors();
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
@@ -53,14 +52,6 @@ const VendorManagementPage: React.FC<VendorManagementPageProps> = ({ setCurrentP
       setSaving(false);
     }
   };
-
-  if (!orgId) {
-    return (
-      <div className="p-6">
-        <p className="text-text-secondary">Organization context required to view vendors.</p>
-      </div>
-    );
-  }
 
   return (
     <div className="p-6 space-y-6">

@@ -25,6 +25,7 @@ const SalaryPage: React.FC = () => {
     const { requests: approvedValidations } = useValidationRequests({ organizationId: orgId, status: 'APPROVED' });
     const [processing, setProcessing] = useState<string | null>(null);
     const [selectedStaff, setSelectedStaff] = useState<SalaryData | null>(null);
+    const [modalBaseSalary, setModalBaseSalary] = useState<number | null>(null);
     const [ratePerKm, setRatePerKm] = useState<number>(10); // Editable rate per km
     const { entries: ledgerEntries, loading: ledgerLoading } = useSalaryLedgerEntries(orgId, selectedMonth);
     const [editingEntry, setEditingEntry] = useState<SalaryLedgerEntry | null>(null);
@@ -57,7 +58,9 @@ const SalaryPage: React.FC = () => {
         const monthEnd = `${selectedMonth}-31`;
         const byUser: Record<string, number> = {};
         (approvedValidations || []).forEach((r) => {
-            const dateStr = r.createdAt ? r.createdAt.toISOString().slice(0, 10) : '';
+            // Use approval date for salary month; fallback to createdAt for legacy data
+            const baseDate = (r.approvedAt || r.createdAt);
+            const dateStr = baseDate ? baseDate.toISOString().slice(0, 10) : '';
             if (dateStr >= monthStart && dateStr <= monthEnd && r.userId) {
                 const amt = r.amount ?? 0;
                 byUser[r.userId] = (byUser[r.userId] ?? 0) + amt;
@@ -275,7 +278,10 @@ const SalaryPage: React.FC = () => {
                         <div
                             key={data.user.id}
                             className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
-                            onClick={() => setSelectedStaff(data)}
+                            onClick={() => {
+                                setSelectedStaff(data);
+                                setModalBaseSalary(data.estimatedSalary);
+                            }}
                         >
                             {/* Card Header */}
                             <div className="bg-gradient-to-r from-indigo-500 to-purple-500 px-4 py-3 flex items-center gap-3">
@@ -456,8 +462,22 @@ const SalaryPage: React.FC = () => {
                                 <h3 className="text-lg font-bold text-indigo-900 mb-3">Salary Calculation</h3>
                                 <div className="space-y-2">
                                     <div className="flex justify-between text-sm">
-                                        <span className="text-indigo-700">Base Salary (Hours × Rate)</span>
-                                        <span className="font-medium text-indigo-900">{formatCurrencyINR(selectedStaff.estimatedSalary)}</span>
+                                        <span className="text-indigo-700">Base Salary</span>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                value={modalBaseSalary ?? selectedStaff.estimatedSalary}
+                                                onChange={(e) =>
+                                                    setModalBaseSalary(parseFloat(e.target.value) || 0)
+                                                }
+                                                className="w-28 border border-indigo-200 rounded-lg px-2 py-1 text-right text-sm"
+                                            />
+                                            <span className="font-medium text-indigo-900">
+                                                {formatCurrencyINR(modalBaseSalary ?? selectedStaff.estimatedSalary)}
+                                            </span>
+                                        </div>
                                     </div>
                                     <div className="flex justify-between text-sm">
                                         <span className="text-indigo-700">Travel Reimbursement ({selectedStaff.distanceKm.toFixed(1)} km × ₹{ratePerKm})</span>
@@ -484,8 +504,12 @@ const SalaryPage: React.FC = () => {
                             {/* Generate Button */}
                             <button
                                 onClick={() => {
-                                    handleGenerate(selectedStaff);
+                                    handleGenerate({
+                                        ...selectedStaff,
+                                        estimatedSalary: modalBaseSalary ?? selectedStaff.estimatedSalary,
+                                    } as any);
                                     setSelectedStaff(null);
+                                    setModalBaseSalary(null);
                                 }}
                                 disabled={!!processing}
                                 className="w-full px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 transition-colors"
