@@ -124,12 +124,19 @@ const TeamMemberDetailView: React.FC<{ user: User; initialTab?: 'history'; initi
             ];
         }
         if (user.role === UserRole.DRAWING_TEAM) {
-            const memberProjects = projects.filter(p => p.assignedTeam.drawing === user.id);
-            const completed = memberProjects.filter(p => p.status === ProjectStatus.COMPLETED).length;
+            // Fallback heuristic for Drawing Team KPIs:
+            // Use projects where this user is the projectHeadId OR
+            // appears in a generic assignedTo/assignedDrawing field.
+            const memberProjects = projects.filter((p: any) =>
+                p.projectHeadId === user.id ||
+                p.assignedTo === user.id ||
+                p.assignedDrawing === user.id
+            );
+            const completed = memberProjects.filter((p: any) => p.status === ProjectStatus.COMPLETED).length;
             return [
                 { title: 'Project Load', value: memberProjects.length, icon: DocumentCheckIcon },
                 { title: 'Design Release', value: completed, icon: CheckCircleIcon },
-                { title: 'Velocity', value: '3.5 Days', icon: ClockIcon },
+                { title: 'Velocity', value: memberProjects.length > 0 ? 'Live' : '—', icon: ClockIcon },
             ];
         }
         return [];

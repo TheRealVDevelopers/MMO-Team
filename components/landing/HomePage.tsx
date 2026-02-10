@@ -431,6 +431,7 @@ const PortfolioShowcase: React.FC<{ onNavigate: (page: string) => void }> = ({ o
         { name: 'Apna Mart', logo: '/apna mart.jfif', industry: 'Retail' },
         { name: 'Qlar', logo: '/qlar.jfif', industry: 'Corporate' },
         { name: 'TeamLease', logo: '/team.png', industry: 'Co-working' },
+        { name: 'Apna Mart', logo: '/apna mart.jfif', industry: 'Retail' }
     ];
 
     return (
