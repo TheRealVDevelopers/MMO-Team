@@ -413,6 +413,56 @@ export const useCaseDrawings = (caseId?: string) => {
   return { drawings, loading };
 };
 
+/** Summary of BOQ, quotations, documents, drawings per case for Reference list */
+export interface CaseReferenceSummary {
+  boqCount: number;
+  quotationCount: number;
+  documentsCount: number;
+  drawingsCount: number;
+}
+
+/** Fetch counts of BOQ, quotations, documents, drawings for multiple cases (for Reference page). */
+export const useCasesReferenceSummary = (caseIds: string[]): Record<string, CaseReferenceSummary> => {
+  const [summary, setSummary] = useState<Record<string, CaseReferenceSummary>>({});
+
+  useEffect(() => {
+    if (!db || caseIds.length === 0) {
+      setSummary({});
+      return;
+    }
+
+    const fetchCount = async (caseId: string, subcollection: string): Promise<number> => {
+      try {
+        const ref = collection(db, FIRESTORE_COLLECTIONS.CASES, caseId, subcollection);
+        const snap = await getDocs(ref);
+        return snap.size;
+      } catch {
+        return 0;
+      }
+    };
+
+    let cancelled = false;
+    const run = async () => {
+      const result: Record<string, CaseReferenceSummary> = {};
+      for (const id of caseIds) {
+        if (cancelled) return;
+        const [boqCount, quotationCount, documentsCount, drawingsCount] = await Promise.all([
+          fetchCount(id, FIRESTORE_COLLECTIONS.BOQ),
+          fetchCount(id, FIRESTORE_COLLECTIONS.QUOTATIONS),
+          fetchCount(id, FIRESTORE_COLLECTIONS.DOCUMENTS),
+          fetchCount(id, 'drawings'),
+        ]);
+        result[id] = { boqCount, quotationCount, documentsCount, drawingsCount };
+      }
+      if (!cancelled) setSummary(result);
+    };
+    run();
+    return () => { cancelled = true; };
+  }, [caseIds.join(',')]);
+
+  return summary;
+};
+
 export const useCaseSiteVisits = (caseId?: string) => {
   const [siteVisits, setSiteVisits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

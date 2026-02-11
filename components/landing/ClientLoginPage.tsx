@@ -8,7 +8,7 @@ import {
     ExclamationCircleIcon,
     CheckCircleIcon
 } from '@heroicons/react/24/outline';
-import { verifyClientCredentials, createClientAccount } from '../../services/authService';
+import { signInClient, signInClientFirstTime } from '../../services/authService';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -59,62 +59,52 @@ interface ClientLoginPageProps {
 const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [name, setName] = useState(''); // Added for registration
     const [error, setError] = useState('');
-    const [success, setSuccess] = useState(''); // Added for registration success
     const [isLoading, setIsLoading] = useState(false);
-    const [isRegistering, setIsRegistering] = useState(false); // Added for mode toggle
+    /** true = First time user (email only), false = Already have account (email + password) */
+    const [isFirstTimeUser, setIsFirstTimeUser] = useState(true);
 
     const handleAuth = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-        setSuccess('');
         setIsLoading(true);
 
         try {
-            // Validate email format
             const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailPattern.test(email)) {
+            if (!emailPattern.test(email.trim())) {
                 setError('Invalid email format. Please enter a valid email address.');
                 setIsLoading(false);
                 return;
             }
 
-            if (isRegistering) {
-                if (!name.trim()) {
-                    setError('Please enter your full name.');
-                    setIsLoading(false);
-                    return;
-                }
-                if (password.length < 6) {
-                    setError('Password must be at least 6 characters long.');
-                    setIsLoading(false);
-                    return;
-                }
-
-                await createClientAccount(email, password, name);
-                setSuccess('Account created successfully! You can now log in.');
-                setIsRegistering(false);
-                setPassword('');
-            } else {
-                // Verify credentials with Firebase
-                // Use signInClient to get the user object and isFirstLogin status
-                const { signInClient } = await import('../../services/authService');
-                const result = await signInClient(email, password);
-
+            if (isFirstTimeUser) {
+                const result = await signInClientFirstTime(email.trim());
                 if (result && result.user) {
                     onLoginSuccess(result.user, result.isFirstLogin);
                 } else {
-                    setError('Invalid email or password. Please check your credentials.');
+                    setError('Unable to sign in. Please try "Already have account" with your password.');
+                }
+            } else {
+                if (!password) {
+                    setError('Please enter your password.');
+                    setIsLoading(false);
+                    return;
+                }
+                const result = await signInClient(email.trim(), password);
+                if (result && result.user) {
+                    onLoginSuccess(result.user, result.isFirstLogin);
+                } else {
+                    setError('Invalid email or password.');
                 }
             }
-        } catch (error: any) {
-            console.error('Client auth error:', error);
-            // specific firebase auth error handling could go here
-            if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+        } catch (err: any) {
+            console.error('Client auth error:', err);
+            if (err.message === 'ALREADY_HAVE_ACCOUNT') {
+                setError('You already have an account. Switch to "Already have account" and sign in with your email and password.');
+            } else if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
                 setError('Invalid email or password.');
             } else {
-                setError(error.message || 'Unable to process request. Please try again later.');
+                setError(err.message || 'Unable to process request. Please try again.');
             }
         } finally {
             setIsLoading(false);
@@ -144,45 +134,42 @@ const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => 
                             />
                         </motion.div>
                         <h1 className="text-5xl md:text-6xl font-serif font-bold text-text-primary mb-4 tracking-tight">
-                            {isRegistering ? 'Create Account' : 'View My Project'}
+                            View My Project
                         </h1>
                         <p className="text-text-secondary font-light text-xl tracking-[0.05em] opacity-80 max-w-lg mx-auto leading-relaxed">
-                            {isRegistering
-                                ? 'Join the MMO family and start your project journey today'
-                                : 'Experience your interior journey through our exclusive client portal'}
+                            Experience your interior journey through our exclusive client portal
                         </p>
                     </div>
 
-                    {/* Login/Register Card */}
+                    {/* Login Card */}
                     <div className="bg-surface/80 backdrop-blur-2xl border border-white/20 rounded-[3rem] shadow-luxury p-10 md:p-16 relative overflow-hidden group">
-                        {/* Decorative Gradient Blob */}
                         <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors duration-1000"></div>
 
-                        <form onSubmit={handleAuth} className="space-y-8 relative z-10">
-                            {isRegistering && (
-                                <motion.div
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: 'auto' }}
-                                >
-                                    <label className="block text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] mb-4">
-                                        Full Name
-                                    </label>
-                                    <div className="relative group">
-                                        <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-text-secondary/50 group-focus-within:text-primary transition-colors">
-                                            <IdentificationIcon className="w-5 h-5" />
-                                        </div>
-                                        <input
-                                            type="text"
-                                            value={name}
-                                            onChange={(e) => setName(e.target.value)}
-                                            placeholder="Enter your full name"
-                                            className="w-full pl-14 pr-6 py-5 bg-background border-2 border-border rounded-2xl focus:border-primary outline-none transition-all text-text-primary text-lg placeholder:text-text-secondary/60"
-                                            required={isRegistering}
-                                        />
-                                    </div>
-                                </motion.div>
-                            )}
+                        {/* Toggle: First time / Already have account */}
+                        <div className="flex justify-center gap-2 mb-8 relative z-10">
+                            <button
+                                type="button"
+                                onClick={() => { setIsFirstTimeUser(true); setError(''); setPassword(''); }}
+                                className={cn(
+                                    "px-6 py-3 rounded-full text-sm font-bold uppercase tracking-wider transition-all",
+                                    isFirstTimeUser ? "bg-primary text-white shadow-lg" : "bg-background/80 text-text-secondary hover:text-primary border border-border"
+                                )}
+                            >
+                                First time user
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => { setIsFirstTimeUser(false); setError(''); }}
+                                className={cn(
+                                    "px-6 py-3 rounded-full text-sm font-bold uppercase tracking-wider transition-all",
+                                    !isFirstTimeUser ? "bg-primary text-white shadow-lg" : "bg-background/80 text-text-secondary hover:text-primary border border-border"
+                                )}
+                            >
+                                Already have account
+                            </button>
+                        </div>
 
+                        <form onSubmit={handleAuth} className="space-y-8 relative z-10">
                             <div>
                                 <label className="block text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] mb-4">
                                     Email Address
@@ -195,50 +182,42 @@ const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => 
                                         type="email"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
-                                        placeholder="client@makemyoffice.com"
+                                        placeholder="Enter email registered with your project"
                                         className="w-full pl-14 pr-6 py-5 bg-background border-2 border-border rounded-2xl focus:border-primary outline-none transition-all text-text-primary text-lg placeholder:text-text-secondary/60"
                                         required
                                     />
                                 </div>
                                 <p className="text-[10px] uppercase tracking-widest text-text-secondary/40 mt-3 ml-1">
-                                    {isRegistering ? 'We will use this for project updates' : 'Enter your registered email address'}
+                                    {isFirstTimeUser ? 'Use the email we have on file for your project' : 'Enter your registered email address'}
                                 </p>
                             </div>
 
-                            <div>
-                                <label className="block text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] mb-4">
-                                    Password
-                                </label>
-                                <div className="relative group">
-                                    <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-text-secondary/50 group-focus-within:text-primary transition-colors">
-                                        <LockClosedIcon className="w-5 h-5" />
+                            {!isFirstTimeUser && (
+                                <div>
+                                    <label className="block text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] mb-4">
+                                        Password
+                                    </label>
+                                    <div className="relative group">
+                                        <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-text-secondary/50 group-focus-within:text-primary transition-colors">
+                                            <LockClosedIcon className="w-5 h-5" />
+                                        </div>
+                                        <input
+                                            type="password"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            placeholder="Enter your password"
+                                            className="w-full pl-14 pr-6 py-5 bg-background border-2 border-border rounded-2xl focus:border-primary outline-none transition-all text-text-primary text-lg placeholder:text-text-secondary/60"
+                                            required={!isFirstTimeUser}
+                                        />
                                     </div>
-                                    <input
-                                        type="password"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        placeholder={isRegistering ? "Create a secure password" : "Enter your password"}
-                                        className="w-full pl-14 pr-6 py-5 bg-background border-2 border-border rounded-2xl focus:border-primary outline-none transition-all text-text-primary text-lg placeholder:text-text-secondary/60"
-                                        required
-                                    />
+                                    <p className="text-[10px] uppercase tracking-widest text-text-secondary/40 mt-3 ml-1">The password you set after first login</p>
                                 </div>
-                                {!isRegistering && (
-                                    <p className="text-[10px] uppercase tracking-widest text-text-secondary/40 mt-3 ml-1">Provided by your sales consultant</p>
-                                )}
-                            </div>
+                            )}
 
-                            {/* Status Messages */}
                             {error && (
                                 <div className="flex items-start space-x-3 p-4 bg-red-50 border border-red-200 rounded-xl">
                                     <ExclamationCircleIcon className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                                     <p className="text-sm text-red-800">{error}</p>
-                                </div>
-                            )}
-
-                            {success && (
-                                <div className="flex items-start space-x-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
-                                    <CheckCircleIcon className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                                    <p className="text-sm text-emerald-800">{success}</p>
                                 </div>
                             )}
 
@@ -257,25 +236,11 @@ const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => 
                                     </div>
                                 ) : (
                                     <>
-                                        {isRegistering ? 'Create My Account' : 'Access Project'}
+                                        {isFirstTimeUser ? 'Log in' : 'Access Project'}
                                         <ArrowRightIcon className="w-4 h-4 ml-3 group-hover:translate-x-1 transition-transform" />
                                     </>
                                 )}
                             </button>
-
-                            <div className="text-center pt-2">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setIsRegistering(!isRegistering);
-                                        setError('');
-                                        setSuccess('');
-                                    }}
-                                    className="text-[10px] font-black text-primary uppercase tracking-[0.2em] hover:text-secondary transition-colors"
-                                >
-                                    {isRegistering ? 'Already have an account? Login' : "Don't have an account? Create one"}
-                                </button>
-                            </div>
                         </form>
 
                         {/* Help Section */}

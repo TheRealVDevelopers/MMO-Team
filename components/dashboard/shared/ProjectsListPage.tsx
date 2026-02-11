@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
-import { useCases } from '../../../hooks/useCases';
+import { useCases, useCasesReferenceSummary } from '../../../hooks/useCases';
 import { Case, UserRole } from '../../../types';
 import { formatCurrencyINR } from '../../../constants';
 import Card from '../../shared/Card';
@@ -23,12 +23,6 @@ const ProjectsListPage: React.FC = () => {
     const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
     if (!currentUser) return null;
-
-    // Debug: Log what we're getting
-    console.log('ProjectsListPage - Total cases:', cases?.length || 0);
-    console.log('ProjectsListPage - Cases with isProject=true:', cases?.filter(c => c.isProject === true).length || 0);
-    console.log('ProjectsListPage - Cases with isProject=false:', cases?.filter(c => c.isProject === false).length || 0);
-    console.log('ProjectsListPage - Cases with isProject undefined:', cases?.filter(c => c.isProject === undefined).length || 0);
 
     // Filter: Show projects and optionally leads
     // Note: If isProject is undefined, treat as project for backward compatibility
@@ -72,6 +66,9 @@ const ProjectsListPage: React.FC = () => {
         item.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.clientName?.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    const caseIds = useMemo(() => filteredItems.map(i => i.id), [filteredItems]);
+    const referenceSummary = useCasesReferenceSummary(caseIds);
 
     // Count projects and leads
     // Note: undefined isProject is treated as project for backward compatibility
@@ -193,6 +190,27 @@ const ProjectsListPage: React.FC = () => {
                                             {item.clientName}
                                         </p>
 
+                                        {/* BOQ / Quotation / Documents summary */}
+                                        {(() => {
+                                            const ref = referenceSummary[item.id];
+                                            if (!ref || (ref.boqCount === 0 && ref.quotationCount === 0 && ref.documentsCount === 0 && ref.drawingsCount === 0)) return null;
+                                            return (
+                                                <div className="flex flex-wrap gap-2 mb-4 text-xs">
+                                                    {ref.boqCount > 0 && (
+                                                        <span className="px-2 py-1 rounded bg-amber-100 text-amber-800 font-medium">BOQ {ref.boqCount}</span>
+                                                    )}
+                                                    {ref.quotationCount > 0 && (
+                                                        <span className="px-2 py-1 rounded bg-emerald-100 text-emerald-800 font-medium">Quotation {ref.quotationCount}</span>
+                                                    )}
+                                                    {(ref.documentsCount > 0 || ref.drawingsCount > 0) && (
+                                                        <span className="px-2 py-1 rounded bg-slate-100 text-slate-700 font-medium">
+                                                            Docs {ref.documentsCount + ref.drawingsCount}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            );
+                                        })()}
+
                                         {/* Budget */}
                                         {item.budget && (
                                             <p className={cn(
@@ -224,21 +242,19 @@ const ProjectsListPage: React.FC = () => {
                                     <th className="px-6 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">Project / Client</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">Type</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">Status</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">Documents</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">BOQ</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">Quotation</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">Docs / Drawings</th>
                                     <th className="px-6 py-3 text-right text-xs font-medium text-text-tertiary uppercase tracking-wider">Action</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-surface divide-y divide-border">
                                 {filteredItems.map(item => {
                                     const isLead = item.isProject === false;
-                                    // Note: Documents are now in subcollection, not inline
-                                    // This would require a separate query - for now show empty
-                                    const docs: any[] = [];
-                                    const latestDocs = docs.sort((a, b) => {
-                                        const dateA = new Date(a.uploadedAt || a.uploaded || 0).getTime();
-                                        const dateB = new Date(b.uploadedAt || b.uploaded || 0).getTime();
-                                        return dateB - dateA;
-                                    }).slice(0, 3); // Show top 3
+                                    const ref = referenceSummary[item.id];
+                                    const boqCount = ref?.boqCount ?? 0;
+                                    const quotationCount = ref?.quotationCount ?? 0;
+                                    const docsCount = (ref?.documentsCount ?? 0) + (ref?.drawingsCount ?? 0);
 
                                     return (
                                         <tr key={item.id} className="hover:bg-subtle-background/50 transition-colors">
@@ -259,30 +275,26 @@ const ProjectsListPage: React.FC = () => {
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <span className="text-sm text-text-secondary">{item.status}</span>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-2">
-                                                    {docs.length === 0 ? (
-                                                        <span className="text-xs text-text-tertiary italic">No docs</span>
-                                                    ) : (
-                                                        <>
-                                                            {latestDocs.map((doc: any, i) => (
-                                                                <a
-                                                                    key={i}
-                                                                    href={doc.fileUrl || doc.url}
-                                                                    target="_blank"
-                                                                    rel="noreferrer"
-                                                                    className="group relative p-1.5 bg-subtle-background hover:bg-primary/10 rounded-lg transition-colors border border-border"
-                                                                    title={doc.fileName || doc.name}
-                                                                >
-                                                                    <svg className="w-4 h-4 text-text-secondary group-hover:text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                                                                </a>
-                                                            ))}
-                                                            {docs.length > 3 && (
-                                                                <span className="text-xs text-text-tertiary self-center">+{docs.length - 3} more</span>
-                                                            )}
-                                                        </>
-                                                    )}
-                                                </div>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                {boqCount > 0 ? (
+                                                    <span className="px-2 py-1 rounded bg-amber-100 text-amber-800 text-xs font-medium">{boqCount}</span>
+                                                ) : (
+                                                    <span className="text-xs text-text-tertiary">—</span>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                {quotationCount > 0 ? (
+                                                    <span className="px-2 py-1 rounded bg-emerald-100 text-emerald-800 text-xs font-medium">{quotationCount}</span>
+                                                ) : (
+                                                    <span className="text-xs text-text-tertiary">—</span>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                {docsCount > 0 ? (
+                                                    <span className="px-2 py-1 rounded bg-slate-100 text-slate-700 text-xs font-medium">{docsCount}</span>
+                                                ) : (
+                                                    <span className="text-xs text-text-tertiary">—</span>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right">
                                                 <PrimaryButton

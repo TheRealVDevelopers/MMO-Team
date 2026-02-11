@@ -647,9 +647,77 @@ export const signInVendor = async (email: string, password: string): Promise<Ven
 
 // Client Authentication
 
+const CLIENTS_COLLECTION = 'clients';
+
 /**
- * Verify client credentials using email and password
- * AND check for isFirstLogin status
+ * First-time client login: email only. Looks up client by email in cases (clientEmail);
+ * if found, creates Firebase Auth account + client profile and signs them in.
+ * Next time they must use "Already have account" with password.
+ */
+export const signInClientFirstTime = async (
+    email: string
+): Promise<{ user: any; isFirstLogin: boolean } | null> => {
+    try {
+        if (!auth || !db) throw new Error("Firebase not initialized");
+
+        const trimmedEmail = email.trim();
+        if (!trimmedEmail) return null;
+        const normalizedEmail = trimmedEmail.toLowerCase();
+
+        // 1. Check if client already has an account (clients doc with this email)
+        const clientsRef = collection(db, CLIENTS_COLLECTION);
+        const q = query(clientsRef, where('email', '==', normalizedEmail));
+        const existingClients = await getDocs(q);
+        if (!existingClients.empty) {
+            throw new Error('ALREADY_HAVE_ACCOUNT');
+        }
+
+        // 2. Find a case with this client email (match as stored – try both trimmed and lowercase for robustness)
+        const casesRef = collection(db, FIRESTORE_COLLECTIONS.CASES);
+        const caseQ = query(casesRef, where('clientEmail', '==', trimmedEmail));
+        let caseSnap = await getDocs(caseQ);
+        if (caseSnap.empty && trimmedEmail !== normalizedEmail) {
+            const caseQ2 = query(casesRef, where('clientEmail', '==', normalizedEmail));
+            caseSnap = await getDocs(caseQ2);
+        }
+        if (caseSnap.empty) {
+            throw new Error('No project found for this email. Use the email registered with your project.');
+        }
+
+        const firstCase = caseSnap.docs[0];
+        const caseData = firstCase.data();
+        const clientName = caseData.clientName || 'Client';
+        const caseId = firstCase.id;
+
+        // 3. Create Firebase Auth user with a one-time random password (user never sees it)
+        const randomPassword = `MMO${Date.now()}${Math.random().toString(36).slice(2, 10)}!`;
+        const userCredential = await createUserWithEmailAndPassword(auth, trimmedEmail, randomPassword);
+        const user = userCredential.user;
+
+        // 4. Create client profile (store email lowercase for "already have account" lookup)
+        await setDoc(doc(db, CLIENTS_COLLECTION, user.uid), {
+            id: user.uid,
+            name: clientName,
+            email: normalizedEmail,
+            isFirstLogin: true,
+            caseId,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        });
+
+        return { user, isFirstLogin: true };
+    } catch (error: any) {
+        if (error.message === 'ALREADY_HAVE_ACCOUNT') throw error;
+        if (error.code === 'auth/email-already-in-use') {
+            throw new Error('ALREADY_HAVE_ACCOUNT');
+        }
+        console.error('Error in first-time client sign-in:', error);
+        throw error;
+    }
+};
+
+/**
+ * Existing client login: email + password. Returns user and isFirstLogin (for password change prompt).
  */
 export const signInClient = async (
     email: string,
@@ -658,35 +726,27 @@ export const signInClient = async (
     try {
         if (!auth || !db) throw new Error("Firebase not initialized");
 
-        // 1. Sign in with Firebase Auth
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
         const user = userCredential.user;
 
-        // 2. Fetch Client Profile to check isFirstLogin
-        const clientDoc = await getDoc(doc(db, 'clients', user.uid));
-
+        const clientDoc = await getDoc(doc(db, CLIENTS_COLLECTION, user.uid));
         let isFirstLogin = false;
         if (clientDoc.exists()) {
             const data = clientDoc.data();
             isFirstLogin = data.isFirstLogin === true;
         } else {
-            // FALLBACK: If Firestore profile missing but Auth successful, create it on-the-fly
-            // This handles legacy users or race conditions in creation
-            console.warn(`Client profile missing for ${user.uid}, creating default profile.`);
             try {
-                await setDoc(doc(db, 'clients', user.uid), {
+                await setDoc(doc(db, CLIENTS_COLLECTION, user.uid), {
                     id: user.uid,
                     name: user.displayName || 'Valued Client',
                     email: user.email,
-                    isFirstLogin: true, // Force password reset to be safe
+                    isFirstLogin: true,
                     createdAt: serverTimestamp(),
                     updatedAt: serverTimestamp(),
                 });
                 isFirstLogin = true;
             } catch (err) {
                 console.error("Failed to auto-create client profile:", err);
-                // Allow login to proceed even if profile creation fails, 
-                // preventing "User found in Auth but missing in Firestore" blocker
             }
         }
 
@@ -763,7 +823,7 @@ export const createClientAccount = async (
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
         };
-        await setDoc(doc(db, 'clients', newUserUid), clientData);
+        await setDoc(doc(db, CLIENTS_COLLECTION, newUserUid), clientData);
 
         console.log(`Client account created: ${clientName} (${email})`);
         return newUserUid;
@@ -799,7 +859,7 @@ export const changeClientPassword = async (
         await updatePassword(user, newPassword);
 
         // Update isFirstLogin logic in Firestore
-        await updateDoc(doc(db, 'clients', user.uid), {
+        await updateDoc(doc(db, CLIENTS_COLLECTION, user.uid), {
             isFirstLogin: false,
             updatedAt: serverTimestamp()
         });
