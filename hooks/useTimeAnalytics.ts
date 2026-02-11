@@ -243,7 +243,24 @@ export const useTimeAnalytics = (
     }
 
     // Calculate idle time (logged - active - break)
-    const totalIdleSeconds = Math.max(0, totalLoggedSeconds - totalActiveSeconds - totalBreakSeconds);
+    // For entries before today: maintain backward compatibility (show 0 idle if no activities recorded)
+    // For today and forward: use correct calculation
+    const today = new Date().toLocaleDateString('en-CA');
+    const hasHistoricalEntries = windowedEntries.some(entry => entry.dateKey < today);
+    const hasTodayOrFutureEntries = windowedEntries.some(entry => entry.dateKey >= today);
+    
+    let totalIdleSeconds = 0;
+    
+    if (hasTodayOrFutureEntries) {
+      // For today and forward: use correct calculation
+      totalIdleSeconds = Math.max(0, totalLoggedSeconds - totalActiveSeconds - totalBreakSeconds);
+    } else if (hasHistoricalEntries) {
+      // For historical entries only: maintain backward compatibility
+      // If no activities were recorded, show 0 idle time (assume all time was productive)
+      totalIdleSeconds = totalActiveSeconds > 0 
+        ? Math.max(0, totalLoggedSeconds - totalActiveSeconds - totalBreakSeconds)
+        : 0;
+    }
     
     // Convert to hours
     const totalActiveHours = parseFloat((totalActiveSeconds / 3600).toFixed(2));
@@ -300,6 +317,7 @@ export interface TeamTimeAnalytics {
     totalActiveHours: number;
     totalBreakHours: number;
     totalLoggedHours: number;
+    totalIdleHours: number;
     avgProductivity: number;
     activeUsers: number;
   };
@@ -396,6 +414,7 @@ export const useTeamTimeAnalytics = (
           totalActiveHours: 0,
           totalBreakHours: 0,
           totalLoggedHours: 0,
+          totalIdleHours: 0,
           avgProductivity: 0,
           activeUsers: 0
         },
@@ -430,9 +449,9 @@ export const useTeamTimeAnalytics = (
     let activeUsersCount = 0;
 
     for (const [userId, userData] of userMap) {
-      let userActiveSeconds = 0;
-      let userBreakSeconds = 0;
-      let userLoggedSeconds = 0;
+      let userActiveSecondsSum = 0;
+      let userBreakSecondsSum = 0;
+      let userLoggedSecondsSum = 0;
       let userDays = 0;
       let currentStatus: TimeTrackingStatus | null = null;
 
@@ -441,23 +460,23 @@ export const useTeamTimeAnalytics = (
         const clockOut = entry.clockOut;
         const sessionEnd = clockOut || new Date();
         
-        userLoggedSeconds += durationInSeconds(clockIn, sessionEnd);
+        userLoggedSecondsSum += durationInSeconds(clockIn, sessionEnd);
         
         // Calculate break time
         for (const breakItem of entry.breaks) {
           if (breakItem.endTime) {
-            userBreakSeconds += durationInSeconds(breakItem.startTime, breakItem.endTime);
+            userBreakSecondsSum += durationInSeconds(breakItem.startTime, breakItem.endTime);
           } else if (!clockOut) {
-            userBreakSeconds += durationInSeconds(breakItem.startTime, new Date());
+            userBreakSecondsSum += durationInSeconds(breakItem.startTime, new Date());
           }
         }
         
         // Calculate active time from activities
         for (const activity of entry.activities) {
           if (activity.endTime) {
-            userActiveSeconds += durationInSeconds(activity.startTime, activity.endTime);
+            userActiveSecondsSum += durationInSeconds(activity.startTime, activity.endTime);
           } else if (!clockOut) {
-            userActiveSeconds += durationInSeconds(activity.startTime, new Date());
+            userActiveSecondsSum += durationInSeconds(activity.startTime, new Date());
           }
         }
         
@@ -470,8 +489,29 @@ export const useTeamTimeAnalytics = (
         }
       }
 
+      const userLoggedSeconds = userLoggedSecondsSum;
+      const userActiveSeconds = userActiveSecondsSum;
+      const userBreakSeconds = userBreakSecondsSum;
+      
+      // Calculate idle time with backward compatibility for historical entries
+      const today = new Date().toLocaleDateString('en-CA');
+      const userHasHistoricalEntries = userData.entries.some(entry => entry.dateKey < today);
+      const userHasTodayOrFutureEntries = userData.entries.some(entry => entry.dateKey >= today);
+      
+      let userIdleSeconds = 0;
+      if (userHasTodayOrFutureEntries) {
+        // For today and forward: use correct calculation
+        userIdleSeconds = Math.max(0, userLoggedSeconds - userActiveSeconds - userBreakSeconds);
+      } else if (userHasHistoricalEntries) {
+        // For historical entries only: maintain backward compatibility
+        userIdleSeconds = userActiveSeconds > 0 
+          ? Math.max(0, userLoggedSeconds - userActiveSeconds - userBreakSeconds)
+          : 0;
+      }
+      
       const userLoggedHours = userLoggedSeconds / 3600;
       const userActiveHours = userActiveSeconds / 3600;
+      const userIdleHours = userIdleSeconds / 3600;
       const productivity = userLoggedSeconds > 0 
         ? parseFloat(((userActiveSeconds / userLoggedSeconds) * 100).toFixed(1))
         : 0;
@@ -495,6 +535,8 @@ export const useTeamTimeAnalytics = (
       }
     }
 
+    const teamTotalIdleSeconds = Math.max(0, teamTotalLoggedSeconds - teamTotalActiveSeconds - teamTotalBreakSeconds);
+
     return {
       users: users.sort((a, b) => b.totalLoggedHours - a.totalLoggedHours),
       teamTotals: {
@@ -502,6 +544,7 @@ export const useTeamTimeAnalytics = (
         totalActiveHours: parseFloat((teamTotalActiveSeconds / 3600).toFixed(2)),
         totalBreakHours: parseFloat((teamTotalBreakSeconds / 3600).toFixed(2)),
         totalLoggedHours: parseFloat((teamTotalLoggedSeconds / 3600).toFixed(2)),
+        totalIdleHours: parseFloat((teamTotalIdleSeconds / 3600).toFixed(2)),
         avgProductivity: teamTotalLoggedSeconds > 0
           ? parseFloat(((teamTotalActiveSeconds / teamTotalLoggedSeconds) * 100).toFixed(1))
           : 0,

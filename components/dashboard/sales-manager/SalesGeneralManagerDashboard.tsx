@@ -4,6 +4,7 @@ import LeadManagementPage from './LeadManagementPage';
 import TeamManagementPage from './TeamManagementPage';
 import ReportsPage from './ReportsPage';
 import ClientProjectsPage from './ClientProjectsPage';
+import SalesManagerProjectsPage from './SalesManagerProjectsPage';
 import { Lead, LeadHistory, LeadPipelineStatus } from '../../../types';
 import { USERS } from '../../../constants';
 import { UserPlusIcon, UsersIcon, ArrowDownTrayIcon, ArrowLeftIcon, ShieldExclamationIcon } from '../../icons/IconComponents';

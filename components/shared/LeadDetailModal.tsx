@@ -14,7 +14,9 @@ import SmartDateTimePicker from './SmartDateTimePicker';
 import { uploadMultipleLeadAttachments, formatFileSize } from '../../services/leadAttachmentService';
 import { LeadHistoryAttachment } from '../../types';
 import { useActivities } from '../../hooks/useActivities';
-import { doc, onSnapshot, Timestamp } from 'firebase/firestore';
+import { useCaseDocumentsFlat } from '../../hooks/useCaseDocumentsFlat';
+import { DocumentType } from '../../types';
+import { doc, onSnapshot, Timestamp, updateDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { FIRESTORE_COLLECTIONS } from '../../constants';
 
@@ -31,8 +33,14 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
     const navigate = useNavigate();
     const { currentUser } = useAuth();
     const { activities, addActivity } = useActivities(caseItem.id);
+    const { documents: caseDocuments, uploadFileWithStorage, loading: docsLoading } = useCaseDocumentsFlat({
+        caseId: caseItem.id
+    });
     
     const [newNote, setNewNote] = useState('');
+    const [documentType, setDocumentType] = useState<DocumentType>(DocumentType.PDF);
+    const [documentFiles, setDocumentFiles] = useState<File[]>([]);
+    const [isUploadingDocs, setIsUploadingDocs] = useState(false);
     
     // CRITICAL FIX: Resolve the incoming status to CaseStatus
     // The caseItem may come from useLeads (LeadPipelineStatus) or useCases (CaseStatus)
@@ -183,7 +191,25 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
             ) as Case;
 
             console.log(`[LeadDetailModal] Updating case ${currentCase.id} with CaseStatus: "${newStatus}"`);
-            onUpdate(cleanedCase);
+            
+            // Update case in Firestore directly to ensure proper persistence
+            if (db) {
+                try {
+                    const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, currentCase.id);
+                    await updateDoc(caseRef, {
+                        status: newStatus,
+                        updatedAt: serverTimestamp(),
+                    });
+                    console.log(`[LeadDetailModal] Case ${currentCase.id} updated in Firestore`);
+                } catch (firestoreError) {
+                    console.error('[LeadDetailModal] Firestore update failed:', firestoreError);
+                    // Fallback to the original onUpdate method
+                    onUpdate(cleanedCase);
+                }
+            } else {
+                // Fallback to the original onUpdate method if no db connection
+                onUpdate(cleanedCase);
+            }
             setNewNote('');
             setSelectedFiles([]);
             // Don't reset newStatus - keep it at the new status
@@ -206,12 +232,68 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
         setSelectedFiles(prev => prev.filter((_, i) => i !== index));
     };
 
+    // Handle document file selection
+    const handleDocumentFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            setDocumentFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+        }
+    };
+
+    // Remove document file
+    const removeDocumentFile = (index: number) => {
+        setDocumentFiles(prev => prev.filter((_, i) => i !== index));
+    };
+
+    // Upload documents
+    const handleUploadDocuments = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (documentFiles.length === 0 || !currentUser) return;
+
+        setIsUploadingDocs(true);
+        try {
+            // Upload each file
+            for (const file of documentFiles) {
+                await uploadFileWithStorage(
+                    file,
+                    documentType,
+                    currentUser.id,
+                    {
+                        notes: `Uploaded by ${currentUser.name} - ${documentType}`
+                        // Removed visibleToClient as it's not in CaseDocument interface
+                    }
+                );
+            }
+
+            // Log activity
+            await addActivity({
+                type: 'file_upload', // Changed from 'document_upload' to valid activity type
+                action: `Uploaded ${documentFiles.length} ${documentType} document(s)`,
+                userId: currentUser.id,
+                userName: currentUser.name,
+                metadata: {
+                    documentType,
+                    fileCount: documentFiles.length
+                }
+            });
+
+            setDocumentFiles([]);
+            setDocumentType(DocumentType.PDF);
+            alert(`✅ Successfully uploaded ${documentFiles.length} document(s)!`);
+        } catch (error: any) {
+            console.error('Error uploading documents:', error);
+            alert(`Failed to upload documents: ${error.message || 'Please try again'}`);
+        } finally {
+            setIsUploadingDocs(false);
+        }
+    };
+
     const handleAddReminder = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!reminderNote.trim() || !reminderDate) return;
 
         const newReminder: Reminder = {
             id: `rem-${new Date().getTime()}`,
+            title: reminderNote, // Add title field
             date: new Date(reminderDate),
             notes: reminderNote,
             completed: false,
@@ -238,22 +320,20 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
             const dateStr = selectedDate.toISOString().split('T')[0];
 
             try {
-                await addTask({
+                // Create task using Firestore directly since addTask is deprecated
+                const tasksRef = collection(db, FIRESTORE_COLLECTIONS.CASES, currentCase.id, FIRESTORE_COLLECTIONS.TASKS);
+                await addDoc(tasksRef, {
+                    caseId: currentCase.id,
                     title: `[Reminder] ${currentCase.clientName}: ${reminderNote}`,
-                    userId: currentUser.id,
-                    assignedTo: currentUser.id, // Required field
+                    type: 'REMINDER',
+                    assignedTo: currentUser.id,
+                    assignedBy: currentUser.id,
                     status: TaskStatus.PENDING,
-                    timeSpent: 0,
                     priority: 'Medium',
-                    priorityOrder: 50,
                     deadline: reminderDate,
-                    isPaused: false,
-                    date: dateStr,
-                    description: `${currentCase.isProject ? 'Project' : 'Lead'}: ${currentCase.clientName} - ${(currentCase as any).projectName || currentCase.title}`,
-                    createdAt: new Date(),
-                    createdBy: currentUser.id,
-                    createdByName: currentUser.name,
-                }, currentUser.id);
+                    notes: reminderNote,
+                    createdAt: serverTimestamp(),
+                });
             } catch (error) {
                 console.error('Error adding reminder task:', error);
             }
@@ -520,6 +600,82 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
                                 )}
                             </div>
                         </div>
+
+                        {/* Document Upload Section */}
+                        <div className="mt-6">
+                            <h3 className="text-md font-bold text-text-primary mb-4">Document Upload</h3>
+                            <form onSubmit={handleUploadDocuments} className="space-y-4 p-4 border border-border rounded-md bg-subtle-background">
+                                <div>
+                                    <label htmlFor="document-type" className="block text-sm font-medium text-text-primary mb-2">
+                                        Document Type
+                                    </label>
+                                    <select
+                                        id="document-type"
+                                        value={documentType}
+                                        onChange={(e) => setDocumentType(e.target.value as DocumentType)}
+                                        className="w-full rounded-md border-border shadow-sm focus:border-primary focus:ring-primary sm:text-sm bg-surface"
+                                    >
+                                        {Object.values(DocumentType).map(type => (
+                                            <option key={type} value={type}>
+                                                {type.toUpperCase()}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                
+                                <div>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <label
+                                            htmlFor="document-upload"
+                                            className="cursor-pointer inline-flex items-center px-3 py-1.5 border border-border rounded-md shadow-sm text-xs font-medium text-text-secondary bg-surface hover:bg-subtle-background transition-colors"
+                                        >
+                                            <PaperClipIcon className="h-4 w-4 mr-1.5 text-text-tertiary" />
+                                            Select Documents
+                                        </label>
+                                        <input
+                                            id="document-upload"
+                                            type="file"
+                                            multiple
+                                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.dwg,.dxf"
+                                            className="hidden"
+                                            onChange={handleDocumentFileSelect}
+                                        />
+                                        <span className="text-xs text-text-tertiary">
+                                            {documentFiles.length > 0 ? `${documentFiles.length} file(s) selected` : 'Select files to upload'}
+                                        </span>
+                                    </div>
+
+                                    {documentFiles.length > 0 && (
+                                        <div className="space-y-2 bg-surface p-2 rounded-md border border-border/50 mt-2">
+                                            {documentFiles.map((file, index) => (
+                                                <div key={index} className="flex items-center justify-between text-xs p-1.5 bg-subtle-background rounded">
+                                                    <span className="truncate max-w-[200px] text-text-primary font-medium">{file.name}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-text-tertiary">{formatFileSize(file.size)}</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeDocumentFile(index)}
+                                                            className="text-text-tertiary hover:text-error transition-colors"
+                                                        >
+                                                            <XMarkIcon className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                <button
+                                    type="submit"
+                                    className="w-full inline-flex justify-center items-center rounded-md border border-transparent bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
+                                    disabled={documentFiles.length === 0 || isUploadingDocs}
+                                >
+                                    <PaperClipIcon className="w-4 h-4 mr-2" />
+                                    {isUploadingDocs ? 'Uploading...' : `Upload ${documentFiles.length} Document(s)`}
+                                </button>
+                            </form>
+                        </div>
                     </div>
 
                     {/* Right Column */}
@@ -599,20 +755,27 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
                 isOpen={isAddTaskModalOpen}
                 onClose={() => setIsAddTaskModalOpen(false)}
                 onAssign={async (task) => {
-                    // 1. Create the task
-                    await addTask({
-                        ...task,
-                        status: TaskStatus.ASSIGNED, // Explicitly set Assigned for mission control
-                        date: new Date().toISOString().split('T')[0],
-                        timeSpent: 0,
-                        isPaused: false,
-                        createdBy: currentUser?.id || '',
-                        createdByName: currentUser?.name || '',
-                        createdAt: new Date(),
-                        // Ensure context is passed if not already in task object (though it should be)
-                        contextId: task.contextId || currentCase.id,
-                        contextType: task.contextType || (currentCase.isProject ? 'project' : 'lead')
-                    } as any, currentUser?.id || '');
+                    // 1. Create the task using Firestore directly
+                    if (db) {
+                        try {
+                            const tasksRef = collection(db, FIRESTORE_COLLECTIONS.CASES, currentCase.id, FIRESTORE_COLLECTIONS.TASKS);
+                            await addDoc(tasksRef, {
+                                caseId: currentCase.id,
+                                title: task.title,
+                                type: task.type || 'GENERAL',
+                                assignedTo: task.userId,
+                                assignedBy: currentUser?.id || '',
+                                status: TaskStatus.ASSIGNED,
+                                priority: task.priority || 'Medium',
+                                notes: task.description || '',
+                                createdAt: serverTimestamp(),
+                            });
+                        } catch (error) {
+                            console.error('Error creating task:', error);
+                            alert('Failed to create task. Please try again.');
+                            return;
+                        }
+                    }
 
                     // 2. CRITICAL: Update the lead/project status based on task type
                     // This ensures the item appears in the correct workflow column

@@ -433,6 +433,7 @@ export const useCasesReferenceSummary = (caseIds: string[]): Record<string, Case
 
     const fetchCount = async (caseId: string, subcollection: string): Promise<number> => {
       try {
+        // FLAT STRUCTURE: cases/{caseId}/{subcollection}
         const ref = collection(db, FIRESTORE_COLLECTIONS.CASES, caseId, subcollection);
         const snap = await getDocs(ref);
         return snap.size;

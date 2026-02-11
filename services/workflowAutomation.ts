@@ -55,9 +55,7 @@ export const onLeadAssigned = async (
   try {
     // Get case data to determine if site engineer is assigned
     const caseRef = doc(
-      db!,
-      FIRESTORE_COLLECTIONS.ORGANIZATIONS,
-      organizationId,
+      db,
       FIRESTORE_COLLECTIONS.CASES,
       caseId
     );
@@ -386,7 +384,7 @@ export const onPaymentVerified = async (
     const notifyUsers = [
       caseData.createdBy,
       caseData.assignedSales,
-      caseData.projectHead,
+      caseData.projectHeadId,
     ].filter(Boolean);
 
     for (const userId of notifyUsers as string[]) {
@@ -475,7 +473,7 @@ export const onJMSSigned = async (
     const notifyUsers = [
       caseData.createdBy,
       caseData.assignedSales,
-      caseData.projectHead,
+      caseData.projectHeadId,
     ].filter(Boolean);
 
     for (const userId of notifyUsers as string[]) {
@@ -510,8 +508,6 @@ const logActivity = async (
   try {
     const activitiesRef = collection(
       db,
-      FIRESTORE_COLLECTIONS.ORGANIZATIONS,
-      organizationId,
       FIRESTORE_COLLECTIONS.CASES,
       caseId,
       FIRESTORE_COLLECTIONS.ACTIVITIES
