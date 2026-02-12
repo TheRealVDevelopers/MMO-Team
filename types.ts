@@ -34,8 +34,7 @@ export enum CaseStatus {
   NEGOTIATION = "negotiation",
   WAITING_FOR_PAYMENT = "waiting_for_payment",
   WAITING_FOR_PLANNING = "waiting_for_planning",
-  PLANNING_IN_PROGRESS = "planning_in_progress",
-  ACTIVE = "active",
+  PLANNING_SUBMITTED = "planning_submitted",
   EXECUTION_ACTIVE = "execution_active",
   COMPLETED = "completed",
 }

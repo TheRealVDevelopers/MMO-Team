@@ -18,7 +18,7 @@ import PaymentWidget from '../client-portal/PaymentMilestones/PaymentWidget';
 import QuickChat from '../client-portal/QuickChat';
 import RECCEDrawingViewer from '../client-portal/RECCEDrawingViewer';
 import PayAdvanceSection from '../client-portal/PayAdvanceSection';
-import ExecutionProjectPlanningPanel from '../dashboard/execution-team/ExecutionProjectPlanningPanel';
+
 
 import DocumentsArchive from '../client-portal/DocumentsArchive';
 import ForcePasswordResetModal from '../client-portal/ForcePasswordResetModal';
@@ -323,7 +323,7 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ clientUser, o
                     {/* LEFT: Roadmap */}
                     <div className="lg:col-span-2 space-y-8">
                         {/* Project Planning Panel (Master Plan) - Only visible if Active/Planning */}
-                        <ExecutionProjectPlanningPanel caseId={project.projectId} isClientView={true} />
+                        {/* <ExecutionProjectPlanningPanel caseId={project.projectId} isClientView={true} /> - REMOVED: Legacy component */}
 
                         <div>
                             <div className="flex items-center gap-3 mb-6">

@@ -9,13 +9,14 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import { FIRESTORE_COLLECTIONS } from '../../../constants';
 import { Case, CaseStatus } from '../../../types';
-import { ArrowLeftIcon } from '@heroicons/react/24/outline';
-import ExecutionPlanningSection from './ExecutionPlanningSection';
+import { ArrowLeftIcon, LockClosedIcon } from '@heroicons/react/24/outline';
+import ExecutionPlanningNew from './ExecutionPlanningNew';
 import ExecutionApprovalsSection from './ExecutionApprovalsSection';
 import ExecutionDailyLogSection from './ExecutionDailyLogSection';
 import ExecutionJMSSection from './ExecutionJMSSection';
 import ExecutionMaterialsReadOnlySection from './ExecutionMaterialsReadOnlySection';
 import ExecutionDocumentsReadOnlySection from './ExecutionDocumentsReadOnlySection';
+import { isCaseCompleted, isPlanningLocked } from '../../../services/executionStatusService';
 
 interface Props {
   caseId: string;
@@ -78,12 +79,57 @@ const ExecutionWorkspace: React.FC<Props> = ({ caseId, onBack }) => {
     | undefined;
   const hasPlan = !!plan && (!!plan.days?.length || !!(plan as any).phases?.length);
   const bothApproved = !!plan?.approvals?.admin && !!plan?.approvals?.client;
-  const isExecutionActive = status === CaseStatus.EXECUTION_ACTIVE || status === CaseStatus.ACTIVE;
+  const isExecutionActive = status === CaseStatus.EXECUTION_ACTIVE;
   const showPlanning =
-    status === CaseStatus.WAITING_FOR_PLANNING || status === CaseStatus.PLANNING_IN_PROGRESS;
+    status === CaseStatus.WAITING_FOR_PLANNING || status === CaseStatus.PLANNING_SUBMITTED;
   const showJMS = isExecutionActive;
+  const isCompleted = isCaseCompleted(status);
+  const isPlanningLocked = status !== CaseStatus.WAITING_FOR_PLANNING;
 
   const totalPlannedDays = Array.isArray(plan?.days) ? plan.days.length : 0;
+
+  // Show read-only mode for completed projects
+  if (isCompleted) {
+    return (
+      <div className="space-y-10 pb-12">
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={onBack}
+            className="p-2 rounded-lg border border-border hover:bg-surface text-text-primary"
+            aria-label="Back to projects"
+          >
+            <ArrowLeftIcon className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-text-primary">Execution Workspace</h1>
+            <p className="text-sm text-text-secondary">{caseData.title}</p>
+          </div>
+        </div>
+        
+        <div className="bg-surface border border-border rounded-xl p-8 text-center">
+          <LockClosedIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-text-primary mb-2">Project Completed – Read Only Mode</h2>
+          <p className="text-text-secondary mb-6">This project is locked and cannot be modified.</p>
+          
+          {/* Show summary sections in read-only mode */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto text-left">
+            <div className="bg-background/50 p-4 rounded-lg">
+              <h3 className="font-semibold text-text-primary mb-2">Project Summary</h3>
+              <p className="text-sm text-text-secondary">Title: {caseData.title}</p>
+              <p className="text-sm text-text-secondary">Client: {caseData.clientName || '—'}</p>
+              <p className="text-sm text-text-secondary">Status: {status}</p>
+            </div>
+            
+            <div className="bg-background/50 p-4 rounded-lg">
+              <h3 className="font-semibold text-text-primary mb-2">Documents</h3>
+              <p className="text-sm text-text-secondary">View project documents in read-only mode</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-10 pb-12">
@@ -133,14 +179,26 @@ const ExecutionWorkspace: React.FC<Props> = ({ caseId, onBack }) => {
         </div>
       </section>
 
-      {/* Section 2 — Planning (only if not fully approved) */}
-      {showPlanning && (
-        <ExecutionPlanningSection
+      {/* Section 2 — Planning (only if not fully approved and not locked) */}
+      {showPlanning && !isPlanningLocked && (
+        <ExecutionPlanningNew
           caseId={caseId}
-          caseData={caseData}
-          existingPlan={plan}
-          onSaved={() => {}}
+          onBack={() => {}}
         />
+      )}
+      
+      {/* Show planning as read-only when locked */}
+      {showPlanning && isPlanningLocked && (
+        <section className="bg-surface border border-border rounded-xl p-6">
+          <h2 className="text-lg font-bold text-text-primary mb-4">2. Planning</h2>
+          <div className="flex items-center gap-3 p-4 rounded-lg bg-gray-50 border border-gray-200">
+            <LockClosedIcon className="w-5 h-5 text-gray-500" />
+            <div>
+              <p className="font-medium text-gray-700">Planning Locked</p>
+              <p className="text-sm text-gray-600">Planning is read-only after submission. Contact admin for changes.</p>
+            </div>
+          </div>
+        </section>
       )}
 
       {/* Section 3 — Approvals (when plan exists) */}
@@ -158,6 +216,7 @@ const ExecutionWorkspace: React.FC<Props> = ({ caseId, onBack }) => {
         <ExecutionDailyLogSection
           caseId={caseId}
           planDays={Array.isArray(plan?.days) ? plan.days.map((d: any) => ({ date: d.date?.toDate?.() ?? d.date })) : []}
+          isCompleted={isCompleted}
         />
       )}
 
@@ -167,9 +226,37 @@ const ExecutionWorkspace: React.FC<Props> = ({ caseId, onBack }) => {
           planDays={Array.isArray(plan?.days) ? plan.days : []}
         />
       )}
+      
+      {/* Materials Management (separate page/component) - Show locked for completed */}
+      {isCompleted && (
+        <section className="bg-surface border border-border rounded-xl p-6">
+          <h2 className="text-lg font-bold text-text-primary mb-4">Materials Management</h2>
+          <div className="flex items-center gap-3 p-4 rounded-lg bg-gray-50 border border-gray-200">
+            <LockClosedIcon className="w-5 h-5 text-gray-500" />
+            <div>
+              <p className="font-medium text-gray-700">Materials Locked</p>
+              <p className="text-sm text-gray-600">Cannot modify materials for completed projects.</p>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Section 6 — Documents (read-only) */}
-      <ExecutionDocumentsReadOnlySection caseId={caseId} />
+      <ExecutionDocumentsReadOnlySection caseId={caseId} /> 
+      
+      {/* Documents Management - Show locked for completed */}
+      {isCompleted && (
+        <section className="bg-surface border border-border rounded-xl p-6">
+          <h2 className="text-lg font-bold text-text-primary mb-4">Documents Management</h2>
+          <div className="flex items-center gap-3 p-4 rounded-lg bg-gray-50 border border-gray-200">
+            <LockClosedIcon className="w-5 h-5 text-gray-500" />
+            <div>
+              <p className="font-medium text-gray-700">Documents Locked</p>
+              <p className="text-sm text-gray-600">Cannot upload documents for completed projects.</p>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Section 7 — Project Closure (JMS) (when execution active: Mark Complete → Launch JMS) */}
       {showJMS && (
@@ -178,6 +265,7 @@ const ExecutionWorkspace: React.FC<Props> = ({ caseId, onBack }) => {
           caseData={caseData}
           plan={plan || {}}
           onUpdated={() => {}}
+          isCompleted={isCompleted}
         />
       )}
     </div>

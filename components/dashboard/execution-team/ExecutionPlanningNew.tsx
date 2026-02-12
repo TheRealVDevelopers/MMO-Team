@@ -1,3 +1,4 @@
+// @deprecated – legacy execution component. Not used in workspace architecture.
 /**
  * EXECUTION PLANNING - COMPLETE REBUILD
  * 

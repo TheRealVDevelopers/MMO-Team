@@ -1,19 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useCaseDocuments } from '../../../hooks/useCaseDocuments';
-import { DocumentType } from '../../../types';
+import { DocumentType, CaseStatus } from '../../../types';
+import { LockClosedIcon } from '@heroicons/react/24/outline';
+import { isCaseCompleted } from '../../../services/executionStatusService';
 
 interface Props {
   caseId: string | null;
+  caseStatus?: CaseStatus;
 }
 
-const ExecutionDocuments: React.FC<Props> = ({ caseId }) => {
+const ExecutionDocuments: React.FC<Props> = ({ caseId, caseStatus }) => {
   const { currentUser } = useAuth();
   const { documents, loading, uploadDocument } = useCaseDocuments({ 
-    caseId: caseId || '', 
-    organizationId: currentUser?.organizationId || '' 
+    caseId: caseId || ''
   });
   const [showUploadForm, setShowUploadForm] = useState(false);
+  const isCompleted = caseStatus ? isCaseCompleted(caseStatus) : false;
   const [uploading, setUploading] = useState(false);
   
   const [fileName, setFileName] = useState('');

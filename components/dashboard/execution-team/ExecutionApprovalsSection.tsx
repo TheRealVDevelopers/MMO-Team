@@ -10,6 +10,7 @@ import { db } from '../../../firebase';
 import { FIRESTORE_COLLECTIONS } from '../../../constants';
 import { Case, CaseStatus, UserRole } from '../../../types';
 import { CheckCircleIcon } from '@heroicons/react/24/outline';
+import { checkAndTransitionToExecutionActive } from '../../../services/executionStatusService';
 
 interface Props {
   caseId: string;
@@ -31,21 +32,21 @@ const ExecutionApprovalsSection: React.FC<Props> = ({ caseId, caseData, plan, on
     setBusy(true);
     try {
       const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, caseId);
-      const updates: Record<string, any> = {
+      
+      // Set admin approval
+      await updateDoc(caseRef, {
         'executionPlan.approvals.admin': true,
         updatedAt: serverTimestamp(),
-      };
-      if (clientApproved) {
-        updates.status = CaseStatus.EXECUTION_ACTIVE;
-        const budget = caseData.costCenter?.totalBudget ?? caseData.financial?.totalBudget ?? 0;
-        if (budget > 0) {
-          updates['costCenter.totalBudget'] = budget;
-          updates['costCenter.spentAmount'] = 0;
-          updates['costCenter.remainingAmount'] = budget;
-        }
-      }
-      await updateDoc(caseRef, updates);
+      });
+      
+      // Trigger automatic status transition check
+      const transitioned = await checkAndTransitionToExecutionActive(caseId);
+      
       onApproved();
+      
+      if (transitioned) {
+        console.log('[Execution Approvals] Status automatically transitioned to EXECUTION_ACTIVE');
+      }
     } catch (e) {
       console.error(e);
     } finally {

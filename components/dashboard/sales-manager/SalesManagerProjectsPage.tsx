@@ -119,7 +119,7 @@ const SalesManagerProjectsPage: React.FC<SalesManagerProjectsPageProps> = ({ set
                 return 'bg-green-100 text-green-800 border-green-200';
             case CaseStatus.WAITING_FOR_PLANNING:
                 return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-            case CaseStatus.ACTIVE:
+            case CaseStatus.EXECUTION_ACTIVE:
                 return 'bg-teal-100 text-teal-800 border-teal-200';
             case CaseStatus.COMPLETED:
                 return 'bg-gray-100 text-gray-800 border-gray-200';
@@ -358,7 +358,7 @@ const SalesManagerProjectsPage: React.FC<SalesManagerProjectsPageProps> = ({ set
                             } else if (title.includes('quotation') || title.includes('boq')) {
                                 newStatus = CaseStatus.BOQ;
                             } else if (title.includes('execution') || title.includes('install')) {
-                                newStatus = CaseStatus.ACTIVE;
+                                newStatus = CaseStatus.EXECUTION_ACTIVE;
                             } else {
                                 newStatus = CaseStatus.LEAD; // Default
                             }

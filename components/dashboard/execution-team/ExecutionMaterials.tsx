@@ -2,11 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { collection, query, onSnapshot, addDoc, updateDoc, doc, getDoc, serverTimestamp, increment } from 'firebase/firestore';
 import { db } from '../../../firebase';
-import { Case, UserRole } from '../../../types';
+import { Case, UserRole, CaseStatus } from '../../../types';
 import { FIRESTORE_COLLECTIONS } from '../../../constants';
+import { LockClosedIcon } from '@heroicons/react/24/outline';
+import { isCaseCompleted } from '../../../services/executionStatusService';
 
 interface Props {
   caseId: string | null;
+  caseStatus?: CaseStatus;
 }
 
 interface Material {
@@ -23,7 +26,7 @@ interface Material {
   estimatedCost?: number;
 }
 
-const ExecutionMaterials: React.FC<Props> = ({ caseId }) => {
+const ExecutionMaterials: React.FC<Props> = ({ caseId, caseStatus }) => {
   const { currentUser } = useAuth();
   const [materials, setMaterials] = useState<Material[]>([]);
   const [caseData, setCaseData] = useState<Case | null>(null);
@@ -107,8 +110,6 @@ const ExecutionMaterials: React.FC<Props> = ({ caseId }) => {
   const handleApproveMaterial = async (materialId: string, material: Material) => {
     if (!caseId || !currentUser) return;
 
-    const cost = material.estimatedCost || 0;
-    
     try {
       // Update material status
       const materialRef = doc(db, FIRESTORE_COLLECTIONS.CASES, caseId, FIRESTORE_COLLECTIONS.MATERIALS, materialId);
@@ -118,26 +119,7 @@ const ExecutionMaterials: React.FC<Props> = ({ caseId }) => {
         approvedAt: serverTimestamp()
       });
 
-      // Update costCenter in Case document
-      const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, caseId);
-      const currentCase = await getDoc(caseRef);
-      
-      if (currentCase.exists()) {
-        const data = currentCase.data() as Case;
-        const newSpentAmount = (data.costCenter?.spentAmount || 0) + cost;
-        const newMaterialsAmount = (data.costCenter?.materials || 0) + cost;
-        const totalBudget = data.costCenter?.totalBudget || 0;
-        const newRemainingAmount = totalBudget - newSpentAmount;
-
-        await updateDoc(caseRef, {
-          'costCenter.spentAmount': newSpentAmount,
-          'costCenter.materials': newMaterialsAmount,
-          'costCenter.remainingAmount': newRemainingAmount,
-          updatedAt: serverTimestamp()
-        });
-      }
-
-      alert(`Material approved! Cost: ₹${cost.toLocaleString()}`);
+      alert(`Material approved!`);
     } catch (error) {
       console.error('Error approving material:', error);
       alert('Failed to approve material.');
@@ -155,6 +137,7 @@ const ExecutionMaterials: React.FC<Props> = ({ caseId }) => {
   }
 
   const isAdmin = currentUser?.role === UserRole.SUPER_ADMIN || currentUser?.role === UserRole.ADMIN;
+  const isCompleted = caseStatus ? isCaseCompleted(caseStatus) : false;
 
   const getStatusBadge = (status: string) => {
     const config: any = {
@@ -173,7 +156,8 @@ const ExecutionMaterials: React.FC<Props> = ({ caseId }) => {
         <h1 className="text-3xl font-bold">Materials Management</h1>
         <button
           onClick={() => setShowRequestForm(!showRequestForm)}
-          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+          disabled={isCompleted}
+          className={`px-4 py-2 rounded-lg ${isCompleted ? "bg-gray-300 text-gray-500 cursor-not-allowed" : "bg-primary text-white hover:bg-primary/90"}`}
         >
           {showRequestForm ? 'Cancel' : '+ Request Material'}
         </button>

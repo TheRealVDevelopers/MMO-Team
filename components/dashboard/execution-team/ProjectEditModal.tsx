@@ -133,7 +133,7 @@ const ProjectEditModal: React.FC<Props> = ({ isOpen, onClose, project, onSave })
               <option value={CaseStatus.NEGOTIATION}>Negotiation</option>
               <option value={CaseStatus.WAITING_FOR_PAYMENT}>Waiting for Payment</option>
               <option value={CaseStatus.WAITING_FOR_PLANNING}>Waiting for Planning</option>
-              <option value={CaseStatus.ACTIVE}>Active</option>
+              <option value={CaseStatus.EXECUTION_ACTIVE}>Active</option>
               <option value={CaseStatus.COMPLETED}>Completed</option>
             </select>
           </div>

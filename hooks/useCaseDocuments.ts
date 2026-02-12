@@ -18,7 +18,6 @@ import { FIRESTORE_COLLECTIONS } from '../constants';
 import { uploadCaseDocuments, deleteFile, UploadResult } from '../services/storageService';
 
 interface UseCaseDocumentsOptions {
-  organizationId: string;
   caseId: string;
   type?: DocumentType | DocumentType[];
 }
@@ -30,7 +29,7 @@ export const useCaseDocuments = (options: UseCaseDocumentsOptions) => {
 
   // Real-time listener for documents
   useEffect(() => {
-    if (!db || !options.organizationId || !options.caseId) {
+    if (!db || !options.caseId) {
       setLoading(false);
       return;
     }
@@ -38,8 +37,6 @@ export const useCaseDocuments = (options: UseCaseDocumentsOptions) => {
     try {
       const documentsRef = collection(
         db,
-        FIRESTORE_COLLECTIONS.ORGANIZATIONS,
-        options.organizationId,
         FIRESTORE_COLLECTIONS.CASES,
         options.caseId,
         FIRESTORE_COLLECTIONS.DOCUMENTS
@@ -86,20 +83,18 @@ export const useCaseDocuments = (options: UseCaseDocumentsOptions) => {
       setError(err.message);
       setLoading(false);
     }
-  }, [options.organizationId, options.caseId, JSON.stringify(options.type)]);
+  }, [options.caseId, JSON.stringify(options.type)]);
 
   // Upload document
   const uploadDocument = useCallback(
     async (documentData: Omit<CaseDocument, 'id' | 'uploadedAt'>) => {
-      if (!db || !options.organizationId || !options.caseId) {
-        throw new Error('Database, organization, or case not initialized');
+      if (!db || !options.caseId) {
+        throw new Error('Database or case not initialized');
       }
 
       try {
         const documentsRef = collection(
           db,
-          FIRESTORE_COLLECTIONS.ORGANIZATIONS,
-          options.organizationId,
           FIRESTORE_COLLECTIONS.CASES,
           options.caseId,
           FIRESTORE_COLLECTIONS.DOCUMENTS
@@ -118,7 +113,6 @@ export const useCaseDocuments = (options: UseCaseDocumentsOptions) => {
 
         // Log activity
         await logActivity(
-          options.organizationId,
           options.caseId,
           `Document uploaded: ${documentData.fileName}`,
           documentData.uploadedBy
@@ -130,7 +124,7 @@ export const useCaseDocuments = (options: UseCaseDocumentsOptions) => {
         throw err;
       }
     },
-    [options.organizationId, options.caseId]
+    [options.caseId]
   );
 
   // Upload file to Storage and then save metadata to Firestore
@@ -141,8 +135,8 @@ export const useCaseDocuments = (options: UseCaseDocumentsOptions) => {
       uploadedBy: string,
       additionalData?: Partial<CaseDocument>
     ): Promise<string> => {
-      if (!db || !options.organizationId || !options.caseId) {
-        throw new Error('Database, organization, or case not initialized');
+      if (!db || !options.caseId) {
+        throw new Error('Database or case not initialized');
       }
 
       try {
@@ -152,8 +146,6 @@ export const useCaseDocuments = (options: UseCaseDocumentsOptions) => {
         // 2. Save metadata to Firestore
         const documentsRef = collection(
           db,
-          FIRESTORE_COLLECTIONS.ORGANIZATIONS,
-          options.organizationId,
           FIRESTORE_COLLECTIONS.CASES,
           options.caseId,
           FIRESTORE_COLLECTIONS.DOCUMENTS
@@ -179,7 +171,6 @@ export const useCaseDocuments = (options: UseCaseDocumentsOptions) => {
 
         // Log activity
         await logActivity(
-          options.organizationId,
           options.caseId,
           `Document uploaded: ${file.name}`,
           uploadedBy
@@ -191,21 +182,19 @@ export const useCaseDocuments = (options: UseCaseDocumentsOptions) => {
         throw err;
       }
     },
-    [options.organizationId, options.caseId]
+    [options.caseId]
   );
 
   // Delete document from Firestore and Storage
   const deleteDocument = useCallback(
     async (documentId: string) => {
-      if (!db || !options.organizationId || !options.caseId) {
-        throw new Error('Database, organization, or case not initialized');
+      if (!db || !options.caseId) {
+        throw new Error('Database or case not initialized');
       }
 
       try {
         const documentRef = doc(
           db,
-          FIRESTORE_COLLECTIONS.ORGANIZATIONS,
-          options.organizationId,
           FIRESTORE_COLLECTIONS.CASES,
           options.caseId,
           FIRESTORE_COLLECTIONS.DOCUMENTS,
@@ -229,24 +218,22 @@ export const useCaseDocuments = (options: UseCaseDocumentsOptions) => {
 
         await deleteDoc(documentRef);
 
-        await logActivity(options.organizationId, options.caseId, 'Document deleted', 'system');
+        await logActivity(options.caseId, 'Document deleted', 'system');
       } catch (err: any) {
         console.error('Error deleting document:', err);
         throw err;
       }
     },
-    [options.organizationId, options.caseId]
+    [options.caseId]
   );
 
   // Helper: Log activity
-  const logActivity = async (orgId: string, caseId: string, action: string, userId: string) => {
+  const logActivity = async (caseId: string, action: string, userId: string) => {
     if (!db) return;
 
     try {
       const activitiesRef = collection(
         db,
-        FIRESTORE_COLLECTIONS.ORGANIZATIONS,
-        orgId,
         FIRESTORE_COLLECTIONS.CASES,
         caseId,
         FIRESTORE_COLLECTIONS.ACTIVITIES

@@ -38,7 +38,7 @@ const ExecutionProcurementPage: React.FC = () => {
 
   const eligibleCases = useMemo(() => {
     return cases.filter((c) => {
-      const active = c.status === CaseStatus.EXECUTION_ACTIVE || c.status === CaseStatus.ACTIVE;
+      const active = c.status === CaseStatus.EXECUTION_ACTIVE;
       const plan = c.executionPlan as { days?: unknown[] } | undefined;
       const hasDays = plan?.days && Array.isArray(plan.days) && plan.days.length > 0;
       return c.isProject && active && hasDays;

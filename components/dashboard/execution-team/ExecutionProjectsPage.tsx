@@ -36,13 +36,13 @@ const ExecutionProjectsPage: React.FC<Props> = ({ onSelectProject }) => {
     if (project.status === CaseStatus.COMPLETED) {
       return { label: 'Completed', color: 'bg-gray-500', textColor: 'text-gray-700', bgLight: 'bg-gray-50' };
     }
-    if (project.status === CaseStatus.EXECUTION_ACTIVE || project.status === CaseStatus.ACTIVE) {
+    if (project.status === CaseStatus.EXECUTION_ACTIVE) {
       return { label: 'Execution Active', color: 'bg-green-500', textColor: 'text-green-700', bgLight: 'bg-green-50' };
     }
     const plan = project.executionPlan as { approvals?: { admin?: boolean; client?: boolean } } | undefined;
     const bothApproved = plan?.approvals?.admin && plan?.approvals?.client;
     if (
-      (project.status === CaseStatus.PLANNING_IN_PROGRESS || project.status === CaseStatus.WAITING_FOR_PLANNING) &&
+      project.status === CaseStatus.WAITING_FOR_PLANNING &&
       plan &&
       !bothApproved
     ) {
@@ -126,7 +126,7 @@ const ExecutionProjectsPage: React.FC<Props> = ({ onSelectProject }) => {
     return plan?.days?.length && !(plan.approvals?.admin && plan.approvals?.client);
   });
   const executionActive = myProjects.filter(
-    (p) => p.status === CaseStatus.EXECUTION_ACTIVE || p.status === CaseStatus.ACTIVE
+    (p) => p.status === CaseStatus.EXECUTION_ACTIVE
   );
   const completed = myProjects.filter((p) => p.status === CaseStatus.COMPLETED);
 

@@ -123,7 +123,7 @@ const SalesTeamDashboard: React.FC<{ currentPage: string, setCurrentPage: (page:
         return LeadPipelineStatus.QUOTATION_SENT;
       case CaseStatus.WAITING_FOR_PAYMENT:
         return LeadPipelineStatus.WON;
-      case CaseStatus.ACTIVE:
+      case CaseStatus.EXECUTION_ACTIVE:
         return LeadPipelineStatus.IN_EXECUTION;
       case CaseStatus.COMPLETED:
         return LeadPipelineStatus.WON;

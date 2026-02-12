@@ -43,7 +43,7 @@ export const mapCaseStatusToLeadStatus = (status: CaseStatus | string): LeadPipe
       return LeadPipelineStatus.WON;
     case CaseStatus.WAITING_FOR_PLANNING:
       return LeadPipelineStatus.WON;
-    case CaseStatus.ACTIVE:
+    case CaseStatus.EXECUTION_ACTIVE:
       return LeadPipelineStatus.IN_EXECUTION;
     case CaseStatus.COMPLETED:
       return LeadPipelineStatus.WON;
@@ -91,9 +91,9 @@ export const mapLeadStatusToCaseStatus = (status: LeadPipelineStatus | CaseStatu
     case LeadPipelineStatus.NEGOTIATION:
       return CaseStatus.NEGOTIATION;
     case LeadPipelineStatus.IN_PROCUREMENT:
-      return CaseStatus.ACTIVE;
+      return CaseStatus.EXECUTION_ACTIVE;
     case LeadPipelineStatus.IN_EXECUTION:
-      return CaseStatus.ACTIVE;
+      return CaseStatus.EXECUTION_ACTIVE;
     case LeadPipelineStatus.WON:
       return CaseStatus.COMPLETED;
     case LeadPipelineStatus.LOST:
@@ -117,7 +117,7 @@ export const CASE_STATUS_DISPLAY_LABELS: Record<string, string> = {
   [CaseStatus.NEGOTIATION]: 'Negotiation',
   [CaseStatus.WAITING_FOR_PAYMENT]: 'Waiting for Payment',
   [CaseStatus.WAITING_FOR_PLANNING]: 'Waiting for Planning',
-  [CaseStatus.ACTIVE]: 'Active / In Execution',
+  [CaseStatus.EXECUTION_ACTIVE]: 'Active / In Execution',
   [CaseStatus.COMPLETED]: 'Completed',
 };
 

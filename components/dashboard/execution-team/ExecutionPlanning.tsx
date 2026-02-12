@@ -311,7 +311,7 @@ const ExecutionPlanning: React.FC<Props> = ({ caseId, setCurrentPage }) => {
 
       // If all approved, activate project and initialize cost center
       if (allApproved) {
-        updates.status = CaseStatus.ACTIVE;
+        updates.status = CaseStatus.EXECUTION_ACTIVE;
         updates.costCenter = {
           totalBudget: totalProjectCost,
           spentAmount: 0,

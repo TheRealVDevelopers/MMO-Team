@@ -10,16 +10,18 @@ import { doc, updateDoc, collection, addDoc, onSnapshot, serverTimestamp } from 
 import { db } from '../../../firebase';
 import { FIRESTORE_COLLECTIONS } from '../../../constants';
 import { Case, CaseStatus } from '../../../types';
-import { CheckCircleIcon } from '@heroicons/react/24/outline';
+import { CheckCircleIcon, LockClosedIcon } from '@heroicons/react/24/outline';
+import { isCaseCompleted } from '../../../services/executionStatusService';
 
 interface Props {
   caseId: string;
   caseData: Case;
   plan: { executionMarkedComplete?: boolean; [key: string]: any };
   onUpdated: () => void;
+  isCompleted?: boolean;  // Added for immutability checks
 }
 
-const ExecutionJMSSection: React.FC<Props> = ({ caseId, caseData, plan, onUpdated }) => {
+const ExecutionJMSSection: React.FC<Props> = ({ caseId, caseData, plan, onUpdated, isCompleted = false }) => {
   const { currentUser } = useAuth();
   const [busy, setBusy] = useState(false);
   const [jmsLaunched, setJmsLaunched] = useState(false);
@@ -74,6 +76,22 @@ const ExecutionJMSSection: React.FC<Props> = ({ caseId, caseData, plan, onUpdate
       setBusy(false);
     }
   };
+
+  // Show locked state for completed projects
+  if (isCompleted) {
+    return (
+      <section className="bg-surface border border-border rounded-xl p-6">
+        <h2 className="text-lg font-bold text-text-primary mb-4">7. Project Closure (JMS)</h2>
+        <div className="flex items-center gap-3 p-4 rounded-lg bg-gray-50 border border-gray-200">
+          <LockClosedIcon className="w-5 h-5 text-gray-500" />
+          <div>
+            <p className="font-medium text-gray-700">JMS Locked</p>
+            <p className="text-sm text-gray-600">Cannot modify JMS for completed projects.</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   if (completed) {
     return (

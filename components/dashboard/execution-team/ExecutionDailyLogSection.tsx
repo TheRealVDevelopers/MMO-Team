@@ -6,15 +6,18 @@
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useDailyUpdates } from '../../../hooks/useDailyUpdates';
+import { LockClosedIcon } from '@heroicons/react/24/outline';
+import { isCaseCompleted } from '../../../services/executionStatusService';
 
 interface Props {
   caseId: string;
   planDays?: Array<{ date: Date }>;
+  isCompleted?: boolean;  // Added to receive completed status
 }
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
-const ExecutionDailyLogSection: React.FC<Props> = ({ caseId, planDays = [] }) => {
+const ExecutionDailyLogSection: React.FC<Props> = ({ caseId, planDays = [], isCompleted = false }) => {
   const { currentUser } = useAuth();
   const { updates, loading, addUpdate } = useDailyUpdates(caseId);
   const [workDescription, setWorkDescription] = useState('');
@@ -76,6 +79,37 @@ const ExecutionDailyLogSection: React.FC<Props> = ({ caseId, planDays = [] }) =>
       <section className="bg-surface border border-border rounded-xl p-6">
         <h2 className="text-lg font-bold text-text-primary mb-4">4. Daily Execution Log</h2>
         <p className="text-sm text-text-secondary">Loading…</p>
+      </section>
+    );
+  }
+
+  // Show read-only mode for completed projects
+  if (isCompleted) {
+    return (
+      <section className="bg-surface border border-border rounded-xl p-6">
+        <h2 className="text-lg font-bold text-text-primary mb-4">4. Daily Execution Log</h2>
+        <div className="flex items-center gap-3 p-4 rounded-lg bg-gray-50 border border-gray-200">
+          <LockClosedIcon className="w-5 h-5 text-gray-500" />
+          <div>
+            <p className="font-medium text-gray-700">Daily Log Locked</p>
+            <p className="text-sm text-gray-600">Cannot add daily updates to completed projects.</p>
+          </div>
+        </div>
+        
+        {/* Show existing updates in read-only mode */}
+        {updates.length > 0 && (
+          <div className="mt-6">
+            <p className="text-sm font-medium text-text-primary mb-2">Daily Logs History</p>
+            <ul className="space-y-2 max-h-60 overflow-y-auto">
+              {updates.map((u) => (
+                <li key={u.id} className="text-sm text-text-secondary border-b border-border pb-2">
+                  {typeof u.date === 'string' ? u.date.slice(0, 10) : new Date(u.date).toISOString().slice(0, 10)} — {u.workDescription}
+                  {u.manpowerCount ? ` (${u.manpowerCount} workers)` : ''}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </section>
     );
   }

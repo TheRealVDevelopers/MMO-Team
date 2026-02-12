@@ -245,7 +245,7 @@ export const useCases = (options: UseCasesOptions = {}) => {
       try {
         await updateCase(caseId, {
           isProject: true,
-          status: CaseStatus.ACTIVE,
+          status: CaseStatus.EXECUTION_ACTIVE,
           workflow: {
             ...targetCase.workflow,
             paymentVerified: true,
