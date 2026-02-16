@@ -397,19 +397,18 @@ const BOQTab: React.FC<{ boqs: CaseBOQ[]; loading: boolean; caseId: string; proj
                             <div key={boq.id} className="border border-border rounded-lg p-4">
                                 <div className="flex items-start justify-between mb-2">
                                     <div>
-                                        <h3 className="font-semibold text-text-primary">BOQ #{boq.id.slice(-6)}</h3>
+                                        <h3 className="font-semibold text-text-primary">BOQ #{(boq.id || '').slice(-6)}</h3>
                                         <p className="text-sm text-text-secondary">{boq.items.length} items</p>
                                         <p className="text-xs text-text-tertiary">
                                             Created: {safeDate(boq.createdAt)}
                                         </p>
                                     </div>
                                     {boq.status && (
-                                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                            boq.status === 'approved' ? 'bg-success/10 text-success' :
-                                            boq.status === 'pending' ? 'bg-warning/10 text-warning' :
-                                            boq.status === 'rejected' ? 'bg-error/10 text-error' :
-                                            'bg-gray-100 text-gray-700'
-                                        }`}>
+                                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${boq.status === 'approved' ? 'bg-success/10 text-success' :
+                                                boq.status === 'pending' ? 'bg-warning/10 text-warning' :
+                                                    boq.status === 'rejected' ? 'bg-error/10 text-error' :
+                                                        'bg-gray-100 text-gray-700'
+                                            }`}>
                                             {boq.status.toUpperCase()}
                                         </span>
                                     )}
@@ -470,7 +469,7 @@ const QuotationsTab: React.FC<{
     const handleApprove = async (quotation: CaseQuotation) => {
         if (!currentUser || !canApprove) return;
 
-        if (!window.confirm(`Approve quotation ${quotation.id.slice(-8)}?`)) return;
+        if (!window.confirm(`Approve quotation ${(quotation.id || '').slice(-8)}?`)) return;
 
         setApproving(quotation.id);
         try {
@@ -525,7 +524,7 @@ const QuotationsTab: React.FC<{
                                 <div className="flex items-start justify-between mb-2">
                                     <div>
                                         <h3 className="font-semibold text-text-primary">
-                                            {`QT-${quot.id.slice(-6)}`}
+                                            {`QT-${(quot.id || '').slice(-6)}`}
                                         </h3>
                                         <p className="text-xs text-text-tertiary">
                                             Submitted: {safeDate(quot.createdAt)}
@@ -597,7 +596,7 @@ const QuotationsTab: React.FC<{
                         <div className="bg-background rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
                             <h3 className="text-lg font-bold text-text-primary mb-4">Reject Quotation</h3>
                             <p className="text-sm text-text-secondary mb-4">
-                                Quotation: {selectedQuotation.quotationNumber || `QT-${selectedQuotation.id.slice(-6)}`}
+                                Quotation: {selectedQuotation.quotationNumber || `QT-${(selectedQuotation.id || '').slice(-6)}`}
                             </p>
                             <div className="mb-4">
                                 <label className="block text-sm font-medium text-text-primary mb-2">

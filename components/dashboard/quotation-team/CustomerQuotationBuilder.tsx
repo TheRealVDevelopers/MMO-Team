@@ -87,12 +87,11 @@ const CaseListItem: React.FC<{
                             </span>
                         )}
                         {!quotationsLoading && quotations.length > 0 && (
-                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                isAudited ? 'bg-green-100 text-green-700' :
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${isAudited ? 'bg-green-100 text-green-700' :
                                 isPendingAudit ? 'bg-amber-100 text-amber-700' :
-                                isRejected ? 'bg-red-100 text-red-700' :
-                                'bg-gray-100 text-gray-500'
-                            }`}>
+                                    isRejected ? 'bg-red-100 text-red-700' :
+                                        'bg-gray-100 text-gray-500'
+                                }`}>
                                 {isAudited ? 'AUDITED' : isPendingAudit ? 'PENDING AUDIT' : isRejected ? 'REJECTED' : 'NOT AUDITED'}
                             </span>
                         )}
@@ -203,10 +202,12 @@ const CustomerQuotationBuilder: React.FC = () => {
 
             // Normalize items for procurement (handles both old and new schema)
             const items = (quot.items || []).map((i: any) => ({
+                itemId: i.itemId || i.id || i.catalogItemId, // Preserve ID for PDF/Catalog lookup
                 name: i.name || i.itemName || i.description || 'Item',
                 quantity: Number(i.quantity) || 0,
-                unit: i.unit || 'pcs',
+                unit: i.unit || 'units',
                 rate: Number(i.rate ?? i.unitPrice ?? 0) || 0,
+                unitPrice: Number(i.unitPrice ?? i.rate ?? 0) || 0,
                 total: Number(i.total ?? (i.quantity * (i.rate ?? i.unitPrice ?? 0))) || 0,
             }));
             const grandTotal = Number(quot.grandTotal ?? quot.finalAmount ?? quot.totalAmount ?? 0) || 0;
@@ -229,6 +230,7 @@ const CustomerQuotationBuilder: React.FC = () => {
 
             await updateDoc(caseRef, {
                 status: 'QUOTATION_SUBMITTED',
+                quotationStatus: 'SUBMITTED_FOR_AUDIT', // Update quotation status
                 updatedAt: serverTimestamp(),
             });
 
@@ -398,6 +400,13 @@ const CustomerQuotationBuilder: React.FC = () => {
                 status: 'Pending Approval', // Requires Admin or Sales Manager approval
                 notes: `Customer quotation submitted by ${currentUser.name}`,
                 ssValue: (ssLeft !== '' || ssRight !== '') ? `${ssLeft || 0}:${ssRight || 0}` : undefined // SS format: left:right
+            });
+
+            // Update Case with quotationStatus
+            const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, selectedCase.id);
+            await updateDoc(caseRef, {
+                quotationStatus: 'PENDING_APPROVAL', // Initial status
+                updatedAt: serverTimestamp()
             });
 
             console.log(`✅ Quotation saved to cases/${selectedCase.id}/quotations/${quotationId}`);
@@ -604,12 +613,11 @@ const CustomerQuotationBuilder: React.FC = () => {
                                                             {quot.status}
                                                         </span>
                                                         {quot.auditStatus && (
-                                                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                                                quot.auditStatus === 'approved' ? 'bg-green-100 text-green-700' :
+                                                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${quot.auditStatus === 'approved' ? 'bg-green-100 text-green-700' :
                                                                 quot.auditStatus === 'pending' ? 'bg-amber-100 text-amber-700' :
-                                                                quot.auditStatus === 'rejected' ? 'bg-red-100 text-red-700' :
-                                                                'bg-gray-100 text-gray-700'
-                                                            }`}>
+                                                                    quot.auditStatus === 'rejected' ? 'bg-red-100 text-red-700' :
+                                                                        'bg-gray-100 text-gray-700'
+                                                                }`}>
                                                                 {quot.auditStatus === 'approved' ? 'AUDITED' : quot.auditStatus === 'pending' ? 'PENDING AUDIT' : quot.auditStatus === 'rejected' ? 'REJECTED' : 'NOT AUDITED'}
                                                             </span>
                                                         )}

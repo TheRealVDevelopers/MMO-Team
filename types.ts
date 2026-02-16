@@ -82,6 +82,7 @@ export enum ApprovalRequestType {
   EXPENSE_APPROVAL = "expense_approval",
   VENDOR_BILL = "vendor_bill",
   STAFF_REGISTRATION = "staff_registration",
+  QUOTATION_APPROVAL = "quotation_approval", // Added for consistency
 }
 
 export enum ApprovalStatus {
@@ -175,14 +176,14 @@ export interface ApprovalRequest {
   id: string;
   caseId: string;
   organizationId?: string; // Required when creating; all queries filter by org
-  type: 'PAYMENT' | 'BUDGET' | 'MATERIAL' | 'EXPENSE';
+  type?: 'PAYMENT' | 'BUDGET' | 'MATERIAL' | 'EXPENSE';
   status: 'pending' | 'approved' | 'rejected' | 'resolved';
-  payload: {
+  payload?: {
     amount?: number;
     paymentId?: string;
     expenseId?: string;
-    invoiceId?: string;
-    materialId?: string;
+    budgetId?: string;
+    materialRequestId?: number;
     notes?: string;
   };
   /** Immutable copy of payload at request time; approval executors MUST use this when present. */
@@ -190,16 +191,29 @@ export interface ApprovalRequest {
     amount?: number;
     paymentId?: string;
     expenseId?: string;
-    invoiceId?: string;
-    materialId?: string;
+    budgetId?: string;
+    materialRequestId?: number;
     notes?: string;
   };
-  requestedBy: string; // User ID
-  requestedAt: Date;
-  assignedToRole: UserRole;
+  requestedBy?: string; // User ID (alias for requesterId)
+  requesterId?: string; // Match hook
+  requestedAt?: Date; // Alias for createdAt
+  createdAt?: Date; // Match hook
+  assignedToRole?: UserRole;
   resolvedBy?: string; // User ID
   resolvedAt?: Date;
   rejectionReason?: string;
+
+  // Extended fields for Quotation/General Approvals
+  requestType?: any; // ApprovalRequestType
+  title?: string;
+  description?: string;
+  contextId?: string;
+  requesterName?: string;
+  priority?: string;
+  targetRole?: UserRole;
+  startDate?: Date;
+  endDate?: Date;
 }
 
 // ========================================
@@ -236,6 +250,10 @@ export interface Case {
 
   // Status - THE SINGLE AUTHORITY
   status: CaseStatus;
+
+  // Priority
+  priority?: string;
+  quotationStatus?: string; // To track quotation workflow state
 
   // Workflow State (Derived helpers, NOT authority)
   workflow: CaseWorkflow;
@@ -325,21 +343,7 @@ export interface Case {
 // ========================================
 
 // Path: cases/{caseId}/approvals/{approvalId} (duplicate def for same shape - use main one above)
-export interface ApprovalRequest {
-  id: string;
-  caseId: string;
-  organizationId?: string;
-  type: 'PAYMENT' | 'BUDGET' | 'MATERIAL' | 'EXPENSE';
-  status: 'pending' | 'approved' | 'rejected' | 'resolved';
-  payload: { amount?: number; paymentId?: string; expenseId?: string; invoiceId?: string; materialId?: string; notes?: string };
-  payloadSnapshot?: { amount?: number; paymentId?: string; expenseId?: string; invoiceId?: string; materialId?: string; notes?: string };
-  requestedBy: string;
-  requestedAt: Date;
-  assignedToRole: UserRole;
-  resolvedBy?: string;
-  resolvedAt?: Date;
-  rejectionReason?: string;
-}
+// Duplicate ApprovalRequest removed (Use main definition above)
 
 // Path: organizations/{orgId}/generalLedger/{entryId}
 export interface GeneralLedgerEntry {
@@ -1409,6 +1413,7 @@ export interface CaseBOQ {
   createdBy: string;
   createdAt: Date | any; // Timestamp
   pdfUrl?: string; // Generated PDF URL
+  status?: 'pending' | 'approved' | 'rejected' | 'submitted';
 }
 
 export interface BOQItemData {
@@ -1423,6 +1428,7 @@ export interface BOQItemData {
 // Quotation Document: cases/{caseId}/quotations/{quotationId}
 export interface CaseQuotation {
   id: string;
+  quotationNumber?: string;
   caseId: string;
   boqId: string; // Reference to BOQ
   items: QuotationItemData[];
@@ -1440,15 +1446,24 @@ export interface CaseQuotation {
   auditStatus: 'pending' | 'approved' | 'rejected';
   auditedBy?: string;
   auditedAt?: Date | any;
+  status: string; // 'Pending Approval', 'Approved', 'Rejected'
+  submittedAt?: Date | any;
+  submittedBy?: string;
+  submittedByName?: string;
+  finalAmount?: number; // Alias or computed final
+  totalAmount?: number; // Added to match usage in Builder
 }
 
 export interface QuotationItemData {
-  catalogItemId: string;
+  catalogItemId?: string;
+  itemId?: string; // Alias for catalogItemId
   name: string;
-  unit: string;
+  unit?: string;
   quantity: number;
-  rate: number;
+  rate?: number;
+  unitPrice?: number; // Alias for rate
   total: number;
+  discount?: number; // Percentage
 }
 
 // ========================================
@@ -1815,11 +1830,7 @@ export enum SiteVisitStatus {
   CANCELLED = "cancelled",
 }
 
-export enum VendorBillStatus {
-  PENDING = "pending",
-  PAID = "paid",
-  OVERDUE = "overdue",
-}
+
 
 export interface Document {
   id: string;

@@ -51,16 +51,22 @@ const QuotationAuditPage: React.FC = () => {
     const { requests: approvalRequests, loading } = useApprovalRequests(); // Get all requests
     const { submitRequest } = useApprovals();
 
-    // Filter for quotation approvals in pending status
-    const pendingQuotations = approvalRequests.filter(
-        r => r.requestType === ApprovalRequestType.QUOTATION_APPROVAL &&
-            r.status === ApprovalStatus.PENDING
-    );
-
     const [selectedQuotation, setSelectedQuotation] = useState<ApprovalRequest | null>(null);
     const [editMode, setEditMode] = useState(false);
     const [editedItems, setEditedItems] = useState<QuotationItem[]>([]);
     const [submitting, setSubmitting] = useState(false);
+    const [activeTab, setActiveTab] = useState<'pending' | 'history'>('pending');
+
+    // Filter quotations based on active tab
+    const filteredQuotations = approvalRequests.filter(r => {
+        if (r.requestType !== ApprovalRequestType.QUOTATION_APPROVAL) return false;
+
+        if (activeTab === 'pending') {
+            return r.status === ApprovalStatus.PENDING;
+        } else {
+            return r.status === ApprovalStatus.APPROVED || r.status === ApprovalStatus.REJECTED;
+        }
+    });
 
     // When a quotation is selected, parse its items
     useEffect(() => {
@@ -149,21 +155,49 @@ const QuotationAuditPage: React.FC = () => {
             />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Pending Quotations List */}
+                {/* Quotations List */}
                 <ContentCard>
-                    <h3 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
-                        <DocumentTextIcon className="w-5 h-5 text-primary" />
-                        Pending Audit ({pendingQuotations.length})
-                    </h3>
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-bold text-text-primary flex items-center gap-2">
+                            <DocumentTextIcon className="w-5 h-5 text-primary" />
+                            {activeTab === 'pending' ? 'Pending Audit' : 'Audit History'} ({filteredQuotations.length})
+                        </h3>
+                    </div>
+
+                    {/* Tabs */}
+                    <div className="flex p-1 bg-subtle-background rounded-lg mb-4">
+                        <button
+                            onClick={() => setActiveTab('pending')}
+                            className={cn(
+                                "flex-1 py-1.5 text-xs font-medium rounded-md transition-all",
+                                activeTab === 'pending'
+                                    ? "bg-white text-primary shadow-sm"
+                                    : "text-text-secondary hover:text-text-primary"
+                            )}
+                        >
+                            Pending
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('history')}
+                            className={cn(
+                                "flex-1 py-1.5 text-xs font-medium rounded-md transition-all",
+                                activeTab === 'history'
+                                    ? "bg-white text-primary shadow-sm"
+                                    : "text-text-secondary hover:text-text-primary"
+                            )}
+                        >
+                            History
+                        </button>
+                    </div>
 
                     <div className="space-y-3 max-h-[600px] overflow-y-auto">
-                        {pendingQuotations.length === 0 ? (
+                        {filteredQuotations.length === 0 ? (
                             <div className="text-center py-12 text-text-tertiary">
                                 <DocumentTextIcon className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                                <p>No quotations pending audit</p>
+                                <p>No quotations found in {activeTab}</p>
                             </div>
                         ) : (
-                            pendingQuotations.map(quotation => (
+                            filteredQuotations.map(quotation => (
                                 <Card
                                     key={quotation.id}
                                     onClick={() => setSelectedQuotation(quotation)}
@@ -176,8 +210,13 @@ const QuotationAuditPage: React.FC = () => {
                                         <h4 className="font-bold text-text-primary text-sm line-clamp-1">
                                             {quotation.title.replace('[APPROVAL NEEDED] ', '')}
                                         </h4>
-                                        <span className="text-[10px] font-medium px-2 py-0.5 bg-amber-500/10 text-amber-500 rounded-full">
-                                            Pending
+                                        <span className={cn(
+                                            "text-[10px] font-medium px-2 py-0.5 rounded-full",
+                                            quotation.status === ApprovalStatus.PENDING ? "bg-amber-500/10 text-amber-500" :
+                                                quotation.status === ApprovalStatus.APPROVED ? "bg-green-500/10 text-green-500" :
+                                                    "bg-red-500/10 text-red-500"
+                                        )}>
+                                            {quotation.status.charAt(0).toUpperCase() + quotation.status.slice(1)}
                                         </span>
                                     </div>
                                     <p className="text-xs text-text-secondary line-clamp-2 mb-2">

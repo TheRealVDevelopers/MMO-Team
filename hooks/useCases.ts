@@ -233,11 +233,11 @@ export const useCases = (options: UseCasesOptions = {}) => {
       // HARD RULE: Verify the case is in WAITING_FOR_PLANNING status
       const targetCase = cases.find((c) => c.id === caseId);
       if (!targetCase) throw new Error('Case not found');
-      
+
       if (targetCase.status !== CaseStatus.WAITING_FOR_PLANNING) {
         throw new Error(`BLOCKED: Cannot convert to project. Status must be WAITING_FOR_PLANNING, but is ${targetCase.status}`);
       }
-      
+
       if (!targetCase.financial?.paymentVerified) {
         throw new Error('BLOCKED: Cannot convert to project - payment not verified by accountant');
       }
@@ -307,8 +307,26 @@ export const convertLeadToProject = async (
 };
 
 // Legacy stub exports for backward compatibility
-export const addCaseQuotation = async () => {
-  console.warn('addCaseQuotation is deprecated - use useCaseDocuments instead');
+// Restored functionality for backward compatibility
+export const addCaseQuotation = async (caseId: string, quotationData: any) => {
+  if (!db) throw new Error('Database not initialized');
+
+  try {
+    const quotationsRef = collection(db, FIRESTORE_COLLECTIONS.CASES, caseId, FIRESTORE_COLLECTIONS.QUOTATIONS);
+
+    // Clean undefined values
+    const cleanData: any = { ...quotationData };
+    Object.keys(cleanData).forEach(key => cleanData[key] === undefined && delete cleanData[key]);
+
+    return await addDoc(quotationsRef, {
+      ...cleanData,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error adding quotation:', error);
+    throw error;
+  }
 };
 
 export const useCaseQuotations = (caseId?: string) => {
@@ -327,8 +345,8 @@ export const useCaseQuotations = (caseId?: string) => {
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
-        id: doc.id,
         ...doc.data(),
+        id: doc.id,
         createdAt: doc.data().createdAt instanceof Timestamp ? doc.data().createdAt.toDate() : new Date(doc.data().createdAt || Date.now())
       }));
       console.log(`[useCaseQuotations] Loaded ${data.length} quotations for case ${caseId}`, data);
@@ -361,8 +379,8 @@ export const useCaseBOQs = (caseId?: string) => {
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
-        id: doc.id,
         ...doc.data(),
+        id: doc.id,
         createdAt: doc.data().createdAt instanceof Timestamp ? doc.data().createdAt.toDate() : new Date(doc.data().createdAt || Date.now())
       }));
       console.log(`[useCaseBOQs] Loaded ${data.length} BOQs for case ${caseId}`, data);
@@ -395,8 +413,8 @@ export const useCaseDrawings = (caseId?: string) => {
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
-        id: doc.id,
         ...doc.data(),
+        id: doc.id,
         uploadedAt: doc.data().uploadedAt instanceof Timestamp ? doc.data().uploadedAt.toDate() : new Date(doc.data().uploadedAt || Date.now())
       }));
       console.log(`[useCaseDrawings] Loaded ${data.length} drawings for case ${caseId}`, data);
@@ -480,8 +498,8 @@ export const useCaseSiteVisits = (caseId?: string) => {
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
-        id: doc.id,
         ...doc.data(),
+        id: doc.id,
         scheduledDate: doc.data().scheduledDate instanceof Timestamp ? doc.data().scheduledDate.toDate() : new Date(doc.data().scheduledDate || Date.now())
       }));
       console.log(`[useCaseSiteVisits] Loaded ${data.length} site visits for case ${caseId}`, data);
@@ -514,8 +532,8 @@ export const useCaseTasks = (caseId?: string) => {
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
-        id: doc.id,
         ...doc.data(),
+        id: doc.id,
         createdAt: doc.data().createdAt instanceof Timestamp ? doc.data().createdAt.toDate() : new Date(doc.data().createdAt || Date.now())
       }));
       console.log(`[useCaseTasks] Loaded ${data.length} tasks for case ${caseId}`, data);

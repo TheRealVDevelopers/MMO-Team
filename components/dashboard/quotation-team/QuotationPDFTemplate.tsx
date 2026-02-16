@@ -138,7 +138,10 @@ const QuotationPDFTemplate: React.FC<QuotationPDFTemplateProps> = ({ quotation, 
                                         try {
                                             const d = quotation.submittedAt instanceof Date ? quotation.submittedAt :
                                                 (quotation.submittedAt as any)?.toDate ? (quotation.submittedAt as any).toDate() :
-                                                    new Date(quotation.submittedAt);
+                                                    quotation.submittedAt ? new Date(quotation.submittedAt) :
+                                                        quotation.createdAt instanceof Date ? quotation.createdAt :
+                                                            (quotation.createdAt as any)?.toDate ? (quotation.createdAt as any).toDate() :
+                                                                new Date();
                                             return d.toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
                                         } catch (e) { return 'Invalid Date'; }
                                     })()}
@@ -148,7 +151,10 @@ const QuotationPDFTemplate: React.FC<QuotationPDFTemplateProps> = ({ quotation, 
                                         try {
                                             const d = quotation.submittedAt instanceof Date ? quotation.submittedAt :
                                                 (quotation.submittedAt as any)?.toDate ? (quotation.submittedAt as any).toDate() :
-                                                    new Date(quotation.submittedAt);
+                                                    quotation.submittedAt ? new Date(quotation.submittedAt) :
+                                                        quotation.createdAt instanceof Date ? quotation.createdAt :
+                                                            (quotation.createdAt as any)?.toDate ? (quotation.createdAt as any).toDate() :
+                                                                new Date();
                                             const validUntil = new Date(d.getTime() + 30 * 24 * 60 * 60 * 1000);
                                             return validUntil.toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
                                         } catch (e) { return 'Invalid Date'; }
@@ -156,9 +162,9 @@ const QuotationPDFTemplate: React.FC<QuotationPDFTemplateProps> = ({ quotation, 
                                 </p>
                             </div>
                             <div className={`px-4 py-2 rounded-lg font-bold ${quotation.status === 'Approved' ? 'bg-green-100 text-green-700' :
-                                    quotation.status === 'Pending Approval' ? 'bg-yellow-100 text-yellow-700' :
-                                        quotation.status === 'Rejected' ? 'bg-red-100 text-red-700' :
-                                            'bg-gray-100 text-gray-700'
+                                quotation.status === 'Pending Approval' ? 'bg-yellow-100 text-yellow-700' :
+                                    quotation.status === 'Rejected' ? 'bg-red-100 text-red-700' :
+                                        'bg-gray-100 text-gray-700'
                                 }`}>
                                 {quotation.status}
                             </div>
@@ -169,9 +175,9 @@ const QuotationPDFTemplate: React.FC<QuotationPDFTemplateProps> = ({ quotation, 
                             <h3 className="text-sm font-bold text-text-primary mb-2">Bill To:</h3>
                             <p className="text-base font-semibold text-text-primary">{caseData.clientName}</p>
                             <p className="text-sm text-text-secondary">{caseData.projectName}</p>
-                            <p className="text-sm text-text-secondary">Phone: {caseData.contact?.phone || caseData.clientPhone || '—'}</p>
-                            {(caseData.contact?.email || caseData.clientEmail) && (
-                                <p className="text-sm text-text-secondary">Email: {caseData.contact?.email || caseData.clientEmail}</p>
+                            <p className="text-sm text-text-secondary">Phone: {caseData.clientPhone || '—'}</p>
+                            {caseData.clientEmail && (
+                                <p className="text-sm text-text-secondary">Email: {caseData.clientEmail}</p>
                             )}
                         </div>
                     </div>
@@ -191,13 +197,14 @@ const QuotationPDFTemplate: React.FC<QuotationPDFTemplateProps> = ({ quotation, 
                             </thead>
                             <tbody>
                                 {quotation.items.map((item, index) => {
-                                    const lineTotal = item.unitPrice * item.quantity;
-                                    const discountAmount = (lineTotal * item.discount) / 100;
+                                    const unitPrice = item.unitPrice ?? item.rate ?? 0;
+                                    const lineTotal = unitPrice * item.quantity;
+                                    const discountAmount = (lineTotal * (item.discount || 0)) / 100;
                                     const finalAmount = lineTotal - discountAmount;
 
                                     // Find item name from catalog
                                     const catalogItem = catalogItems.find(ci => ci.id === item.itemId);
-                                    const itemName = catalogItem?.name || `Item #${item.itemId.slice(-6)}`;
+                                    const itemName = catalogItem?.name || (item.name ? item.name : `Item #${(item.itemId || '').slice(-6)}`);
                                     const itemDescription = catalogItem?.description || '';
 
                                     return (
@@ -210,8 +217,8 @@ const QuotationPDFTemplate: React.FC<QuotationPDFTemplateProps> = ({ quotation, 
                                                 )}
                                             </td>
                                             <td className="border border-border p-3 text-right text-sm">{item.quantity}</td>
-                                            <td className="border border-border p-3 text-right text-sm">{formatCurrencyINR(item.unitPrice)}</td>
-                                            <td className="border border-border p-3 text-right text-sm">{item.discount}%</td>
+                                            <td className="border border-border p-3 text-right text-sm">{formatCurrencyINR(unitPrice)}</td>
+                                            <td className="border border-border p-3 text-right text-sm">{item.discount || 0}%</td>
                                             <td className="border border-border p-3 text-right text-sm font-medium">{formatCurrencyINR(finalAmount)}</td>
                                         </tr>
                                     );
@@ -225,21 +232,21 @@ const QuotationPDFTemplate: React.FC<QuotationPDFTemplateProps> = ({ quotation, 
                         <div className="w-80">
                             <div className="flex justify-between py-2 border-b border-border">
                                 <span className="text-sm text-text-secondary">Subtotal:</span>
-                                <span className="text-sm font-medium text-text-primary">{formatCurrencyINR(quotation.totalAmount - quotation.discountAmount)}</span>
+                                <span className="text-sm font-medium text-text-primary">{formatCurrencyINR((quotation.totalAmount ?? quotation.subtotal ?? 0) - (quotation.discountAmount || 0))}</span>
                             </div>
                             {quotation.discountAmount > 0 && (
                                 <div className="flex justify-between py-2 border-b border-border">
                                     <span className="text-sm text-text-secondary">Discount:</span>
-                                    <span className="text-sm font-medium text-error">- {formatCurrencyINR(quotation.discountAmount)}</span>
+                                    <span className="text-sm font-medium text-error">- {formatCurrencyINR(quotation.discountAmount || 0)}</span>
                                 </div>
                             )}
                             <div className="flex justify-between py-2 border-b border-border">
                                 <span className="text-sm text-text-secondary">Tax (GST 18%):</span>
-                                <span className="text-sm font-medium text-text-primary">{formatCurrencyINR(quotation.taxAmount)}</span>
+                                <span className="text-sm font-medium text-text-primary">{formatCurrencyINR(quotation.taxAmount ?? ((quotation.totalAmount ?? quotation.subtotal ?? 0) * 0.18))}</span>
                             </div>
                             <div className="flex justify-between py-3 bg-primary/10 px-4 rounded-lg mt-2">
                                 <span className="text-lg font-bold text-text-primary">Total Amount:</span>
-                                <span className="text-lg font-bold text-primary">{formatCurrencyINR(quotation.finalAmount)}</span>
+                                <span className="text-lg font-bold text-primary">{formatCurrencyINR(quotation.finalAmount ?? quotation.grandTotal ?? quotation.totalAmount ?? 0)}</span>
                             </div>
                         </div>
                     </div>
