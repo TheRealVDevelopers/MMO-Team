@@ -300,8 +300,6 @@ export interface Case {
       miscCost: number;
       expanded?: boolean;
     }>;
-    approved?: boolean;
-    approvedBy?: string;
   };
 
   // Cost center tracking (Active Financials)
@@ -531,6 +529,12 @@ export interface CaseDocument {
   uploadedBy: string; // User ID
   uploadedAt: Date;
   notes?: string;
+
+  // Visibility & Approval
+  visibleToClient: boolean;
+  approvalStatus: 'pending' | 'approved' | 'rejected';
+  approvedBy?: string; // User ID
+  approvedAt?: Date;
 }
 
 // Path: organizations/{orgId}/cases/{caseId}/expenses/{expenseId}
@@ -734,6 +738,18 @@ export interface Invoice {
   dueDate?: Date;
   paidAt?: Date;
   status: 'pending' | 'paid' | 'overdue';
+
+  // Visibility & Approval
+  visibleToClient?: boolean; // Optional for backward compatibility
+  approvalStatus?: 'pending' | 'approved' | 'rejected'; // Optional for backward compatibility
+  approvedBy?: string;
+  approvedAt?: Date;
+
+  // Legacy / Aliases (for backward compatibility)
+  projectId?: string; // Alias for caseId
+  total?: number; // Alias for totalAmount
+  issueDate?: Date; // Alias for issuedAt
+  [key: string]: any; // Allow flexibility during migration
 }
 
 // ========================================
@@ -1355,17 +1371,7 @@ export interface DailyUpdate {
   [key: string]: any;
 }
 
-export interface Invoice {
-  id: string;
-  clientName: string;
-  amount: number;
-  status: 'pending' | 'paid' | 'overdue';
-  issuedAt: Date;
-  issueDate?: Date;
-  projectId?: string;
-  total?: number;
-  [key: string]: any;
-}
+
 
 export interface Vendor {
   id: string;

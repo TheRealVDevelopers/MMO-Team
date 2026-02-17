@@ -56,7 +56,7 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
         // Lead-specific (manual)
         title: '',
         estimatedBudget: '',
-        assignedSales: '',
+        assignedSales: currentUser?.role === UserRole.SALES_TEAM_MEMBER ? currentUser.id : '',
         priority: 'Medium' as 'Low' | 'Medium' | 'High',
         notes: ''
     });
@@ -111,21 +111,24 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
             return;
         }
 
-        // Permission check: Admin and Sales GM can create any lead; Sales Team Member only Individual
-        const canCreateOrgLead = currentUser?.role === UserRole.ADMIN || currentUser?.role === UserRole.SALES_GENERAL_MANAGER;
-        const canCreateIndividualLead = canCreateOrgLead || currentUser?.role === UserRole.SALES_TEAM_MEMBER;
-        if (leadType === 'organization' && !canCreateOrgLead) {
-            setErrors({ submit: 'You do not have permission to create organization leads. Use Individual lead type.' });
-            return;
-        }
-        if (leadType === 'individual' && !canCreateIndividualLead) {
-            setErrors({ submit: 'You do not have permission to create leads' });
+        // Permission check: Admin, Sales GM, and Sales Team Member can create leads
+        // We removed the restriction that Sales Team Members cannot create Organization leads
+        const canCreateLead = currentUser?.role === UserRole.ADMIN ||
+            currentUser?.role === UserRole.SALES_GENERAL_MANAGER ||
+            currentUser?.role === UserRole.SALES_TEAM_MEMBER;
+
+        console.log('DEBUG: Permission Check:', { role: currentUser?.role, canCreateLead });
+
+        if (!canCreateLead) {
+            setErrors({ submit: 'You do not have permission to create leads.' });
             return;
         }
 
         setIsSubmitting(true);
 
         try {
+            console.log('DEBUG: Starting lead creation...');
+
             // Direct Firestore write - HARD RULE: ONLY write to cases collection
             const { db } = await import('../../../firebase');
             const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
@@ -136,6 +139,7 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
 
             // Create case document at ROOT level: cases/{caseId}
             const casesRef = collection(db, FIRESTORE_COLLECTIONS.CASES);
+            console.log('DEBUG: Firestore ref created', casesRef.path);
 
             const caseData: any = {
                 leadType,
@@ -394,59 +398,59 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
 
                             {/* STEP 1: ORGANIZATION SELECTION (MANDATORY when Organization) */}
                             {leadType === 'organization' && (
-                            <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <BuildingOfficeIcon className="w-6 h-6 text-blue-600" />
-                                    <h3 className="text-lg font-bold text-gray-900">
-                                        Step 1: Select Organization
-                                        <span className="text-red-500 ml-1">*</span>
-                                    </h3>
-                                </div>
+                                <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <BuildingOfficeIcon className="w-6 h-6 text-blue-600" />
+                                        <h3 className="text-lg font-bold text-gray-900">
+                                            Step 1: Select Organization
+                                            <span className="text-red-500 ml-1">*</span>
+                                        </h3>
+                                    </div>
 
-                                <div className="flex gap-3">
-                                    <div className="flex-1">
-                                        <select
-                                            value={selectedOrgId}
-                                            onChange={(e) => setSelectedOrgId(e.target.value)}
-                                            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.organization ? 'border-red-500' : 'border-gray-300'
-                                                }`}
-                                            disabled={orgsLoading}
-                                        >
-                                            <option value="">
-                                                {orgsLoading ? 'Loading organizations...' : 'Select an organization'}
-                                            </option>
-                                            {organizations.map((org) => (
-                                                <option key={org.id} value={org.id}>
-                                                    {org.name}
+                                    <div className="flex gap-3">
+                                        <div className="flex-1">
+                                            <select
+                                                value={selectedOrgId}
+                                                onChange={(e) => setSelectedOrgId(e.target.value)}
+                                                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.organization ? 'border-red-500' : 'border-gray-300'
+                                                    }`}
+                                                disabled={orgsLoading}
+                                            >
+                                                <option value="">
+                                                    {orgsLoading ? 'Loading organizations...' : 'Select an organization'}
                                                 </option>
-                                            ))}
-                                        </select>
-                                        {errors.organization && (
-                                            <p className="mt-1 text-sm text-red-500">{errors.organization}</p>
-                                        )}
-                                    </div>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowCreateOrgModal(true)}
-                                        className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 whitespace-nowrap"
-                                    >
-                                        <PlusIcon className="w-5 h-5" />
-                                        New Org
-                                    </button>
-                                </div>
-
-                                {selectedOrg && leadType === 'organization' && (
-                                    <div className="mt-4 p-4 bg-white rounded-lg border border-blue-200">
-                                        <p className="text-sm font-medium text-gray-700 mb-2">Selected Organization:</p>
-                                        <div className="text-sm text-gray-600 space-y-1">
-                                            <p><strong>Name:</strong> {selectedOrg.name}</p>
-                                            {selectedOrg.phone && <p><strong>Phone:</strong> {selectedOrg.phone}</p>}
-                                            {selectedOrg.email && <p><strong>Email:</strong> {selectedOrg.email}</p>}
+                                                {organizations.map((org) => (
+                                                    <option key={org.id} value={org.id}>
+                                                        {org.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            {errors.organization && (
+                                                <p className="mt-1 text-sm text-red-500">{errors.organization}</p>
+                                            )}
                                         </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowCreateOrgModal(true)}
+                                            className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 whitespace-nowrap"
+                                        >
+                                            <PlusIcon className="w-5 h-5" />
+                                            New Org
+                                        </button>
                                     </div>
-                                )}
-                            </div>
+
+                                    {selectedOrg && leadType === 'organization' && (
+                                        <div className="mt-4 p-4 bg-white rounded-lg border border-blue-200">
+                                            <p className="text-sm font-medium text-gray-700 mb-2">Selected Organization:</p>
+                                            <div className="text-sm text-gray-600 space-y-1">
+                                                <p><strong>Name:</strong> {selectedOrg.name}</p>
+                                                {selectedOrg.phone && <p><strong>Phone:</strong> {selectedOrg.phone}</p>}
+                                                {selectedOrg.email && <p><strong>Email:</strong> {selectedOrg.email}</p>}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             )}
 
                             {/* STEP 2: CLIENT INFORMATION (Auto-filled from Org when Organization, manual when Individual) */}

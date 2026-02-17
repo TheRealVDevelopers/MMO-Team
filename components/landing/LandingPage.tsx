@@ -31,10 +31,45 @@ interface LandingPageProps {
 const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [loginModalType, setLoginModalType] = useState<'staff' | 'vendor'>('staff');
-  const [currentView, setCurrentView] = useState<'home' | 'services' | 'portfolio' | 'about' | 'contact' | 'start-project' | 'client-login' | 'client-dashboard' | 'client-change-password' | 'client-project-selector'>('home');
+  // Initialize view based on localStorage existence to prevent flash (optional optimization)
+  const [currentView, setCurrentView] = useState<'home' | 'services' | 'portfolio' | 'about' | 'contact' | 'start-project' | 'client-login' | 'client-dashboard' | 'client-change-password' | 'client-project-selector'>(() => {
+    if (typeof localStorage !== 'undefined' && localStorage.getItem('mmo-client-user')) {
+      return 'client-dashboard';
+    }
+    return 'home';
+  });
   const [isScrolled, setIsScrolled] = useState(false);
   const [clientUser, setClientUser] = useState<{ uid: string, email: string, isFirstLogin: boolean, cases?: any[], selectedCaseId?: string | null } | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Initialize client user from localStorage
+  useEffect(() => {
+    const savedClient = localStorage.getItem('mmo-client-user');
+    if (savedClient) {
+      try {
+        const parsedClient = JSON.parse(savedClient);
+        setClientUser(parsedClient);
+        // Restore view based on client state
+        if (parsedClient.cases && parsedClient.cases.length > 1 && !parsedClient.selectedCaseId) {
+          setCurrentView('client-project-selector');
+        } else {
+          setCurrentView('client-dashboard');
+        }
+      } catch (e) {
+        console.error("Failed to restore client session", e);
+        localStorage.removeItem('mmo-client-user');
+      }
+    }
+  }, []);
+
+  // Persist client user to localStorage
+  useEffect(() => {
+    if (clientUser) {
+      localStorage.setItem('mmo-client-user', JSON.stringify(clientUser));
+    } else {
+      localStorage.removeItem('mmo-client-user');
+    }
+  }, [clientUser]);
 
   // Scroll to top when view changes
   useEffect(() => {

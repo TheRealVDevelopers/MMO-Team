@@ -12,13 +12,13 @@ interface Props {
 
 const ExecutionDocuments: React.FC<Props> = ({ caseId, caseStatus }) => {
   const { currentUser } = useAuth();
-  const { documents, loading, uploadDocument } = useCaseDocuments({ 
+  const { documents, loading, uploadDocument } = useCaseDocuments({
     caseId: caseId || ''
   });
   const [showUploadForm, setShowUploadForm] = useState(false);
   const isCompleted = caseStatus ? isCaseCompleted(caseStatus) : false;
   const [uploading, setUploading] = useState(false);
-  
+
   const [fileName, setFileName] = useState('');
   const [fileUrl, setFileUrl] = useState('');
   const [docType, setDocType] = useState<DocumentType>(DocumentType.PDF);
@@ -36,7 +36,9 @@ const ExecutionDocuments: React.FC<Props> = ({ caseId, caseStatus }) => {
         fileName,
         fileUrl,
         uploadedBy: currentUser.id,
-        notes: notes || undefined
+        notes: notes || undefined,
+        visibleToClient: false,
+        approvalStatus: 'pending',
       });
 
       setFileName('');
@@ -44,7 +46,7 @@ const ExecutionDocuments: React.FC<Props> = ({ caseId, caseStatus }) => {
       setDocType(DocumentType.PDF);
       setNotes('');
       setShowUploadForm(false);
-      
+
       alert('Document added successfully!');
     } catch (error) {
       console.error('Error adding document:', error);
@@ -94,9 +96,9 @@ const ExecutionDocuments: React.FC<Props> = ({ caseId, caseStatus }) => {
         <div className="bg-surface border border-border rounded-xl p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4">Add Document</h2>
           <p className="text-sm text-text-secondary mb-4">
-            Note: File upload to storage is not implemented. Please provide direct URLs.
+            Note: Documents will be visible to the client only after approval.
           </p>
-          
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">File Name *</label>
@@ -185,7 +187,7 @@ const ExecutionDocuments: React.FC<Props> = ({ caseId, caseStatus }) => {
                   {doc.notes && (
                     <p className="text-xs text-text-secondary mt-2">{doc.notes}</p>
                   )}
-                  
+
                   <div className="flex gap-2 mt-3">
                     <a
                       href={doc.fileUrl}

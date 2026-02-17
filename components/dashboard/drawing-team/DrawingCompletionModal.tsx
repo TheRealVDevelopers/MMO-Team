@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import CreateBOQModal from './CreateBOQModal';
-import { 
-    doc, 
-    updateDoc, 
-    addDoc, 
-    collection, 
+import {
+    doc,
+    updateDoc,
+    addDoc,
+    collection,
     serverTimestamp,
     getDoc,
-    Timestamp 
+    Timestamp
 } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import { FIRESTORE_COLLECTIONS } from '../../../constants';
@@ -84,6 +84,7 @@ const DrawingCompletionModal: React.FC<DrawingCompletionModalProps> = ({
                     uploadedBy: currentUser.id,
                     uploadedAt: serverTimestamp(),
                     visibleToClient: false,
+                    approvalStatus: 'pending',
                     files: {
                         has2D: file2D !== null,
                         hasPDF: filePDF !== null,
@@ -120,13 +121,12 @@ const DrawingCompletionModal: React.FC<DrawingCompletionModalProps> = ({
 
                     <div className="p-6 space-y-6">
                         {/* 1. BOQ - MANDATORY */}
-                        <div className={`p-5 rounded-xl border-2 ${
-                            boqCreated ? 'bg-green-50 border-green-500' : 'bg-yellow-50 border-yellow-500'
-                        }`}>
+                        <div className={`p-5 rounded-xl border-2 ${boqCreated ? 'bg-green-50 border-green-500' : 'bg-yellow-50 border-yellow-500'
+                            }`}>
                             <div className="flex items-center justify-between">
                                 <div>
                                     <h3 className="font-bold text-gray-900 text-lg">
-                                        1. Bill of Quantities (BOQ) 
+                                        1. Bill of Quantities (BOQ)
                                         <span className="text-red-600 ml-2">*MANDATORY*</span>
                                     </h3>
                                     <p className="text-sm text-gray-600 mt-1">

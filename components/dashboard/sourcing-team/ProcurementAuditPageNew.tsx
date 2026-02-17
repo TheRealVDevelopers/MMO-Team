@@ -147,7 +147,13 @@ const ProcurementAuditPageNew: React.FC = () => {
                     name: `Quotation - ${quotation.projectName}`,
                     url: quotation.pdfUrl,
                     fileUrl: quotation.pdfUrl,
+
+                    // Visibility & Approval Logic
                     visibleToClient: true,
+                    approvalStatus: 'approved',
+                    approvedBy: currentUser.id,
+                    approvedAt: serverTimestamp(),
+
                     uploadedBy: currentUser.id,
                     uploadedAt: serverTimestamp(),
                     quotationId: quotation.id,

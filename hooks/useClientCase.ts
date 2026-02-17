@@ -129,7 +129,11 @@ const setupSubListeners = (
     });
 
     // 3. Documents (Visible to Client)
-    const docsQ = query(collection(caseRef, 'documents'), where('visibleToClient', '==', true));
+    const docsQ = query(
+        collection(caseRef, 'documents'),
+        where('visibleToClient', '==', true),
+        where('approvalStatus', '==', 'approved')
+    );
     const docsUnsub = onSnapshot(docsQ, (snap) => {
         documents = snap.docs.map(d => ({ id: d.id, ...d.data() } as CaseDocument));
         update();
@@ -148,10 +152,12 @@ const setupSubListeners = (
         : null;
     const invoicesUnsub = invoicesRef
         ? onSnapshot(query(invoicesRef, where('caseId', '==', caseData.id)), (snap) => {
-            invoices = snap.docs.map(d => ({ id: d.id, ...d.data() } as Invoice));
+            invoices = snap.docs
+                .map(d => ({ id: d.id, ...d.data() } as Invoice))
+                .filter(inv => inv.visibleToClient === true && inv.approvalStatus === 'approved');
             update();
-          })
-        : () => {};
+        })
+        : () => { };
 
     // Initial update
     update();
@@ -362,8 +368,8 @@ const mapToClientProject = (
         })),
         totalPaid: c.financial?.totalCollected || 0,
         totalBudget: c.financial?.totalBudget || 0,
-        planDays: (c.executionPlan?.days ?? []).map((d: { date: unknown }) => ({
-            date: d.date instanceof Timestamp ? d.date.toDate() : d.date
+        planDays: (c.executionPlan?.days ?? []).map((d: { date: any }) => ({
+            date: d.date instanceof Timestamp ? d.date.toDate() : new Date(d.date)
         })),
     };
 };

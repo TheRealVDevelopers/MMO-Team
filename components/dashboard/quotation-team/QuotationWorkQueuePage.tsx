@@ -526,10 +526,10 @@ const QuotationBuilderModal: React.FC<{
                 pdfUrl: '',
                 ...(canSeePR && (pr1 > 0 || pr2 > 0)
                     ? {
-                          prRatio: `PR1: ₹${Number(pr1).toLocaleString('en-IN', { minimumFractionDigits: 2 })} | PR2: ₹${Number(pr2).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-                          pr1: Number(pr1),
-                          pr2: Number(pr2),
-                      }
+                        prRatio: `PR1: ₹${Number(pr1).toLocaleString('en-IN', { minimumFractionDigits: 2 })} | PR2: ₹${Number(pr2).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                        pr1: Number(pr1),
+                        pr2: Number(pr2),
+                    }
                     : {}),
             };
             const quotRef = await addDoc(
@@ -552,6 +552,7 @@ const QuotationBuilderModal: React.FC<{
                 createdBy: currentUser.id,
                 createdAt: serverTimestamp(),
                 visibleToClient: false,
+                approvalStatus: 'pending',
                 items: quotationItems,
                 subtotal,
                 discount,
@@ -911,11 +912,10 @@ const CatalogSelectionModal: React.FC<{
                                 <div
                                     key={item.id}
                                     onClick={() => toggleItem(item.id)}
-                                    className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
-                                        selectedItems.has(item.id)
+                                    className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${selectedItems.has(item.id)
                                             ? 'border-green-500 bg-green-50'
                                             : 'border-gray-200 hover:border-green-300'
-                                    }`}
+                                        }`}
                                 >
                                     <div className="flex items-start gap-3">
                                         <input
