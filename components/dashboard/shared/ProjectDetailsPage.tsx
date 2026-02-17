@@ -7,6 +7,7 @@ import { useCaseBOQs } from '../../../hooks/useCases';
 import { useCaseDrawings } from '../../../hooks/useCases';
 import { approveQuotation, rejectQuotation } from '../../../hooks/useCases';
 import { createCaseTask, useCaseTasks, useCaseSiteVisits } from '../../../hooks/useCases';
+import { useCaseDocuments } from '../../../hooks/useCaseDocuments';
 import { useInvoices } from '../../../hooks/useInvoices';
 import { Case, UserRole, CaseQuotation, CaseBOQ, CaseDrawing } from '../../../types';
 import { formatCurrencyINR, safeDate, safeDateTime } from '../../../constants';
@@ -405,9 +406,9 @@ const BOQTab: React.FC<{ boqs: CaseBOQ[]; loading: boolean; caseId: string; proj
                                     </div>
                                     {boq.status && (
                                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${boq.status === 'approved' ? 'bg-success/10 text-success' :
-                                                boq.status === 'pending' ? 'bg-warning/10 text-warning' :
-                                                    boq.status === 'rejected' ? 'bg-error/10 text-error' :
-                                                        'bg-gray-100 text-gray-700'
+                                            boq.status === 'pending' ? 'bg-warning/10 text-warning' :
+                                                boq.status === 'rejected' ? 'bg-error/10 text-error' :
+                                                    'bg-gray-100 text-gray-700'
                                             }`}>
                                             {boq.status.toUpperCase()}
                                         </span>
@@ -863,8 +864,7 @@ const MaterialsTab: React.FC<{ caseId: string }> = ({ caseId }) => {
 
 const DocumentsTab: React.FC<{ projectCase: Case }> = ({ projectCase }) => {
     const [selectedDocument, setSelectedDocument] = useState<any>(null);
-
-    const documents = (projectCase as any).documents || [];
+    const { documents, loading } = useCaseDocuments({ caseId: projectCase.id || '' });
 
     const getFileIcon = (fileName: string) => {
         const ext = fileName.toLowerCase().split('.').pop();
@@ -912,20 +912,20 @@ const DocumentsTab: React.FC<{ projectCase: Case }> = ({ projectCase }) => {
                             >
                                 <div className="flex flex-col items-center text-center">
                                     <div className="mb-3">
-                                        {getFileIcon(doc.name)}
+                                        {getFileIcon(doc.fileName)}
                                     </div>
                                     <h3 className="font-semibold text-text-primary text-sm truncate w-full mb-1">
-                                        {doc.name}
+                                        {doc.fileName}
                                     </h3>
                                     <p className="text-xs text-text-secondary capitalize">
                                         {doc.type || 'Document'}
                                     </p>
                                     <p className="text-xs text-text-tertiary mt-2">
-                                        {doc.uploaded ? new Date(doc.uploaded).toLocaleDateString() : 'Date unknown'}
+                                        {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString() : 'Date unknown'}
                                     </p>
-                                    {doc.url && (
+                                    {doc.fileUrl && (
                                         <a
-                                            href={doc.url}
+                                            href={doc.fileUrl}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="text-xs text-primary hover:underline mt-2"
@@ -946,9 +946,9 @@ const DocumentsTab: React.FC<{ projectCase: Case }> = ({ projectCase }) => {
                         <div className="max-w-4xl max-h-[90vh] w-full bg-background rounded-lg shadow-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
                             <div className="p-4 border-b border-border flex items-center justify-between">
                                 <div>
-                                    <h3 className="text-lg font-bold text-text-primary">{selectedDocument.name}</h3>
+                                    <h3 className="text-lg font-bold text-text-primary">{selectedDocument.fileName}</h3>
                                     <p className="text-sm text-text-secondary">
-                                        {selectedDocument.uploaded ? new Date(selectedDocument.uploaded).toLocaleDateString() : 'Date unknown'}
+                                        {selectedDocument.uploadedAt ? new Date(selectedDocument.uploadedAt).toLocaleDateString() : 'Date unknown'}
                                     </p>
                                 </div>
                                 <button onClick={() => setSelectedDocument(null)} className="text-text-tertiary hover:text-text-primary">
@@ -958,11 +958,11 @@ const DocumentsTab: React.FC<{ projectCase: Case }> = ({ projectCase }) => {
                                 </button>
                             </div>
                             <div className="p-6 text-center">
-                                {selectedDocument.url ? (
+                                {selectedDocument.fileUrl ? (
                                     <div className="space-y-4">
                                         <p className="text-text-secondary">Click below to view or download the document</p>
                                         <PrimaryButton
-                                            onClick={() => window.open(selectedDocument.url, '_blank')}
+                                            onClick={() => window.open(selectedDocument.fileUrl, '_blank')}
                                         >
                                             Open Document
                                         </PrimaryButton>

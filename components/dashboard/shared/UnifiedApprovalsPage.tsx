@@ -49,6 +49,8 @@ const TYPE_LABELS: Record<string, string> = {
   OTHER: 'Other',
 };
 
+import DocumentVisibilityBackfill from './DocumentVisibilityBackfill';
+
 const UnifiedApprovalsPage: React.FC = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
@@ -136,7 +138,13 @@ const UnifiedApprovalsPage: React.FC = () => {
           name: `Quotation - ${item.caseName}`,
           url: item.documentUrl,
           fileUrl: item.documentUrl,
+
+          // Visibility & Approval Logic
           visibleToClient: true,
+          approvalStatus: 'approved',
+          approvedBy: currentUser.id,
+          approvedAt: serverTimestamp(),
+
           uploadedBy: currentUser.id,
           uploadedAt: serverTimestamp(),
           quotationId: item.sourceRef.id,
@@ -486,6 +494,9 @@ const UnifiedApprovalsPage: React.FC = () => {
           </div>
         </ContentCard>
       )}
+
+      {/* Admin Backfill Tool */}
+      <DocumentVisibilityBackfill />
     </div>
   );
 };

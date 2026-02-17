@@ -14,7 +14,7 @@ const fromFirestore = (docData: FirestoreInvoice, id: string): Invoice => {
         id,
         issueDate: docData.issueDate.toDate(),
         dueDate: docData.dueDate.toDate(),
-    };
+    } as Invoice;
 };
 
 export const useInvoices = (projectId?: string) => {
@@ -54,18 +54,30 @@ export const addInvoice = async (invoiceData: Omit<Invoice, 'id'>) => {
     // Import dynamically to avoid circular dependencies
     const { recordInvoiceCreation } = await import('../services/financeService');
 
-    const docRef = await addDoc(collection(db, 'invoices'), invoiceData);
+    const invoiceWithDefaults = {
+        ...invoiceData,
+        visibleToClient: false,
+        approvalStatus: 'pending'
+    };
 
-    // Auto-record P&L transaction for this invoice
-    if (invoiceData.projectId) {
+    const docRef = await addDoc(collection(db, 'invoices'), invoiceWithDefaults);
+
+    if (invoiceData.projectId || invoiceData.caseId) {
         await recordInvoiceCreation(
             docRef.id,
-            invoiceData.projectId,
-            invoiceData.total,
+            (invoiceData.projectId || invoiceData.caseId) as string,
+            invoiceData.totalAmount || invoiceData.amount,
             invoiceData.invoiceNumber || 'Unknown'
         );
     }
 };
+
+// Helper to ensure defaults
+const prepareInvoiceData = (data: Omit<Invoice, 'id'>) => ({
+    ...data,
+    visibleToClient: false,
+    approvalStatus: 'pending' as const
+});
 
 export const updateInvoice = async (invoiceId: string, updatedData: Partial<Invoice>) => {
     const invoiceRef = doc(db, 'invoices', invoiceId);
