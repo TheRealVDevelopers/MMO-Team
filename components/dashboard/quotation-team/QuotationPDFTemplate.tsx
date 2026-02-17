@@ -13,9 +13,13 @@ interface QuotationPDFTemplateProps {
     caseData: Case;
     onClose: () => void;
     onEdit?: () => void;
+    /** When true, PR section is never shown (e.g. client-facing PDF). */
+    excludePR?: boolean;
 }
 
-const QuotationPDFTemplate: React.FC<QuotationPDFTemplateProps> = ({ quotation, caseData, onClose, onEdit }) => {
+const ALLOWED_PR_ROLES = [UserRole.SUPER_ADMIN, UserRole.SALES_GENERAL_MANAGER, UserRole.QUOTATION_TEAM];
+
+const QuotationPDFTemplate: React.FC<QuotationPDFTemplateProps> = ({ quotation, caseData, onClose, onEdit, excludePR = false }) => {
     const printRef = useRef<HTMLDivElement>(null);
     const { currentUser } = useAuth();
     const { items: catalogItems } = useCatalog();
@@ -28,14 +32,8 @@ const QuotationPDFTemplate: React.FC<QuotationPDFTemplateProps> = ({ quotation, 
         };
     }, []);
 
-    // Check if user can see PR (Internal Price Rate) field
-    // Only visible to: Sales Manager (Sales General Manager), Quotation Team, Admin (Super Admin)
-    const canViewPR = currentUser?.role && [
-        UserRole.SALES_GENERAL_MANAGER, // Sales Manager
-        UserRole.SUPER_ADMIN,           // Admin
-        UserRole.ADMIN,                 // Admin
-        UserRole.QUOTATION_TEAM         // Quotation Team
-    ].includes(currentUser.role);
+    // PR visible only to Super Admin, Sales Manager, Quotation Team. Never show for client (excludePR).
+    const canViewPR = !excludePR && currentUser?.role && ALLOWED_PR_ROLES.includes(currentUser.role);
 
     const handleDownloadPDF = () => {
         if (printRef.current) {
@@ -251,9 +249,9 @@ const QuotationPDFTemplate: React.FC<QuotationPDFTemplateProps> = ({ quotation, 
                         </div>
                     </div>
 
-                    {/* PR (Internal Price Rate) Field - Visible only to authorized roles */}
-                    {canViewPR && quotation.internalPRCode && (
-                        <div className="mb-8 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded print:hidden">
+                    {/* PR (Internal Price Rate) - Visible only to Super Admin, Sales Manager, Quotation Team */}
+                    {canViewPR && (quotation.prRatio || quotation.internalPRCode) && (
+                        <div className="mb-8 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded">
                             <div className="flex items-start gap-3">
                                 <div className="flex-shrink-0">
                                     <svg className="w-5 h-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
@@ -261,14 +259,19 @@ const QuotationPDFTemplate: React.FC<QuotationPDFTemplateProps> = ({ quotation, 
                                     </svg>
                                 </div>
                                 <div className="flex-1">
-                                    <h4 className="text-sm font-bold text-yellow-800 mb-1">🔒 Internal PR Code (Confidential)</h4>
-                                    <p className="text-sm text-yellow-700">
-                                        <span className="font-semibold">PR Code:</span> {quotation.internalPRCode}
-                                    </p>
+                                    <h4 className="text-sm font-bold text-yellow-800 mb-1">🔒 Internal PR (Confidential)</h4>
+                                    {quotation.prRatio && (
+                                        <p className="text-sm text-yellow-700">
+                                            <span className="font-semibold">PR:</span> {quotation.prRatio}
+                                        </p>
+                                    )}
+                                    {quotation.internalPRCode && (
+                                        <p className="text-sm text-yellow-700">
+                                            <span className="font-semibold">PR Code:</span> {quotation.internalPRCode}
+                                        </p>
+                                    )}
                                     <p className="text-xs text-yellow-600 mt-1">
-                                        ⚠️ This field is confidential and visible only to Sales Manager, Admin, and Quotation Team.
-                                        <br />
-                                        <strong>NOT included in printed/downloaded PDF.</strong>
+                                        Visible only to Super Admin, Sales Manager, and Quotation Team. Not for client.
                                     </p>
                                 </div>
                             </div>

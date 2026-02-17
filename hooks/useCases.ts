@@ -22,6 +22,7 @@ interface UseCasesOptions {
   organizationId?: string;
   userId?: string; // Filter by assigned user
   isProject?: boolean; // Filter leads vs projects
+  projectHeadId?: string; // When set with isProject, only cases assigned to this project head
   status?: CaseStatus | CaseStatus[];
 }
 
@@ -52,6 +53,11 @@ export const useCases = (options: UseCasesOptions = {}) => {
       // Apply isProject filter
       if (options.isProject !== undefined) {
         constraints.push(where('isProject', '==', options.isProject));
+      }
+
+      // When loading projects for execution, restrict to assigned project head only
+      if (options.isProject === true && options.projectHeadId) {
+        constraints.push(where('projectHeadId', '==', options.projectHeadId));
       }
 
       // Apply status filter
@@ -116,7 +122,7 @@ export const useCases = (options: UseCasesOptions = {}) => {
       setError(err.message);
       setLoading(false);
     }
-  }, [options.organizationId, options.userId, options.isProject, JSON.stringify(options.status)]);
+  }, [options.organizationId, options.userId, options.isProject, options.projectHeadId, JSON.stringify(options.status)]);
 
   // Create new case (lead)
   const createCase = useCallback(

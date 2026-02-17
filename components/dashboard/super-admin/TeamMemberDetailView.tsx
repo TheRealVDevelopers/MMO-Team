@@ -382,12 +382,9 @@ const TeamMemberDetailView: React.FC<{ user: User; initialTab?: 'history'; initi
                                     </motion.div>
                                 )}
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                                    <UserMetric title="Total working hours" value={`${timeMetrics.loggedHours}h`} icon={ClockIcon} />
-                                    <UserMetric title="Active task hours" value={`${timeMetrics.activeHours}h`} icon={CheckCircleIcon} />
-                                    <UserMetric title="Idle hours" value={`${timeMetrics.idleHours}h`} icon={PauseCircleIcon} />
-                                    <UserMetric title="Break hours" value={`${timeMetrics.breakHours}h`} icon={PauseCircleIcon} />
-                                    <UserMetric title="Tasks completed" value={userTasks.filter(t => t.status === TaskStatus.COMPLETED || t.status === TaskStatus.ACKNOWLEDGED).length} icon={DocumentCheckIcon} />
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <UserMetric title="Total Break Time" value={`${timeMetrics.breakHours}h`} icon={PauseCircleIcon} />
+                                    <UserMetric title="Total Tasks Completed" value={userTasks.filter(t => t.status === TaskStatus.COMPLETED || t.status === TaskStatus.ACKNOWLEDGED).length} icon={DocumentCheckIcon} />
                                 </div>
                             </section>
 

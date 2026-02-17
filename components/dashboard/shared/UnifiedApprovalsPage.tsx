@@ -1,11 +1,11 @@
 /**
  * Unified Approvals Page - Admin and Sales Manager
- * Lists ALL pending approvals in a single normalized table.
- * No type-specific UI branching.
+ * Lists pending quotations and execution plan approvals (PLANNING_SUBMITTED).
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
-import { UserRole } from '../../../types';
+import { UserRole, CaseStatus } from '../../../types';
 import { useNormalizedApprovals } from '../../../hooks/useNormalizedApprovals';
 import { useValidationRequests, approveValidationRequest } from '../../../hooks/useValidationRequests';
 import { ContentCard, SectionHeader } from './DashboardUI';
@@ -14,6 +14,7 @@ import {
   CheckCircleIcon,
   XMarkIcon,
   ClipboardDocumentCheckIcon,
+  DocumentTextIcon,
 } from '@heroicons/react/24/outline';
 import { formatCurrencyINR, safeDateTime } from '../../../constants';
 import { DEFAULT_ORGANIZATION_ID } from '../../../constants';
@@ -27,10 +28,19 @@ import {
   getDocs,
   query,
   where,
+  onSnapshot,
   writeBatch,
 } from 'firebase/firestore';
 import { FIRESTORE_COLLECTIONS } from '../../../constants';
 import type { NormalizedApprovalItem } from '../../../hooks/useNormalizedApprovals';
+
+interface ExecutionPlanCase {
+  id: string;
+  title?: string;
+  projectHeadId?: string;
+  executionPlan?: { createdAt?: unknown };
+  updatedAt?: unknown;
+}
 
 const TYPE_LABELS: Record<string, string> = {
   EXPENSE: 'Expense',
@@ -40,12 +50,73 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 const UnifiedApprovalsPage: React.FC = () => {
+  const navigate = useNavigate();
   const { currentUser } = useAuth();
   const orgId = currentUser?.organizationId || DEFAULT_ORGANIZATION_ID;
   const { items, loading } = useNormalizedApprovals();
   const { requests: validationRequests, loading: validationLoading } = useValidationRequests({ organizationId: orgId, status: 'PENDING' });
   const [processing, setProcessing] = useState<string | null>(null);
   const [validationProcessing, setValidationProcessing] = useState<string | null>(null);
+  const [executionPlanCases, setExecutionPlanCases] = useState<ExecutionPlanCase[]>([]);
+  const [executionPlanLoading, setExecutionPlanLoading] = useState(true);
+  const [executionPlanProcessing, setExecutionPlanProcessing] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!db) {
+      setExecutionPlanLoading(false);
+      return;
+    }
+    const casesRef = collection(db, FIRESTORE_COLLECTIONS.CASES);
+    const q = query(casesRef, where('status', '==', CaseStatus.PLANNING_SUBMITTED));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const casesData = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as ExecutionPlanCase));
+      setExecutionPlanCases(casesData);
+      setExecutionPlanLoading(false);
+    }, () => setExecutionPlanLoading(false));
+    return () => unsubscribe();
+  }, []);
+
+  const handleExecutionPlanApprove = async (caseId: string) => {
+    if (!currentUser || !window.confirm('Approve this execution plan? Project will move to Execution Active.')) return;
+    setExecutionPlanProcessing(caseId);
+    try {
+      const caseRef = doc(db!, FIRESTORE_COLLECTIONS.CASES, caseId);
+      await updateDoc(caseRef, {
+        status: CaseStatus.EXECUTION_ACTIVE,
+        'executionPlan.approvalStatus': 'approved',
+        'executionPlan.approvedBy': currentUser.id,
+        'executionPlan.approvedAt': serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      alert('Execution plan approved.');
+    } catch (e) {
+      console.error(e);
+      alert('Failed to approve.');
+    } finally {
+      setExecutionPlanProcessing(null);
+    }
+  };
+
+  const handleExecutionPlanReject = async (caseId: string) => {
+    if (!currentUser) return;
+    const reason = window.prompt('Reason for rejection (optional):');
+    setExecutionPlanProcessing(caseId);
+    try {
+      const caseRef = doc(db!, FIRESTORE_COLLECTIONS.CASES, caseId);
+      await updateDoc(caseRef, {
+        status: CaseStatus.WAITING_FOR_PLANNING,
+        'executionPlan.approvalStatus': 'rejected',
+        updatedAt: serverTimestamp(),
+        ...(reason?.trim() ? { 'executionPlan.rejectionReason': reason.trim() } : {}),
+      });
+      alert('Execution plan rejected.');
+    } catch (e) {
+      console.error(e);
+      alert('Failed to reject.');
+    } finally {
+      setExecutionPlanProcessing(null);
+    }
+  };
 
   const handleApprove = async (item: NormalizedApprovalItem) => {
     if (!currentUser || item.type !== 'quotation') return;
@@ -250,6 +321,84 @@ const UnifiedApprovalsPage: React.FC = () => {
                           title="Reject"
                           onClick={() => handleReject(item)}
                           disabled={!!processing}
+                        >
+                          <XMarkIcon className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </ContentCard>
+      )}
+
+      {/* Execution plan approval — cases with status PLANNING_SUBMITTED */}
+      <SectionHeader
+        title="Execution plan approval"
+        subtitle="Projects with submitted execution plans. Approve to move to Execution Active."
+      />
+      {executionPlanLoading ? (
+        <div className="flex justify-center py-8">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
+        </div>
+      ) : executionPlanCases.length === 0 ? (
+        <ContentCard>
+          <div className="flex items-center gap-3 py-6 text-text-secondary">
+            <DocumentTextIcon className="w-10 h-10 text-gray-300" />
+            <p className="font-medium">No pending execution plan approvals</p>
+          </div>
+        </ContentCard>
+      ) : (
+        <ContentCard>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-3 px-4 text-xs font-bold uppercase text-text-tertiary">Project</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold uppercase text-text-tertiary">Project head</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold uppercase text-text-tertiary">Submitted</th>
+                  <th className="text-right py-3 px-4 text-xs font-bold uppercase text-text-tertiary">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {executionPlanCases.map((c) => (
+                  <tr key={c.id} className="border-b border-border/50 hover:bg-subtle-background/30">
+                    <td className="py-3 px-4 font-medium text-text-primary">{c.title || c.id}</td>
+                    <td className="py-3 px-4 text-sm text-text-secondary">{c.projectHeadId || '—'}</td>
+                    <td className="py-3 px-4 text-sm text-text-tertiary">
+                      {c.executionPlan?.createdAt != null
+                        ? safeDateTime(c.executionPlan.createdAt)
+                        : c.updatedAt != null
+                          ? safeDateTime(c.updatedAt)
+                          : '—'}
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          className="p-2 rounded-lg border border-border hover:bg-surface transition-colors"
+                          title="View plan"
+                          onClick={() => navigate(`/project-reference?project=${c.id}`)}
+                        >
+                          <EyeIcon className="w-5 h-5 text-text-secondary" />
+                        </button>
+                        <button
+                          type="button"
+                          className="p-2 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 disabled:opacity-50"
+                          title="Approve"
+                          onClick={() => handleExecutionPlanApprove(c.id)}
+                          disabled={!!executionPlanProcessing}
+                        >
+                          <CheckCircleIcon className="w-5 h-5" />
+                        </button>
+                        <button
+                          type="button"
+                          className="p-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-50"
+                          title="Reject"
+                          onClick={() => handleExecutionPlanReject(c.id)}
+                          disabled={!!executionPlanProcessing}
                         >
                           <XMarkIcon className="w-5 h-5" />
                         </button>

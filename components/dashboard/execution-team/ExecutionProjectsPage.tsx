@@ -26,11 +26,11 @@ interface Props {
 
 const ExecutionProjectsPage: React.FC<Props> = ({ onSelectProject }) => {
   const { currentUser } = useAuth();
-  const { cases, loading } = useCases();
+  const { cases, loading } = useCases({ isProject: true, projectHeadId: currentUser?.id ?? undefined });
 
   const myProjects = useMemo(() => {
-    return cases.filter((c) => c.isProject && c.projectHeadId === currentUser?.id);
-  }, [cases, currentUser?.id]);
+    return cases;
+  }, [cases]);
 
   const getStatusBadge = (project: (typeof myProjects)[0]) => {
     if (project.status === CaseStatus.COMPLETED) {
@@ -39,13 +39,8 @@ const ExecutionProjectsPage: React.FC<Props> = ({ onSelectProject }) => {
     if (project.status === CaseStatus.EXECUTION_ACTIVE) {
       return { label: 'Execution Active', color: 'bg-green-500', textColor: 'text-green-700', bgLight: 'bg-green-50' };
     }
-    const plan = project.executionPlan as { approvals?: { admin?: boolean; client?: boolean } } | undefined;
-    const bothApproved = plan?.approvals?.admin && plan?.approvals?.client;
-    if (
-      project.status === CaseStatus.WAITING_FOR_PLANNING &&
-      plan &&
-      !bothApproved
-    ) {
+    const plan = project.executionPlan as { approvalStatus?: string } | undefined;
+    if (project.status === CaseStatus.PLANNING_SUBMITTED || (project.status === CaseStatus.WAITING_FOR_PLANNING && plan && plan.approvalStatus !== 'approved')) {
       return { label: 'Awaiting Approval', color: 'bg-blue-500', textColor: 'text-blue-700', bgLight: 'bg-blue-50' };
     }
     if (project.status === CaseStatus.WAITING_FOR_PLANNING && !plan) {
@@ -57,7 +52,7 @@ const ExecutionProjectsPage: React.FC<Props> = ({ onSelectProject }) => {
   const ProjectCard = ({ project, index }: { project: (typeof myProjects)[0]; index: number }) => {
     const config = getStatusBadge(project);
     const isPlanningPending =
-      project.status === CaseStatus.WAITING_FOR_PLANNING && !(project.executionPlan as any)?.days?.length;
+      project.status === CaseStatus.WAITING_FOR_PLANNING && !(project.executionPlan as any)?.phases?.length;
 
     return (
       <motion.div
@@ -119,12 +114,11 @@ const ExecutionProjectsPage: React.FC<Props> = ({ onSelectProject }) => {
   }
 
   const planningPending = myProjects.filter(
-    (p) => p.status === CaseStatus.WAITING_FOR_PLANNING && !(p.executionPlan as any)?.days?.length
+    (p) => p.status === CaseStatus.WAITING_FOR_PLANNING && !(p.executionPlan as any)?.phases?.length
   );
-  const awaitingApproval = myProjects.filter((p) => {
-    const plan = p.executionPlan as { approvals?: { admin?: boolean; client?: boolean }; days?: unknown[] } | undefined;
-    return plan?.days?.length && !(plan.approvals?.admin && plan.approvals?.client);
-  });
+  const awaitingApproval = myProjects.filter(
+    (p) => p.status === CaseStatus.PLANNING_SUBMITTED || ((p.executionPlan as any)?.phases?.length && (p.executionPlan as any)?.approvalStatus !== 'approved')
+  );
   const executionActive = myProjects.filter(
     (p) => p.status === CaseStatus.EXECUTION_ACTIVE
   );

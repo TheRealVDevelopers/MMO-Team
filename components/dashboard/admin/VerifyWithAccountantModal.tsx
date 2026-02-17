@@ -34,6 +34,7 @@ import {
 import { Case, CaseStatus, UserRole, StaffUser } from '../../../types';
 import { FIRESTORE_COLLECTIONS, formatCurrencyINR } from '../../../constants';
 import { createNotification } from '../../../services/notificationService';
+import { useUsers } from '../../../hooks/useUsers';
 import {
     XMarkIcon,
     BanknotesIcon,
@@ -72,6 +73,7 @@ const VerifyWithAccountantModal: React.FC<Props> = ({
     onSubmitSuccess
 }) => {
     const { currentUser } = useAuth();
+    const { users } = useUsers();
 
     // Step control
     const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
@@ -80,6 +82,9 @@ const VerifyWithAccountantModal: React.FC<Props> = ({
     const [availableLeads, setAvailableLeads] = useState<Case[]>([]);
     const [selectedLead, setSelectedLead] = useState<Case | null>(null);
     const [loadingLeads, setLoadingLeads] = useState(true);
+
+    // Project Head (for when lead converts to project)
+    const [projectHeadId, setProjectHeadId] = useState('');
 
     // Step 2: Payment Details
     const [paymentDetails, setPaymentDetails] = useState<PaymentDetails>({
@@ -160,6 +165,11 @@ const VerifyWithAccountantModal: React.FC<Props> = ({
     const handleSubmit = async () => {
         if (!selectedLead || !currentUser || !db) return;
 
+        if (!projectHeadId?.trim()) {
+            alert('Please select a Project Head for this project.');
+            return;
+        }
+
         // Validate payment details - ONLY amount and method are required
         if (!paymentDetails.method) {
             alert('❌ Please select a payment method');
@@ -204,14 +214,14 @@ const VerifyWithAccountantModal: React.FC<Props> = ({
                 createdBy: currentUser.id,
                 createdByName: currentUser.name,
                 createdAt: serverTimestamp(),
-                
+                // Project head for when lead converts to project (set on case on approval)
+                projectHeadId: projectHeadId || null,
                 // Legacy fields for backward compatibility
                 method: paymentDetails.method,
                 attachmentUrl: paymentDetails.attachmentUrl || null,
                 submittedBy: currentUser.id,
                 submittedByName: currentUser.name,
                 submittedAt: serverTimestamp(),
-                
                 // Payment terms (optional, for reference only)
                 paymentTerms: paymentTerms.totalProjectValue > 0 ? {
                     totalProjectValue: paymentTerms.totalProjectValue,
@@ -540,6 +550,34 @@ const VerifyWithAccountantModal: React.FC<Props> = ({
                             <p className="text-sm text-gray-600">
                                 Define the payment installment plan for this project. These are TERMS only, not confirmation.
                             </p>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Project Head *
+                                </label>
+                                <select
+                                    value={projectHeadId}
+                                    onChange={(e) => setProjectHeadId(e.target.value)}
+                                    className="w-full px-4 py-3 border rounded-lg bg-white"
+                                    required
+                                >
+                                    <option value="">Select Project Head</option>
+                                    {users
+                                        .filter(u =>
+                                            u.role === UserRole.PROJECT_HEAD ||
+                                            u.role === UserRole.EXECUTION_TEAM ||
+                                            u.role === UserRole.SUPER_ADMIN
+                                        )
+                                        .map((u) => (
+                                            <option key={u.id} value={u.id}>
+                                                {u.name} {u.role && `(${u.role})`}
+                                            </option>
+                                        ))}
+                                </select>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Who will be the project head when this lead converts to a project.
+                                </p>
+                            </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">

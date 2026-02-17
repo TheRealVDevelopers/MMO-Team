@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, onSnapshot, query, orderBy, addDoc, Timestamp, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, addDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { Organization } from '../types';
 import { FIRESTORE_COLLECTIONS } from '../constants';
 
@@ -14,20 +14,25 @@ export const useOrganizations = () => {
             setLoading(false);
             return;
         }
-        
+
         setLoading(true);
-        const q = query(collection(db, FIRESTORE_COLLECTIONS.ORGANIZATIONS), orderBy('createdAt', 'desc'));
+        setError(null);
+        // Query without orderBy to avoid requiring composite index and to tolerate docs missing createdAt
+        const q = query(collection(db, FIRESTORE_COLLECTIONS.ORGANIZATIONS));
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const orgsData: Organization[] = [];
-            snapshot.forEach((doc) => {
-                const data = doc.data();
+            snapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                const createdAt = data?.createdAt?.toDate?.() ?? (data?.createdAt ? new Date(data.createdAt) : new Date());
                 orgsData.push({
                     ...data,
-                    id: doc.id,
-                    createdAt: data.createdAt?.toDate() || new Date(),
+                    id: docSnap.id,
+                    createdAt,
                 } as Organization);
             });
+            // Sort by createdAt desc in-memory
+            orgsData.sort((a, b) => (b.createdAt?.getTime?.() ?? 0) - (a.createdAt?.getTime?.() ?? 0));
             setOrganizations(orgsData);
             setLoading(false);
         }, (err) => {

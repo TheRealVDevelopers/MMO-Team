@@ -200,6 +200,29 @@ const QuotationWorkQueuePage: React.FC = () => {
         setShowQuotationModal(true);
     };
 
+    const handleEndTask = async (task: TaskWithCase) => {
+        if (!db || !currentUser) return;
+        try {
+            const taskRef = doc(db, FIRESTORE_COLLECTIONS.CASES, task.caseId, FIRESTORE_COLLECTIONS.TASKS, task.id);
+            await updateDoc(taskRef, {
+                status: TaskStatus.COMPLETED,
+                completedAt: serverTimestamp()
+            });
+            await addDoc(
+                collection(db, FIRESTORE_COLLECTIONS.CASES, task.caseId, FIRESTORE_COLLECTIONS.ACTIVITIES),
+                {
+                    caseId: task.caseId,
+                    action: `Quotation task completed by ${currentUser.name || currentUser.email}`,
+                    by: currentUser.id,
+                    timestamp: serverTimestamp()
+                }
+            );
+        } catch (error) {
+            console.error('[Quotation Queue] Error ending task:', error);
+            alert('Failed to end task. Please try again.');
+        }
+    };
+
     if (loading) {
         return (
             <div className="p-8">
@@ -297,6 +320,7 @@ const QuotationWorkQueuePage: React.FC = () => {
                             key={task.id}
                             task={task}
                             onStart={handleStartTask}
+                            onEndTask={handleEndTask}
                             onOpenBuilder={handleOpenQuotationBuilder}
                         />
                     ))
@@ -323,8 +347,9 @@ const QuotationWorkQueuePage: React.FC = () => {
 const QuotationTaskCard: React.FC<{
     task: TaskWithCase;
     onStart: (task: TaskWithCase) => void;
+    onEndTask: (task: TaskWithCase) => void;
     onOpenBuilder: (task: TaskWithCase) => void;
-}> = ({ task, onStart, onOpenBuilder }) => {
+}> = ({ task, onStart, onEndTask, onOpenBuilder }) => {
     const statusConfig = {
         [TaskStatus.PENDING]: { color: 'bg-yellow-100 text-yellow-800 border-yellow-300', label: 'PENDING' },
         [TaskStatus.STARTED]: { color: 'bg-green-100 text-green-800 border-green-300', label: 'IN PROGRESS' },
@@ -365,11 +390,11 @@ const QuotationTaskCard: React.FC<{
 
                     {task.status === TaskStatus.STARTED && (
                         <button
-                            onClick={() => onOpenBuilder(task)}
-                            className="px-6 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:from-green-700 hover:to-blue-700 flex items-center gap-2 font-medium"
+                            onClick={() => onEndTask(task)}
+                            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 font-medium"
                         >
-                            <CalculatorIcon className="w-5 h-5" />
-                            Create Quotation
+                            <CheckCircleIcon className="w-5 h-5" />
+                            End Task
                         </button>
                     )}
 
@@ -402,12 +427,11 @@ const QuotationBuilderModal: React.FC<{
     const [notes, setNotes] = useState<string>('');
     const [submitting, setSubmitting] = useState(false);
 
-    // Show PR fields only for specific roles
+    // PR visible only to Super Admin, Sales Manager, Quotation Team (not Client, Procurement, Execution, etc.)
     const canSeePR = [
-        UserRole.QUOTATION_TEAM,
+        UserRole.SUPER_ADMIN,
         UserRole.SALES_GENERAL_MANAGER,
-        UserRole.ADMIN,
-        UserRole.SUPER_ADMIN
+        UserRole.QUOTATION_TEAM
     ].includes(currentUser?.role);
 
     useEffect(() => {
@@ -500,6 +524,13 @@ const QuotationBuilderModal: React.FC<{
                 createdAt: serverTimestamp(),
                 auditStatus: 'pending',
                 pdfUrl: '',
+                ...(canSeePR && (pr1 > 0 || pr2 > 0)
+                    ? {
+                          prRatio: `PR1: ₹${Number(pr1).toLocaleString('en-IN', { minimumFractionDigits: 2 })} | PR2: ₹${Number(pr2).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+                          pr1: Number(pr1),
+                          pr2: Number(pr2),
+                      }
+                    : {}),
             };
             const quotRef = await addDoc(
                 collection(db!, FIRESTORE_COLLECTIONS.CASES, task.caseId, FIRESTORE_COLLECTIONS.QUOTATIONS),

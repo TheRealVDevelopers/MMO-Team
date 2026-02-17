@@ -10,6 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useCases } from '../../hooks/useCases';
 import ExecutionProjectsPage from './execution-team/ExecutionProjectsPage';
 import ExecutionWorkspace from './execution-team/ExecutionWorkspace';
+import ExecutionTimelinePage from './execution-team/ExecutionTimelinePage';
 import RequestValidationPage from './shared/RequestValidationPage';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
@@ -53,6 +54,22 @@ const ExecutionTeamDashboard: React.FC<Props> = ({ currentPage, setCurrentPage }
     if (typeof window !== 'undefined') localStorage.removeItem('execution_active_project');
     navigate('/planning', { replace: true });
   };
+
+  if (currentPage === 'timeline') {
+    return (
+      <div className="p-6">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-text-primary">Execution Hub</h1>
+          <p className="text-text-secondary mt-1">Timeline — monitor plan and daily logs</p>
+        </div>
+        <ExecutionTimelinePage
+          caseId={selectedCaseId}
+          onSelectProject={(id) => (id ? handleSelectProject(id) : handleBackToProjects())}
+          onBack={() => setCurrentPage('planning')}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">

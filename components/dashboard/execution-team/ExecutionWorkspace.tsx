@@ -71,14 +71,14 @@ const ExecutionWorkspace: React.FC<Props> = ({ caseId, onBack }) => {
   const plan = caseData.executionPlan as
     | {
         days?: unknown[];
-        approvals?: { admin?: boolean; client?: boolean };
+        approvalStatus?: string;
         executionMarkedComplete?: boolean;
         startDate?: Date;
         endDate?: Date;
       }
     | undefined;
   const hasPlan = !!plan && (!!plan.days?.length || !!(plan as any).phases?.length);
-  const bothApproved = !!plan?.approvals?.admin && !!plan?.approvals?.client;
+  const planApproved = plan?.approvalStatus === 'approved';
   const isExecutionActive = status === CaseStatus.EXECUTION_ACTIVE;
   const showPlanning =
     status === CaseStatus.WAITING_FOR_PLANNING || status === CaseStatus.PLANNING_SUBMITTED;

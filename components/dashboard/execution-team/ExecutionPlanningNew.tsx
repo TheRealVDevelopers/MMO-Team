@@ -1,19 +1,9 @@
 // @deprecated – legacy execution component. Not used in workspace architecture.
 /**
- * EXECUTION PLANNING - COMPLETE REBUILD
- * 
- * CRITICAL FLOW (STRICT ORDER):
- * 1. Financial Planning (MANDATORY FIRST) - Budget + Installments
- * 2. Load Approved Quotation (NOT CATALOG) - Auto-pull quotation items
- * 3. Phase + Labor Planning - Assign quotation items to phases
- * 4. Atomic Save - Update executionPlan + Initialize costCenter
- * 5. Submit for Admin Approval - Status = PLANNING_SUBMITTED
- * 
- * RULES:
- * - Budget MUST be filled first (all other UI locked until done)
- * - Materials ONLY from approved quotation (NO catalog)
- * - Execution ONLY sets: deliveryDate, laborCount per phase
- * - Single atomic save (no partial saves)
+ * EXECUTION PLANNING
+ *
+ * Flow: Approved Quotation (read-only) -> Phase + Labor Planning -> Submit for Admin Approval.
+ * Execution team does NOT define client finance; cost center is set at payment verification.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -30,13 +20,12 @@ import {
     getDocs,
     writeBatch
 } from 'firebase/firestore';
-import { Case, CaseQuotation, QuotationItemData } from '../../../types';
+import { Case, CaseQuotation, QuotationItemData, CaseStatus } from '../../../types';
 import { FIRESTORE_COLLECTIONS, formatCurrencyINR } from '../../../constants';
 import {
     CheckCircleIcon,
     ExclamationTriangleIcon,
     CalendarIcon,
-    CurrencyDollarIcon,
     TruckIcon,
     UsersIcon
 } from '@heroicons/react/24/outline';
@@ -44,18 +33,6 @@ import {
 interface Props {
     caseId: string;
     onBack: () => void;
-}
-
-interface Installment {
-    label: 'Advance' | 'Second' | 'Final';
-    amount: number;
-    dueDate: string;
-    paid: boolean;
-}
-
-interface FinancialPlan {
-    totalBudget: number;
-    installments: Installment[];
 }
 
 interface PhaseMaterial {
@@ -76,6 +53,18 @@ interface Phase {
     materials: PhaseMaterial[];
 }
 
+export interface ExecutionFundRequest {
+    id: string;
+    requestedDate?: string;
+    amount: number;
+    reason: string;
+    requiredOn: string;
+    status: 'pending' | 'approved' | 'rejected';
+    requestedBy?: string;
+    createdAt?: unknown;
+    note?: string;
+}
+
 const ExecutionPlanningNew: React.FC<Props> = ({ caseId, onBack }) => {
     const { currentUser } = useAuth();
 
@@ -85,19 +74,11 @@ const ExecutionPlanningNew: React.FC<Props> = ({ caseId, onBack }) => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
-    // STEP 1: Financial Planning
-    const [financialPlan, setFinancialPlan] = useState<FinancialPlan>({
-        totalBudget: 0,
-        installments: [
-            { label: 'Advance', amount: 0, dueDate: '', paid: false },
-            { label: 'Second', amount: 0, dueDate: '', paid: false },
-            { label: 'Final', amount: 0, dueDate: '', paid: false }
-        ]
-    });
-    const [financialPlanComplete, setFinancialPlanComplete] = useState(false);
-
-    // STEP 3: Phase Planning
+    // Phase Planning
     const [phases, setPhases] = useState<Phase[]>([]);
+
+    // Execution Fund Requests (money required for execution expenses; not client payment)
+    const [executionFundRequests, setExecutionFundRequests] = useState<ExecutionFundRequest[]>([]);
 
     // Load case and approved quotation
     useEffect(() => {
@@ -120,15 +101,12 @@ const ExecutionPlanningNew: React.FC<Props> = ({ caseId, onBack }) => {
                 // Load existing execution plan if any
                 if (caseDataLoaded.executionPlan) {
                     const plan = caseDataLoaded.executionPlan as any;
-                    
-                    if (plan.financialPlan) {
-                        setFinancialPlan(plan.financialPlan);
-                        setFinancialPlanComplete(true);
-                    }
-
                     if (plan.phases) {
                         setPhases(plan.phases);
                     }
+                }
+                if ((caseDataLoaded as any).executionFundRequests?.length) {
+                    setExecutionFundRequests((caseDataLoaded as any).executionFundRequests);
                 }
 
                 // Load approved quotation
@@ -154,36 +132,6 @@ const ExecutionPlanningNew: React.FC<Props> = ({ caseId, onBack }) => {
 
         loadData();
     }, [caseId]);
-
-    // Validate financial plan
-    const validateFinancialPlan = (): boolean => {
-        if (financialPlan.totalBudget <= 0) {
-            alert('❌ Please enter total project budget');
-            return false;
-        }
-
-        const totalInstallments = financialPlan.installments.reduce((sum, inst) => sum + inst.amount, 0);
-        if (Math.abs(totalInstallments - financialPlan.totalBudget) > 1) {
-            alert(`❌ Installments (₹${totalInstallments.toLocaleString('en-IN')}) must equal Total Budget (₹${financialPlan.totalBudget.toLocaleString('en-IN')})`);
-            return false;
-        }
-
-        for (const inst of financialPlan.installments) {
-            if (!inst.dueDate) {
-                alert(`❌ Please set due date for ${inst.label} installment`);
-                return false;
-            }
-        }
-
-        return true;
-    };
-
-    const handleSaveFinancialPlan = () => {
-        if (validateFinancialPlan()) {
-            setFinancialPlanComplete(true);
-            alert('✅ Financial plan saved! You can now proceed with phase planning.');
-        }
-    };
 
     const addPhase = () => {
         const newPhase: Phase = {
@@ -215,12 +163,13 @@ const ExecutionPlanningNew: React.FC<Props> = ({ caseId, onBack }) => {
             return;
         }
 
+        const displayName = quotItem.name || (quotItem as any).itemName || 'Unnamed';
         const newMaterial: PhaseMaterial = {
-            quotationItemId: quotItem.catalogItemId, // Use as reference
-            catalogItemId: quotItem.catalogItemId,
-            name: quotItem.name,
+            quotationItemId: quotItem.catalogItemId ?? (quotItem as any).itemId ?? '',
+            catalogItemId: quotItem.catalogItemId ?? (quotItem as any).itemId ?? '',
+            name: displayName,
             quantity: quotItem.quantity,
-            unit: quotItem.unit,
+            unit: quotItem.unit ?? 'pcs',
             deliveryDate: ''
         };
 
@@ -253,12 +202,6 @@ const ExecutionPlanningNew: React.FC<Props> = ({ caseId, onBack }) => {
     const handleSubmitPlanning = async () => {
         if (!caseData || !currentUser || !db) return;
 
-        // Validate financial plan
-        if (!financialPlanComplete || !validateFinancialPlan()) {
-            alert('❌ Please complete financial planning first');
-            return;
-        }
-
         // Validate phases
         if (phases.length === 0) {
             alert('❌ Please add at least one phase');
@@ -287,10 +230,7 @@ const ExecutionPlanningNew: React.FC<Props> = ({ caseId, onBack }) => {
         }
 
         const confirmSubmit = window.confirm(
-            `Submit execution plan for admin approval?\n\n` +
-            `Total Budget: ₹${financialPlan.totalBudget.toLocaleString('en-IN')}\n` +
-            `Phases: ${phases.length}\n` +
-            `This will lock the plan for admin review.`
+            `Submit execution plan for admin approval?\n\nPhases: ${phases.length}\nThis will lock the plan for admin review.`
         );
 
         if (!confirmSubmit) return;
@@ -304,29 +244,28 @@ const ExecutionPlanningNew: React.FC<Props> = ({ caseId, onBack }) => {
             const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, caseId);
             
             const executionPlan = {
-                financialPlan,
                 phases,
                 startDate: phases[0]?.startDate || '',
                 endDate: phases[phases.length - 1]?.endDate || '',
                 createdBy: currentUser.id,
                 createdAt: serverTimestamp(),
-                approvedByAdmin: false
+                approvalStatus: 'pending'
             };
 
-            // Initialize cost center
-            const costCenter = {
-                totalBudget: financialPlan.totalBudget,
-                spentAmount: 0,
-                remainingAmount: financialPlan.totalBudget,
-                expenses: 0,
-                materials: 0,
-                salaries: 0
-            };
+            // Firestore does not allow serverTimestamp() inside arrays; use client timestamp for array items
+            const fundRequestsToSave = executionFundRequests.map((req) => ({
+                ...req,
+                id: req.id || `fr-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                status: 'pending' as const,
+                requestedBy: currentUser.id,
+                requestedDate: req.requestedDate || new Date().toISOString(),
+                createdAt: req.createdAt ?? new Date(),
+            }));
 
             batch.update(caseRef, {
                 executionPlan,
-                costCenter,
-                status: 'PLANNING_SUBMITTED',
+                executionFundRequests: fundRequestsToSave,
+                status: CaseStatus.PLANNING_SUBMITTED,
                 updatedAt: serverTimestamp()
             });
 
@@ -334,7 +273,7 @@ const ExecutionPlanningNew: React.FC<Props> = ({ caseId, onBack }) => {
             const activityRef = doc(collection(db, FIRESTORE_COLLECTIONS.CASES, caseId, FIRESTORE_COLLECTIONS.ACTIVITIES));
             batch.set(activityRef, {
                 caseId,
-                action: `Execution plan submitted for admin approval (Budget: ₹${financialPlan.totalBudget.toLocaleString('en-IN')}, ${phases.length} phases)`,
+                action: `Execution plan submitted for admin approval (${phases.length} phases)`,
                 by: currentUser.id,
                 timestamp: serverTimestamp()
             });
@@ -353,6 +292,21 @@ const ExecutionPlanningNew: React.FC<Props> = ({ caseId, onBack }) => {
         }
     };
 
+    // Hooks must run unconditionally (before any early return)
+    const hasQuotation = !!approvedQuotation;
+    const quotationItems = React.useMemo(() => {
+        const raw = approvedQuotation?.items || [];
+        return raw.map((item: QuotationItemData & { itemName?: string }, index: number) => {
+            const displayName = item.name || (item as any).itemName || 'Unnamed item';
+            const value = item.catalogItemId ?? (item as any).itemId ?? `q-${index}`;
+            return {
+                ...item,
+                name: displayName,
+                catalogItemId: value,
+            };
+        });
+    }, [approvedQuotation?.items]);
+
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64">
@@ -368,10 +322,6 @@ const ExecutionPlanningNew: React.FC<Props> = ({ caseId, onBack }) => {
             </div>
         );
     }
-
-    // TEMPORARILY: Allow planning without quotation for testing
-    const hasQuotation = !!approvedQuotation;
-    const quotationItems = approvedQuotation?.items || [];
 
     return (
         <div className="p-6 space-y-6">
@@ -389,151 +339,8 @@ const ExecutionPlanningNew: React.FC<Props> = ({ caseId, onBack }) => {
                 </button>
             </div>
 
-            {/* Progress Indicator */}
-            <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg">
-                <div className={`flex items-center gap-2 ${financialPlanComplete ? 'text-green-600' : 'text-blue-600'}`}>
-                    {financialPlanComplete ? (
-                        <CheckCircleIcon className="w-6 h-6" />
-                    ) : (
-                        <div className="w-6 h-6 border-2 border-blue-600 rounded-full flex items-center justify-center text-xs font-bold">1</div>
-                    )}
-                    <span className="font-medium">Financial Plan</span>
-                </div>
-                <div className="flex-1 h-1 bg-gray-300" />
-                <div className={`flex items-center gap-2 ${financialPlanComplete ? 'text-blue-600' : 'text-gray-400'}`}>
-                    <div className="w-6 h-6 border-2 border-current rounded-full flex items-center justify-center text-xs font-bold">2</div>
-                    <span className="font-medium">Phase Planning</span>
-                </div>
-            </div>
-
-            {/* STEP 1: FINANCIAL PLANNING */}
-            <div className="bg-white rounded-xl shadow-md p-6">
-                <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                        <CurrencyDollarIcon className="w-8 h-8 text-green-600" />
-                        <div>
-                            <h2 className="text-2xl font-bold text-gray-900">Step 1: Financial Planning</h2>
-                            <p className="text-gray-600 text-sm">Budget and payment schedule (MANDATORY)</p>
-                        </div>
-                    </div>
-                    {financialPlanComplete && (
-                        <button
-                            onClick={() => setFinancialPlanComplete(false)}
-                            className="text-sm text-blue-600 hover:text-blue-800"
-                        >
-                            Edit Financial Plan
-                        </button>
-                    )}
-                </div>
-
-                <div className="space-y-6">
-                    {/* Total Budget */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Total Project Budget *
-                        </label>
-                        <input
-                            type="number"
-                            min="0"
-                            value={financialPlan.totalBudget || ''}
-                            onChange={(e) => setFinancialPlan({
-                                ...financialPlan,
-                                totalBudget: parseFloat(e.target.value) || 0
-                            })}
-                            disabled={financialPlanComplete}
-                            className="w-full px-4 py-3 border rounded-lg text-lg font-bold disabled:bg-gray-100"
-                            placeholder="Enter total budget"
-                        />
-                    </div>
-
-                    {/* Installments */}
-                    <div>
-                        <h3 className="font-bold text-gray-900 mb-3">Payment Installments</h3>
-                        <div className="space-y-4">
-                            {financialPlan.installments.map((inst, index) => (
-                                <div key={index} className="grid grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            {inst.label} Payment *
-                                        </label>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            value={inst.amount || ''}
-                                            onChange={(e) => {
-                                                const updated = [...financialPlan.installments];
-                                                updated[index].amount = parseFloat(e.target.value) || 0;
-                                                setFinancialPlan({ ...financialPlan, installments: updated });
-                                            }}
-                                            disabled={financialPlanComplete}
-                                            className="w-full px-3 py-2 border rounded-lg disabled:bg-gray-100"
-                                            placeholder="Amount"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Due Date *
-                                        </label>
-                                        <input
-                                            type="date"
-                                            value={inst.dueDate}
-                                            onChange={(e) => {
-                                                const updated = [...financialPlan.installments];
-                                                updated[index].dueDate = e.target.value;
-                                                setFinancialPlan({ ...financialPlan, installments: updated });
-                                            }}
-                                            disabled={financialPlanComplete}
-                                            className="w-full px-3 py-2 border rounded-lg disabled:bg-gray-100"
-                                        />
-                                    </div>
-                                    <div className="flex items-end">
-                                        <div className="text-sm text-gray-600">
-                                            {inst.amount > 0 && financialPlan.totalBudget > 0 && (
-                                                <span className="font-medium">
-                                                    {((inst.amount / financialPlan.totalBudget) * 100).toFixed(1)}% of total
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Validation Summary */}
-                        {financialPlan.totalBudget > 0 && (
-                            <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                                <div className="flex justify-between text-sm">
-                                    <span>Total Installments:</span>
-                                    <span className="font-bold">
-                                        ₹{financialPlan.installments.reduce((sum, inst) => sum + inst.amount, 0).toLocaleString('en-IN')}
-                                    </span>
-                                </div>
-                                <div className="flex justify-between text-sm mt-1">
-                                    <span>Total Budget:</span>
-                                    <span className="font-bold">₹{financialPlan.totalBudget.toLocaleString('en-IN')}</span>
-                                </div>
-                                {Math.abs(financialPlan.installments.reduce((sum, inst) => sum + inst.amount, 0) - financialPlan.totalBudget) > 1 && (
-                                    <p className="text-red-600 text-sm mt-2">
-                                        ⚠️ Installments must equal total budget
-                                    </p>
-                                )}
-                            </div>
-                        )}
-                    </div>
-
-                    {!financialPlanComplete && (
-                        <button
-                            onClick={handleSaveFinancialPlan}
-                            className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-bold"
-                        >
-                            ✓ Save Financial Plan & Continue
-                        </button>
-                    )}
-                </div>
-            </div>
-
-            {/* STEP 2: APPROVED QUOTATION (READ-ONLY) - OPTIONAL */}
-            {financialPlanComplete && hasQuotation && (
+            {/* Approved Quotation (read-only) */}
+            {hasQuotation && (
                 <div className="bg-white rounded-xl shadow-md p-6">
                     <div className="flex items-center gap-3 mb-6">
                         <CheckCircleIcon className="w-8 h-8 text-purple-600" />
@@ -581,7 +388,7 @@ const ExecutionPlanningNew: React.FC<Props> = ({ caseId, onBack }) => {
             )}
 
             {/* Warning if no quotation */}
-            {financialPlanComplete && !hasQuotation && (
+            {!hasQuotation && (
                 <div className="bg-yellow-50 rounded-xl p-6 border-2 border-yellow-300">
                     <div className="flex items-start gap-3">
                         <ExclamationTriangleIcon className="w-6 h-6 text-yellow-600 flex-shrink-0 mt-1" />
@@ -596,14 +403,14 @@ const ExecutionPlanningNew: React.FC<Props> = ({ caseId, onBack }) => {
                 </div>
             )}
 
-            {/* STEP 3: PHASE PLANNING */}
-            {financialPlanComplete && (
+            {/* Phase Planning */}
+            {(
                 <div className="bg-white rounded-xl shadow-md p-6">
                     <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-3">
                             <CalendarIcon className="w-8 h-8 text-blue-600" />
                             <div>
-                                <h2 className="text-2xl font-bold text-gray-900">Step 2: Phase Planning</h2>
+                                <h2 className="text-2xl font-bold text-gray-900">Phase Planning</h2>
                                 <p className="text-gray-600 text-sm">Timeline, labor, and material delivery</p>
                             </div>
                         </div>
@@ -686,10 +493,17 @@ const ExecutionPlanningNew: React.FC<Props> = ({ caseId, onBack }) => {
                                             <p className="text-sm text-gray-500 mb-2">No materials assigned yet</p>
                                         ) : (
                                             <div className="space-y-2 mb-4">
-                                                {phase.materials.map((material, matIndex) => (
+                                                {phase.materials.map((material, matIndex) => {
+                                                    const fromQuotation = quotationItems.find(
+                                                        (q) =>
+                                                            (q.catalogItemId ?? (q as any).itemId) === material.catalogItemId ||
+                                                            (q.catalogItemId ?? (q as any).itemId) === material.quotationItemId
+                                                    );
+                                                    const displayName = (fromQuotation && (fromQuotation.name || (fromQuotation as any).itemName)) || material.name || 'Unnamed item';
+                                                    return (
                                                     <div key={matIndex} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                                                         <div className="flex-1">
-                                                            <p className="font-medium">{material.name}</p>
+                                                            <p className="font-medium">{displayName}</p>
                                                             <p className="text-sm text-gray-600">{material.quantity} {material.unit}</p>
                                                         </div>
                                                         <div>
@@ -708,14 +522,17 @@ const ExecutionPlanningNew: React.FC<Props> = ({ caseId, onBack }) => {
                                                             ✕
                                                         </button>
                                                     </div>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         )}
 
                                         <select
                                             onChange={(e) => {
                                                 if (e.target.value) {
-                                                    const item = quotationItems.find(i => i.catalogItemId === e.target.value);
+                                                    const item = quotationItems.find((i, idx) =>
+                                                        (i.catalogItemId ?? (i as any).itemId ?? `q-${idx}`) === e.target.value
+                                                    );
                                                     if (item) {
                                                         assignMaterialToPhase(phase.id, item);
                                                         e.target.value = '';
@@ -729,8 +546,8 @@ const ExecutionPlanningNew: React.FC<Props> = ({ caseId, onBack }) => {
                                                 {hasQuotation ? '+ Select material from quotation' : 'No quotation available'}
                                             </option>
                                             {quotationItems.map((item, idx) => (
-                                                <option key={idx} value={item.catalogItemId}>
-                                                    {item.name} ({item.quantity} {item.unit})
+                                                <option key={idx} value={item.catalogItemId ?? (item as any).itemId ?? `q-${idx}`}>
+                                                    {item.name} ({item.quantity} {item.unit ?? 'pcs'})
                                                 </option>
                                             ))}
                                         </select>
@@ -739,6 +556,76 @@ const ExecutionPlanningNew: React.FC<Props> = ({ caseId, onBack }) => {
                             ))}
                         </div>
                     )}
+
+                    {/* Execution Fund Requests */}
+                    <div className="mt-6 pt-6 border-t">
+                        <h4 className="font-bold text-gray-900 mb-2">Execution Fund Requests</h4>
+                        <p className="text-sm text-gray-600 mb-3">Money required for execution expenses (not client payment). Approval handled separately.</p>
+                        {executionFundRequests.map((req, idx) => (
+                            <div key={req.id || idx} className="flex flex-wrap items-center gap-3 p-3 bg-gray-50 rounded-lg mb-2">
+                                <input
+                                    type="date"
+                                    value={req.requiredOn || ''}
+                                    onChange={(e) => {
+                                        const next = [...executionFundRequests];
+                                        next[idx] = { ...next[idx], requiredOn: e.target.value };
+                                        setExecutionFundRequests(next);
+                                    }}
+                                    className="px-2 py-1.5 border rounded text-sm"
+                                    placeholder="Date required"
+                                />
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={req.amount || ''}
+                                    onChange={(e) => {
+                                        const next = [...executionFundRequests];
+                                        next[idx] = { ...next[idx], amount: parseFloat(e.target.value) || 0 };
+                                        setExecutionFundRequests(next);
+                                    }}
+                                    className="w-28 px-2 py-1.5 border rounded text-sm"
+                                    placeholder="Amount"
+                                />
+                                <input
+                                    type="text"
+                                    value={req.reason || ''}
+                                    onChange={(e) => {
+                                        const next = [...executionFundRequests];
+                                        next[idx] = { ...next[idx], reason: e.target.value };
+                                        setExecutionFundRequests(next);
+                                    }}
+                                    className="flex-1 min-w-[120px] px-2 py-1.5 border rounded text-sm"
+                                    placeholder="Reason"
+                                />
+                                <input
+                                    type="text"
+                                    value={req.note || ''}
+                                    onChange={(e) => {
+                                        const next = [...executionFundRequests];
+                                        next[idx] = { ...next[idx], note: e.target.value };
+                                        setExecutionFundRequests(next);
+                                    }}
+                                    className="flex-1 min-w-[100px] px-2 py-1.5 border rounded text-sm"
+                                    placeholder="Note (optional)"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setExecutionFundRequests(executionFundRequests.filter((_, i) => i !== idx))}
+                                    className="text-red-600 hover:text-red-800 text-sm"
+                                >
+                                    Remove
+                                </button>
+                            </div>
+                        ))}
+                        <button
+                            type="button"
+                            onClick={() => setExecutionFundRequests([...executionFundRequests, { id: '', amount: 0, reason: '', requiredOn: '', status: 'pending' }])}
+                            className="mt-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm font-medium"
+                        >
+                            + Add Fund Request
+                        </button>
+                    </div>
 
                     {/* Submit Button */}
                     {phases.length > 0 && (

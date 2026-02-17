@@ -37,11 +37,10 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
 
     const { addProject, projects: allProjects } = useProjects();
     const { leads } = useLeads();
-    const { organizations: realOrgs, addOrganization, updateOrganization } = useOrganizations();
+    const { organizations: realOrgs, addOrganization, updateOrganization, loading: orgsLoading, error: orgsError } = useOrganizations();
     const { users } = useUsers();
 
-    // Merge mock organizations with real Firestore organizations
-    const organizations = realOrgs; // Removed mock ORGANIZATIONS
+    const organizations = realOrgs ?? [];
 
     const handleCreateOrganization = async (orgData: Omit<Organization, 'id' | 'createdAt' | 'createdBy' | 'projects'>) => {
         try {
@@ -107,9 +106,9 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
         return colors[status] || 'bg-gray-100 text-gray-800 border-gray-200';
     };
 
-    const filteredOrgs = (organizations || []).filter(org =>
-        org.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        org.contactPerson?.toLowerCase().includes(searchQuery.toLowerCase())
+    const filteredOrgs = organizations.filter(org =>
+        (org?.name ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (org?.contactPerson ?? '').toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     // Count projects for each organization
@@ -159,15 +158,26 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                 </div>
             </div>
 
+            {/* Loading / Error state */}
+            {orgsLoading && (
+                <div className="text-center py-12 text-text-secondary">Loading organizations...</div>
+            )}
+            {orgsError && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 text-red-700 dark:text-red-300">
+                    Failed to load organizations. Please try again.
+                </div>
+            )}
+
             {/* Organizations Grid */}
+            {!orgsLoading && !orgsError && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredOrgs.map((org) => (
                     <motion.div
-                        key={org.id}
+                        key={org?.id ?? ''}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="bg-surface rounded-xl shadow-sm border border-border hover:shadow-md transition-shadow p-6 group cursor-pointer"
-                        onClick={() => handleViewProjects(org)}
+                        onClick={() => org && handleViewProjects(org)}
                     >
                         <div className="flex justify-between items-start mb-4">
                             <div className="p-3 bg-primary/10 rounded-lg">
@@ -177,8 +187,10 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        setOrganizationToEdit(org);
-                                        setIsCreateModalOpen(true);
+                                        if (org) {
+                                            setOrganizationToEdit(org);
+                                            setIsCreateModalOpen(true);
+                                        }
                                     }}
                                     className="p-1.5 text-text-tertiary hover:text-primary hover:bg-primary/10 rounded-lg transition-colors bg-subtle-background"
                                     title="Edit Organization"
@@ -186,35 +198,37 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                                     <PencilIcon className="w-4 h-4" />
                                 </button>
                                 <span className="text-xs font-medium px-2 py-1 bg-subtle-background rounded-full text-text-secondary">
-                                    {getOrgProjectCount(org.id)} Projects
+                                    {getOrgProjectCount(org?.id ?? '')} Projects
                                 </span>
                             </div>
                         </div>
 
                         <h3 className="text-xl font-bold text-text-primary mb-2 group-hover:text-primary transition-colors">
-                            {org.name}
+                            {org?.name ?? 'Unnamed'}
                         </h3>
 
                         <div className="space-y-3 text-sm text-text-secondary">
                             <div className="flex items-center gap-2">
                                 <UserIcon className="w-4 h-4" />
-                                <span>{org.contactPerson}</span>
+                                <span>{org?.contactPerson ?? '—'}</span>
                             </div>
                             <div className="flex items-start gap-2">
                                 <MapPinIcon className="w-4 h-4 mt-0.5" />
-                                <span className="line-clamp-2">{org.address}</span>
+                                <span className="line-clamp-2">{org?.address ?? '—'}</span>
                             </div>
                         </div>
 
                         <div className="mt-6 pt-4 border-t border-border flex justify-between items-center">
                             <div className="text-xs text-text-tertiary">
-                                Since {new Date(org.createdAt).toLocaleDateString()}
+                                Since {org?.createdAt ? new Date(org.createdAt).toLocaleDateString() : 'N/A'}
                             </div>
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    setSelectedOrgId(org.id);
-                                    setIsProjectLauncherOpen(true);
+                                    if (org?.id) {
+                                        setSelectedOrgId(org.id);
+                                        setIsProjectLauncherOpen(true);
+                                    }
                                 }}
                                 className="text-sm font-medium text-primary hover:text-primary/80"
                             >
@@ -224,6 +238,7 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                     </motion.div>
                 ))}
             </div>
+            )}
 
             <CreateOrganizationModal
                 isOpen={isCreateModalOpen}

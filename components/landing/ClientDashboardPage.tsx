@@ -213,7 +213,7 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ clientUser, o
     const paidMilestoneCount = project.paymentMilestones.filter(m => m.isPaid).length;
     const unlockedUntilStage = paidMilestoneCount > 0 && project.paymentMilestones[paidMilestoneCount - 1]
         ? project.paymentMilestones[paidMilestoneCount - 1].unlocksStage + 1
-        : 2;
+        : Math.max(2, project.stages?.length ?? 10); // Use journey stage status for lock; high value so index doesn't override
     const nextUnpaidMilestone = project.paymentMilestones.find(m => !m.isPaid);
 
     return (
@@ -327,10 +327,13 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ clientUser, o
 
                         <div>
                             <div className="flex items-center gap-3 mb-6">
-                                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                                    <CheckCircleIcon className="w-6 h-6" />
+                                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary shadow-sm">
+                                    <CheckCircleIcon className="w-7 h-7" />
                                 </div>
-                                <h2 className="text-2xl font-bold text-gray-800 tracking-tight">Project Journey</h2>
+                                <div>
+                                    <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Your Journey</h2>
+                                    <p className="text-sm text-gray-500 mt-0.5">Full timeline from first call to execution — dates and descriptions</p>
+                                </div>
                             </div>
                             <VerticalRoadmap
                                 stages={project.stages}

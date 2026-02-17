@@ -1,6 +1,6 @@
 /**
- * Section 3: Approvals — Admin and Client must both approve.
- * When both true → status EXECUTION_ACTIVE, costCenter initialized if needed.
+ * Section 3: Approvals — Super Admin approves execution plan. No client approval.
+ * On Approve: approvalStatus = approved, status = EXECUTION_ACTIVE.
  */
 
 import React, { useState } from 'react';
@@ -10,43 +10,33 @@ import { db } from '../../../firebase';
 import { FIRESTORE_COLLECTIONS } from '../../../constants';
 import { Case, CaseStatus, UserRole } from '../../../types';
 import { CheckCircleIcon } from '@heroicons/react/24/outline';
-import { checkAndTransitionToExecutionActive } from '../../../services/executionStatusService';
 
 interface Props {
   caseId: string;
   caseData: Case;
-  plan: { approvals?: { admin?: boolean; client?: boolean }; [key: string]: any };
+  plan: { approvalStatus?: string; approvedBy?: string; approvedAt?: unknown; [key: string]: any };
   onApproved: () => void;
 }
 
 const ExecutionApprovalsSection: React.FC<Props> = ({ caseId, caseData, plan, onApproved }) => {
   const { currentUser } = useAuth();
   const [busy, setBusy] = useState(false);
-  const adminApproved = !!plan?.approvals?.admin;
-  const clientApproved = !!plan?.approvals?.client;
-  const bothApproved = adminApproved && clientApproved;
+  const approved = plan?.approvalStatus === 'approved';
   const isSuperAdmin = currentUser?.role === UserRole.SUPER_ADMIN;
 
   const handleAdminApprove = async () => {
-    if (!isSuperAdmin || adminApproved) return;
+    if (!isSuperAdmin || approved) return;
     setBusy(true);
     try {
       const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, caseId);
-      
-      // Set admin approval
       await updateDoc(caseRef, {
-        'executionPlan.approvals.admin': true,
+        'executionPlan.approvalStatus': 'approved',
+        'executionPlan.approvedBy': currentUser!.id,
+        'executionPlan.approvedAt': serverTimestamp(),
+        status: CaseStatus.EXECUTION_ACTIVE,
         updatedAt: serverTimestamp(),
       });
-      
-      // Trigger automatic status transition check
-      const transitioned = await checkAndTransitionToExecutionActive(caseId);
-      
       onApproved();
-      
-      if (transitioned) {
-        console.log('[Execution Approvals] Status automatically transitioned to EXECUTION_ACTIVE');
-      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -59,8 +49,8 @@ const ExecutionApprovalsSection: React.FC<Props> = ({ caseId, caseData, plan, on
       <h2 className="text-lg font-bold text-text-primary mb-4">3. Approvals</h2>
       <div className="space-y-4">
         <div className="flex items-center justify-between p-4 rounded-lg border border-border">
-          <span className="font-medium text-text-primary">Admin</span>
-          {adminApproved ? (
+          <span className="font-medium text-text-primary">Super Admin</span>
+          {approved ? (
             <span className="flex items-center gap-2 text-green-600">
               <CheckCircleIcon className="w-5 h-5" /> Approved
             </span>
@@ -77,17 +67,7 @@ const ExecutionApprovalsSection: React.FC<Props> = ({ caseId, caseData, plan, on
             <span className="text-text-tertiary">Pending</span>
           )}
         </div>
-        <div className="flex items-center justify-between p-4 rounded-lg border border-border">
-          <span className="font-medium text-text-primary">Client</span>
-          {clientApproved ? (
-            <span className="flex items-center gap-2 text-green-600">
-              <CheckCircleIcon className="w-5 h-5" /> Approved
-            </span>
-          ) : (
-            <span className="text-text-tertiary">Pending (client approves in Client Dashboard)</span>
-          )}
-        </div>
-        {bothApproved && (
+        {approved && (
           <p className="text-sm text-green-600 font-medium">Execution unlocked. Daily log and execution are active.</p>
         )}
       </div>

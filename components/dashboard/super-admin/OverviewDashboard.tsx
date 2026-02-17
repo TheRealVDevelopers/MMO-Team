@@ -144,11 +144,9 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage, o
         new Date().getMonth()
     );
 
-    // Derived metrics from unified hook (all computed, not stored)
+    // Derived metrics from unified hook (Total Break Time only; idle and active task time removed from UI)
     const teamMetrics = useMemo(() => ({
-        loggedHours: timeAnalyticsLoading ? '0.0' : teamTotals.totalLoggedHours.toFixed(1),
-        activeHours: timeAnalyticsLoading ? '0.0' : teamTotals.totalActiveHours.toFixed(1),
-        idleHours: timeAnalyticsLoading ? '0.0' : Math.max(0, teamTotals.totalLoggedHours - teamTotals.totalActiveHours - teamTotals.totalBreakHours).toFixed(1),
+        breakHours: timeAnalyticsLoading ? '0.0' : teamTotals.totalBreakHours.toFixed(1),
     }), [teamTotals, timeAnalyticsLoading]);
     const [funnelLeads, setFunnelLeads] = useState<Project[]>([]);
 
@@ -284,22 +282,10 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ setCurrentPage, o
                             </motion.div>
                         )}
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                             <StatCard
-                                title="Team Logged Hours"
-                                value={teamMetrics.loggedHours}
-                                icon={<ClockIcon className="w-6 h-6" />}
-                                color="primary"
-                            />
-                            <StatCard
-                                title="Task Execution Time"
-                                value={teamMetrics.activeHours}
-                                icon={<CheckCircleIcon className="w-6 h-6" />}
-                                color="accent"
-                            />
-                            <StatCard
-                                title="Idle Analysis"
-                                value={teamMetrics.idleHours}
+                                title="Total Break Time"
+                                value={teamMetrics.breakHours}
                                 icon={<PauseCircleIcon className="w-6 h-6" />}
                                 color="secondary"
                             />

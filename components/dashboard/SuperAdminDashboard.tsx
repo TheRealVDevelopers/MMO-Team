@@ -19,6 +19,7 @@ import CasesManagementPage from './super-admin/CasesManagementPage';
 import TimesheetReportsPage from './super-admin/TimesheetReportsPage';
 import ExecutionPlanApprovalPage from './super-admin/ExecutionPlanApprovalPage';
 import RequestValidationPage from './shared/RequestValidationPage';
+import ExecutionTimelineSuperAdminWrapper from './execution-team/ExecutionTimelineSuperAdminWrapper';
 
 interface SuperAdminDashboardProps {
     currentPage: string;
@@ -63,6 +64,8 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ currentPage, 
             return <ProjectTrackingPage setCurrentPage={setCurrentPage} />;
         case 'project-hub':
             return <UnifiedProjectsPage roleView="admin" />;
+        case 'timeline':
+            return <ExecutionTimelineSuperAdminWrapper setCurrentPage={setCurrentPage} />;
         case 'leads':
             return <LeadsManagementPage setCurrentPage={setCurrentPage} />;
         case 'communication':

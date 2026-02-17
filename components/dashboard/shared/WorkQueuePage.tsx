@@ -730,39 +730,8 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
             completedAt: serverTimestamp()
         });
 
-        // Log activity
+        // Log activity (no auto Site Inspection task)
         await logActivity(task.caseId, `${task.type} completed`, currentUser.id);
-
-        // Get case to find site engineer
-        const caseDoc = await getDoc(doc(db!, FIRESTORE_COLLECTIONS.CASES, task.caseId));
-        if (!caseDoc.exists()) throw new Error('Case not found');
-
-        const caseData = caseDoc.data() as Case;
-        const siteEngineerId = (caseData as any).assignedSiteEngineer || currentUser.id;
-
-        // Auto-create SITE_INSPECTION task
-        await addDoc(
-            collection(db!, FIRESTORE_COLLECTIONS.CASES, task.caseId, FIRESTORE_COLLECTIONS.TASKS),
-            {
-                caseId: task.caseId,
-                type: TaskType.SITE_INSPECTION,
-                assignedTo: siteEngineerId,
-                assignedBy: currentUser.id,
-                status: TaskStatus.PENDING,
-                createdAt: serverTimestamp()
-            }
-        );
-
-        await logActivity(task.caseId, 'Site inspection task created', currentUser.id);
-
-        await sendNotification(
-            siteEngineerId,
-            'New Site Inspection Task',
-            `Site inspection assigned for: ${task.projectName}`,
-            `/cases/${task.caseId}`
-        );
-
-        console.log('✅ SALES task completed → SITE_INSPECTION created');
     };
 
     // AUTOMATION 2: SITE_INSPECTION → DRAWING_TASK

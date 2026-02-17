@@ -56,8 +56,6 @@ interface Approvals {
   admin: boolean;
   adminAt?: Date;
   adminBy?: string;
-  client: boolean;
-  clientAt?: Date;
 }
 
 const ExecutionPlanning: React.FC<Props> = ({ caseId, setCurrentPage }) => {
@@ -79,7 +77,6 @@ const ExecutionPlanning: React.FC<Props> = ({ caseId, setCurrentPage }) => {
   const [approvals, setApprovals] = useState<Approvals>({
     projectHead: false,
     admin: false,
-    client: false,
   });
 
   useEffect(() => {
@@ -117,7 +114,7 @@ const ExecutionPlanning: React.FC<Props> = ({ caseId, setCurrentPage }) => {
             }
 
             if (plan.approvals) {
-              setApprovals(plan.approvals);
+              setApprovals({ projectHead: !!plan.approvals.projectHead, admin: !!plan.approvals.admin });
             }
           } else {
             // Initialize with one empty phase
@@ -286,8 +283,8 @@ const ExecutionPlanning: React.FC<Props> = ({ caseId, setCurrentPage }) => {
     }
   };
 
-  // Admin/Client approval actions
-  const handleApprove = async (role: 'admin' | 'client') => {
+  // Admin approval only (no client approval)
+  const handleApprove = async (role: 'admin') => {
     if (!caseId || !currentUser) return;
 
     setSaving(true);
@@ -301,15 +298,16 @@ const ExecutionPlanning: React.FC<Props> = ({ caseId, setCurrentPage }) => {
         ...(role === 'admin' ? { adminBy: currentUser.id } : {}),
       };
 
-      // Check if all approvals are complete
-      const allApproved = newApprovals.projectHead && newApprovals.admin && newApprovals.client;
+      const allApproved = newApprovals.projectHead && newApprovals.admin;
 
       const updates: any = {
         'executionPlan.approvals': newApprovals,
+        'executionPlan.approvalStatus': allApproved ? 'approved' : 'pending',
+        'executionPlan.approvedBy': role === 'admin' ? currentUser.id : undefined,
+        'executionPlan.approvedAt': role === 'admin' ? serverTimestamp() : undefined,
         updatedAt: serverTimestamp(),
       };
 
-      // If all approved, activate project and initialize cost center
       if (allApproved) {
         updates.status = CaseStatus.EXECUTION_ACTIVE;
         updates.costCenter = {
@@ -352,7 +350,7 @@ const ExecutionPlanning: React.FC<Props> = ({ caseId, setCurrentPage }) => {
 
       // Reset local state
       setPhases([createEmptyPhase()]);
-      setApprovals({ projectHead: false, admin: false, client: false });
+      setApprovals({ projectHead: false, admin: false });
       setActiveTab('timeline');
 
       alert('Plan rejected. Project Head can create a new plan.');
@@ -370,7 +368,6 @@ const ExecutionPlanning: React.FC<Props> = ({ caseId, setCurrentPage }) => {
   const canEdit = isProjectHead && !approvals.projectHead;
   const planExists = !!caseData?.executionPlan;
   const pendingAdminApproval = approvals.projectHead && !approvals.admin;
-  const pendingClientApproval = approvals.admin && !approvals.client;
 
   // Empty state
   if (!caseId) {
@@ -870,44 +867,10 @@ const ExecutionPlanning: React.FC<Props> = ({ caseId, setCurrentPage }) => {
                   )}
                 </div>
 
-                {/* Client Approval */}
-                <div className={`flex items-center justify-between p-4 rounded-lg ${approvals.client ? 'bg-green-50 border border-green-200' : 'bg-subtle-background border border-border'}`}>
-                  <div className="flex items-center gap-3">
-                    {approvals.client ? (
-                      <CheckCircleIcon className="w-6 h-6 text-green-600" />
-                    ) : pendingClientApproval ? (
-                      <ClockIcon className="w-6 h-6 text-amber-500" />
-                    ) : (
-                      <ClockIcon className="w-6 h-6 text-text-tertiary" />
-                    )}
-                    <div>
-                      <p className="font-semibold text-text-primary">Client Approval</p>
-                      <p className="text-sm text-text-secondary">
-                        {approvals.client
-                          ? 'Client approved the plan'
-                          : pendingClientApproval
-                            ? 'Waiting for client confirmation'
-                            : 'Pending admin approval'}
-                      </p>
-                    </div>
-                  </div>
-                  {isAdmin && pendingClientApproval && !approvals.client && (
-                    <button
-                      onClick={() => handleApprove('client')}
-                      disabled={saving}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-semibold disabled:opacity-50"
-                    >
-                      Mark Client Approved
-                    </button>
-                  )}
-                  {approvals.client && (
-                    <span className="text-sm text-green-600 font-semibold">Approved</span>
-                  )}
-                </div>
               </div>
 
               {/* All Approved Message */}
-              {approvals.projectHead && approvals.admin && approvals.client && (
+              {approvals.projectHead && approvals.admin && (
                 <div className="mt-6 p-4 bg-green-100 border border-green-300 rounded-lg">
                   <p className="text-green-800 font-semibold text-center">
                     ✓ All approvals complete! Project is now ACTIVE.

@@ -8,6 +8,7 @@ import SettingsPage from './components/settings/SettingsPage';
 import InternalLayout from './components/dashboard/shared/InternalLayout';
 import ProjectsListPage from './components/dashboard/shared/ProjectsListPage';
 import ProjectDetailsPage from './components/dashboard/shared/ProjectDetailsPage';
+import ProjectReferencePage from './components/dashboard/shared/ProjectReferencePage';
 import LandingPage from './components/landing/LandingPage';
 import { useAuth } from './context/AuthContext';
 import { StaffUser, UserRole, Vendor } from './types';
@@ -15,7 +16,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   BuildingOfficeIcon, RectangleGroupIcon, UsersIcon, RectangleStackIcon, FunnelIcon, ChartPieIcon, ChatBubbleLeftRightIcon, ShieldExclamationIcon,
   ClockIcon, MapPinIcon, PaintBrushIcon, CalculatorIcon, TruckIcon, WrenchScrewdriverIcon, CreditCardIcon, ChartBarSquareIcon, CalendarDaysIcon, BanknotesIcon,
-  ViewColumnsIcon, TagIcon, ListBulletIcon, PresentationChartLineIcon, ReceiptPercentIcon, BuildingStorefrontIcon, BuildingLibraryIcon, CheckCircleIcon, DocumentTextIcon, CubeIcon, QueueListIcon, ShieldCheckIcon, ClipboardDocumentCheckIcon
+  ViewColumnsIcon, TagIcon, ListBulletIcon, PresentationChartLineIcon, ReceiptPercentIcon, BuildingStorefrontIcon, BuildingLibraryIcon, CheckCircleIcon, DocumentTextIcon, CubeIcon, QueueListIcon, ShieldCheckIcon, ClipboardDocumentCheckIcon,
+  CalendarIcon
 } from './components/icons/IconComponents';
 import { InboxIcon } from '@heroicons/react/24/outline';
 
@@ -27,6 +29,7 @@ const navConfig = {
       { id: 'request-validation', label: 'Request Validation', icon: <ClipboardDocumentCheckIcon className="w-6 h-6" /> },
       { id: 'team', label: 'Team', icon: <UsersIcon className="w-6 h-6" /> },
       { id: 'project-hub', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
+      { id: 'timeline', label: 'Timeline', icon: <CalendarIcon className="w-6 h-6" /> },
       { id: 'projects', label: 'Reference', icon: <RectangleStackIcon className="w-6 h-6" /> },
       { id: 'organizations', label: 'Organizations', icon: <BuildingOfficeIcon className="w-6 h-6" /> },
       { id: 'leads', label: 'Leads', icon: <FunnelIcon className="w-6 h-6" /> },
@@ -148,12 +151,14 @@ const navConfig = {
       { id: 'bidding', label: 'Vendor Bidding', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       { id: 'execution-procurement', label: 'Execution Procurement', icon: <TruckIcon className="w-6 h-6" /> },
       { id: 'vendors', label: 'Vendors', icon: <BuildingStorefrontIcon className="w-6 h-6" /> },
+      { id: 'history', label: 'History', icon: <ClockIcon className="w-6 h-6" /> },
     ]
   },
   [UserRole.EXECUTION_TEAM]: {
     title: 'Execution Hub',
     navItems: [
       { id: 'planning', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
+      { id: 'timeline', label: 'Timeline', icon: <CalendarIcon className="w-6 h-6" /> },
       { id: 'request-validation', label: 'Request Validation', icon: <ClipboardDocumentCheckIcon className="w-6 h-6" /> },
       { id: 'approvals', label: 'Approvals', icon: <CheckCircleIcon className="w-6 h-6" /> },
       { id: 'budget', label: 'Budgets', icon: <BanknotesIcon className="w-6 h-6" /> },
@@ -167,6 +172,7 @@ const navConfig = {
     title: 'Execution Hub',
     navItems: [
       { id: 'planning', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
+      { id: 'timeline', label: 'Timeline', icon: <CalendarIcon className="w-6 h-6" /> },
       { id: 'request-validation', label: 'Request Validation', icon: <ClipboardDocumentCheckIcon className="w-6 h-6" /> },
       { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
       { id: 'board', label: 'Board', icon: <ViewColumnsIcon className="w-6 h-6" /> },
@@ -295,6 +301,7 @@ const AppContent: React.FC = () => {
           <Routes>
             <Route path="/projects/:caseId" element={<ProjectDetailsPage />} />
             <Route path="/projects" element={<ProjectsListPage />} />
+            <Route path="/project-reference" element={<ProjectReferencePage />} />
             <Route path="*" element={<Dashboard currentPage={currentPage} setCurrentPage={handleSetPage} />} />
           </Routes>
         )}

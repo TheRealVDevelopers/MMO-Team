@@ -283,9 +283,10 @@ export interface Case {
         requiredOn: Date;
       }>;
     }>;
-    approvals: { admin: boolean; client: boolean };
-    createdBy?: string; // projectHeadId
+    approvalStatus?: 'pending' | 'approved' | 'rejected';
+    approvedBy?: string; // userId
     approvedAt?: Date;
+    createdBy?: string; // projectHeadId
     executionMarkedComplete?: boolean; // gates "Launch JMS"
     // Legacy shape (phases) kept for backward compat during migration
     phases?: Array<{
@@ -318,6 +319,19 @@ export interface Case {
 
   // Execution (only when isProject = true)
   execution?: CaseExecution;
+
+  // Execution fund requests (money required for execution; not client payment)
+  executionFundRequests?: Array<{
+    id: string;
+    requestedDate?: string;
+    amount: number;
+    reason: string;
+    requiredOn: string;
+    status: 'pending' | 'approved' | 'rejected';
+    requestedBy?: string;
+    createdAt?: unknown;
+    note?: string;
+  }>;
 
   // Closure tracking (populated when JMS signed)
   closure?: {
@@ -1438,6 +1452,8 @@ export interface CaseQuotation {
   discount: number; // Percentage
   discountAmount: number;
   grandTotal: number;
+  /** Profit ratio (e.g. "1:2"). Visible only to Super Admin, Sales Manager, Quotation Team. Never expose to client. */
+  prRatio?: string;
   internalPRCode?: string; // Visible only to Admin/Quotation/Sales GM
   notes?: string;
   createdBy: string;

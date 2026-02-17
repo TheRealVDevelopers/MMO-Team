@@ -91,9 +91,8 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; lead
       
       const loggedHours = timeAnalyticsLoading ? '0.0' : totals.totalLoggedHours.toFixed(1);
       const activeHours = timeAnalyticsLoading ? '0.0' : totals.totalActiveHours.toFixed(1);
-      const idleHours = timeAnalyticsLoading ? '0.0' : Math.max(0, totals.totalLoggedHours - totals.totalActiveHours).toFixed(1);
-      
-      return { loggedHours, activeHours, idleHours };
+
+      return { loggedHours, activeHours };
     }, [teamUsers, salesTeamUserIds, timeAnalyticsLoading]);
 
     // --- LIVE DATA CALCULATIONS ---
@@ -217,7 +216,7 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; lead
                     </motion.div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-subtle-background p-6 rounded-2xl border border-border/20 group hover:border-primary/20 transition-all">
                         <div className="flex items-center gap-3 mb-4">
                             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
@@ -233,19 +232,9 @@ const SalesOverviewPage: React.FC<{ setCurrentPage: (page: string) => void; lead
                             <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
                                 <CheckCircleIcon className="w-5 h-5" />
                             </div>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Sales Activity Time</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Total Active Time</p>
                         </div>
                         <p className="text-3xl font-serif font-black text-text-primary tracking-tight">{salesTeamMetrics.activeHours}<span className="text-sm font-sans font-medium text-text-tertiary ml-2">hrs</span></p>
-                    </div>
-
-                    <div className="bg-subtle-background p-6 rounded-2xl border border-border/20 group hover:border-secondary/20 transition-all">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary group-hover:scale-110 transition-transform">
-                                <PauseCircleIcon className="w-5 h-5" />
-                            </div>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Idle Analysis</p>
-                        </div>
-                        <p className="text-3xl font-serif font-black text-text-primary tracking-tight">{salesTeamMetrics.idleHours}<span className="text-sm font-sans font-medium text-text-tertiary ml-2">hrs</span></p>
                     </div>
                 </div>
             </section>

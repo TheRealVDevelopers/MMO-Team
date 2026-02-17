@@ -60,6 +60,8 @@ interface PaymentRecord {
         secondAmount: number;
         finalAmount: number;
     };
+    /** Set when payment is submitted (Verify With Accountant); applied to case when approved */
+    projectHeadId?: string | null;
     case?: Case;
 }
 
@@ -378,6 +380,7 @@ const PaymentVerificationInbox: React.FC = () => {
                     verifiedAt: data.verifiedAt,
                     rejectionReason: data.rejectionReason,
                     paymentTerms: data.paymentTerms,
+                    projectHeadId: data.projectHeadId ?? null,
                 };
 
                 // Extract caseId from path: cases/{caseId}/payments/{paymentId}
@@ -481,7 +484,7 @@ const PaymentVerificationInbox: React.FC = () => {
                 remainingAmount: verifiedAmount
             };
 
-            batch.update(caseRef, {
+            const caseUpdate: Record<string, unknown> = {
                 isProject: true, // Convert to project
                 status: CaseStatus.WAITING_FOR_PLANNING,
                 costCenter: costCenterData,
@@ -489,8 +492,12 @@ const PaymentVerificationInbox: React.FC = () => {
                 'financial.paymentVerified': true,
                 'financial.verifiedAt': serverTimestamp(),
                 'financial.verifiedBy': currentUser.id,
-                updatedAt: serverTimestamp()
-            });
+                updatedAt: serverTimestamp(),
+            };
+            if (selectedPayment.projectHeadId) {
+                caseUpdate.projectHeadId = selectedPayment.projectHeadId;
+            }
+            batch.update(caseRef, caseUpdate);
 
             // 4. Log activity
             const activityRef = doc(collection(db, FIRESTORE_COLLECTIONS.CASES, selectedPayment.caseId, FIRESTORE_COLLECTIONS.ACTIVITIES));

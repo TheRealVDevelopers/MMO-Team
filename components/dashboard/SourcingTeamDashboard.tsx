@@ -6,6 +6,7 @@ import QuotationAuditPage from './sourcing-team/ProcurementAuditPageNew';
 import VendorBiddingPage from './sourcing-team/VendorBiddingPage';
 import ExecutionProcurementPage from './sourcing-team/ExecutionProcurementPage';
 import VendorManagementPage from './sourcing-team/VendorManagementPage';
+import ProcurementHistoryPage from './sourcing-team/ProcurementHistoryPage';
 
 const ProcurementTeamDashboard: React.FC<{ currentPage: string; setCurrentPage: (page: string) => void }> = ({
   currentPage,
@@ -26,6 +27,8 @@ const ProcurementTeamDashboard: React.FC<{ currentPage: string; setCurrentPage: 
       return <ExecutionProcurementPage />;
     case 'vendors':
       return <VendorManagementPage setCurrentPage={setCurrentPage} />;
+    case 'history':
+      return <ProcurementHistoryPage />;
     default:
       return <QuotationAuditPage />;
   }

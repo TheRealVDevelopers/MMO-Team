@@ -75,6 +75,19 @@ export const useClientCase = (clientId: string | undefined) => {
     return { project, loading, error };
 };
 
+const formatDateRange = (start: Date, end: Date): string =>
+    `${start.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} – ${end.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+
+// Normalize Firestore timestamp to Date
+const toDate = (v: unknown): Date | undefined => {
+    if (v == null) return undefined;
+    if (v instanceof Date) return isNaN(v.getTime()) ? undefined : v;
+    if (typeof (v as any).toDate === 'function') return (v as any).toDate();
+    if (typeof (v as any).seconds === 'number') return new Date((v as any).seconds * 1000);
+    if (typeof v === 'string' || typeof v === 'number') { const d = new Date(v as any); return isNaN(d.getTime()) ? undefined : d; }
+    return undefined;
+};
+
 // Helper to setup subcollection listeners and merge data
 const setupSubListeners = (
     caseRef: any,
@@ -82,19 +95,24 @@ const setupSubListeners = (
     setProject: (p: ClientProject) => void,
     onDataLoaded?: () => void
 ) => {
-    // We'll use a local state object to aggregate data
     let approvals: ApprovalRequest[] = [];
     let payments: CasePayment[] = [];
     let documents: CaseDocument[] = [];
     let updates: CaseDailyUpdate[] = [];
     let invoices: Invoice[] = [];
+    let quotations: Array<{ createdAt?: unknown; grandTotal?: number; finalAmount?: number; title?: string }> = [];
 
-    // Helper to run the mapping and Update State
     const update = () => {
-        const mappedProject = mapToClientProject(caseData, approvals, payments, documents, updates, invoices);
+        const mappedProject = mapToClientProject(caseData, approvals, payments, documents, updates, invoices, quotations);
         setProject(mappedProject);
         if (onDataLoaded) onDataLoaded();
     };
+
+    // Fetch quotations once for journey (quotation date / description)
+    getDocs(collection(caseRef, 'quotations')).then((snap) => {
+        quotations = snap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+        update();
+    }).catch(() => update());
 
     // 1. Approvals
     // Note: UserRole doesn't have "CLIENT" yet, assuming we added it or using string check
@@ -156,23 +174,101 @@ const mapToClientProject = (
     payments: CasePayment[],
     docs: CaseDocument[],
     updates: CaseDailyUpdate[],
-    invoices: Invoice[]
+    invoices: Invoice[],
+    quotations: Array<{ createdAt?: unknown; grandTotal?: number; finalAmount?: number; title?: string }> = []
 ): ClientProject => {
 
-    // 1. Map Stages
-    // If executionPlan exists, use it. Else use default.
-    const stages: JourneyStage[] = c.executionPlan?.phases.map((phase, idx) => ({
-        id: idx + 1,
-        name: phase.name,
-        description: `Phase ${idx + 1} of execution`,
-        status: idx === 0 ? 'in-progress' : 'locked', // Logic needs refinement based on current date/status
-        responsibleRole: 'engineer', // Default
-        startDate: phase.startDate, // Firestore Timestamp handling needed?
-        expectedEndDate: phase.endDate,
-        progressPercent: 0 // Calc from updates
-    })) || [
-            { id: 1, name: 'Project Initiated', description: 'Waiting for execution plan', status: 'in-progress', responsibleRole: 'consultant' }
-        ];
+    const now = new Date();
+    const created = toDate(c.createdAt) ?? new Date();
+    const firstQuotation = quotations.length > 0
+        ? [...quotations].sort((a, b) => (toDate(a.createdAt)?.getTime() ?? 0) - (toDate(b.createdAt)?.getTime() ?? 0))[0]
+        : null;
+    const quotationDate = firstQuotation ? toDate(firstQuotation.createdAt) : undefined;
+    const planStart = c.executionPlan?.startDate ? toDate(c.executionPlan.startDate) : undefined;
+    const workflow = c.workflow ?? { siteVisitDone: false, quotationDone: false, boqDone: false };
+
+    // Full journey: Call → Site inspection → BOQ & Quotation → Project initiated → Execution phases
+    const preStages: JourneyStage[] = [];
+
+    // 1. Call connected
+    preStages.push({
+        id: 1,
+        name: 'Call connected',
+        description: 'First contact established with our team.',
+        status: 'completed',
+        responsibleRole: 'consultant',
+        startDate: created,
+        expectedEndDate: created,
+        actualEndDate: created,
+    });
+
+    // 2. Site inspection
+    const siteDone = workflow.siteVisitDone || [CaseStatus.SITE_VISIT, CaseStatus.DRAWING, CaseStatus.BOQ, CaseStatus.QUOTATION, CaseStatus.NEGOTIATION, CaseStatus.WAITING_FOR_PAYMENT, CaseStatus.WAITING_FOR_PLANNING, CaseStatus.PLANNING_SUBMITTED, CaseStatus.EXECUTION_ACTIVE, CaseStatus.COMPLETED].includes(c.status as CaseStatus);
+    preStages.push({
+        id: 2,
+        name: 'Site inspection',
+        description: 'Site visit and measurements completed. Scope and requirements documented.',
+        status: siteDone ? 'completed' : (c.status === CaseStatus.SITE_VISIT ? 'in-progress' : 'locked'),
+        responsibleRole: 'engineer',
+        startDate: quotationDate ? new Date(quotationDate.getTime() - 5 * 24 * 60 * 60 * 1000) : undefined,
+        expectedEndDate: quotationDate,
+        actualEndDate: siteDone ? (quotationDate ?? created) : undefined,
+    });
+
+    // 3. BOQ & Quotation
+    const quotDone = workflow.quotationDone || workflow.boqDone || (quotations.length > 0) || [CaseStatus.QUOTATION, CaseStatus.NEGOTIATION, CaseStatus.WAITING_FOR_PAYMENT, CaseStatus.WAITING_FOR_PLANNING, CaseStatus.PLANNING_SUBMITTED, CaseStatus.EXECUTION_ACTIVE, CaseStatus.COMPLETED].includes(c.status as CaseStatus);
+    const quotAmount = firstQuotation?.grandTotal ?? firstQuotation?.finalAmount;
+    const quotDesc = quotAmount != null ? `Scope and pricing shared. Quotation: ₹${(Number(quotAmount) / 100000).toFixed(2)} Lakhs` : 'Scope, BOQ and quotation shared with you.';
+    preStages.push({
+        id: 3,
+        name: 'BOQ & Quotation',
+        description: quotDesc,
+        status: quotDone ? 'completed' : (c.status === CaseStatus.QUOTATION || c.status === CaseStatus.BOQ ? 'in-progress' : 'locked'),
+        responsibleRole: 'consultant',
+        startDate: quotationDate,
+        expectedEndDate: quotationDate,
+        actualEndDate: quotDone ? (quotationDate ?? created) : undefined,
+    });
+
+    // 4. Project initiated (converted to project)
+    const projectStarted = c.isProject && (planStart ?? (payments.length > 0));
+    const projectStartDate = planStart ?? (payments.length > 0 ? toDate((payments as any)[0]?.createdAt) : undefined) ?? created;
+    preStages.push({
+        id: 4,
+        name: 'Project initiated',
+        description: 'Advance received. Project kicked off and execution plan in place.',
+        status: projectStarted ? 'completed' : (c.isProject ? 'in-progress' : 'locked'),
+        responsibleRole: 'consultant',
+        startDate: projectStartDate,
+        expectedEndDate: planStart ?? projectStartDate,
+        actualEndDate: projectStarted ? (planStart ?? projectStartDate) : undefined,
+    });
+
+    // 5. Execution phases (from executionPlan.phases)
+    const phases = c.executionPlan?.phases ?? [];
+    let phaseOffset = 5;
+    const phaseStages: JourneyStage[] = phases.map((phase, idx) => {
+        const start = toDate(phase.startDate);
+        const end = toDate(phase.endDate);
+        const isComplete = end && now >= end;
+        const inProgress = start && end && now >= start && now <= end;
+        return {
+            id: phaseOffset + idx,
+            name: phase.name,
+            description: (phase as any).description || `Execution work: ${phase.name}. ${start && end ? `${formatDateRange(start, end)}` : ''}`,
+            status: isComplete ? 'completed' : inProgress ? 'in-progress' : 'locked',
+            responsibleRole: 'engineer',
+            startDate: start,
+            expectedEndDate: end,
+            actualEndDate: isComplete ? end : undefined,
+            progressPercent: inProgress ? 50 : (isComplete ? 100 : 0),
+        };
+    });
+
+    const executionPlaceholder: JourneyStage = { id: 5, name: 'Execution', description: 'Waiting for execution plan. Phases and dates will appear here once approved.', status: 'locked', responsibleRole: 'engineer' };
+    const allStages: JourneyStage[] = phaseStages.length > 0 ? [...preStages, ...phaseStages] : [...preStages, executionPlaceholder];
+    const currentStageId = allStages.find(s => s.status === 'in-progress')?.id ?? (allStages.filter(s => s.status === 'completed').pop()?.id ?? 1);
+    const stages: JourneyStage[] = allStages;
 
     // 2. Map Activities (Updates + Docs + Payments)
     let activities: ActivityItem[] = [];
@@ -244,8 +340,8 @@ const mapToClientProject = (
         budget: c.financial?.totalBudget ? `₹${(c.financial.totalBudget / 100000).toFixed(2)} Lakhs` : 'TBD',
         startDate: c.executionPlan?.startDate ? (c.executionPlan.startDate instanceof Timestamp ? c.executionPlan.startDate.toDate() : new Date(c.executionPlan.startDate)) : new Date(),
         expectedCompletion: c.executionPlan?.endDate ? (c.executionPlan.endDate instanceof Timestamp ? c.executionPlan.endDate.toDate() : new Date(c.executionPlan.endDate)) : new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // Default +60 days
-        currentStageId: 1,
-        stages: stages,
+        currentStageId,
+        stages,
         consultant: {
             id: c.assignedSales || 'admin',
             name: 'Relationship Manager', // Fetch name if possible, else generic
