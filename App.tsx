@@ -67,6 +67,7 @@ const navConfig = {
   [UserRole.SALES_GENERAL_MANAGER]: {
     title: 'Sales Manager',
     navItems: [
+      { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
       { id: 'overview', label: 'Dashboard', icon: <RectangleGroupIcon className="w-6 h-6" /> },
       { id: 'request-validation', label: 'Request Validation', icon: <ClipboardDocumentCheckIcon className="w-6 h-6" /> },
       { id: 'project-hub', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },

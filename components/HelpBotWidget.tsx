@@ -1,20 +1,20 @@
 /**
- * HelpBot – Floating widget for internal error reporting.
- * Visible to all authenticated internal staff; no sidebar link.
+ * HelpBot – Feedback & error reporting via WhatsApp.
+ * No Firestore/Storage; opens WhatsApp with pre-filled message. Screenshot compulsory.
  */
 
 import React, { useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useSubmitErrorReport, useErrorReportsList } from '../hooks/useErrorReports';
-import type { ErrorReportSeverity } from '../hooks/useErrorReports';
-import { ChatBubbleLeftRightIcon, XMarkIcon, BugAntIcon, MicrophoneIcon, StopIcon } from '@heroicons/react/24/outline';
+import { ChatBubbleLeftRightIcon, XMarkIcon, BugAntIcon, MicrophoneIcon, StopIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 
 const HELPBOT_PAGE_LABELS: Record<string, string> = {
   '/projects': 'Projects List',
   '/project-reference': 'Project Reference',
   '/error-rectification': 'Error Rectification',
 };
+
+const WHATSAPP_NUMBER = '918123908319'; // 91 (India) + 8123908319
 
 function getPageLabel(pathname: string): string {
   if (HELPBOT_PAGE_LABELS[pathname]) return HELPBOT_PAGE_LABELS[pathname];
@@ -23,28 +23,52 @@ function getPageLabel(pathname: string): string {
   return pathname || 'App';
 }
 
+function buildWhatsAppMessage(params: {
+  page: string;
+  description: string;
+  severity: string;
+  userName: string;
+}): string {
+  const lines = [
+    '*HelpBot – Application feedback*',
+    '',
+    `*Page:* ${params.page}`,
+    `*Severity:* ${params.severity}`,
+    `*Reported by:* ${params.userName}`,
+    '',
+    '*Description:*',
+    params.description || '(No text – see voice note / screenshot in next messages)',
+    '',
+    '---',
+    'Please send your *screenshot* (and voice note if recorded) in the next messages in this chat.',
+  ];
+  return lines.join('\n');
+}
+
+function openWhatsApp(text: string): void {
+  const encoded = encodeURIComponent(text);
+  const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encoded}`;
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
 const HelpBotWidget: React.FC = () => {
   const { currentUser } = useAuth();
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const [page, setPage] = useState('');
   const [description, setDescription] = useState('');
-  const [severity, setSeverity] = useState<ErrorReportSeverity>('medium');
+  const [severity, setSeverity] = useState<string>('medium');
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
   const [voiceBlob, setVoiceBlob] = useState<Blob | null>(null);
   const [isRecording, setIsRecording] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
-  const { submit, submitting, error } = useSubmitErrorReport();
-  const { unresolvedCount, isAdmin } = useErrorReportsList();
-
-  // Only show for authenticated staff (no vendor/client)
   const isStaff = currentUser && !('vendorId' in currentUser);
   if (!isStaff) return null;
 
   const pageLabel = page || getPageLabel(location.pathname);
+  const userName = currentUser?.name || currentUser?.email || 'Unknown';
 
   const handleOpen = () => {
     setPage(getPageLabel(location.pathname));
@@ -66,8 +90,7 @@ const HelpBotWidget: React.FC = () => {
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       recorder.onstop = () => {
         stream.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(chunksRef.current, { type: mime });
-        setVoiceBlob(blob);
+        setVoiceBlob(new Blob(chunksRef.current, { type: mime }));
       };
       recorder.start(200);
       setIsRecording(true);
@@ -84,42 +107,44 @@ const HelpBotWidget: React.FC = () => {
     setIsRecording(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const hasText = description.trim().length > 0;
-    const hasVoice = voiceBlob != null;
+    const hasVoice = voiceBlob != null && voiceBlob.size > 0;
+    if (!screenshotFile) return; // compulsory
     if (!hasText && !hasVoice) return;
-    const id = await submit({
+
+    const message = buildWhatsAppMessage({
       page: pageLabel,
-      description: description.trim() || '(Voice note only)',
+      description: description.trim() || '(Voice note recorded – please send it in WhatsApp after this message.)',
       severity,
-      screenshotFile: screenshotFile || null,
-      voiceBlob: voiceBlob || null,
+      userName,
     });
-    if (id) {
-      setOpen(false);
-      setDescription('');
-      setScreenshotFile(null);
-      setVoiceBlob(null);
-    }
+
+    openWhatsApp(message);
+    setOpen(false);
+    setDescription('');
+    setScreenshotFile(null);
+    setVoiceBlob(null);
   };
 
-  const canSubmit = description.trim().length > 0 || (voiceBlob != null && voiceBlob.size > 0);
+  const hasDescription = description.trim().length > 0 || (voiceBlob != null && voiceBlob.size > 0);
+  const canSubmit = !!screenshotFile && hasDescription;
 
   return (
     <>
+      {/* Banner note above the button */}
+      <div className="fixed bottom-20 right-6 z-[9998] max-w-[220px] rounded-xl border border-primary/30 bg-white px-3 py-2 shadow-lg text-sm text-slate-700">
+        <p className="font-medium text-slate-800">For any changes in the application, please let us know here.</p>
+      </div>
+
       <button
         type="button"
         onClick={handleOpen}
         className="fixed bottom-6 right-6 z-[9999] w-14 h-14 rounded-full bg-primary text-white shadow-lg hover:bg-primary/90 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-        aria-label="Report error (HelpBot)"
+        aria-label="Report feedback (HelpBot)"
       >
         <ChatBubbleLeftRightIcon className="w-7 h-7" />
-        {isAdmin && unresolvedCount > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
-            {unresolvedCount > 99 ? '99+' : unresolvedCount}
-          </span>
-        )}
       </button>
 
       {open && (
@@ -137,7 +162,21 @@ const HelpBotWidget: React.FC = () => {
                 <XMarkIcon className="w-5 h-5" />
               </button>
             </div>
+
             <form onSubmit={handleSubmit} className="p-4 space-y-4">
+              {/* How to report – instructions */}
+              <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 space-y-2">
+                <p className="font-semibold text-amber-900 flex items-center gap-2">
+                  <DocumentTextIcon className="w-4 h-4" />
+                  How to report
+                </p>
+                <ul className="text-sm text-amber-800 space-y-1 list-disc list-inside">
+                  <li>Describe the error <strong>clearly</strong> in the text box below, <strong>or</strong> record a voice note.</li>
+                  <li>Include what you were doing, what went wrong, and what you expected.</li>
+                  <li><strong>Screenshot is compulsory</strong> – please attach a screenshot of the issue.</li>
+                </ul>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Page</label>
                 <input
@@ -148,14 +187,15 @@ const HelpBotWidget: React.FC = () => {
                   placeholder="Where did the error occur?"
                 />
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Error description *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Error description * (text or voice)</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={4}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                  placeholder="Describe what went wrong, or use the mic to send a voice note..."
+                  placeholder="Describe what went wrong clearly. You can also record a voice note below."
                 />
                 <div className="mt-2 flex items-center gap-2">
                   {!isRecording ? (
@@ -178,17 +218,31 @@ const HelpBotWidget: React.FC = () => {
                     </button>
                   )}
                   {voiceBlob && voiceBlob.size > 0 && (
-                    <span className="text-xs text-gray-500">
-                      Voice note ready ({Math.round(voiceBlob.size / 1024)} KB)
-                    </span>
+                    <span className="text-xs text-gray-500">Voice note ready ({Math.round(voiceBlob.size / 1024)} KB) – send it in WhatsApp after opening the chat.</span>
                   )}
                 </div>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Screenshot * (compulsory)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  required
+                  onChange={(e) => setScreenshotFile(e.target.files?.[0] ?? null)}
+                  className="w-full text-sm text-gray-500 file:mr-2 file:py-2 file:px-4 file:rounded file:border-0 file:bg-primary file:text-white"
+                />
+                <p className="text-xs text-gray-500 mt-1">You must attach a screenshot. After clicking &quot;Send to WhatsApp&quot;, send this image in the same WhatsApp chat.</p>
+                {screenshotFile && (
+                  <p className="text-xs text-green-600 mt-1 font-medium">{screenshotFile.name} selected</p>
+                )}
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Severity</label>
                 <select
                   value={severity}
-                  onChange={(e) => setSeverity(e.target.value as ErrorReportSeverity)}
+                  onChange={(e) => setSeverity(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                 >
                   <option value="minor">Minor</option>
@@ -196,20 +250,11 @@ const HelpBotWidget: React.FC = () => {
                   <option value="critical">Critical</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Screenshot (optional)</label>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setScreenshotFile(e.target.files?.[0] ?? null)}
-                  className="w-full text-sm text-gray-500 file:mr-2 file:py-2 file:px-4 file:rounded file:border-0 file:bg-primary file:text-white"
-                />
-                {screenshotFile && (
-                  <p className="text-xs text-gray-500 mt-1">{screenshotFile.name}</p>
-                )}
+
+              <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 text-sm text-slate-600">
+                <strong>What happens next:</strong> Clicking &quot;Send to WhatsApp&quot; will open WhatsApp with your message. Please then send your <strong>screenshot</strong> (and voice note if you recorded one) in that same chat.
               </div>
-              {error && <p className="text-sm text-red-600">{error}</p>}
+
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"
@@ -220,10 +265,11 @@ const HelpBotWidget: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={submitting || !canSubmit}
-                  className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50"
+                  disabled={!canSubmit}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {submitting ? 'Sending…' : 'Submit'}
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                  Send to WhatsApp
                 </button>
               </div>
             </form>

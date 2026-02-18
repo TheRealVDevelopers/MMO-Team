@@ -411,6 +411,8 @@ const MyDayPage: React.FC = () => {
     }, [selectedDate]);
 
 
+    const showAttendanceForSalesManager = currentUser.role === UserRole.SALES_GENERAL_MANAGER || currentUser.role === UserRole.MANAGER;
+
     return (
         <motion.div
             variants={staggerContainer}
@@ -429,10 +431,17 @@ const MyDayPage: React.FC = () => {
                 />
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Left Column: Clocking & Calendar */}
-                <div className="space-y-8">
+            {/* Day Timeline / Attendance – ensure visible for Sales General Manager & Manager (clock in, clock out, break) */}
+            {showAttendanceForSalesManager && (
+                <div className="mb-6">
                     <TimeTimeline timeEntry={todayTimeEntry} />
+                </div>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Left Column: Clocking & Calendar (timeline shown here for non-SGM/non-Manager; SGM/Manager see it at top) */}
+                <div className="space-y-8">
+                    {!showAttendanceForSalesManager && <TimeTimeline timeEntry={todayTimeEntry} />}
 
                     <PersonalCalendar
                         userId={currentUser.id}
