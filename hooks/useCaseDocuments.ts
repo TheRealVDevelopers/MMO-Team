@@ -161,6 +161,8 @@ export const useCaseDocuments = (options: UseCaseDocumentsOptions) => {
           mimeType: uploadResult.contentType,
           uploadedBy,
           uploadedAt: new Date(),
+          visibleToClient: false,
+          approvalStatus: 'pending',
           ...additionalData,
         };
 
@@ -227,6 +229,41 @@ export const useCaseDocuments = (options: UseCaseDocumentsOptions) => {
     [options.caseId]
   );
 
+  // Update document metadata (e.g. visibility, approval status)
+  const updateDocument = useCallback(
+    async (documentId: string, updates: Partial<CaseDocument>) => {
+      if (!db || !options.caseId) {
+        throw new Error('Database or case not initialized');
+      }
+
+      try {
+        const { updateDoc } = await import('firebase/firestore');
+        const documentRef = doc(
+          db,
+          FIRESTORE_COLLECTIONS.CASES,
+          options.caseId,
+          FIRESTORE_COLLECTIONS.DOCUMENTS,
+          documentId
+        );
+
+        await updateDoc(documentRef, {
+          ...updates,
+          updatedAt: serverTimestamp() // distinct from uploadedAt
+        } as any);
+
+        // Optional: log specific changes if needed
+        if (updates.visibleToClient !== undefined) {
+          await logActivity(options.caseId, `Document visibility ${updates.visibleToClient ? 'enabled' : 'disabled'}`, 'system');
+        }
+
+      } catch (err: any) {
+        console.error('Error updating document:', err);
+        throw err;
+      }
+    },
+    [options.caseId]
+  );
+
   // Helper: Log activity
   const logActivity = async (caseId: string, action: string, userId: string) => {
     if (!db) return;
@@ -255,6 +292,7 @@ export const useCaseDocuments = (options: UseCaseDocumentsOptions) => {
     error,
     uploadDocument,
     uploadFileWithStorage,
+    updateDocument,
     deleteDocument,
   };
 };

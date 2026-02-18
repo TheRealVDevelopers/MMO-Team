@@ -16,6 +16,7 @@ import { PrimaryButton, SecondaryButton } from '../shared/DashboardUI';
 import { getTabFromUrl, setTabInUrl } from '../../../services/notificationRouting';
 import QuotationPDFTemplate from '../quotation-team/QuotationPDFTemplate';
 import BOQPDFTemplate from '../quotation-team/BOQPDFTemplate';
+import DocumentUploadModal from './DocumentUploadModal';
 
 /**
  * UNIFIED PROJECT DETAILS PAGE
@@ -864,7 +865,52 @@ const MaterialsTab: React.FC<{ caseId: string }> = ({ caseId }) => {
 
 const DocumentsTab: React.FC<{ projectCase: Case }> = ({ projectCase }) => {
     const [selectedDocument, setSelectedDocument] = useState<any>(null);
-    const { documents, loading } = useCaseDocuments({ caseId: projectCase.id || '' });
+    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const { documents, loading, updateDocument } = useCaseDocuments({ caseId: projectCase.id || '' });
+    const { currentUser } = useAuth();
+
+    // Check permissions
+    const canUpload = [
+        UserRole.SUPER_ADMIN,
+        UserRole.ADMIN,
+        UserRole.MANAGER,
+        UserRole.PROJECT_HEAD,
+        UserRole.SALES_GENERAL_MANAGER,
+        UserRole.SALES_TEAM_MEMBER,
+        UserRole.DRAWING_TEAM,
+        UserRole.QUOTATION_TEAM,
+        UserRole.SITE_ENGINEER,
+        UserRole.DESIGNER,
+        UserRole.EXECUTION_TEAM,
+        UserRole.ACCOUNTS_TEAM
+    ].includes(currentUser?.role as UserRole);
+
+    const canManageVisibility = [
+        UserRole.SUPER_ADMIN,
+        UserRole.ADMIN,
+        UserRole.MANAGER,
+        UserRole.PROJECT_HEAD,
+        UserRole.SALES_GENERAL_MANAGER
+    ].includes(currentUser?.role as UserRole);
+
+    const handleVisibilityToggle = async (doc: any, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!canManageVisibility) return;
+
+        try {
+            const newVisibility = !doc.visibleToClient;
+            await updateDocument(doc.id, {
+                visibleToClient: newVisibility,
+                // Auto-approve if making visible and not already approved
+                approvalStatus: newVisibility && doc.approvalStatus !== 'approved' ? 'approved' : doc.approvalStatus,
+                approvedBy: newVisibility && doc.approvalStatus !== 'approved' ? currentUser?.id : doc.approvedBy,
+                approvedAt: newVisibility && doc.approvalStatus !== 'approved' ? new Date() : doc.approvedAt
+            });
+        } catch (error) {
+            console.error("Failed to update visibility:", error);
+            alert("Failed to update visibility");
+        }
+    };
 
     const getFileIcon = (fileName: string) => {
         const ext = fileName.toLowerCase().split('.').pop();
@@ -884,7 +930,7 @@ const DocumentsTab: React.FC<{ projectCase: Case }> = ({ projectCase }) => {
         }
         if (['doc', 'docx'].includes(ext || '')) {
             return (
-                <svg className="w-8 h-8 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
                 </svg>
             );
@@ -899,41 +945,98 @@ const DocumentsTab: React.FC<{ projectCase: Case }> = ({ projectCase }) => {
     return (
         <Card>
             <div className="p-6">
-                <h2 className="text-xl font-bold text-text-primary mb-4">Project Documents</h2>
+                <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-bold text-text-primary">Project Documents</h2>
+                    {canUpload && (
+                        <PrimaryButton onClick={() => setIsUploadModalOpen(true)}>
+                            Upload Document
+                        </PrimaryButton>
+                    )}
+                </div>
+                {/* DEBUG: Remove after testing */}
+                <div className="mb-4 text-xs text-red-500 bg-red-50 p-2 rounded">
+                    Debug: Role={currentUser?.role} | canUpload={canUpload ? 'YES' : 'NO'} | canManageVisibility={canManageVisibility ? 'YES' : 'NO'}
+                </div>
+
                 {documents.length === 0 ? (
-                    <p className="text-text-secondary">No documents uploaded yet.</p>
+                    <div className="text-center py-10 bg-subtle-background rounded-xl border border-dashed border-gray-200">
+                        <p className="text-text-secondary">No documents uploaded yet.</p>
+                        {canUpload && (
+                            <button
+                                onClick={() => setIsUploadModalOpen(true)}
+                                className="text-primary hover:text-secondary text-sm font-semibold mt-2"
+                            >
+                                Upload your first document
+                            </button>
+                        )}
+                    </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         {documents.map((doc, index) => (
                             <div
                                 key={doc.id || index}
-                                className="border border-border rounded-lg p-4 hover:shadow-lg transition-shadow cursor-pointer"
+                                className="group relative border border-border rounded-xl p-4 hover:shadow-lg hover:border-primary/20 transition-all cursor-pointer bg-surface"
                                 onClick={() => setSelectedDocument(doc)}
                             >
-                                <div className="flex flex-col items-center text-center">
-                                    <div className="mb-3">
+                                {/* Visibility Badge/Toggle (Top Right) */}
+                                <div className="absolute top-3 right-3 z-10">
+                                    {canManageVisibility ? (
+                                        <button
+                                            onClick={(e) => handleVisibilityToggle(doc, e)}
+                                            className={`p-1.5 rounded-full transition-colors ${doc.visibleToClient
+                                                ? 'bg-success/10 text-success hover:bg-success/20'
+                                                : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                                                }`}
+                                            title={doc.visibleToClient ? "Visible to Client" : "Hidden from Client"}
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                {doc.visibleToClient ? (
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                ) : (
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                                )}
+                                                {doc.visibleToClient && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />}
+                                            </svg>
+                                        </button>
+                                    ) : doc.visibleToClient && (
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-success/10 text-success">
+                                            Visible
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div className="flex flex-col items-center text-center pt-2">
+                                    <div className="mb-4 p-3 bg-subtle-background rounded-full group-hover:scale-110 transition-transform duration-300">
                                         {getFileIcon(doc.fileName)}
                                     </div>
-                                    <h3 className="font-semibold text-text-primary text-sm truncate w-full mb-1">
+                                    <h3 className="font-bold text-text-primary text-sm truncate w-full mb-1" title={doc.fileName}>
                                         {doc.fileName}
                                     </h3>
-                                    <p className="text-xs text-text-secondary capitalize">
+                                    <span className="inline-block px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600 uppercase tracking-wide mb-2">
                                         {doc.type || 'Document'}
-                                    </p>
-                                    <p className="text-xs text-text-tertiary mt-2">
+                                    </span>
+                                    <p className="text-xs text-text-tertiary">
                                         {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString() : 'Date unknown'}
                                     </p>
-                                    {doc.fileUrl && (
-                                        <a
-                                            href={doc.fileUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-xs text-primary hover:underline mt-2"
-                                            onClick={(e) => e.stopPropagation()}
-                                        >
-                                            Download
-                                        </a>
-                                    )}
+
+                                    <div className="mt-4 w-full pt-3 border-t border-border flex justify-center">
+                                        {doc.fileUrl ? (
+                                            <a
+                                                href={doc.fileUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-xs font-bold text-primary hover:text-secondary flex items-center gap-1"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                Download
+                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                                </svg>
+                                            </a>
+                                        ) : (
+                                            <span className="text-xs text-gray-400 cursor-not-allowed">Unavailable</span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         ))}
@@ -943,24 +1046,30 @@ const DocumentsTab: React.FC<{ projectCase: Case }> = ({ projectCase }) => {
                 {/* Document Preview Modal */}
                 {selectedDocument && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setSelectedDocument(null)}>
-                        <div className="max-w-4xl max-h-[90vh] w-full bg-background rounded-lg shadow-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                            <div className="p-4 border-b border-border flex items-center justify-between">
+                        <div className="max-w-4xl max-h-[90vh] w-full bg-background rounded-2xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                            <div className="p-4 border-b border-border flex items-center justify-between bg-white">
                                 <div>
                                     <h3 className="text-lg font-bold text-text-primary">{selectedDocument.fileName}</h3>
                                     <p className="text-sm text-text-secondary">
-                                        {selectedDocument.uploadedAt ? new Date(selectedDocument.uploadedAt).toLocaleDateString() : 'Date unknown'}
+                                        {selectedDocument.uploadedAt ? new Date(selectedDocument.uploadedAt).toLocaleDateString() : 'Date unknown'} • {selectedDocument.type}
                                     </p>
                                 </div>
-                                <button onClick={() => setSelectedDocument(null)} className="text-text-tertiary hover:text-text-primary">
+                                <button onClick={() => setSelectedDocument(null)} className="p-2 rounded-full hover:bg-gray-100 text-text-tertiary hover:text-text-primary transition-colors">
                                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                     </svg>
                                 </button>
                             </div>
-                            <div className="p-6 text-center">
+                            <div className="p-8 text-center bg-gray-50 h-full flex flex-col items-center justify-center min-h-[300px]">
                                 {selectedDocument.fileUrl ? (
-                                    <div className="space-y-4">
-                                        <p className="text-text-secondary">Click below to view or download the document</p>
+                                    <div className="space-y-6">
+                                        <div className="w-20 h-20 bg-white rounded-2xl shadow-sm flex items-center justify-center mx-auto text-primary">
+                                            {getFileIcon(selectedDocument.fileName)}
+                                        </div>
+                                        <div>
+                                            <p className="text-text-primary font-medium mb-1">Pass this file?</p>
+                                            <p className="text-text-secondary text-sm">Previewing is limited for this file type.</p>
+                                        </div>
                                         <PrimaryButton
                                             onClick={() => window.open(selectedDocument.fileUrl, '_blank')}
                                         >
@@ -974,6 +1083,13 @@ const DocumentsTab: React.FC<{ projectCase: Case }> = ({ projectCase }) => {
                         </div>
                     </div>
                 )}
+
+                {/* Upload Modal */}
+                <DocumentUploadModal
+                    isOpen={isUploadModalOpen}
+                    onClose={() => setIsUploadModalOpen(false)}
+                    caseId={projectCase.id}
+                />
             </div>
         </Card>
     );
