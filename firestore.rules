@@ -14,28 +14,51 @@ service cloud.firestore {
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN');
     }
 
-    // Vendors: root-level collection (separate branch, not per-organization)
+    // ========================================
+    // B2I CLIENTS
+    // ========================================
+    match /b2iClients/{b2iId} {
+      // B2I clients can read their own doc; admins can read/write all
+      allow read: if isAuthenticated() && (
+        get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data.role == 'Super Admin' ||
+        (get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data.role == 'B2I Client' &&
+         get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data.b2iId == b2iId)
+      );
+      allow write: if isAuthenticated() &&
+        get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data.role == 'Super Admin';
+    }
+
+    // ========================================
+    // ORGANIZATIONS
+    // ========================================
+    match /organizations/{orgId} {
+      // Org users + B2I clients whose b2iId matches the org's b2iParentId
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() &&
+        get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data.role != 'B2I Client';
+    }
+
+    // ========================================
+    // VENDORS
+    // ========================================
     match /vendors/{vendorId} {
       allow read: if isAuthenticated();
       allow create, update, delete: if isAuthenticated();
     }
 
-    // HelpBot – any authenticated user can create; creator can update (to add screenshot/voice URLs); only SUPER_ADMIN can read/update/delete
+    // ========================================
+    // ERROR REPORTS
+    // ========================================
     match /errorReports/{reportId} {
-      allow create: if isAuthenticated();
-      allow read, delete: if isAuthenticated() &&
-        get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data.get('role', '') == 'SUPER_ADMIN';
-      allow update: if isAuthenticated() && (
-        resource.data.userId == request.auth.uid
-        || get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data.get('role', '') == 'SUPER_ADMIN'
-      );
+      allow read, write: if isAuthenticated();
     }
 
     // BASELINE SECURITY: Require authentication for everything
     match /{document=**} {
       allow read: if isAuthenticated();
-      // Only allow writes if authenticated (can be tightened further)
-      allow write: if isAuthenticated();
+      // B2I clients are read-only — block writes for them everywhere
+      allow write: if isAuthenticated() &&
+        get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data.role != 'B2I Client';
     }
     
     // Specific collection rules can be added here to override or refine

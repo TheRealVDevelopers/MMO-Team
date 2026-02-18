@@ -29,48 +29,81 @@ import {
     ProjectHealth
 } from '../components/client-portal/types';
 
-export const useClientCase = (clientId: string | undefined) => {
+export const useClientCase = (identifier: { type: 'clientUid' | 'caseId'; value: string } | string | undefined) => {
     const [project, setProject] = useState<ClientProject | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!clientId || !db) {
+        if (!identifier || !db) {
+            setLoading(false);
+            return;
+        }
+
+        const idValue = typeof identifier === 'string' ? identifier : identifier.value;
+        const idType = typeof identifier === 'string' ? 'clientUid' : identifier.type;
+
+        if (!idValue) {
             setLoading(false);
             return;
         }
 
         setLoading(true);
 
-        // 1. Query for the Case assigned to this Client
-        const casesRef = collection(db, 'cases');
-        // Consistent with CreateLeadModal and authService, use 'clientUid'
-        const q = query(casesRef, where('clientUid', '==', clientId));
+        let unsubscribeCase: () => void = () => { };
 
-        const unsubscribeCase = onSnapshot(q, (snapshot) => {
-            if (snapshot.empty) {
-                console.log("No case found for client:", clientId);
-                setProject(null);
+        const fetchCase = async () => {
+            try {
+                if (idType === 'caseId') {
+                    // Fetch specific case by ID
+                    const caseRef = doc(db, 'cases', idValue);
+                    unsubscribeCase = onSnapshot(caseRef, (docSnap) => {
+                        if (docSnap.exists()) {
+                            const caseData = docSnap.data() as Case;
+                            setupSubListeners(docSnap.ref, caseData, setProject, () => setLoading(false));
+                        } else {
+                            console.log("No case found for ID:", idValue);
+                            setProject(null);
+                            setLoading(false);
+                        }
+                    }, (err) => {
+                        console.error("Error fetching case:", err);
+                        setError(err.message);
+                        setLoading(false);
+                    });
+                } else {
+                    // Query by clientUid
+                    const casesRef = collection(db, 'cases');
+                    const q = query(casesRef, where('clientUid', '==', idValue));
+                    unsubscribeCase = onSnapshot(q, (snapshot) => {
+                        if (snapshot.empty) {
+                            console.log("No case found for client:", idValue);
+                            setProject(null);
+                            setLoading(false);
+                            return;
+                        }
+                        const caseDoc = snapshot.docs[0];
+                        const caseData = caseDoc.data() as Case;
+                        setupSubListeners(caseDoc.ref, caseData, setProject, () => setLoading(false));
+                    }, (err) => {
+                        console.error("Error fetching case:", err);
+                        setError(err.message);
+                        setLoading(false);
+                    });
+                }
+            } catch (err: any) {
+                console.error("Error setting up case listener:", err);
+                setError(err.message);
                 setLoading(false);
-                return;
             }
+        };
 
-            const caseDoc = snapshot.docs[0];
-            const caseData = caseDoc.data() as Case;
-            const caseId = caseDoc.id;
+        fetchCase();
 
-            // 2. Setup Subcollection Listeners
-            // Delegate to helper
-            setupSubListeners(caseDoc.ref, caseData, setProject, () => setLoading(false));
-
-        }, (err) => {
-            console.error("Error fetching case:", err);
-            setError(err.message);
-            setLoading(false);
-        });
-
-        return () => unsubscribeCase();
-    }, [clientId]);
+        return () => {
+            if (unsubscribeCase) unsubscribeCase();
+        };
+    }, [identifier]); // Deep comparison or simplified dep check might be needed if object passed dynamically
 
     return { project, loading, error };
 };
@@ -131,8 +164,7 @@ const setupSubListeners = (
     // 3. Documents (Visible to Client)
     const docsQ = query(
         collection(caseRef, 'documents'),
-        where('visibleToClient', '==', true),
-        where('approvalStatus', '==', 'approved')
+        where('visibleToClient', '==', true)
     );
     const docsUnsub = onSnapshot(docsQ, (snap) => {
         documents = snap.docs.map(d => ({ id: d.id, ...d.data() } as CaseDocument));

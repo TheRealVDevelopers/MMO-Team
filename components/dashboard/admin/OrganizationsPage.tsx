@@ -170,74 +170,79 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
 
             {/* Organizations Grid */}
             {!orgsLoading && !orgsError && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredOrgs.map((org) => (
-                    <motion.div
-                        key={org?.id ?? ''}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-surface rounded-xl shadow-sm border border-border hover:shadow-md transition-shadow p-6 group cursor-pointer"
-                        onClick={() => org && handleViewProjects(org)}
-                    >
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="p-3 bg-primary/10 rounded-lg">
-                                <BuildingOfficeIcon className="w-8 h-8 text-primary" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredOrgs.map((org) => (
+                        <motion.div
+                            key={org?.id ?? ''}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-surface rounded-xl shadow-sm border border-border hover:shadow-md transition-shadow p-6 group cursor-pointer"
+                            onClick={() => org && handleViewProjects(org)}
+                        >
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="p-3 bg-primary/10 rounded-lg">
+                                    <BuildingOfficeIcon className="w-8 h-8 text-primary" />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (org) {
+                                                setOrganizationToEdit(org);
+                                                setIsCreateModalOpen(true);
+                                            }
+                                        }}
+                                        className="p-1.5 text-text-tertiary hover:text-primary hover:bg-primary/10 rounded-lg transition-colors bg-subtle-background"
+                                        title="Edit Organization"
+                                    >
+                                        <PencilIcon className="w-4 h-4" />
+                                    </button>
+                                    <span className="text-xs font-medium px-2 py-1 bg-subtle-background rounded-full text-text-secondary">
+                                        {getOrgProjectCount(org?.id ?? '')} Projects
+                                    </span>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2">
+
+                            <h3 className="text-xl font-bold text-text-primary mb-2 group-hover:text-primary transition-colors">
+                                {org?.name ?? 'Unnamed'}
+                            </h3>
+                            {org?.isB2IChild && (
+                                <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 mb-2">
+                                    B2I Linked
+                                </span>
+                            )}
+
+                            <div className="space-y-3 text-sm text-text-secondary">
+                                <div className="flex items-center gap-2">
+                                    <UserIcon className="w-4 h-4" />
+                                    <span>{org?.contactPerson ?? '—'}</span>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                    <MapPinIcon className="w-4 h-4 mt-0.5" />
+                                    <span className="line-clamp-2">{org?.address ?? '—'}</span>
+                                </div>
+                            </div>
+
+                            <div className="mt-6 pt-4 border-t border-border flex justify-between items-center">
+                                <div className="text-xs text-text-tertiary">
+                                    Since {org?.createdAt ? new Date(org.createdAt).toLocaleDateString() : 'N/A'}
+                                </div>
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        if (org) {
-                                            setOrganizationToEdit(org);
-                                            setIsCreateModalOpen(true);
+                                        if (org?.id) {
+                                            setSelectedOrgId(org.id);
+                                            setIsProjectLauncherOpen(true);
                                         }
                                     }}
-                                    className="p-1.5 text-text-tertiary hover:text-primary hover:bg-primary/10 rounded-lg transition-colors bg-subtle-background"
-                                    title="Edit Organization"
+                                    className="text-sm font-medium text-primary hover:text-primary/80"
                                 >
-                                    <PencilIcon className="w-4 h-4" />
+                                    + New Project
                                 </button>
-                                <span className="text-xs font-medium px-2 py-1 bg-subtle-background rounded-full text-text-secondary">
-                                    {getOrgProjectCount(org?.id ?? '')} Projects
-                                </span>
                             </div>
-                        </div>
-
-                        <h3 className="text-xl font-bold text-text-primary mb-2 group-hover:text-primary transition-colors">
-                            {org?.name ?? 'Unnamed'}
-                        </h3>
-
-                        <div className="space-y-3 text-sm text-text-secondary">
-                            <div className="flex items-center gap-2">
-                                <UserIcon className="w-4 h-4" />
-                                <span>{org?.contactPerson ?? '—'}</span>
-                            </div>
-                            <div className="flex items-start gap-2">
-                                <MapPinIcon className="w-4 h-4 mt-0.5" />
-                                <span className="line-clamp-2">{org?.address ?? '—'}</span>
-                            </div>
-                        </div>
-
-                        <div className="mt-6 pt-4 border-t border-border flex justify-between items-center">
-                            <div className="text-xs text-text-tertiary">
-                                Since {org?.createdAt ? new Date(org.createdAt).toLocaleDateString() : 'N/A'}
-                            </div>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (org?.id) {
-                                        setSelectedOrgId(org.id);
-                                        setIsProjectLauncherOpen(true);
-                                    }
-                                }}
-                                className="text-sm font-medium text-primary hover:text-primary/80"
-                            >
-                                + New Project
-                            </button>
-                        </div>
-                    </motion.div>
-                ))}
-            </div>
+                        </motion.div>
+                    ))}
+                </div>
             )}
 
             <CreateOrganizationModal

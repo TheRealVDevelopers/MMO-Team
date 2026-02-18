@@ -21,32 +21,32 @@ export const STORAGE_PATHS = {
   // Lead/Case attachments
   LEAD_ATTACHMENTS: 'leads/{leadId}/attachments',
   CASE_DOCUMENTS: 'cases/{caseId}/documents',
-  
+
   // Drawing/Design files
   DRAWINGS: 'drawings/{caseId}',
   CAD_FILES: 'cad/{caseId}',
-  
+
   // User profiles
   USER_AVATARS: 'users/{userId}/avatar',
-  
+
   // Project files
   PROJECT_FILES: 'projects/{projectId}/files',
   SITE_PHOTOS: 'projects/{projectId}/site-photos',
-  
+
   // Quotation/BOQ
   QUOTATION_PDFS: 'quotations/{caseId}',
   BOQ_PDFS: 'boq/{caseId}',
-  
+
   // Chat attachments
   CHAT_ATTACHMENTS: 'chat/{channelId}/attachments',
-  
+
   // Receipts and invoices
   RECEIPTS: 'finance/receipts/{receiptId}',
   INVOICES: 'finance/invoices/{invoiceId}',
-  
+
   // Catalog images
   CATALOG_IMAGES: 'catalog/{itemId}/images',
-  
+
   // General attachments
   GENERAL: 'attachments',
 };
@@ -100,8 +100,9 @@ export const uploadFile = async (
   const storageRef = ref(storage, fullPath);
 
   // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/e4336b3f-e354-4a9b-9c27-6ecee71671c2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'storageService.ts:uploadFile',message:'uploadFile before upload',data:{fullPath,storagePath},timestamp:Date.now(),hypothesisId:'H6'})}).catch(()=>{});
+  fetch('http://127.0.0.1:7242/ingest/e4336b3f-e354-4a9b-9c27-6ecee71671c2', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'storageService.ts:uploadFile', message: 'uploadFile before upload', data: { fullPath, storagePath }, timestamp: Date.now(), hypothesisId: 'H6' }) }).catch(() => { });
   // #endregion
+  console.log('[StorageService] Uploading file to:', fullPath); // Debug log
 
   try {
     // Upload the file
@@ -125,7 +126,7 @@ export const uploadFile = async (
     };
   } catch (error: any) {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/e4336b3f-e354-4a9b-9c27-6ecee71671c2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'storageService.ts:uploadFile:catch',message:'upload failed',data:{fullPath,errorCode:error?.code,errorMessage:error?.message},timestamp:Date.now(),hypothesisId:'H4'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/e4336b3f-e354-4a9b-9c27-6ecee71671c2', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'storageService.ts:uploadFile:catch', message: 'upload failed', data: { fullPath, errorCode: error?.code, errorMessage: error?.message }, timestamp: Date.now(), hypothesisId: 'H4' }) }).catch(() => { });
     // #endregion
     console.error('[StorageService] Upload failed:', error);
     throw new Error(`Failed to upload file: ${error.message}`);
@@ -258,7 +259,7 @@ export const listFiles = async (directoryPath: string): Promise<{
   try {
     const directoryRef = ref(storage, directoryPath);
     const result = await listAll(directoryRef);
-    
+
     const files = result.items.map((item) => ({
       name: item.name,
       path: item.fullPath,
@@ -289,7 +290,7 @@ export const getFileMetadata = async (filePath: string): Promise<{
   try {
     const storageRef = ref(storage, filePath);
     const metadata = await getMetadata(storageRef);
-    
+
     return {
       name: metadata.name,
       size: metadata.size,
@@ -451,10 +452,10 @@ export const getFileTypeCategory = (contentType: string): 'image' | 'document' |
  */
 export const isAllowedFileType = (file: File, allowedTypes?: string[]): boolean => {
   if (!allowedTypes || allowedTypes.length === 0) return true;
-  
+
   const ext = file.name.split('.').pop()?.toLowerCase() || '';
   const mimeType = file.type.toLowerCase();
-  
+
   return allowedTypes.some((type) => {
     const typeNormalized = type.toLowerCase().replace('.', '');
     return ext === typeNormalized || mimeType.includes(typeNormalized);

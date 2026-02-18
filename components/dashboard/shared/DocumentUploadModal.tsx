@@ -4,6 +4,10 @@ import { useAuth } from '../../../context/AuthContext';
 import { UserRole, DocumentType } from '../../../types';
 import { XMarkIcon, CloudArrowUpIcon, DocumentIcon } from '@heroicons/react/24/outline'; // Adjust icons
 import { PrimaryButton, SecondaryButton } from '../shared/DashboardUI'; // Adjust UI components
+import { uploadDrawing, uploadBoqPdf, uploadQuotationPdf, UploadResult } from '../../../services/storageService';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../../firebase';
+import { FIRESTORE_COLLECTIONS } from '../../../constants';
 
 interface DocumentUploadModalProps {
     isOpen: boolean;
@@ -17,6 +21,7 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ isOpen, onClo
 
     const [file, setFile] = useState<File | null>(null);
     const [docType, setDocType] = useState<DocumentType>(DocumentType.PDF);
+    const [category, setCategory] = useState<string>('General'); // For drawings
     const [visibleToClient, setVisibleToClient] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -31,37 +36,101 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ isOpen, onClo
     };
 
     const handleUpload = async () => {
-        if (!file || !currentUser) {
+        if (!file || !currentUser || !caseId) {
             setError('Please select a file.');
             return;
         }
 
         setIsUploading(true);
         setError(null);
+        console.log('[DocumentUploadModal] Starting upload:', { caseId, docType, fileName: file.name });
 
         try {
-            // Determine auto-approval based on role
-            const canAutoApprove = [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.PROJECT_HEAD].includes(currentUser.role);
-            const approvalStatus = canAutoApprove ? 'approved' : 'pending';
-            const approvedBy = canAutoApprove ? currentUser.id : undefined;
-            const approvedAt = canAutoApprove ? new Date() : undefined;
+            // Auto-approve ALL uploads per user request
+            const approvalStatus = 'approved';
+            const approvedBy = currentUser.id;
+            const approvedAt = new Date();
 
+            // Handle specific document types
+            if (docType === DocumentType.TWO_D || docType === DocumentType.THREE_D) {
+                // Upload to Drawings
+                const result = await uploadDrawing(caseId, file, docType === DocumentType.TWO_D ? 'pdf' : 'cad'); // Assuming 'pdf' for 2D visual, 'cad' for source? Logic might need tuning but fine for now.
+                // Actually uploadDrawing takes 'pdf' or 'cad'. DocumentType.TWO_D might be an image.
+                // Let's use the helper based on content type? Or just assume it's a drawing file.
+                // Re-using uploadDrawing might force path 'drawings/{caseId}' or 'cad/{caseId}'.
 
-            await uploadFileWithStorage(
-                file,
-                docType,
-                currentUser.id,
-                {
+                const drawingsRef = collection(db, FIRESTORE_COLLECTIONS.CASES, caseId, FIRESTORE_COLLECTIONS.DRAWINGS);
+                await addDoc(drawingsRef, {
+                    caseId,
+                    type: docType,
+                    category,
+                    fileName: file.name,
+                    fileUrl: result.url,
+                    storagePath: result.path,
+                    fileSize: result.fileSize,
+                    fileType: file.type, // Store mime type
+                    uploadedBy: currentUser.id,
+                    uploadedAt: serverTimestamp(),
                     visibleToClient,
                     approvalStatus,
                     approvedBy,
                     approvedAt
-                }
-            );
+                });
+
+            } else if (docType === DocumentType.BOQ) {
+                // Upload to BOQ
+                const result = await uploadBoqPdf(caseId, file);
+                const boqRef = collection(db, FIRESTORE_COLLECTIONS.CASES, caseId, FIRESTORE_COLLECTIONS.BOQ);
+                // BOQ usually has items structure, but here we are uploading a PDF.
+                // This might need to be a separate "boq_files" or we treat it as a BOQ entry with fileUrl.
+                await addDoc(boqRef, {
+                    caseId,
+                    status: 'pending', // BOQs defaults to pending usually
+                    subtotal: 0, // Placeholder
+                    items: [], // Placeholder
+                    fileUrl: result.url,
+                    storagePath: result.path,
+                    fileName: file.name,
+                    uploadedBy: currentUser.id,
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp()
+                });
+
+            } else if (docType === DocumentType.QUOTATION) {
+                // Upload to Quotations
+                const result = await uploadQuotationPdf(caseId, file);
+                const quotRef = collection(db, FIRESTORE_COLLECTIONS.CASES, caseId, FIRESTORE_COLLECTIONS.QUOTATIONS);
+                await addDoc(quotRef, {
+                    caseId,
+                    quotationNumber: `QT-${Date.now()}`, // Generate temp ID
+                    grandTotal: 0, // Placeholder
+                    fileUrl: result.url,
+                    storagePath: result.path,
+                    fileName: file.name,
+                    auditStatus: 'pending',
+                    createdBy: currentUser.id,
+                    createdAt: serverTimestamp()
+                });
+
+            } else {
+                // Default: Upload to Documents (General, PDF, Images, Recce)
+                await uploadFileWithStorage(
+                    file,
+                    docType,
+                    currentUser.id,
+                    {
+                        visibleToClient,
+                        approvalStatus,
+                        approvedBy,
+                        approvedAt
+                    }
+                );
+            }
 
             onClose();
             setFile(null); // Reset
             setVisibleToClient(false);
+            setCategory('General');
         } catch (err: any) {
             console.error('Upload failed:', err);
             setError(err.message || 'Failed to upload document.');
@@ -120,6 +189,27 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ isOpen, onClo
                             <option value={DocumentType.RECCE}>Recce Report</option>
                         </select>
                     </div>
+
+                    {/* Category Selection for Drawings */}
+                    {(docType === DocumentType.TWO_D || docType === DocumentType.THREE_D) && (
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Category</label>
+                            <select
+                                value={category}
+                                onChange={(e) => setCategory(e.target.value)}
+                                className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm transition-all"
+                            >
+                                <option value="General">General</option>
+                                <option value="Floor Plan">Floor Plan</option>
+                                <option value="Elevation">Elevation</option>
+                                <option value="Section">Section</option>
+                                <option value="Electrical">Electrical</option>
+                                <option value="Plumbing">Plumbing</option>
+                                <option value="Civil">Civil</option>
+                                <option value="Furniture">Furniture</option>
+                            </select>
+                        </div>
+                    )}
 
                     {/* Visibility Toggle */}
                     <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-100">

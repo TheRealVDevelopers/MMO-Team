@@ -25,7 +25,10 @@ import {
     addDoc
 } from 'firebase/firestore';
 import { auth, db, logAgent, firebaseConfig } from '../firebase';
-import { StaffUser, UserRole, Vendor, CaseStatus } from '../types';
+import {
+    StaffUser, UserRole, Vendor, CaseStatus, B2IClient,
+    B2I_PARENT
+} from '../types';
 import { FIRESTORE_COLLECTIONS, DEFAULT_ORGANIZATION_ID } from '../constants';
 
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
@@ -908,5 +911,85 @@ export const getClientCases = async (clientUid: string): Promise<any[]> => {
     } catch (error) {
         console.error('Error fetching client cases:', error);
         return [];
+    }
+};
+
+/**
+ * Create a B2I Parent Account (B2I_PARENT role).
+ * Creates Auth User + Staff User (Role: B2I_PARENT).
+ * NOTE: Does NOT link to B2I Client doc here; that should be done by the caller (B2IClientsPage) 
+ * or we can pass b2iId to link it.
+ * Actually, the plan says: update B2IClientsPage to call this.
+ * This function handles the Auth + StaffUser creation.
+ */
+export const createB2IParentAccount = async (
+    email: string,
+    name: string,
+    phone: string,
+    b2iId: string
+): Promise<string> => {
+    try {
+        if (!auth || !db) throw new Error("Firebase not initialized");
+        const password = DEFAULT_STAFF_PASSWORD; // Default '123456'
+
+        // Initialize a secondary Firebase app to create the user without logging out the admin
+        let secondaryApp;
+        let secondaryAuth;
+        let newUserUid;
+
+        try {
+            const appName = `SecondaryApp-B2I-${Date.now()}`;
+            secondaryApp = initializeApp(firebaseConfig, appName);
+            secondaryAuth = getAuth(secondaryApp);
+
+            // Create Firebase Auth account
+            const userCredential = await createUserWithEmailAndPassword(
+                secondaryAuth,
+                email,
+                password
+            );
+            newUserUid = userCredential.user.uid;
+
+            // Immediately sign out from secondary
+            await signOut(secondaryAuth);
+        } catch (authError) {
+            throw authError; // Pass up
+        } finally {
+            if (secondaryApp) {
+                await deleteApp(secondaryApp);
+            }
+        }
+
+        // Create Staff User Document
+        const staffData: StaffUser = {
+            id: newUserUid,
+            name: name,
+            email: email,
+            role: UserRole.B2I_PARENT,
+            organizationId: 'B2I_GLOBAL', // Placeholder or specific B2I Org ID if applicable
+            isActive: true,
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+            phone: phone || '',
+            createdAt: new Date(),
+            currentTask: '',
+            lastUpdateTimestamp: new Date(),
+            mustChangePassword: true, // Specific field we added
+            b2iId: b2iId, // Link to B2I Client Doc
+            region: 'Global',
+        } as StaffUser;
+
+        // Use setDoc
+        await setDoc(doc(db, FIRESTORE_COLLECTIONS.STAFF_USERS, newUserUid), {
+            ...staffData,
+            createdAt: serverTimestamp(),
+            lastUpdateTimestamp: serverTimestamp(),
+        });
+
+        console.log(`B2I Parent account created: ${name} (${email})`);
+        return newUserUid;
+
+    } catch (error: any) {
+        console.error('Error creating B2I parent account:', error);
+        throw new Error(error.message || 'Failed to create B2I parent account');
     }
 };

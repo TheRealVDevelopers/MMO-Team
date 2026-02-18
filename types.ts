@@ -22,6 +22,8 @@ export enum UserRole {
   ACCOUNTS_TEAM = "Accounts Team",
   DESIGNER = "Designer",
   VENDOR = "Vendor",
+  B2I_CLIENT = "B2I Client",
+  B2I_PARENT = "B2I Parent",
 }
 
 export enum CaseStatus {
@@ -662,6 +664,24 @@ export interface CaseJMS {
 }
 
 // ========================================
+// B2I CLIENT TYPES
+// ========================================
+
+// Path: b2iClients/{b2iId}
+export interface B2IClient {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  contactPerson: string;
+  createdAt: Date;
+  createdBy: string;
+  status: 'active' | 'inactive';
+  authUid?: string;
+}
+
+// ========================================
 // ORGANIZATION LEVEL TYPES
 // ========================================
 
@@ -673,8 +693,18 @@ export interface Organization {
   phone?: string;
   email?: string;
   gst?: string;
+  contactPerson?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  gstin?: string;
   createdAt: Date;
+  createdBy?: string;
+  is_demo?: boolean;
+  projects?: any[];
   settings?: OrganizationSettings;
+  // B2I fields
+  isB2IChild?: boolean;
+  b2iParentId?: string | null;
 }
 
 export interface OrganizationSettings {
@@ -790,6 +820,9 @@ export interface StaffUser {
   lastUpdateTimestamp?: Date;
   // Admin settings
   showUserSelector?: boolean; // Toggle to show/hide user selector dropdown in header (Admin only)
+  // B2I fields
+  b2iId?: string; // Set when role is B2I_CLIENT, links to b2iClients/{b2iId}
+  mustChangePassword?: boolean;
 }
 
 // Path: staffUsers/{userId}/notifications/{notificationId}

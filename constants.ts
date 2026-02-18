@@ -13,6 +13,7 @@ export const FIRESTORE_COLLECTIONS = {
   ORGANIZATIONS: 'organizations',
   STAFF_USERS: 'staffUsers',
   CASES: 'cases',
+  B2I_CLIENTS: 'b2iClients',
   CATALOG: 'catalog',
   CHAT_CHANNELS: 'chat_channels',
   CHAT_MESSAGES: 'chat_messages',
@@ -38,6 +39,7 @@ export const FIRESTORE_COLLECTIONS = {
   QUOTATIONS: 'quotations', // Quotations with audit status
   QUOTATION_BIDS: 'quotationBids', // Vendor bidding after quotation approval
   PROCUREMENT_PLANS: 'procurementPlans', // Execution material scheduling
+  DRAWINGS: 'drawings', // 2D/3D Drawings
 
   // Subcollections under organizations/{orgId}
   PURCHASE_INVOICES: 'purchaseInvoices',

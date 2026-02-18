@@ -1,6 +1,6 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
-import { StaffUser, UserRole, Vendor } from '../types';
+import { StaffUser, UserRole, Vendor, B2IClient } from '../types';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
@@ -101,12 +101,43 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                   email: v.email,
                   category: v.category ?? '',
                   gstNumber: v.gstNumber,
+                  contact: v.contact ?? '', // Fix for missing property
                 });
               } else {
                 setCurrentVendor(null);
               }
             } else {
               setCurrentVendor(null);
+            }
+
+            // Check for forced password change
+            if (userData.mustChangePassword) {
+              // We don't block login here, but the UI should redirect to /set-password
+              // This logic is usually better handled in a protected route or App.tsx, 
+              // but we can set a flag or just let the user object carry the property.
+              console.log("User must change password.");
+            }
+
+            // If role is B2I_CLIENT, verify B2I client status
+            if (userData.role === UserRole.B2I_CLIENT && userData.b2iId) {
+              const b2iRef = doc(db, FIRESTORE_COLLECTIONS.B2I_CLIENTS, userData.b2iId);
+              const b2iSnap = await getDoc(b2iRef);
+              if (b2iSnap.exists()) {
+                const b2iData = b2iSnap.data();
+                if (b2iData.status === 'inactive') {
+                  console.warn('B2I Client is inactive, blocking login');
+                  setCurrentUser(null);
+                  setCurrentVendor(null);
+                  setLoading(false);
+                  return;
+                }
+              } else {
+                console.warn('B2I Client document not found, blocking login');
+                setCurrentUser(null);
+                setCurrentVendor(null);
+                setLoading(false);
+                return;
+              }
             }
           } else {
             console.warn('User exists in Auth but not in Firestore');
@@ -130,7 +161,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (parsed.id && parsed.id.length < 20) {
               isMockUser = true;
             }
-          } catch (e) {}
+          } catch (e) { }
         }
 
         if (isMockUser) {
@@ -158,13 +189,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
     console.log('Logging out...');
+    try {
+      await auth.signOut();
+    } catch (error) {
+      console.error("Error signing out from Firebase:", error);
+    }
     localStorage.removeItem('mmo-current-user');
     localStorage.removeItem('mmo-current-vendor');
     setCurrentUser(null);
     setCurrentVendor(null);
   };
+
 
   return (
     <AuthContext.Provider value={{ currentUser, setCurrentUser, currentVendor, setCurrentVendor, updateCurrentUserAvatar, loading, logout }}>

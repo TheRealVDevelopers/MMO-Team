@@ -58,9 +58,15 @@ const DocumentsArchive: React.FC<{ documents: ArchivedDocument[] }> = ({ documen
                                                 </div>
                                             </div>
                                         </div>
-                                        <button className="p-2 text-gray-300 hover:text-primary transition-colors">
+                                        <a
+                                            href={doc.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="p-2 text-gray-300 hover:text-primary transition-colors"
+                                            title="Download Document"
+                                        >
                                             <ArrowDownTrayIcon className="w-5 h-5" />
-                                        </button>
+                                        </a>
                                     </div>
                                 ))}
                             </div>

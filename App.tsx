@@ -12,6 +12,7 @@ import ProjectReferencePage from './components/dashboard/shared/ProjectReference
 import LandingPage from './components/landing/LandingPage';
 import HelpBotWidget from './components/HelpBotWidget';
 import ErrorRectificationPage from './components/ErrorRectificationPage';
+import SetPasswordPage from './components/auth/SetPasswordPage';
 import { useAuth } from './context/AuthContext';
 import { StaffUser, UserRole, Vendor } from './types';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -34,6 +35,7 @@ const navConfig = {
       { id: 'timeline', label: 'Timeline', icon: <CalendarIcon className="w-6 h-6" /> },
       { id: 'projects', label: 'Reference', icon: <RectangleStackIcon className="w-6 h-6" /> },
       { id: 'organizations', label: 'Organizations', icon: <BuildingOfficeIcon className="w-6 h-6" /> },
+      { id: 'b2i', label: 'B2I Clients', icon: <BuildingLibraryIcon className="w-6 h-6" /> },
       { id: 'leads', label: 'Leads', icon: <FunnelIcon className="w-6 h-6" /> },
       { id: 'request-inbox', label: 'Request Inbox', icon: <InboxIcon className="w-6 h-6" /> },
       { id: 'approvals', label: 'Approvals', icon: <CheckCircleIcon className="w-6 h-6" /> },
@@ -184,6 +186,13 @@ const navConfig = {
       { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
     ]
   },
+  [UserRole.B2I_PARENT]: {
+    title: 'B2I Dashboard',
+    navItems: [
+      { id: 'overview', label: 'Overview', icon: <RectangleGroupIcon className="w-6 h-6" /> },
+      // { id: 'organizations', label: 'Organizations', icon: <BuildingOfficeIcon className="w-6 h-6" /> },
+    ]
+  },
   [UserRole.ACCOUNTS_TEAM]: {
     title: 'Financial Command Center',
     navItems: [
@@ -255,8 +264,18 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     if (currentUser) {
+      if (currentUser.mustChangePassword) {
+        navigate('/set-password');
+        setIsShowApp(false); // Hide main app layout
+        return;
+      }
+
       const defaultPage = navConfig[currentUser.role]?.navItems[0]?.id || 'overview';
-      setCurrentPage(defaultPage);
+      // Only redirect if at root or login
+      if (location.pathname === '/' || location.pathname === '/login') {
+        setCurrentPage(defaultPage);
+        navigate(`/${defaultPage}`);
+      }
       setIsShowApp(true);
     } else if (currentVendor) {
       setCurrentPage('overview');
@@ -264,7 +283,7 @@ const AppContent: React.FC = () => {
     } else {
       setIsShowApp(false);
     }
-  }, [currentUser?.role, !!currentVendor]);
+  }, [currentUser, !!currentVendor, currentUser?.mustChangePassword]);
 
   // Show app content when vendor is logged in (VendorDashboard has its own layout)
   if (currentVendor) {
@@ -291,28 +310,29 @@ const AppContent: React.FC = () => {
 
     return (
       <>
-      <InternalLayout
-        currentPage={currentPage}
-        setCurrentPage={handleSetPage}
-        title={currentNavConfig?.title}
-        navItems={currentNavConfig?.navItems}
-        secondaryNavItems={currentNavConfig?.secondaryNavItems}
-        onOpenSettings={handleOpenSettings}
-      >
-        {isSettingsOpen ? (
-          <SettingsPage onClose={handleCloseSettings} />
-        ) : (
-          <Routes>
-            <Route path="/projects/:caseId" element={<ProjectDetailsPage />} />
-            <Route path="/projects" element={<ProjectsListPage />} />
-            <Route path="/project-reference" element={<ProjectReferencePage />} />
-            <Route path="/error-rectification" element={<ErrorRectificationPage />} />
-            <Route path="*" element={<Dashboard currentPage={currentPage} setCurrentPage={handleSetPage} />} />
-          </Routes>
-        )}
-      </InternalLayout>
-      <HelpBotWidget />
-    </>
+        <InternalLayout
+          currentPage={currentPage}
+          setCurrentPage={handleSetPage}
+          title={currentNavConfig?.title}
+          navItems={currentNavConfig?.navItems}
+          secondaryNavItems={currentNavConfig?.secondaryNavItems}
+          onOpenSettings={handleOpenSettings}
+        >
+          {isSettingsOpen ? (
+            <SettingsPage onClose={handleCloseSettings} />
+          ) : (
+            <Routes>
+              <Route path="/set-password" element={<SetPasswordPage />} />
+              <Route path="/projects/:caseId" element={<ProjectDetailsPage />} />
+              <Route path="/projects" element={<ProjectsListPage />} />
+              <Route path="/project-reference" element={<ProjectReferencePage />} />
+              <Route path="/error-rectification" element={<ErrorRectificationPage />} />
+              <Route path="*" element={<Dashboard currentPage={currentPage} setCurrentPage={handleSetPage} />} />
+            </Routes>
+          )}
+        </InternalLayout>
+        <HelpBotWidget />
+      </>
     );
   }
 

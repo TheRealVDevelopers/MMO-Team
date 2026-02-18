@@ -1,23 +1,27 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { XMarkIcon, BuildingOfficeIcon, UserIcon, EnvelopeIcon, PhoneIcon, MapPinIcon, IdentificationIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, BuildingOfficeIcon, UserIcon, EnvelopeIcon, PhoneIcon, MapPinIcon, IdentificationIcon, BuildingLibraryIcon } from '@heroicons/react/24/outline';
 import { Organization } from '../../../types';
+import { useB2IClients } from '../../../hooks/useB2IClients';
 
 interface CreateOrganizationModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSubmit: (org: Omit<Organization, 'id' | 'createdAt' | 'createdBy' | 'projects'>) => void;
     initialData?: Organization | null;
+    defaultB2IParentId?: string; // When creating from B2I detail page
 }
 
-const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = ({ isOpen, onClose, onSubmit, initialData }) => {
+const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = ({ isOpen, onClose, onSubmit, initialData, defaultB2IParentId }) => {
+    const { b2iClients } = useB2IClients();
     const [formData, setFormData] = useState({
         name: '',
         contactPerson: '',
         contactEmail: '',
         contactPhone: '',
         address: '',
-        gstin: ''
+        gstin: '',
+        b2iParentId: defaultB2IParentId || '',
     });
 
     React.useEffect(() => {
@@ -29,7 +33,8 @@ const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = ({ isOpe
                     contactEmail: initialData.contactEmail,
                     contactPhone: initialData.contactPhone,
                     address: initialData.address,
-                    gstin: initialData.gstin || ''
+                    gstin: initialData.gstin || '',
+                    b2iParentId: initialData.b2iParentId || defaultB2IParentId || '',
                 });
             } else {
                 setFormData({
@@ -38,15 +43,21 @@ const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = ({ isOpe
                     contactEmail: '',
                     contactPhone: '',
                     address: '',
-                    gstin: ''
+                    gstin: '',
+                    b2iParentId: defaultB2IParentId || '',
                 });
             }
         }
-    }, [initialData, isOpen]);
+    }, [initialData, isOpen, defaultB2IParentId]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSubmit(formData);
+        const { b2iParentId, ...rest } = formData;
+        onSubmit({
+            ...rest,
+            isB2IChild: !!b2iParentId,
+            b2iParentId: b2iParentId || null,
+        } as any);
         onClose();
     };
 
@@ -172,6 +183,24 @@ const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = ({ isOpe
                                                 className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary bg-background text-text-primary"
                                                 placeholder="29AAAAA0000A1Z5"
                                             />
+                                        </div>
+                                    </div>
+
+                                    {/* B2I Parent (Optional) */}
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">B2I Parent (Optional)</label>
+                                        <div className="relative">
+                                            <BuildingLibraryIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                            <select
+                                                value={formData.b2iParentId}
+                                                onChange={e => setFormData({ ...formData, b2iParentId: e.target.value })}
+                                                className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary bg-background text-text-primary"
+                                            >
+                                                <option value="">No B2I Parent (Independent)</option>
+                                                {b2iClients.filter(c => c.status === 'active').map(client => (
+                                                    <option key={client.id} value={client.id}>{client.name}</option>
+                                                ))}
+                                            </select>
                                         </div>
                                     </div>
                                 </div>

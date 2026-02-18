@@ -20,6 +20,8 @@ import TimesheetReportsPage from './super-admin/TimesheetReportsPage';
 import ExecutionPlanApprovalPage from './super-admin/ExecutionPlanApprovalPage';
 import RequestValidationPage from './shared/RequestValidationPage';
 import ExecutionTimelineSuperAdminWrapper from './execution-team/ExecutionTimelineSuperAdminWrapper';
+import B2IClientsPage from './admin/B2IClientsPage';
+import B2IDetailPage from './admin/B2IDetailPage';
 
 interface SuperAdminDashboardProps {
     currentPage: string;
@@ -30,6 +32,7 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ currentPage, 
     const [selectedMemberId, setSelectedMemberId] = React.useState<string | undefined>(undefined);
     const [selectedTab, setSelectedTab] = React.useState<'history' | undefined>(undefined);
     const [selectedDate, setSelectedDate] = React.useState<string | undefined>(undefined);
+    const [selectedB2IId, setSelectedB2IId] = React.useState<string | undefined>(undefined);
 
     const handleNavigateToMember = (userId: string, tab?: 'history', date?: string) => {
         setSelectedMemberId(userId);
@@ -82,6 +85,11 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ currentPage, 
             return <FinancePage />;
         case 'organizations':
             return <OrganizationsPage setCurrentPage={setCurrentPage} />;
+        case 'b2i':
+            if (selectedB2IId) {
+                return <B2IDetailPage b2iId={selectedB2IId} onBack={() => setSelectedB2IId(undefined)} setCurrentPage={setCurrentPage} />;
+            }
+            return <B2IClientsPage setCurrentPage={setCurrentPage} onSelectB2I={(id) => setSelectedB2IId(id)} />;
         case 'cases':
             return <CasesManagementPage />;
         case 'timesheet-reports':

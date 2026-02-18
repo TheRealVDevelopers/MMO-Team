@@ -56,6 +56,9 @@ const MOCK_COMPANY_INFO: CompanyInfo = {
 interface ClientDashboardPageProps {
     clientUser: { uid: string; email: string; isFirstLogin: boolean } | null;
     onLogout: () => void;
+    caseId?: string; // Optional: For B2I Parent View
+    isReadOnly?: boolean; // Optional: Disables actions
+    onBack?: () => void; // Optional: Custom back handler for ReadOnly view
 }
 
 // Status Badge Component
@@ -75,9 +78,13 @@ const StatusBadge: React.FC<{ health: ProjectHealth }> = ({ health }) => {
     );
 };
 
-const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ clientUser, onLogout }) => {
+const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ clientUser, onLogout, caseId, isReadOnly, onBack }) => {
     // 1. Data Fetching
-    const { project, loading, error } = useClientCase(clientUser?.uid);
+    const { project, loading, error } = useClientCase(
+        caseId
+            ? { type: 'caseId', value: caseId }
+            : (clientUser?.uid ? { type: 'clientUid', value: clientUser.uid } : undefined)
+    );
     const { invoices, loading: invoicesLoading } = useInvoices(project?.projectId || '');
     const { pendingDoc: pendingJMS, signedDoc: signedJMS, loading: jmsLoading } = usePendingJMS(project?.projectId);
 
@@ -100,7 +107,7 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ clientUser, o
 
     const handlePaymentSubmit = async (data: { method: 'UTR' | 'Screenshot'; value: string; amount: number; file?: File }) => {
         try {
-            if (!project || !clientUser) return;
+            if (!project || (!clientUser && !isReadOnly)) return;
 
             // Import dynamically to avoid circular deps if any
             const { ClientPortalService } = await import('../../services/clientPortalService');
@@ -115,12 +122,7 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ clientUser, o
 
             await ClientPortalService.submitPayment(
                 project.projectId,
-                project.consultant.id, // Using consultant ID as stub for Org ID or we can fetch Org ID from project if available. 
-                // Actually project.projectId IS the caseId. OrganizationId is needed separately? 
-                // In useClientCase, we saw caseData.organizationId. ClientProject doesn't explicitly expose it?
-                // Let's assume we can query it or use a default. For now, passing 'org1' or derived.
-                // Wait, useClientCase does not map organizationId to ClientProject.
-                // We should add organizationId to ClientProject or fetch it.
+                project.consultant.id,
                 data.amount,
                 data.method,
                 value
@@ -135,17 +137,17 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ clientUser, o
     };
 
     const handlePayClick = (amount: number, name: string) => {
+        if (isReadOnly) return;
         setSelectedPaymentMilestone({ amount, name });
         setShowPayModal(true);
     };
 
     const handleApprove = async (requestId: string) => {
         try {
+            if (isReadOnly) return;
             if (!project || !clientUser) return;
             const { ClientPortalService } = await import('../../services/clientPortalService');
             await ClientPortalService.approveRequest(project.projectId, requestId, clientUser.uid);
-            // Optimistic update or wait for real-time listener? 
-            // Real-time listener in useClientCase should handle it.
         } catch (error) {
             console.error("Error approving request:", error);
             alert('Failed to approve request.');
@@ -154,6 +156,7 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ clientUser, o
 
     const handleReject = async (requestId: string, reason: string) => {
         try {
+            if (isReadOnly) return;
             if (!project || !clientUser) return;
             const { ClientPortalService } = await import('../../services/clientPortalService');
             await ClientPortalService.rejectRequest(project.projectId, requestId, clientUser.uid, reason);
@@ -164,6 +167,7 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ clientUser, o
     };
 
     const handleSignJMS = async () => {
+        if (isReadOnly) return;
         if (!confirm("Are you sure you want to sign off on the project completion? This confirms all work is satisfactory.")) return;
         try {
             if (!project || !clientUser) return;
@@ -242,10 +246,17 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ clientUser, o
                                 <p className="text-sm font-bold text-gray-800">{MOCK_COMPANY_INFO.contactPhone}</p>
                                 <p className="text-xs text-gray-500">{MOCK_COMPANY_INFO.contactEmail}</p>
                             </div>
-                            <button onClick={onLogout} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
-                                <ArrowRightOnRectangleIcon className="w-4 h-4" />
-                                <span className="hidden sm:inline">Logout</span>
-                            </button>
+                            {isReadOnly && onBack ? (
+                                <button onClick={onBack} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+                                    <ArrowRightOnRectangleIcon className="w-4 h-4 rotate-180" />
+                                    <span className="hidden sm:inline">Back</span>
+                                </button>
+                            ) : (
+                                <button onClick={onLogout} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
+                                    <ArrowRightOnRectangleIcon className="w-4 h-4" />
+                                    <span className="hidden sm:inline">Logout</span>
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -308,10 +319,12 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ clientUser, o
                                 </div>
                             </div>
 
-                            <button className="flex items-center justify-center gap-3 px-6 py-4 bg-primary text-white font-bold rounded-2xl hover:bg-secondary transition-all shadow-lg shadow-primary/20">
-                                <ChatBubbleLeftRightIcon className="w-5 h-5" />
-                                Ask a Question
-                            </button>
+                            {!isReadOnly && (
+                                <button className="flex items-center justify-center gap-3 px-6 py-4 bg-primary text-white font-bold rounded-2xl hover:bg-secondary transition-all shadow-lg shadow-primary/20">
+                                    <ChatBubbleLeftRightIcon className="w-5 h-5" />
+                                    Ask a Question
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -322,9 +335,6 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ clientUser, o
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* LEFT: Roadmap */}
                     <div className="lg:col-span-2 space-y-8">
-                        {/* Project Planning Panel (Master Plan) - Only visible if Active/Planning */}
-                        {/* <ExecutionProjectPlanningPanel caseId={project.projectId} isClientView={true} /> - REMOVED: Legacy component */}
-
                         <div>
                             <div className="flex items-center gap-3 mb-6">
                                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary shadow-sm">
@@ -365,7 +375,7 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ clientUser, o
                                 milestoneName={nextUnpaidMilestone.stageName}
                                 dueDate={nextUnpaidMilestone.dueDate}
                                 isOverdue={nextUnpaidMilestone.dueDate ? new Date() > nextUnpaidMilestone.dueDate : false}
-                                onPayNow={() => handlePayClick(nextUnpaidMilestone.amount, nextUnpaidMilestone.stageName)}
+                                onPayNow={() => !isReadOnly && handlePayClick(nextUnpaidMilestone.amount, nextUnpaidMilestone.stageName)}
                             />
                         )}
 
@@ -423,17 +433,22 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ clientUser, o
 
                         {/* JMS: pending → form; signed/completed → message; else legacy button when at last stage */}
                         {!jmsLoading && pendingJMS && (
-                            <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-[2rem] shadow-lg shadow-emerald-500/30 p-8 text-white">
+                            <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-[2rem] shadow-lg shadow-emerald-500/30 p-8 text-white relative overflow-hidden">
                                 <h3 className="text-xl font-bold mb-2">Project Completion – JMS</h3>
                                 <p className="text-emerald-100 mb-6">Please fill in the details below and sign off the Joint Measurement Sheet (JMS).</p>
                                 <ClientJMSForm
                                     caseId={project.projectId}
                                     jmsDoc={pendingJMS}
-                                    clientId={clientUser!.uid}
+                                    clientId={clientUser?.uid || 'b2i-viewer'}
                                     clientName={project.clientName}
                                     onSuccess={() => alert('Project signed off successfully!')}
                                     onError={(msg) => alert(msg)}
                                 />
+                                {isReadOnly && (
+                                    <div className="absolute inset-0 bg-gray-900/10 backdrop-blur-[1px] flex items-center justify-center z-10">
+                                        <span className="bg-black/70 text-white px-4 py-2 rounded-lg font-medium shadow-lg">View Only Mode</span>
+                                    </div>
+                                )}
                             </div>
                         )}
                         {!jmsLoading && signedJMS && !pendingJMS && (
@@ -448,9 +463,10 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ clientUser, o
                                 <p className="text-emerald-100 mb-6">All stages are complete. Please review and sign off the Joint Measurement Sheet (JMS).</p>
                                 <button
                                     onClick={handleSignJMS}
-                                    className="w-full py-4 bg-white text-emerald-600 font-bold rounded-xl hover:bg-emerald-50 transition-all shadow-lg"
+                                    disabled={isReadOnly}
+                                    className={`w-full py-4 bg-white text-emerald-600 font-bold rounded-xl hover:bg-emerald-50 transition-all shadow-lg ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
-                                    Sign Off Project
+                                    {isReadOnly ? 'Sign Off Available to Client' : 'Sign Off Project'}
                                 </button>
                             </div>
                         )}
@@ -491,15 +507,17 @@ const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ clientUser, o
                 isOpen={isSheetOpen}
                 onClose={() => setIsSheetOpen(false)}
             />
-            {selectedPaymentMilestone && (
-                <PaymentSubmissionModal
-                    isOpen={showPayModal}
-                    onClose={() => setShowPayModal(false)}
-                    onSubmit={handlePaymentSubmit}
-                    amount={selectedPaymentMilestone.amount}
-                    milestoneName={selectedPaymentMilestone.name}
-                />
-            )}
+            {
+                selectedPaymentMilestone && (
+                    <PaymentSubmissionModal
+                        isOpen={showPayModal}
+                        onClose={() => setShowPayModal(false)}
+                        onSubmit={handlePaymentSubmit}
+                        amount={selectedPaymentMilestone.amount}
+                        milestoneName={selectedPaymentMilestone.name}
+                    />
+                )
+            }
         </div>
     );
 };
