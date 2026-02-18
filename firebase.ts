@@ -44,12 +44,15 @@ if (!DEMO_MODE) {
     app = initializeApp(firebaseConfig);
     db = getFirestore(app);
     auth = getAuth(app);
-    storage = getStorage(app);
+    // Use bucket explicitly so Storage always targets the same project (kurchi-app)
+    storage = getStorage(app, firebaseConfig.storageBucket);
 
     console.log('🔥 Firebase Initialized:');
     console.log('  Project ID:', firebaseConfig.projectId);
+    console.log('  Storage bucket:', firebaseConfig.storageBucket);
     console.log('  Using Emulator:', USE_EMULATOR);
     console.log('  Firestore instance:', db ? 'Connected' : 'Failed');
+    console.log('  Storage instance:', storage ? 'Connected' : 'Failed');
 
     // Connect to emulators if enabled
     if (USE_EMULATOR) {

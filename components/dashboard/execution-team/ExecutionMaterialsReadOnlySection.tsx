@@ -39,27 +39,30 @@ const ExecutionMaterialsReadOnlySection: React.FC<Props> = ({ planDays = [] }) =
   }, [planDays, catalogItems]);
 
   return (
-    <section className="bg-surface border border-border rounded-xl p-6">
-      <h2 className="text-lg font-bold text-text-primary mb-4">5. Materials Tracker</h2>
-      <p className="text-sm text-text-secondary mb-4">Planned materials from execution plan. &quot;Used&quot; will be available after procurement integration.</p>
+    <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+      <div className="flex items-center gap-3 mb-5">
+        <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary text-white text-sm font-bold">5</span>
+        <h2 className="text-lg font-bold text-slate-800">Materials Tracker</h2>
+      </div>
+      <p className="text-sm text-slate-600 mb-4">Planned materials from execution plan. &quot;Used&quot; will be available after procurement integration.</p>
       {planned.length === 0 ? (
-        <p className="text-sm text-text-tertiary">No planned materials.</p>
+        <p className="text-sm text-slate-500">No planned materials.</p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-xl border border-slate-200">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border">
-                <th className="text-left py-2 font-medium text-text-primary">Item</th>
-                <th className="text-right py-2 font-medium text-text-primary">Planned qty</th>
-                <th className="text-left py-2 font-medium text-text-primary">Required on</th>
+              <tr className="border-b border-slate-200 bg-slate-50/80">
+                <th className="text-left py-3 px-4 font-semibold text-slate-700">Item</th>
+                <th className="text-right py-3 px-4 font-semibold text-slate-700">Planned qty</th>
+                <th className="text-left py-3 px-4 font-semibold text-slate-700">Required on</th>
               </tr>
             </thead>
             <tbody>
               {planned.map((row) => (
-                <tr key={row.catalogItemId} className="border-b border-border/60">
-                  <td className="py-2 text-text-primary">{row.name}</td>
-                  <td className="text-right py-2 text-text-primary">{row.quantity}</td>
-                  <td className="py-2 text-text-secondary">{row.requiredOn}</td>
+                <tr key={row.catalogItemId} className="border-b border-slate-100 last:border-0">
+                  <td className="py-3 px-4 text-slate-800">{row.name}</td>
+                  <td className="text-right py-3 px-4 text-slate-800">{row.quantity}</td>
+                  <td className="py-3 px-4 text-slate-600">{row.requiredOn}</td>
                 </tr>
               ))}
             </tbody>

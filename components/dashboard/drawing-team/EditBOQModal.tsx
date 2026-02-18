@@ -236,6 +236,7 @@ const EditBOQModal: React.FC<EditBOQModalProps> = ({
             catalogItems={catalogItems}
             onSelect={addItemsFromCatalog}
             onClose={() => setShowCatalogModal(false)}
+            hidePricing={true}
           />
         )}
       </div>

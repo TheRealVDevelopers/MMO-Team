@@ -48,20 +48,23 @@ const ExecutionDocumentsReadOnlySection: React.FC<Props> = ({ caseId }) => {
   }, [caseId]);
 
   return (
-    <section className="bg-surface border border-border rounded-xl p-6">
-      <h2 className="text-lg font-bold text-text-primary mb-4">6. Documents</h2>
-      <p className="text-sm text-text-secondary mb-4">Read-only. 2D, 3D, BOQ, Quotations, Warranties.</p>
+    <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+      <div className="flex items-center gap-3 mb-5">
+        <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary text-white text-sm font-bold">6</span>
+        <h2 className="text-lg font-bold text-slate-800">Documents</h2>
+      </div>
+      <p className="text-sm text-slate-600 mb-4">Read-only. 2D, 3D, BOQ, Quotations, Warranties.</p>
       {loading ? (
-        <p className="text-sm text-text-tertiary">Loading…</p>
+        <p className="text-sm text-slate-500">Loading…</p>
       ) : docs.length === 0 ? (
-        <p className="text-sm text-text-tertiary">No documents.</p>
+        <p className="text-sm text-slate-500">No documents.</p>
       ) : (
         <ul className="space-y-2">
           {docs.map((d) => (
-            <li key={d.id} className="flex items-center justify-between text-sm">
-              <span className="text-text-primary">{LABELS[d.type ?? ''] || d.type || d.fileName || d.id}</span>
+            <li key={d.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50/80 border border-slate-100 text-sm">
+              <span className="font-medium text-slate-800">{LABELS[d.type ?? ''] || d.type || d.fileName || d.id}</span>
               {d.fileUrl && (
-                <a href={d.fileUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                <a href={d.fileUrl} target="_blank" rel="noopener noreferrer" className="text-primary font-medium hover:underline">
                   Open
                 </a>
               )}

@@ -76,33 +76,36 @@ const ExecutionDailyLogSection: React.FC<Props> = ({ caseId, planDays = [], isCo
 
   if (loading) {
     return (
-      <section className="bg-surface border border-border rounded-xl p-6">
-        <h2 className="text-lg font-bold text-text-primary mb-4">4. Daily Execution Log</h2>
-        <p className="text-sm text-text-secondary">Loading…</p>
+      <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+        <div className="flex items-center gap-3 mb-4">
+          <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary text-white text-sm font-bold">4</span>
+          <h2 className="text-lg font-bold text-slate-800">Daily Execution Log</h2>
+        </div>
+        <p className="text-sm text-slate-600">Loading…</p>
       </section>
     );
   }
 
-  // Show read-only mode for completed projects
   if (isCompleted) {
     return (
-      <section className="bg-surface border border-border rounded-xl p-6">
-        <h2 className="text-lg font-bold text-text-primary mb-4">4. Daily Execution Log</h2>
-        <div className="flex items-center gap-3 p-4 rounded-lg bg-gray-50 border border-gray-200">
-          <LockClosedIcon className="w-5 h-5 text-gray-500" />
+      <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+        <div className="flex items-center gap-3 mb-5">
+          <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary text-white text-sm font-bold">4</span>
+          <h2 className="text-lg font-bold text-slate-800">Daily Execution Log</h2>
+        </div>
+        <div className="flex items-center gap-4 p-5 rounded-xl bg-slate-50 border border-slate-100">
+          <LockClosedIcon className="w-5 h-5 text-slate-500" />
           <div>
-            <p className="font-medium text-gray-700">Daily Log Locked</p>
-            <p className="text-sm text-gray-600">Cannot add daily updates to completed projects.</p>
+            <p className="font-semibold text-slate-700">Daily Log Locked</p>
+            <p className="text-sm text-slate-600 mt-0.5">Cannot add daily updates to completed projects.</p>
           </div>
         </div>
-        
-        {/* Show existing updates in read-only mode */}
         {updates.length > 0 && (
           <div className="mt-6">
-            <p className="text-sm font-medium text-text-primary mb-2">Daily Logs History</p>
+            <p className="text-sm font-semibold text-slate-800 mb-2">Daily Logs History</p>
             <ul className="space-y-2 max-h-60 overflow-y-auto">
               {updates.map((u) => (
-                <li key={u.id} className="text-sm text-text-secondary border-b border-border pb-2">
+                <li key={u.id} className="text-sm text-slate-600 border-b border-slate-100 pb-2">
                   {typeof u.date === 'string' ? u.date.slice(0, 10) : new Date(u.date).toISOString().slice(0, 10)} — {u.workDescription}
                   {u.manpowerCount ? ` (${u.manpowerCount} workers)` : ''}
                 </li>
@@ -115,57 +118,60 @@ const ExecutionDailyLogSection: React.FC<Props> = ({ caseId, planDays = [], isCo
   }
 
   return (
-    <section className="bg-surface border border-border rounded-xl p-6">
-      <h2 className="text-lg font-bold text-text-primary mb-4">4. Daily Execution Log</h2>
+    <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+      <div className="flex items-center gap-3 mb-5">
+        <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary text-white text-sm font-bold">4</span>
+        <h2 className="text-lg font-bold text-slate-800">Daily Execution Log</h2>
+      </div>
 
       {missingDates.length > 0 && (
-        <div className="mb-4 p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Missing updates (planned days with no log)</p>
-          <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">{missingDates.join(', ')}</p>
+        <div className="mb-5 p-4 rounded-xl bg-amber-50 border border-amber-200">
+          <p className="text-sm font-medium text-amber-800">Missing updates (planned days with no log)</p>
+          <p className="text-xs text-amber-700 mt-1">{missingDates.join(', ')}</p>
         </div>
       )}
 
       {todayUpdate ? (
-        <div className="p-4 rounded-lg border border-border bg-background/50">
-          <p className="text-sm font-medium text-text-primary">Today&apos;s log submitted</p>
-          <p className="text-sm text-text-secondary mt-1">{todayUpdate.workDescription}</p>
-          <p className="text-xs text-text-tertiary mt-2">Workers: {todayUpdate.manpowerCount}</p>
+        <div className="p-5 rounded-xl border border-slate-200 bg-slate-50/80">
+          <p className="text-sm font-semibold text-slate-800">Today&apos;s log submitted</p>
+          <p className="text-sm text-slate-600 mt-1">{todayUpdate.workDescription}</p>
+          <p className="text-xs text-slate-500 mt-2">Workers: {todayUpdate.manpowerCount}</p>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           <input type="hidden" value={today} readOnly />
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">Work done today *</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Work done today *</label>
             <textarea
               value={workDescription}
               onChange={(e) => setWorkDescription(e.target.value)}
               rows={3}
               required
-              className="w-full px-3 py-2 border border-border rounded-lg bg-background text-text-primary"
+              className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-primary/20 focus:border-primary"
               placeholder="Describe work completed today"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">Number of workers present *</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Number of workers present *</label>
             <input
               type="number"
               min={0}
               value={manpowerCount}
               onChange={(e) => setManpowerCount(parseInt(e.target.value, 10) || 0)}
-              className="w-full max-w-[120px] px-3 py-2 border border-border rounded-lg bg-background text-text-primary"
+              className="w-full max-w-[120px] px-4 py-2.5 border border-slate-200 rounded-xl bg-white text-slate-800"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">Photos (optional)</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Photos (optional)</label>
             <div className="flex gap-2 flex-wrap">
               <input
                 type="url"
                 value={photoUrl}
                 onChange={(e) => setPhotoUrl(e.target.value)}
                 placeholder="Photo URL"
-                className="flex-1 min-w-[180px] px-3 py-2 border border-border rounded-lg bg-background text-text-primary text-sm"
+                className="flex-1 min-w-[180px] px-4 py-2.5 border border-slate-200 rounded-xl bg-white text-slate-800 text-sm"
               />
-              <button type="button" onClick={addPhoto} className="px-3 py-2 border border-border rounded-lg text-sm">
+              <button type="button" onClick={addPhoto} className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50">
                 Add
               </button>
             </div>
@@ -176,26 +182,24 @@ const ExecutionDailyLogSection: React.FC<Props> = ({ caseId, planDays = [], isCo
                     <a href={url} target="_blank" rel="noopener noreferrer" className="text-primary truncate max-w-[120px]">
                       Photo
                     </a>
-                    <button type="button" onClick={() => removePhoto(i)} className="text-error">
-                      ×
-                    </button>
+                    <button type="button" onClick={() => removePhoto(i)} className="text-red-600 hover:text-red-700">×</button>
                   </li>
                 ))}
               </ul>
             )}
           </div>
-          <button type="submit" disabled={saving} className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium disabled:opacity-50">
+          <button type="submit" disabled={saving} className="px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-medium disabled:opacity-50 hover:bg-primary/90 transition-colors">
             {saving ? 'Saving…' : 'Save daily log'}
           </button>
         </form>
       )}
 
       {updates.length > 0 && (
-        <div className="mt-6">
-          <p className="text-sm font-medium text-text-primary mb-2">Recent logs</p>
+        <div className="mt-6 pt-6 border-t border-slate-100">
+          <p className="text-sm font-semibold text-slate-800 mb-2">Recent logs</p>
           <ul className="space-y-2">
             {updates.slice(0, 5).map((u) => (
-              <li key={u.id} className="text-sm text-text-secondary border-b border-border pb-2">
+              <li key={u.id} className="text-sm text-slate-600 border-b border-slate-100 pb-2">
                 {typeof u.date === 'string' ? u.date.slice(0, 10) : new Date(u.date).toISOString().slice(0, 10)} — {u.workDescription}
                 {u.manpowerCount ? ` (${u.manpowerCount} workers)` : ''}
               </li>

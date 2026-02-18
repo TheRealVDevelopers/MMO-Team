@@ -42,7 +42,27 @@ const DashboardCalendar: React.FC<DashboardCalendarProps> = ({ className, initia
     // Use the calendar tasks hook with Firebase persistence
     const { tasks: firebaseTasks, addTask: addTaskToFirebase, toggleTask, deleteTask: deleteTaskFromFirebase, loading } = useCalendarTasks(currentUser?.id);
 
-    const tasks = initialTasks || firebaseTasks;
+    // Merge firebase (Personal Assistant) tasks with initialTasks (e.g. team case tasks) by date, dedupe by id
+    const tasks = (() => {
+        const allDates = new Set([
+            ...Object.keys(firebaseTasks),
+            ...(initialTasks ? Object.keys(initialTasks) : [])
+        ]);
+        const merged: Record<string, CalendarTask[]> = {};
+        for (const date of allDates) {
+            const fromFirebase = firebaseTasks[date] || [];
+            const fromInitial = initialTasks?.[date] || [];
+            const seen = new Set<string>();
+            const combined: CalendarTask[] = [];
+            for (const t of [...fromFirebase, ...fromInitial]) {
+                if (t.id && seen.has(t.id)) continue;
+                seen.add(t.id || `temp-${combined.length}`);
+                combined.push(t);
+            }
+            merged[date] = combined;
+        }
+        return merged;
+    })();
 
     const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
     const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));

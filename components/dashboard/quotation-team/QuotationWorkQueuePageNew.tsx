@@ -32,6 +32,7 @@ import {
     TaskType,
     TaskStatus,
     Case,
+    CaseStatus,
     UserRole,
     CaseBOQ,
     CaseQuotation,
@@ -235,22 +236,24 @@ const QuotationWorkQueuePageNew: React.FC = () => {
             console.log('[Quotation] Audit Status:', quotationData.auditStatus);
             console.log('[Quotation] Data:', quotationData);
 
-            // 2. Generate PDF (without PR code)
+            // 2. Generate PDF (without PR code); quotation doc already saved, update pdfUrl on success
             const quotWithId: CaseQuotation = {
                 ...quotationData,
                 id: quotRef.id
             } as CaseQuotation;
 
-            const pdfUrl = await generateQuotationPDF(quotWithId, { ...caseData, id: selectedTask.caseId });
+            try {
+                const pdfUrl = await generateQuotationPDF(quotWithId, { ...caseData, id: selectedTask.caseId });
+                if (pdfUrl) await updateDoc(quotRef, { pdfUrl });
+                console.log('[Quotation] ✅ PDF generated:', pdfUrl);
+            } catch (pdfErr) {
+                console.error('[Quotation] PDF generation failed:', pdfErr);
+                alert('Quotation saved successfully, but PDF generation failed. You can retry from quotation history.');
+            }
 
-            // Update quotation with PDF URL
-            await updateDoc(quotRef, { pdfUrl });
-
-            console.log('[Quotation] ✅ PDF generated:', pdfUrl);
-
-            // 3. Update case status
+            // 3. Update case status (use CaseStatus enum)
             await updateDoc(caseRef, {
-                status: 'QUOTATION_SUBMITTED',
+                status: CaseStatus.QUOTATION,
                 updatedAt: serverTimestamp()
             });
 
@@ -473,6 +476,31 @@ const QuotationWorkQueuePageNew: React.FC = () => {
                             <CalculatorIcon className="w-6 h-6" />
                             Quotation Builder
                         </h2>
+
+                        {/* Paste all from BOQ - one click to copy all BOQ items; quotation team only adds pricing */}
+                        {latestBOQ && latestBOQ.items?.length > 0 && (
+                            <div className="mb-4">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setQuotationItems(
+                                            latestBOQ.items.map((item: any) => ({
+                                                name: item.name,
+                                                quantity: item.quantity ?? 0,
+                                                unit: item.unit || 'pcs',
+                                                rate: 0,
+                                                total: 0,
+                                                catalogItemId: item.catalogItemId,
+                                            }))
+                                        );
+                                    }}
+                                    className="px-4 py-2 bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-lg hover:bg-indigo-200 font-medium text-sm"
+                                >
+                                    Paste all from BOQ
+                                </button>
+                                <p className="text-xs text-gray-500 mt-1">Adds all BOQ items with quantity; you only need to enter rate per item.</p>
+                            </div>
+                        )}
 
                         {/* Items Table */}
                         <div className="mb-6">

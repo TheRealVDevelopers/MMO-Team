@@ -55,40 +55,53 @@ const ExecutionTeamDashboard: React.FC<Props> = ({ currentPage, setCurrentPage }
     navigate('/planning', { replace: true });
   };
 
+  const headerSubtitle = currentPage === 'timeline'
+    ? 'Timeline — monitor plan and daily logs'
+    : selectedCaseId ? 'Execution Workspace' : 'Your projects — click one to open the workspace';
+
   if (currentPage === 'timeline') {
     return (
-      <div className="p-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-text-primary">Execution Hub</h1>
-          <p className="text-text-secondary mt-1">Timeline — monitor plan and daily logs</p>
+      <div className="min-h-screen bg-gradient-to-b from-slate-50/80 to-background">
+        <div className="p-6 lg:p-8">
+          <header className="mb-8">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold uppercase tracking-wider mb-4">
+              Execution
+            </div>
+            <h1 className="text-3xl lg:text-4xl font-bold text-text-primary tracking-tight">Execution Hub</h1>
+            <p className="text-text-secondary mt-2 text-lg">{headerSubtitle}</p>
+          </header>
+          <ExecutionTimelinePage
+            caseId={selectedCaseId}
+            onSelectProject={(id) => (id ? handleSelectProject(id) : handleBackToProjects())}
+            onBack={() => setCurrentPage('planning')}
+          />
         </div>
-        <ExecutionTimelinePage
-          caseId={selectedCaseId}
-          onSelectProject={(id) => (id ? handleSelectProject(id) : handleBackToProjects())}
-          onBack={() => setCurrentPage('planning')}
-        />
       </div>
     );
   }
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-text-primary">Execution Hub</h1>
-        <p className="text-text-secondary mt-1">
-          {selectedCaseId ? 'Execution Workspace' : 'Your projects — click one to open the workspace'}
-        </p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-b from-slate-50/80 to-background">
+      <div className="p-6 lg:p-8">
+        <header className="mb-8">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold uppercase tracking-wider mb-4">
+            Execution
+          </div>
+          <h1 className="text-3xl lg:text-4xl font-bold text-text-primary tracking-tight">Execution Hub</h1>
+          <p className="text-text-secondary mt-2 text-lg">{headerSubtitle}</p>
+        </header>
 
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
-        </div>
-      ) : selectedCaseId ? (
-        <ExecutionWorkspace caseId={selectedCaseId} onBack={handleBackToProjects} />
-      ) : (
-        <ExecutionProjectsPage onSelectProject={handleSelectProject} />
-      )}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-12 h-12 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+            <p className="text-text-secondary mt-4 font-medium">Loading your projects...</p>
+          </div>
+        ) : selectedCaseId ? (
+          <ExecutionWorkspace caseId={selectedCaseId} onBack={handleBackToProjects} />
+        ) : (
+          <ExecutionProjectsPage onSelectProject={handleSelectProject} />
+        )}
+      </div>
     </div>
   );
 };

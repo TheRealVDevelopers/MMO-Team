@@ -266,6 +266,7 @@ const CreateBOQModal: React.FC<CreateBOQModalProps> = ({
                         catalogItems={catalogItems}
                         onSelect={addItemsFromCatalog}
                         onClose={() => setShowCatalogModal(false)}
+                        hidePricing={true}
                     />
                 )}
             </div>
@@ -274,28 +275,52 @@ const CreateBOQModal: React.FC<CreateBOQModalProps> = ({
 };
 
 // Catalog Selector Modal - exported for use in EditBOQModal
+// hidePricing: when true (BOQ context), do not show price - only product name, unit; user enters quantity only.
+// Categories: show categories first; user picks a category then sees products in that category (same categories used by quotation team).
 export const CatalogSelectorModal: React.FC<{
     catalogItems: any[];
     onSelect: (items: any[]) => void;
     onClose: () => void;
-}> = ({ catalogItems, onSelect, onClose }) => {
+    /** When true (BOQ creation), hide pricing - show only product name and unit */
+    hidePricing?: boolean;
+}> = ({ catalogItems, onSelect, onClose, hidePricing = false }) => {
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+    const categories = React.useMemo(() => {
+        const set = new Set<string>();
+        catalogItems.forEach(item => {
+            const cat = (item.category && String(item.category).trim()) || 'Uncategorized';
+            set.add(cat);
+        });
+        return Array.from(set).sort((a, b) => (a === 'Uncategorized' ? 1 : a.localeCompare(b)));
+    }, [catalogItems]);
+
+    const itemsInCategory = React.useMemo(() => {
+        if (!selectedCategory) return [];
+        return catalogItems.filter(item => {
+            const cat = (item.category && String(item.category).trim()) || 'Uncategorized';
+            return cat === selectedCategory;
+        });
+    }, [catalogItems, selectedCategory]);
+
+    const filteredCatalog = React.useMemo(() => {
+        const base = selectedCategory ? itemsInCategory : catalogItems;
+        if (!searchQuery.trim()) return base;
+        const q = searchQuery.toLowerCase();
+        return base.filter(item =>
+            item.name.toLowerCase().includes(q) ||
+            (item.category && String(item.category).toLowerCase().includes(q))
+        );
+    }, [selectedCategory, itemsInCategory, catalogItems, searchQuery]);
 
     const toggleItem = (itemId: string) => {
         const newSelected = new Set(selectedItems);
-        if (newSelected.has(itemId)) {
-            newSelected.delete(itemId);
-        } else {
-            newSelected.add(itemId);
-        }
+        if (newSelected.has(itemId)) newSelected.delete(itemId);
+        else newSelected.add(itemId);
         setSelectedItems(newSelected);
     };
-
-    const filteredCatalog = catalogItems.filter(item =>
-        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.category?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
 
     const handleSubmit = () => {
         const selected = catalogItems.filter(item => selectedItems.has(item.id));
@@ -308,13 +333,20 @@ export const CatalogSelectorModal: React.FC<{
                 <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-5">
                     <div className="flex justify-between items-center mb-3">
                         <h3 className="text-xl font-bold">Select Items from Catalog</h3>
-                        <button onClick={onClose} className="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2">
-                            ✕
-                        </button>
+                        <button onClick={onClose} className="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2">✕</button>
                     </div>
+                    {selectedCategory && (
+                        <button
+                            type="button"
+                            onClick={() => setSelectedCategory(null)}
+                            className="text-sm text-purple-100 hover:text-white mb-2"
+                        >
+                            ← Back to categories
+                        </button>
+                    )}
                     <input
                         type="text"
-                        placeholder="Search items..."
+                        placeholder={selectedCategory ? "Search in this category..." : "Search items..."}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full px-4 py-2 rounded-lg text-gray-900"
@@ -322,7 +354,23 @@ export const CatalogSelectorModal: React.FC<{
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-5">
-                    {filteredCatalog.length === 0 ? (
+                    {!selectedCategory ? (
+                        <div>
+                            <p className="text-sm font-medium text-gray-600 mb-3">Choose a category</p>
+                            <div className="flex flex-wrap gap-2">
+                                {categories.map(cat => (
+                                    <button
+                                        key={cat}
+                                        type="button"
+                                        onClick={() => setSelectedCategory(cat)}
+                                        className="px-4 py-2 rounded-xl bg-purple-50 text-purple-800 border border-purple-200 hover:bg-purple-100 font-medium"
+                                    >
+                                        {cat}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    ) : filteredCatalog.length === 0 ? (
                         <div className="text-center py-8 text-gray-500">No items found</div>
                     ) : (
                         <div className="grid grid-cols-2 gap-3">
@@ -331,9 +379,7 @@ export const CatalogSelectorModal: React.FC<{
                                     key={item.id}
                                     onClick={() => toggleItem(item.id)}
                                     className={`p-4 border-2 rounded-xl cursor-pointer ${
-                                        selectedItems.has(item.id)
-                                            ? 'border-purple-500 bg-purple-50'
-                                            : 'border-gray-200 hover:border-purple-300'
+                                        selectedItems.has(item.id) ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-purple-300'
                                     }`}
                                 >
                                     <div className="flex items-start gap-3">
@@ -345,10 +391,13 @@ export const CatalogSelectorModal: React.FC<{
                                         />
                                         <div>
                                             <h4 className="font-bold text-gray-900">{item.name}</h4>
-                                            <p className="text-xs text-gray-500">{item.category}</p>
-                                            <p className="text-sm font-medium text-purple-700 mt-1">
-                                                ₹{item.price?.toLocaleString('en-IN') || 0} / {item.unit || 'pcs'}
-                                            </p>
+                                            <p className="text-xs text-gray-500">{item.category || 'Uncategorized'}</p>
+                                            <p className="text-xs text-gray-500 mt-0.5">Unit: {item.unit || 'pcs'}</p>
+                                            {!hidePricing && (
+                                                <p className="text-sm font-medium text-purple-700 mt-1">
+                                                    ₹{item.price?.toLocaleString('en-IN') || 0} / {item.unit || 'pcs'}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -360,12 +409,7 @@ export const CatalogSelectorModal: React.FC<{
                 <div className="border-t p-5 flex justify-between items-center bg-gray-50">
                     <p className="text-sm text-gray-600">{selectedItems.size} item(s) selected</p>
                     <div className="flex gap-3">
-                        <button
-                            onClick={onClose}
-                            className="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-                        >
-                            Cancel
-                        </button>
+                        <button onClick={onClose} className="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">Cancel</button>
                         <button
                             onClick={handleSubmit}
                             disabled={selectedItems.size === 0}

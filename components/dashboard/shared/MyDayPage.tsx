@@ -28,6 +28,7 @@ import { useFinance } from '../../../hooks/useFinance';
 import { ProjectStatus, ApprovalStatus, ApprovalRequestType } from '../../../types';
 import { useProjects } from '../../../hooks/useProjects';
 import { useAssignedApprovalRequests, startRequest, completeRequest } from '../../../hooks/useApprovalSystem';
+import { useCalendarTasks, type CalendarTask } from '../../../hooks/useCalendarTasks';
 
 const SalesStats: React.FC<{ userId: string, leads: any[], timeEntries: any[] }> = ({ userId, leads, timeEntries }) => {
     const myLeads = leads.filter(l => l.assignedTo === userId);
@@ -151,6 +152,7 @@ const MyDayPage: React.FC = () => {
     const { tasks: assignedTasks, loading: tasksLoading } = useAssignedTasksWithCases(currentUser?.id);
     const { requests: assignedRequests, loading: requestsLoading } = useAssignedApprovalRequests(); // Fixed: no params
     const { leads, loading: leadsLoading } = useLeads(currentUser?.organizationId);
+    const { tasks: calendarTasksByDate, toggleTask: toggleCalendarTask } = useCalendarTasks(currentUser?.id);
 
     const [reminders, setReminders] = useState<EnrichedReminder[]>([]);
     const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -437,6 +439,40 @@ const MyDayPage: React.FC = () => {
                         onDateSelect={setSelectedDate}
                         tasks={daysTasks}
                     />
+
+                    {/* Personal Assistant reminders for selected date (from calendarTasks) */}
+                    {(() => {
+                        const calendarForDate = (calendarTasksByDate[selectedDate] || []) as CalendarTask[];
+                        if (calendarForDate.length === 0) return null;
+                        return (
+                            <ContentCard>
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                                        <BellIcon className="w-5 h-5" />
+                                    </div>
+                                    <h3 className="text-lg font-serif font-bold text-text-primary tracking-tight">Personal reminders</h3>
+                                </div>
+                                <ul className="space-y-2">
+                                    {calendarForDate.map((ct) => (
+                                        <li key={ct.id} className="flex items-center gap-3 p-3 rounded-xl bg-subtle-background/50 border border-border/40">
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleCalendarTask(ct.id)}
+                                                className={cn(
+                                                    "w-5 h-5 rounded border-2 flex-shrink-0 flex items-center justify-center transition-colors",
+                                                    ct.completed ? "bg-primary border-primary text-white" : "border-text-tertiary hover:border-primary"
+                                                )}
+                                            >
+                                                {ct.completed && <CheckCircleIcon className="w-3 h-3" />}
+                                            </button>
+                                            <span className={cn("text-sm font-medium", ct.completed && "line-through text-text-tertiary")}>{ct.title}</span>
+                                            {ct.time && <span className="text-xs text-text-tertiary ml-auto">{ct.time}</span>}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </ContentCard>
+                        );
+                    })()}
 
                     {attendanceStats && (
                         <ContentCard>

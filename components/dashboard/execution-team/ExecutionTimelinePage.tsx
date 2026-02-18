@@ -220,20 +220,22 @@ const ExecutionTimelinePage: React.FC<Props> = ({ caseId, onSelectProject, onBac
 
   if (!caseId) {
     return (
-      <div className="p-6 max-w-xl mx-auto">
+      <div className="p-6 max-w-xl mx-auto min-h-screen bg-gradient-to-b from-slate-50/80 to-background">
         {onBack && (
-          <button type="button" onClick={onBack} className="flex items-center gap-2 text-text-secondary hover:text-text-primary mb-6">
+          <button type="button" onClick={onBack} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 mb-6 transition-colors">
             <ArrowLeftIcon className="w-5 h-5" /> Back
           </button>
         )}
-        <div className="rounded-xl border border-border bg-surface p-12 text-center">
-          <CalendarIcon className="w-16 h-16 text-text-tertiary mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-text-primary mb-2">Select a project</h2>
-          <p className="text-text-secondary mb-6">Choose a project from the Projects page to view its timeline.</p>
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-12 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+            <CalendarIcon className="w-8 h-8 text-slate-500" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-800 mb-2">Select a project</h2>
+          <p className="text-slate-600 mb-6">Choose a project from the Projects page to view its timeline.</p>
           <button
             type="button"
             onClick={() => onSelectProject('')}
-            className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 font-medium"
+            className="px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition-colors"
           >
             Go to Projects
           </button>
@@ -244,65 +246,66 @@ const ExecutionTimelinePage: React.FC<Props> = ({ caseId, onSelectProject, onBac
 
   if (loading && !caseData) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+      <div className="flex flex-col items-center justify-center py-20 min-h-[40vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-2 border-primary border-t-transparent" />
+        <p className="text-slate-600 mt-4">Loading timeline…</p>
       </div>
     );
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-6 max-w-4xl mx-auto min-h-screen bg-gradient-to-b from-slate-50/80 to-background">
       {onBack && (
-        <button type="button" onClick={onBack} className="flex items-center gap-2 text-text-secondary hover:text-text-primary mb-4">
+        <button type="button" onClick={onBack} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 mb-6 transition-colors">
           <ArrowLeftIcon className="w-5 h-5" /> Back
         </button>
       )}
 
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary">Timeline</h1>
-          <p className="text-text-secondary text-sm mt-0.5">{caseData?.title ?? caseData?.projectName ?? 'Project'}</p>
+          <h1 className="text-2xl font-bold text-slate-800">Timeline</h1>
+          <p className="text-slate-600 text-sm mt-0.5">{caseData?.title ?? caseData?.projectName ?? 'Project'}</p>
         </div>
-        <div className="flex rounded-lg border border-border overflow-hidden">
+        <div className="flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
           <button
             type="button"
             onClick={() => setViewMode('timeline')}
-            className={`px-4 py-2 text-sm font-medium flex items-center gap-2 ${viewMode === 'timeline' ? 'bg-primary text-white' : 'bg-surface text-text-secondary hover:bg-background-hover'}`}
+            className={`px-4 py-2.5 text-sm font-medium flex items-center gap-2 rounded-lg transition-colors ${viewMode === 'timeline' ? 'bg-primary text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}
           >
-            <CalendarIcon className="w-4 h-4" /> Timeline View
+            <CalendarIcon className="w-4 h-4" /> Timeline
           </button>
           <button
             type="button"
             onClick={() => setViewMode('gantt')}
-            className={`px-4 py-2 text-sm font-medium flex items-center gap-2 ${viewMode === 'gantt' ? 'bg-primary text-white' : 'bg-surface text-text-secondary hover:bg-background-hover'}`}
+            className={`px-4 py-2.5 text-sm font-medium flex items-center gap-2 rounded-lg transition-colors ${viewMode === 'gantt' ? 'bg-primary text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}
           >
-            <ChartBarIcon className="w-4 h-4" /> Gantt View
+            <ChartBarIcon className="w-4 h-4" /> Gantt
           </button>
         </div>
       </div>
 
       {viewMode === 'timeline' && (
         <div className="relative">
-          <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border" aria-hidden />
-          <ul className="space-y-0">
+          <div className="absolute left-5 top-2 bottom-2 w-0.5 bg-slate-200 rounded-full" aria-hidden />
+          <ul className="space-y-4">
             {timelineEvents.map((evt, idx) => {
               const color = statusColor[evt.status] ?? statusColor.upcoming;
               const dateStr = formatDate(evt.date);
               return (
-                <li key={`${evt.type}-${idx}`} className="relative flex gap-4 pb-6">
-                  <div className={`relative z-10 w-8 h-8 rounded-full flex-shrink-0 mt-0.5 ${color}`} aria-hidden />
-                  <div className="flex-1 min-w-0 pt-0">
-                    <p className="text-xs text-text-tertiary font-medium">{dateStr}</p>
-                    <p className="font-semibold text-text-primary mt-0.5">{evt.title}</p>
-                    {evt.description && <p className="text-sm text-text-secondary mt-1">{evt.description}</p>}
-                    <div className="flex flex-wrap gap-2 mt-2">
+                <li key={`${evt.type}-${idx}`} className="relative flex gap-4">
+                  <div className={`relative z-10 w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center ${color} shadow-sm`} aria-hidden />
+                  <div className="flex-1 min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">{dateStr}</p>
+                    <p className="font-semibold text-slate-800 mt-0.5">{evt.title}</p>
+                    {evt.description && <p className="text-sm text-slate-600 mt-1">{evt.description}</p>}
+                    <div className="flex flex-wrap gap-2 mt-3">
                       {(evt.labor != null && evt.labor > 0) && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs bg-slate-100 text-slate-700">
                           <UserGroupIcon className="w-3.5 h-3.5" /> {evt.labor} Workers
                         </span>
                       )}
                       {(evt.manpower != null && evt.manpower > 0) && evt.type === 'daily_update' && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-blue-50 text-blue-700">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs bg-blue-50 text-blue-700">
                           <UserGroupIcon className="w-3.5 h-3.5" /> {evt.manpower} workers
                         </span>
                       )}
@@ -310,16 +313,16 @@ const ExecutionTimelinePage: React.FC<Props> = ({ caseId, onSelectProject, onBac
                         <button
                           type="button"
                           onClick={() => setDailyLogModal({ updates: dailyUpdates })}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-primary/10 text-primary hover:bg-primary/20"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs bg-primary/10 text-primary hover:bg-primary/20 font-medium"
                         >
                           <DocumentTextIcon className="w-3.5 h-3.5" /> Daily update added
                         </button>
                       )}
-                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium capitalize ${
-                        evt.status === 'completed' ? 'bg-green-100 text-green-800' :
+                      <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium capitalize ${
+                        evt.status === 'completed' ? 'bg-emerald-100 text-emerald-800' :
                         evt.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
                         evt.status === 'delayed' ? 'bg-red-100 text-red-800' :
-                        'bg-gray-100 text-gray-700'
+                        'bg-slate-100 text-slate-700'
                       }`}>
                         {evt.status.replace(/_/g, ' ')}
                       </span>
@@ -333,7 +336,7 @@ const ExecutionTimelinePage: React.FC<Props> = ({ caseId, onSelectProject, onBac
       )}
 
       {viewMode === 'gantt' && (
-        <div className="space-y-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
           {phaseEvents.map((evt, idx) => {
             const start = evt.date;
             const end = evt.endDate ?? evt.date;
@@ -341,60 +344,61 @@ const ExecutionTimelinePage: React.FC<Props> = ({ caseId, onSelectProject, onBac
             const offsetDays = differenceInDays(start, minDate);
             const widthPct = Math.min(100, (duration / totalDays) * 100);
             const leftPct = totalDays > 0 ? (offsetDays / totalDays) * 100 : 0;
-            const barColor = evt.status === 'completed' ? 'bg-green-500' : evt.status === 'delayed' ? 'bg-red-500' : 'bg-blue-500';
+            const barColor = evt.status === 'completed' ? 'bg-emerald-500' : evt.status === 'delayed' ? 'bg-red-500' : 'bg-blue-500';
             return (
               <div key={`gantt-${idx}`} className="flex items-center gap-4">
-                <div className="w-32 flex-shrink-0">
-                  <p className="font-medium text-text-primary truncate" title={evt.title}>{evt.title}</p>
+                <div className="w-36 flex-shrink-0">
+                  <p className="font-medium text-slate-800 truncate" title={evt.title}>{evt.title}</p>
                   {evt.labor != null && evt.labor > 0 && (
-                    <p className="text-xs text-text-tertiary flex items-center gap-1">
+                    <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
                       <UserGroupIcon className="w-3 h-3" /> {evt.labor} workers
                     </p>
                   )}
                 </div>
-                <div className="flex-1 h-8 bg-gray-100 rounded relative overflow-hidden">
+                <div className="flex-1 h-10 bg-slate-100 rounded-xl relative overflow-hidden">
                   <div
-                    className={`absolute h-full rounded ${barColor}`}
-                    style={{ left: `${leftPct}%`, width: `${widthPct}%`, minWidth: '4px' }}
+                    className={`absolute h-full rounded-lg ${barColor}`}
+                    style={{ left: `${leftPct}%`, width: `${widthPct}%`, minWidth: '8px' }}
                   />
                 </div>
-                <div className="w-24 text-right text-xs text-text-tertiary flex-shrink-0">
+                <div className="w-28 text-right text-xs text-slate-500 flex-shrink-0">
                   {formatDate(start)} – {formatDate(end)}
                 </div>
               </div>
             );
           })}
           {phaseEvents.length === 0 && (
-            <p className="text-text-secondary text-center py-8">No phases in plan. Add phases in Planning to see Gantt.</p>
+            <p className="text-slate-600 text-center py-8">No phases in plan. Add phases in Planning to see Gantt.</p>
           )}
         </div>
       )}
 
       {timelineEvents.length === 0 && viewMode === 'timeline' && (
-        <div className="rounded-xl border border-border bg-surface p-8 text-center text-text-secondary">
-          No timeline events yet. Execution plan and daily updates will appear here.
+        <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+          <CalendarIcon className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+          <p className="text-slate-600">No timeline events yet. Execution plan and daily updates will appear here.</p>
         </div>
       )}
 
       {dailyLogModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setDailyLogModal(null)}>
-          <div className="bg-surface border border-border rounded-xl shadow-xl max-w-lg w-full max-h-[80vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-              <h3 className="text-lg font-semibold text-text-primary">Daily logs</h3>
-              <button type="button" onClick={() => setDailyLogModal(null)} className="p-2 rounded-lg hover:bg-background-hover text-text-secondary">✕</button>
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-xl max-w-lg w-full max-h-[80vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
+              <h3 className="text-lg font-bold text-slate-800">Daily logs</h3>
+              <button type="button" onClick={() => setDailyLogModal(null)} className="p-2 rounded-xl hover:bg-slate-100 text-slate-500">✕</button>
             </div>
-            <div className="p-4 overflow-y-auto flex-1">
+            <div className="p-5 overflow-y-auto flex-1">
               {dailyLogModal.updates.length === 0 ? (
-                <p className="text-text-secondary">No daily updates yet.</p>
+                <p className="text-slate-600">No daily updates yet.</p>
               ) : (
                 <ul className="space-y-3">
                   {dailyLogModal.updates
                     .sort((a, b) => (toDate(b.date)?.getTime() ?? 0) - (toDate(a.date)?.getTime() ?? 0))
                     .map((u) => (
-                      <li key={u.id} className="p-3 rounded-lg bg-background-hover border border-border">
-                        <p className="text-xs text-text-tertiary font-medium">{formatDate(toDate(u.date) ?? new Date())}</p>
-                        <p className="text-text-primary mt-1 whitespace-pre-wrap">{u.workDescription || '—'}</p>
-                        {u.manpowerCount > 0 && <p className="text-sm text-text-secondary mt-1 flex items-center gap-1"><UserGroupIcon className="w-4 h-4" /> {u.manpowerCount} workers</p>}
+                      <li key={u.id} className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                        <p className="text-xs text-slate-500 font-medium">{formatDate(toDate(u.date) ?? new Date())}</p>
+                        <p className="text-slate-800 mt-1 whitespace-pre-wrap">{u.workDescription || '—'}</p>
+                        {u.manpowerCount > 0 && <p className="text-sm text-slate-600 mt-1 flex items-center gap-1"><UserGroupIcon className="w-4 h-4" /> {u.manpowerCount} workers</p>}
                       </li>
                     ))}
                 </ul>

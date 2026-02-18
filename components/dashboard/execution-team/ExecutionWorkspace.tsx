@@ -51,16 +51,17 @@ const ExecutionWorkspace: React.FC<Props> = ({ caseId, onBack }) => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+      <div className="flex flex-col items-center justify-center py-20">
+        <div className="w-12 h-12 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+        <p className="text-slate-600 mt-4 font-medium">Loading workspace...</p>
       </div>
     );
   }
   if (!caseData) {
     return (
-      <div className="p-6 text-center">
-        <p className="text-text-secondary">Project not found.</p>
-        <button type="button" onClick={onBack} className="mt-4 text-primary font-semibold">
+      <div className="text-center py-16 px-6 bg-white rounded-2xl border border-slate-200 shadow-sm">
+        <p className="text-slate-600">Project not found.</p>
+        <button type="button" onClick={onBack} className="mt-6 px-5 py-2.5 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition-colors">
           Back to Projects
         </button>
       </div>
@@ -91,39 +92,38 @@ const ExecutionWorkspace: React.FC<Props> = ({ caseId, onBack }) => {
   // Show read-only mode for completed projects
   if (isCompleted) {
     return (
-      <div className="space-y-10 pb-12">
+      <div className="space-y-8 pb-12">
         <div className="flex items-center gap-4">
           <button
             type="button"
             onClick={onBack}
-            className="p-2 rounded-lg border border-border hover:bg-surface text-text-primary"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors font-medium"
             aria-label="Back to projects"
           >
-            <ArrowLeftIcon className="w-5 h-5" />
+            <ArrowLeftIcon className="w-5 h-5" /> Back
           </button>
-          <div>
-            <h1 className="text-2xl font-bold text-text-primary">Execution Workspace</h1>
-            <p className="text-sm text-text-secondary">{caseData.title}</p>
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold text-slate-800">Execution Workspace</h1>
+            <p className="text-slate-500 mt-0.5">{caseData.title}</p>
           </div>
         </div>
-        
-        <div className="bg-surface border border-border rounded-xl p-8 text-center">
-          <LockClosedIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-text-primary mb-2">Project Completed – Read Only Mode</h2>
-          <p className="text-text-secondary mb-6">This project is locked and cannot be modified.</p>
-          
-          {/* Show summary sections in read-only mode */}
+
+        <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center shadow-sm">
+          <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+            <LockClosedIcon className="w-8 h-8 text-slate-500" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-800 mb-2">Project Completed – Read Only Mode</h2>
+          <p className="text-slate-600 mb-8">This project is locked and cannot be modified.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto text-left">
-            <div className="bg-background/50 p-4 rounded-lg">
-              <h3 className="font-semibold text-text-primary mb-2">Project Summary</h3>
-              <p className="text-sm text-text-secondary">Title: {caseData.title}</p>
-              <p className="text-sm text-text-secondary">Client: {caseData.clientName || '—'}</p>
-              <p className="text-sm text-text-secondary">Status: {status}</p>
+            <div className="bg-slate-50 p-5 rounded-xl border border-slate-100">
+              <h3 className="font-semibold text-slate-800 mb-2">Project Summary</h3>
+              <p className="text-sm text-slate-600">Title: {caseData.title}</p>
+              <p className="text-sm text-slate-600">Client: {caseData.clientName || '—'}</p>
+              <p className="text-sm text-slate-600">Status: {status}</p>
             </div>
-            
-            <div className="bg-background/50 p-4 rounded-lg">
-              <h3 className="font-semibold text-text-primary mb-2">Documents</h3>
-              <p className="text-sm text-text-secondary">View project documents in read-only mode</p>
+            <div className="bg-slate-50 p-5 rounded-xl border border-slate-100">
+              <h3 className="font-semibold text-slate-800 mb-2">Documents</h3>
+              <p className="text-sm text-slate-600">View project documents in read-only mode</p>
             </div>
           </div>
         </div>
@@ -132,49 +132,52 @@ const ExecutionWorkspace: React.FC<Props> = ({ caseId, onBack }) => {
   }
 
   return (
-    <div className="space-y-10 pb-12">
+    <div className="space-y-8 pb-12">
       <div className="flex items-center gap-4">
         <button
           type="button"
           onClick={onBack}
-          className="p-2 rounded-lg border border-border hover:bg-surface text-text-primary"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors font-medium"
           aria-label="Back to projects"
         >
-          <ArrowLeftIcon className="w-5 h-5" />
+          <ArrowLeftIcon className="w-5 h-5" /> Back
         </button>
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary">Execution Workspace</h1>
-          <p className="text-sm text-text-secondary">{caseData.title}</p>
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold text-slate-800">Execution Workspace</h1>
+          <p className="text-slate-500 mt-0.5">{caseData.title}</p>
         </div>
       </div>
 
       {/* Section 1 — Project Summary (read-only) */}
-      <section className="bg-surface border border-border rounded-xl p-6">
-        <h2 className="text-lg font-bold text-text-primary mb-4">1. Project Summary</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-          <div>
-            <span className="text-text-tertiary">Project name</span>
-            <p className="font-medium text-text-primary">{caseData.title}</p>
+      <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+        <div className="flex items-center gap-3 mb-5">
+          <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary text-white text-sm font-bold">1</span>
+          <h2 className="text-lg font-bold text-slate-800">Project Summary</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 text-sm">
+          <div className="p-3 rounded-xl bg-slate-50/80">
+            <span className="text-slate-500 block text-xs font-medium uppercase tracking-wider mb-1">Project name</span>
+            <p className="font-medium text-slate-800">{caseData.title}</p>
           </div>
-          <div>
-            <span className="text-text-tertiary">Client</span>
-            <p className="font-medium text-text-primary">{caseData.clientName || '—'}</p>
+          <div className="p-3 rounded-xl bg-slate-50/80">
+            <span className="text-slate-500 block text-xs font-medium uppercase tracking-wider mb-1">Client</span>
+            <p className="font-medium text-slate-800">{caseData.clientName || '—'}</p>
           </div>
-          <div>
-            <span className="text-text-tertiary">Planned start / end</span>
-            <p className="font-medium text-text-primary">
+          <div className="p-3 rounded-xl bg-slate-50/80">
+            <span className="text-slate-500 block text-xs font-medium uppercase tracking-wider mb-1">Planned start / end</span>
+            <p className="font-medium text-slate-800">
               {plan?.startDate && plan?.endDate
                 ? `${new Date(plan.startDate).toLocaleDateString()} – ${new Date(plan.endDate).toLocaleDateString()}`
                 : '—'}
             </p>
           </div>
-          <div>
-            <span className="text-text-tertiary">Current status</span>
-            <p className="font-medium text-text-primary">{status}</p>
+          <div className="p-3 rounded-xl bg-slate-50/80">
+            <span className="text-slate-500 block text-xs font-medium uppercase tracking-wider mb-1">Current status</span>
+            <p className="font-medium text-slate-800">{status}</p>
           </div>
-          <div>
-            <span className="text-text-tertiary">Total planned days</span>
-            <p className="font-medium text-text-primary">{totalPlannedDays || '—'}</p>
+          <div className="p-3 rounded-xl bg-slate-50/80">
+            <span className="text-slate-500 block text-xs font-medium uppercase tracking-wider mb-1">Total planned days</span>
+            <p className="font-medium text-slate-800">{totalPlannedDays || '—'}</p>
           </div>
         </div>
       </section>
@@ -189,13 +192,18 @@ const ExecutionWorkspace: React.FC<Props> = ({ caseId, onBack }) => {
       
       {/* Show planning as read-only when locked */}
       {showPlanning && isPlanningLocked && (
-        <section className="bg-surface border border-border rounded-xl p-6">
-          <h2 className="text-lg font-bold text-text-primary mb-4">2. Planning</h2>
-          <div className="flex items-center gap-3 p-4 rounded-lg bg-gray-50 border border-gray-200">
-            <LockClosedIcon className="w-5 h-5 text-gray-500" />
+        <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-slate-500 text-white text-sm font-bold">2</span>
+            <h2 className="text-lg font-bold text-slate-800">Planning</h2>
+          </div>
+          <div className="flex items-center gap-4 p-5 rounded-xl bg-slate-50 border border-slate-100">
+            <div className="w-10 h-10 rounded-xl bg-slate-200 flex items-center justify-center">
+              <LockClosedIcon className="w-5 h-5 text-slate-600" />
+            </div>
             <div>
-              <p className="font-medium text-gray-700">Planning Locked</p>
-              <p className="text-sm text-gray-600">Planning is read-only after submission. Contact admin for changes.</p>
+              <p className="font-semibold text-slate-700">Planning Locked</p>
+              <p className="text-sm text-slate-600 mt-0.5">Planning is read-only after submission. Contact admin for changes.</p>
             </div>
           </div>
         </section>
@@ -229,30 +237,30 @@ const ExecutionWorkspace: React.FC<Props> = ({ caseId, onBack }) => {
       
       {/* Materials Management (separate page/component) - Show locked for completed */}
       {isCompleted && (
-        <section className="bg-surface border border-border rounded-xl p-6">
-          <h2 className="text-lg font-bold text-text-primary mb-4">Materials Management</h2>
-          <div className="flex items-center gap-3 p-4 rounded-lg bg-gray-50 border border-gray-200">
-            <LockClosedIcon className="w-5 h-5 text-gray-500" />
+        <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+          <h2 className="text-lg font-bold text-slate-800 mb-4">Materials Management</h2>
+          <div className="flex items-center gap-4 p-5 rounded-xl bg-slate-50 border border-slate-100">
+            <LockClosedIcon className="w-5 h-5 text-slate-500" />
             <div>
-              <p className="font-medium text-gray-700">Materials Locked</p>
-              <p className="text-sm text-gray-600">Cannot modify materials for completed projects.</p>
+              <p className="font-semibold text-slate-700">Materials Locked</p>
+              <p className="text-sm text-slate-600 mt-0.5">Cannot modify materials for completed projects.</p>
             </div>
           </div>
         </section>
       )}
 
       {/* Section 6 — Documents (read-only) */}
-      <ExecutionDocumentsReadOnlySection caseId={caseId} /> 
-      
+      <ExecutionDocumentsReadOnlySection caseId={caseId} />
+
       {/* Documents Management - Show locked for completed */}
       {isCompleted && (
-        <section className="bg-surface border border-border rounded-xl p-6">
-          <h2 className="text-lg font-bold text-text-primary mb-4">Documents Management</h2>
-          <div className="flex items-center gap-3 p-4 rounded-lg bg-gray-50 border border-gray-200">
-            <LockClosedIcon className="w-5 h-5 text-gray-500" />
+        <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+          <h2 className="text-lg font-bold text-slate-800 mb-4">Documents Management</h2>
+          <div className="flex items-center gap-4 p-5 rounded-xl bg-slate-50 border border-slate-100">
+            <LockClosedIcon className="w-5 h-5 text-slate-500" />
             <div>
-              <p className="font-medium text-gray-700">Documents Locked</p>
-              <p className="text-sm text-gray-600">Cannot upload documents for completed projects.</p>
+              <p className="font-semibold text-slate-700">Documents Locked</p>
+              <p className="text-sm text-slate-600 mt-0.5">Cannot upload documents for completed projects.</p>
             </div>
           </div>
         </section>

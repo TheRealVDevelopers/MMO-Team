@@ -4,6 +4,7 @@ import SalesOverviewPage from './sales-manager/SalesOverviewPage';
 import LeadManagementPage from './sales-manager/LeadManagementPage';
 import TeamManagementPage from './sales-manager/TeamManagementPage';
 import ReportsPage from './sales-manager/ReportsPage';
+import MyDayPage from './shared/MyDayPage';
 import { Lead, LeadHistory, LeadPipelineStatus, Case, CaseStatus } from '../../types';
 import { USERS } from '../../constants';
 import CreateLeadModal from './shared/CreateLeadModal';
@@ -90,6 +91,7 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
 
   const pageTitles: { [key: string]: string } = {
     overview: 'Sales Overview',
+    'my-day': 'My Day',
     leads: 'Lead Management',
     projects: 'Project Management',
     organizations: 'Organizations',
@@ -167,6 +169,8 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
     switch (currentPage) {
       case 'overview':
         return <SalesOverviewPage setCurrentPage={setCurrentPage} leads={leads} users={users} />;
+      case 'my-day':
+        return <MyDayPage />;
       case 'leads':
         return <LeadManagementPage leads={leads} users={users} />;
       case 'project-hub':

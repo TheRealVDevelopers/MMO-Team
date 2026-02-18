@@ -45,13 +45,16 @@ const ExecutionApprovalsSection: React.FC<Props> = ({ caseId, caseData, plan, on
   };
 
   return (
-    <section className="bg-surface border border-border rounded-xl p-6">
-      <h2 className="text-lg font-bold text-text-primary mb-4">3. Approvals</h2>
+    <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+      <div className="flex items-center gap-3 mb-5">
+        <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary text-white text-sm font-bold">3</span>
+        <h2 className="text-lg font-bold text-slate-800">Approvals</h2>
+      </div>
       <div className="space-y-4">
-        <div className="flex items-center justify-between p-4 rounded-lg border border-border">
-          <span className="font-medium text-text-primary">Super Admin</span>
+        <div className="flex items-center justify-between p-5 rounded-xl border border-slate-200 bg-slate-50/50">
+          <span className="font-medium text-slate-800">Super Admin</span>
           {approved ? (
-            <span className="flex items-center gap-2 text-green-600">
+            <span className="flex items-center gap-2 text-emerald-600 font-medium">
               <CheckCircleIcon className="w-5 h-5" /> Approved
             </span>
           ) : isSuperAdmin ? (
@@ -59,16 +62,16 @@ const ExecutionApprovalsSection: React.FC<Props> = ({ caseId, caseData, plan, on
               type="button"
               onClick={handleAdminApprove}
               disabled={busy}
-              className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium disabled:opacity-50"
+              className="px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-medium disabled:opacity-50 hover:bg-primary/90 transition-colors"
             >
               {busy ? '…' : 'Approve'}
             </button>
           ) : (
-            <span className="text-text-tertiary">Pending</span>
+            <span className="text-slate-500">Pending</span>
           )}
         </div>
         {approved && (
-          <p className="text-sm text-green-600 font-medium">Execution unlocked. Daily log and execution are active.</p>
+          <p className="text-sm text-emerald-600 font-medium">Execution unlocked. Daily log and execution are active.</p>
         )}
       </div>
     </section>

@@ -21,6 +21,7 @@ import {
     TaskType,
     TaskStatus,
     Case,
+    CaseStatus,
     UserRole
 } from '../../../types';
 import { FIRESTORE_COLLECTIONS } from '../../../constants';
@@ -538,14 +539,14 @@ const QuotationBuilderModal: React.FC<{
             );
             console.log('[Quotation] Written to cases/' + task.caseId + '/quotations/' + quotRef.id + ' (auditStatus=pending) – should appear in Procurement Audit');
 
-            // 2) Update case status to QUOTATION_SUBMITTED
+            // 2) Update case status (use CaseStatus enum)
             await updateDoc(caseRef, {
-                status: 'QUOTATION_SUBMITTED',
+                status: CaseStatus.QUOTATION,
                 updatedAt: serverTimestamp()
             });
 
             // 3) Save quotation as DRAFT document (without PR) - not visible to client until approved
-            const quotationDoc = {
+            const quotationDoc: Record<string, unknown> = {
                 type: 'QUOTATION_DRAFT',
                 caseId: task.caseId,
                 taskId: task.id,
@@ -554,18 +555,18 @@ const QuotationBuilderModal: React.FC<{
                 visibleToClient: false,
                 approvalStatus: 'pending',
                 items: quotationItems,
-                subtotal,
-                discount,
-                discountAmount,
-                taxRate,
-                taxAmount,
-                totalAmount,
-                notes: notes ?? '',
+                subtotal: Number(subtotal) || 0,
+                discount: Number(discount) || 0,
+                discountAmount: Number(discountAmount) || 0,
+                taxRate: Number(taxRate) || 0,
+                taxAmount: Number(taxAmount) || 0,
+                totalAmount: Number(totalAmount) || 0,
+                notes: String(notes ?? ''),
                 status: 'PENDING_AUDIT'
             };
 
             await addDoc(
-                collection(db!, FIRESTORE_COLLECTIONS.CASES, task.caseId, 'documents'),
+                collection(db!, FIRESTORE_COLLECTIONS.CASES, task.caseId, FIRESTORE_COLLECTIONS.DOCUMENTS),
                 quotationDoc
             );
 

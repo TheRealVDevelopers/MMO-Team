@@ -6,7 +6,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useCases, addCaseQuotation, useCaseQuotations, useCaseBOQs } from '../../../hooks/useCases';
 import { useTargetedApprovalRequests, useAssignedApprovalRequests } from '../../../hooks/useApprovalSystem';
 import { useCatalog } from '../../../hooks/useCatalog';
-import { Case, Project, UserRole, CaseQuotation, CaseBOQ, TaskType, TaskStatus } from '../../../types';
+import { Case, CaseStatus, Project, UserRole, CaseQuotation, CaseBOQ, TaskType, TaskStatus } from '../../../types';
 import { formatCurrencyINR, safeDate } from '../../../constants';
 import { createNotification } from '../../../services/liveDataService';
 import QuotationPDFTemplate from './QuotationPDFTemplate';
@@ -229,8 +229,8 @@ const CustomerQuotationBuilder: React.FC = () => {
             });
 
             await updateDoc(caseRef, {
-                status: 'QUOTATION_SUBMITTED',
-                quotationStatus: 'SUBMITTED_FOR_AUDIT', // Update quotation status
+                status: CaseStatus.QUOTATION,
+                quotationStatus: 'SUBMITTED_FOR_AUDIT',
                 updatedAt: serverTimestamp(),
             });
 
@@ -807,6 +807,44 @@ const CustomerQuotationBuilder: React.FC = () => {
                                     BOQ Reference
                                 </h3>
                                 <p className="text-sm text-text-secondary">Use these items as reference for your quotation</p>
+                                {selectedCaseBOQs.length > 0 && (
+                                    <div className="mt-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const allItems: QuoteLineItem[] = [];
+                                                selectedCaseBOQs.forEach((boq) => {
+                                                    (boq.items || []).forEach((item: any, idx: number) => {
+                                                        const catalogItem = catalogItems.find(
+                                                            (c) => c.id === item.catalogItemId || c.name === (item.name || item.description)
+                                                        );
+                                                        const qty = Number(item.quantity) || 1;
+                                                        const price = catalogItem ? catalogItem.price : 0;
+                                                        const total = price * qty;
+                                                        allItems.push({
+                                                            ...(catalogItem || {
+                                                                id: `boq-${boq.id}-${idx}`,
+                                                                name: item.name || item.description || `Item ${idx + 1}`,
+                                                                category: '',
+                                                                price: 0,
+                                                                unit: item.unit || 'pcs',
+                                                            }),
+                                                            quantity: qty,
+                                                            discount: 0,
+                                                            total: catalogItem ? total : 0,
+                                                        });
+                                                    });
+                                                });
+                                                setQuoteItems(allItems);
+                                            }}
+                                            className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm flex items-center justify-center gap-2"
+                                        >
+                                            <DocumentTextIcon className="w-5 h-5" />
+                                            Paste all from BOQ
+                                        </button>
+                                        <p className="text-xs text-text-tertiary mt-1.5 text-center">Adds all BOQ items to Quotation Items; add or edit pricing as needed.</p>
+                                    </div>
+                                )}
                             </div>
                             <div className="p-4 max-h-[60vh] overflow-y-auto">
                                 {selectedCaseBOQsLoading ? (

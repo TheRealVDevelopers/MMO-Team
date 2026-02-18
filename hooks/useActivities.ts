@@ -90,11 +90,11 @@ export const useActivities = (caseId?: string) => {
           FIRESTORE_COLLECTIONS.ACTIVITIES
         );
 
-        const newActivity = {
-          ...activity,
-          caseId,
-          timestamp: serverTimestamp(),
-        };
+        // Firestore does not allow undefined; strip undefined values
+        const base = { ...activity, caseId, timestamp: serverTimestamp() };
+        const newActivity = Object.fromEntries(
+          Object.entries(base).filter(([, v]) => v !== undefined)
+        ) as Record<string, unknown>;
 
         const docRef = await addDoc(activitiesRef, newActivity);
         return docRef.id;
@@ -131,11 +131,10 @@ export const logActivity = async (
       FIRESTORE_COLLECTIONS.ACTIVITIES
     );
 
-    const newActivity = {
-      ...activity,
-      caseId,
-      timestamp: serverTimestamp(),
-    };
+    const base = { ...activity, caseId, timestamp: serverTimestamp() };
+    const newActivity = Object.fromEntries(
+      Object.entries(base).filter(([, v]) => v !== undefined)
+    ) as Record<string, unknown>;
 
     await addDoc(activitiesRef, newActivity);
   } catch (err: any) {

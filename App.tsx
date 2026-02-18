@@ -10,6 +10,8 @@ import ProjectsListPage from './components/dashboard/shared/ProjectsListPage';
 import ProjectDetailsPage from './components/dashboard/shared/ProjectDetailsPage';
 import ProjectReferencePage from './components/dashboard/shared/ProjectReferencePage';
 import LandingPage from './components/landing/LandingPage';
+import HelpBotWidget from './components/HelpBotWidget';
+import ErrorRectificationPage from './components/ErrorRectificationPage';
 import { useAuth } from './context/AuthContext';
 import { StaffUser, UserRole, Vendor } from './types';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -287,6 +289,7 @@ const AppContent: React.FC = () => {
     const currentNavConfig = navConfig[currentUser.role];
 
     return (
+      <>
       <InternalLayout
         currentPage={currentPage}
         setCurrentPage={handleSetPage}
@@ -302,10 +305,13 @@ const AppContent: React.FC = () => {
             <Route path="/projects/:caseId" element={<ProjectDetailsPage />} />
             <Route path="/projects" element={<ProjectsListPage />} />
             <Route path="/project-reference" element={<ProjectReferencePage />} />
+            <Route path="/error-rectification" element={<ErrorRectificationPage />} />
             <Route path="*" element={<Dashboard currentPage={currentPage} setCurrentPage={handleSetPage} />} />
           </Routes>
         )}
       </InternalLayout>
+      <HelpBotWidget />
+    </>
     );
   }
 

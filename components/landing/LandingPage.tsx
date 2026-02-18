@@ -1,5 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { auth } from '../../firebase';
 import { PhoneIcon, GlobeAltIcon, EnvelopeIcon, Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
@@ -42,24 +44,45 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
   const [clientUser, setClientUser] = useState<{ uid: string, email: string, isFirstLogin: boolean, cases?: any[], selectedCaseId?: string | null } | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Initialize client user from localStorage
+  // Restore client session on load: only if Firebase Auth has the same user (persistence)
   useEffect(() => {
-    const savedClient = localStorage.getItem('mmo-client-user');
-    if (savedClient) {
+    if (!auth) return;
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      const savedClient = typeof localStorage !== 'undefined' ? localStorage.getItem('mmo-client-user') : null;
+      if (!firebaseUser) {
+        if (savedClient) {
+          localStorage.removeItem('mmo-client-user');
+          setClientUser(null);
+          setCurrentView('home');
+        }
+        return;
+      }
+      if (!savedClient) return;
       try {
-        const parsedClient = JSON.parse(savedClient);
-        setClientUser(parsedClient);
-        // Restore view based on client state
-        if (parsedClient.cases && parsedClient.cases.length > 1 && !parsedClient.selectedCaseId) {
+        const parsed = JSON.parse(savedClient);
+        if (parsed.uid !== firebaseUser.uid) {
+          localStorage.removeItem('mmo-client-user');
+          setClientUser(null);
+          setCurrentView('home');
+          return;
+        }
+        // Re-fetch cases for fresh data
+        const { getClientCases } = await import('../../services/authService');
+        const cases = await getClientCases(firebaseUser.uid);
+        const restored = { ...parsed, uid: firebaseUser.uid, email: firebaseUser.email ?? parsed.email, cases };
+        setClientUser(restored);
+        if (restored.cases && restored.cases.length > 1 && !restored.selectedCaseId) {
           setCurrentView('client-project-selector');
         } else {
           setCurrentView('client-dashboard');
         }
       } catch (e) {
-        console.error("Failed to restore client session", e);
+        console.error('Failed to restore client session', e);
         localStorage.removeItem('mmo-client-user');
+        setClientUser(null);
       }
-    }
+    });
+    return () => unsubscribe();
   }, []);
 
   // Persist client user to localStorage
@@ -143,6 +166,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
   };
 
   const handleClientLogout = () => {
+    signOut(auth).catch(() => {});
     setClientUser(null);
     setCurrentView('home');
   };

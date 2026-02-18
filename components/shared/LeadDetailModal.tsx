@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Modal from './Modal';
-import { Case, CaseStatus, LeadPipelineStatus, LeadHistory, Reminder, UserRole, TaskStatus, ProjectStatus } from '../../types';
+import { Case, CaseStatus, LeadPipelineStatus, LeadHistory, Reminder, UserRole, TaskStatus, TaskType, ProjectStatus } from '../../types';
 import LeadHistoryView from './LeadHistoryView';
 import { useAuth } from '../../context/AuthContext';
 import { PlusIcon, BellIcon, MapPinIcon, PaintBrushIcon, CalculatorIcon, TruckIcon, WrenchScrewdriverIcon, CreditCardIcon, PhoneIcon, ChatBubbleLeftRightIcon, BanknotesIcon, CalendarIcon, UserCircleIcon, FireIcon, PaperClipIcon, XMarkIcon, CheckCircleIcon } from '../icons/IconComponents';
@@ -17,6 +17,19 @@ import { useActivities } from '../../hooks/useActivities';
 import { useCaseDocumentsFlat } from '../../hooks/useCaseDocumentsFlat';
 import { DocumentType } from '../../types';
 import { doc, onSnapshot, Timestamp, updateDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
+
+/** Map DirectAssignTaskModal title to TaskType so assignee sees task in their Work Queue / My Day (role-specific queues filter by type). */
+function taskTitleToType(title: string): TaskType {
+    const t = (title || '').toLowerCase();
+    if (t.includes('site') && (t.includes('inspection') || t.includes('visit'))) return TaskType.SITE_VISIT;
+    if (t.includes('drawing')) return TaskType.DRAWING_TASK;
+    if (t.includes('quotation') || t.includes('boq')) return TaskType.QUOTATION_TASK;
+    if (t.includes('material') || t.includes('verification')) return TaskType.PROCUREMENT_AUDIT;
+    if (t.includes('client meeting')) return TaskType.SALES_CONTACT;
+    if (t.includes('execution')) return TaskType.EXECUTION_TASK;
+    return TaskType.SALES_CONTACT;
+}
+import { PencilSquareIcon } from '../icons/IconComponents';
 import { db } from '../../firebase';
 import { FIRESTORE_COLLECTIONS } from '../../constants';
 
@@ -70,6 +83,11 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
 
     const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
     const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
+    const [isEditLeadModalOpen, setIsEditLeadModalOpen] = useState(false);
+    const [editLeadForm, setEditLeadForm] = useState({ clientName: '', clientPhone: '', clientEmail: '', notes: '' });
+    const [isSavingLead, setIsSavingLead] = useState(false);
+    const [callNotes, setCallNotes] = useState('');
+    const [isLoggingCall, setIsLoggingCall] = useState(false);
 
     // CRITICAL FIX: Subscribe to real-time updates for this case
     useEffect(() => {
@@ -384,6 +402,24 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
                             >
                                 View Reference
                             </button>
+                            {(currentUser?.role === UserRole.SUPER_ADMIN || currentUser?.role === UserRole.SALES_GENERAL_MANAGER) && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setEditLeadForm({
+                                            clientName: currentCase.clientName || '',
+                                            clientPhone: (currentCase as any).clientMobile || currentCase.clientPhone || '',
+                                            clientEmail: currentCase.clientEmail || '',
+                                            notes: (currentCase as any).notes || ''
+                                        });
+                                        setIsEditLeadModalOpen(true);
+                                    }}
+                                    className="ml-2 px-3 py-1.5 bg-subtle-background text-primary text-xs font-bold uppercase tracking-wider rounded-lg border border-primary/20 hover:bg-primary hover:text-white transition-all shadow-sm flex items-center gap-1"
+                                >
+                                    <PencilSquareIcon className="w-3 h-3" />
+                                    Edit Lead
+                                </button>
+                            )}
                             {(currentUser?.role === UserRole.SUPER_ADMIN || currentUser?.role === UserRole.MANAGER || currentUser?.role === UserRole.SALES_GENERAL_MANAGER) && (
                                 <button
                                     onClick={() => setIsAddTaskModalOpen(true)}
@@ -454,6 +490,44 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
                         </div>
                     </div>
                     <div className="lg:col-span-2 space-y-6">
+                        <div>
+                            <h3 className="text-md font-bold text-text-primary mb-2">Log a call</h3>
+                            <div className="flex gap-2 mb-4 p-4 border border-border rounded-md bg-subtle-background">
+                                <textarea
+                                    value={callNotes}
+                                    onChange={(e) => setCallNotes(e.target.value)}
+                                    placeholder="Call summary or notes..."
+                                    className="flex-1 min-h-[60px] rounded-md border border-border px-3 py-2 text-sm bg-surface text-text-primary"
+                                    rows={2}
+                                />
+                                <button
+                                    type="button"
+                                    disabled={!currentUser || isLoggingCall || !callNotes.trim()}
+                                    onClick={async () => {
+                                        if (!currentUser || !callNotes.trim()) return;
+                                        setIsLoggingCall(true);
+                                        try {
+                                            await addActivity({
+                                                type: 'note',
+                                                action: 'Call logged',
+                                                userId: currentUser.id,
+                                                userName: currentUser.name,
+                                                notes: callNotes.trim(),
+                                            });
+                                            setCallNotes('');
+                                        } catch (e) {
+                                            console.error('Failed to log call', e);
+                                            alert('Failed to log call. Please try again.');
+                                        } finally {
+                                            setIsLoggingCall(false);
+                                        }
+                                    }}
+                                    className="px-4 py-2 rounded-md bg-primary text-white text-sm font-medium hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                                >
+                                    {isLoggingCall ? 'Logging…' : 'Log call'}
+                                </button>
+                            </div>
+                        </div>
                         <div>
                             <h3 className="text-md font-bold text-text-primary mb-2">Log New Activity</h3>
                             <form onSubmit={handleLogActivity} className="space-y-4 p-4 border border-border rounded-md bg-subtle-background">
@@ -751,71 +825,150 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
                 )
             }
 
+            {/* Edit Lead modal: SUPER_ADMIN and SALES_GENERAL_MANAGER only */}
+            <Modal isOpen={isEditLeadModalOpen} onClose={() => !isSavingLead && setIsEditLeadModalOpen(false)} title="Edit Lead" size="md">
+                <form
+                    onSubmit={async (e) => {
+                        e.preventDefault();
+                        if (!db || !currentCase?.id || isSavingLead) return;
+                        setIsSavingLead(true);
+                        try {
+                            const payload: Record<string, string> = {
+                                clientName: editLeadForm.clientName.trim() || currentCase.clientName,
+                                clientPhone: editLeadForm.clientPhone.trim() || currentCase.clientPhone,
+                                clientEmail: editLeadForm.clientEmail.trim() || (currentCase.clientEmail ?? ''),
+                            };
+                            if (editLeadForm.notes !== undefined) (payload as any).notes = editLeadForm.notes;
+                            await updateLead(currentCase.id, payload as any);
+                            onUpdate({ ...currentCase, ...payload } as any);
+                            setIsEditLeadModalOpen(false);
+                        } catch (err) {
+                            console.error('Edit lead failed', err);
+                            alert('Failed to update lead. Please try again.');
+                        } finally {
+                            setIsSavingLead(false);
+                        }
+                    }}
+                    className="space-y-4"
+                >
+                    <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-text-tertiary mb-1">Contact person</label>
+                        <input
+                            type="text"
+                            value={editLeadForm.clientName}
+                            onChange={(e) => setEditLeadForm((p) => ({ ...p, clientName: e.target.value }))}
+                            className="w-full px-4 py-2 rounded-xl border border-border bg-surface text-text-primary"
+                            placeholder="Client name"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-text-tertiary mb-1">Phone</label>
+                        <input
+                            type="tel"
+                            value={editLeadForm.clientPhone}
+                            onChange={(e) => setEditLeadForm((p) => ({ ...p, clientPhone: e.target.value }))}
+                            className="w-full px-4 py-2 rounded-xl border border-border bg-surface text-text-primary"
+                            placeholder="Phone"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-text-tertiary mb-1">Email</label>
+                        <input
+                            type="email"
+                            value={editLeadForm.clientEmail}
+                            onChange={(e) => setEditLeadForm((p) => ({ ...p, clientEmail: e.target.value }))}
+                            className="w-full px-4 py-2 rounded-xl border border-border bg-surface text-text-primary"
+                            placeholder="Email"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-text-tertiary mb-1">Notes</label>
+                        <textarea
+                            value={editLeadForm.notes}
+                            onChange={(e) => setEditLeadForm((p) => ({ ...p, notes: e.target.value }))}
+                            className="w-full px-4 py-2 rounded-xl border border-border bg-surface text-text-primary min-h-[80px]"
+                            placeholder="Notes"
+                            rows={3}
+                        />
+                    </div>
+                    <div className="flex justify-end gap-2 pt-2">
+                        <button type="button" onClick={() => setIsEditLeadModalOpen(false)} className="px-4 py-2 rounded-xl border border-border text-text-secondary hover:bg-subtle-background">
+                            Cancel
+                        </button>
+                        <button type="submit" disabled={isSavingLead} className="px-4 py-2 rounded-xl bg-primary text-white hover:bg-primary-hover disabled:opacity-50">
+                            {isSavingLead ? 'Saving…' : 'Save'}
+                        </button>
+                    </div>
+                </form>
+            </Modal>
+
             <DirectAssignTaskModal
                 isOpen={isAddTaskModalOpen}
                 onClose={() => setIsAddTaskModalOpen(false)}
                 onAssign={async (task) => {
-                    // 1. Create the task using Firestore directly
-                    if (db) {
-                        try {
-                            const tasksRef = collection(db, FIRESTORE_COLLECTIONS.CASES, currentCase.id, FIRESTORE_COLLECTIONS.TASKS);
-                            await addDoc(tasksRef, {
-                                caseId: currentCase.id,
-                                title: task.title,
-                                type: task.type || 'GENERAL',
-                                assignedTo: task.userId,
-                                assignedBy: currentUser?.id || '',
-                                status: TaskStatus.ASSIGNED,
-                                priority: task.priority || 'Medium',
-                                notes: task.description || '',
-                                createdAt: serverTimestamp(),
-                            });
-                        } catch (error) {
-                            console.error('Error creating task:', error);
-                            alert('Failed to create task. Please try again.');
-                            return;
-                        }
-                    }
-
-                    // 2. CRITICAL: Update the lead/project status based on task type
-                    // This ensures the item appears in the correct workflow column
-                    const title = (task.title || '').toLowerCase();
                     const assigneeId = task.userId;
                     const contextType = task.contextType || (currentCase.isProject ? 'project' : 'lead');
                     const contextId = task.contextId || currentCase.id;
+                    const title = (task.title || '').toLowerCase();
 
-                    console.log('[LeadDetailModal] Task assigned:', title, 'to:', assigneeId, 'context:', contextType, contextId);
+                    // Map modal title to TaskType so assignee sees task in role-specific Work Queue (e.g. SITE_VISIT for Site Engineer, DRAWING_TASK for Drawing)
+                    const taskType = taskTitleToType(task.title || '');
+                    const taskStatus = TaskStatus.ASSIGNED;
 
-                    if (contextType === 'lead') {
-                        // CRITICAL FIX: Use CaseStatus values (not LeadPipelineStatus)
-                        let taskCaseStatus: CaseStatus;
-                        if (title.includes('drawing') || title.includes('design')) {
-                            taskCaseStatus = CaseStatus.DRAWING;
-                        } else if (title.includes('quotation') || title.includes('boq')) {
-                            taskCaseStatus = CaseStatus.BOQ;
-                        } else {
-                            // Default: Site Visit for any other task type
-                            taskCaseStatus = CaseStatus.SITE_VISIT;
-                        }
+                    // Deadline from modal (ISO string or "YYYY-MM-DDTHH:mm") → Firestore Timestamp for Work Queue display
+                    const deadlineValue = (task as any).deadline
+                        ? (typeof (task as any).deadline === 'string'
+                            ? Timestamp.fromDate(new Date((task as any).deadline))
+                            : (task as any).deadline)
+                        : null;
 
-                        console.log('[LeadDetailModal] Updating lead CaseStatus to:', taskCaseStatus, 'assignedTo:', assigneeId);
-                        await updateLead(contextId, {
-                            status: taskCaseStatus as any,
-                            assignedTo: assigneeId
-                        });
+                    if (!db) {
+                        alert('Database not available. Please try again.');
+                        return;
+                    }
+                    try {
+                        const tasksRef = collection(db, FIRESTORE_COLLECTIONS.CASES, currentCase.id, FIRESTORE_COLLECTIONS.TASKS);
+                        const taskPayload: Record<string, unknown> = {
+                            caseId: currentCase.id,
+                            title: task.title,
+                            type: taskType,
+                            assignedTo: assigneeId,
+                            assignedBy: currentUser?.id || '',
+                            status: taskStatus,
+                            priority: task.priority || 'Medium',
+                            notes: task.description || '',
+                            createdAt: serverTimestamp(),
+                        };
+                        if (deadlineValue) taskPayload.deadline = deadlineValue;
+                        await addDoc(tasksRef, taskPayload);
+                    } catch (error) {
+                        console.error('Error creating task:', error);
+                        alert('Failed to create task. Please try again.');
+                        return;
+                    }
 
-                        // Also update local state so UI reflects the change
-                        onUpdate({
-                            ...currentCase,
-                            status: taskCaseStatus,
-                            assignedSales: assigneeId
-                        } as any);
-                    } else if (contextType === 'project') {
-                        // CRITICAL: Update project status for workflow visibility
-                        try {
+                    try {
+                        if (contextType === 'lead') {
+                            let taskCaseStatus: CaseStatus;
+                            if (title.includes('drawing') || title.includes('design')) {
+                                taskCaseStatus = CaseStatus.DRAWING;
+                            } else if (title.includes('quotation') || title.includes('boq')) {
+                                taskCaseStatus = CaseStatus.BOQ;
+                            } else {
+                                taskCaseStatus = CaseStatus.SITE_VISIT;
+                            }
+                            await updateLead(contextId, {
+                                status: taskCaseStatus as any,
+                                assignedTo: assigneeId
+                            });
+                            onUpdate({
+                                ...currentCase,
+                                status: taskCaseStatus,
+                                assignedSales: assigneeId
+                            } as any);
+                        } else if (contextType === 'project') {
                             const { doc: docRef, updateDoc: updateDocFn } = await import('firebase/firestore');
                             const { db: database } = await import('../../firebase');
-
                             let newProjectStatus: CaseStatus;
                             if (title.includes('site') && (title.includes('visit') || title.includes('inspection'))) {
                                 newProjectStatus = CaseStatus.SITE_VISIT;
@@ -824,28 +977,22 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, case
                             } else if (title.includes('quotation') || title.includes('boq')) {
                                 newProjectStatus = CaseStatus.BOQ;
                             } else {
-                                newProjectStatus = CaseStatus.SITE_VISIT; // Default
+                                newProjectStatus = CaseStatus.SITE_VISIT;
                             }
-
-                            console.log('[LeadDetailModal] Updating project CaseStatus to:', newProjectStatus, 'assignedTo:', assigneeId);
                             const projectRef = docRef(database, 'cases', contextId);
                             await updateDocFn(projectRef, {
                                 status: newProjectStatus,
                                 assignedEngineerId: assigneeId
                             });
-
-                            // Update local state
-                            onUpdate({
-                                ...currentCase,
-                                status: newProjectStatus
-                            } as any);
-                        } catch (error) {
-                            console.error('[LeadDetailModal] Failed to update project status:', error);
+                            onUpdate({ ...currentCase, status: newProjectStatus } as any);
                         }
+                    } catch (error) {
+                        console.error('Task created but lead/project update failed:', error);
+                        alert('Task was created but updating lead status failed. Please update the lead manually.');
+                        return;
                     }
-                    // Note: For projects, the ApprovalsPage handles status updates
 
-                    alert('✅ Mission Deployed Successfully - Status updated!');
+                    alert('Task assigned.');
                     setIsAddTaskModalOpen(false);
                 }}
                 initialContextId={currentCase.id}

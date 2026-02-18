@@ -60,42 +60,42 @@ const ExecutionProjectsPage: React.FC<Props> = ({ onSelectProject }) => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.05 }}
         onClick={() => onSelectProject(project.id)}
-        className={`bg-surface border rounded-xl overflow-hidden cursor-pointer hover:shadow-xl transition-all group ${
-          isPlanningPending ? 'border-amber-300 border-2' : 'border-border'
+        className={`relative bg-white rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 group shadow-sm hover:shadow-lg border ${
+          isPlanningPending ? 'border-amber-300 ring-2 ring-amber-200/50' : 'border-slate-200/80 hover:border-primary/30'
         }`}
       >
-        {isPlanningPending && <div className="h-1 bg-gradient-to-r from-amber-500 to-orange-500" />}
-        <div className="p-5">
-          <div className="flex justify-between items-start mb-4">
+        {isPlanningPending && <div className="h-1 bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500" />}
+        <div className="p-6">
+          <div className="flex justify-between items-start gap-3 mb-4">
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-bold text-text-primary truncate">{project.title}</h3>
-              <p className="text-sm text-text-secondary truncate">{project.clientName}</p>
+              <h3 className="text-lg font-bold text-slate-800 truncate group-hover:text-primary transition-colors">{project.title}</h3>
+              <p className="text-sm text-slate-500 truncate mt-0.5">{project.clientName}</p>
             </div>
-            <span
-              className={`px-3 py-1.5 rounded-full text-white text-xs font-bold uppercase tracking-wide ${config.color}`}
-            >
+            <span className={`flex-shrink-0 px-3 py-1.5 rounded-full text-white text-xs font-bold uppercase tracking-wide shadow-sm ${config.color}`}>
               {config.label}
             </span>
           </div>
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center gap-2 text-text-secondary">
-              <UserIcon className="w-4 h-4 flex-shrink-0" />
+          <div className="space-y-3 text-sm">
+            <div className="flex items-center gap-2.5 text-slate-600">
+              <UserIcon className="w-4 h-4 flex-shrink-0 text-slate-400" />
               <span className="truncate">{project.clientPhone || '—'}</span>
             </div>
-            <div className="flex items-center gap-2 text-text-secondary">
-              <MapPinIcon className="w-4 h-4 flex-shrink-0" />
+            <div className="flex items-center gap-2.5 text-slate-600">
+              <MapPinIcon className="w-4 h-4 flex-shrink-0 text-slate-400" />
               <span className="truncate">{project.siteAddress || '—'}</span>
             </div>
             {project.costCenter?.totalBudget != null && (
-              <div className="flex items-center gap-2 text-text-secondary">
-                <CurrencyRupeeIcon className="w-4 h-4 flex-shrink-0" />
-                <span>₹{Number(project.costCenter.totalBudget).toLocaleString()}</span>
+              <div className="flex items-center gap-2.5 text-slate-600">
+                <CurrencyRupeeIcon className="w-4 h-4 flex-shrink-0 text-slate-400" />
+                <span className="font-medium">₹{Number(project.costCenter.totalBudget).toLocaleString()}</span>
               </div>
             )}
           </div>
-          <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
-            <span className="text-sm font-semibold text-primary">Open Workspace</span>
-            <ArrowRightIcon className="w-5 h-5 text-text-tertiary group-hover:text-primary transition-colors" />
+          <div className="mt-5 pt-5 border-t border-slate-100 flex items-center justify-between">
+            <span className="text-sm font-semibold text-primary group-hover:underline">Open Workspace</span>
+            <span className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+              <ArrowRightIcon className="w-4 h-4 text-primary" />
+            </span>
           </div>
         </div>
       </motion.div>
@@ -104,11 +104,9 @@ const ExecutionProjectsPage: React.FC<Props> = ({ onSelectProject }) => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
-          <p className="text-text-secondary mt-4">Loading your projects...</p>
-        </div>
+      <div className="flex flex-col items-center justify-center py-20">
+        <div className="w-12 h-12 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+        <p className="text-slate-600 mt-4 font-medium">Loading your projects...</p>
       </div>
     );
   }
@@ -124,77 +122,92 @@ const ExecutionProjectsPage: React.FC<Props> = ({ onSelectProject }) => {
   );
   const completed = myProjects.filter((p) => p.status === CaseStatus.COMPLETED);
 
+  const SectionBlock = ({
+    icon: Icon,
+    title,
+    count,
+    accent,
+    children,
+  }: {
+    icon: React.ElementType;
+    title: string;
+    count: number;
+    accent: string;
+    children: React.ReactNode;
+  }) => (
+    <div className="space-y-5">
+      <div className="flex items-center gap-3">
+        <span className={`flex items-center justify-center w-10 h-10 rounded-xl ${accent}`}>
+          <Icon className="w-5 h-5 text-white" />
+        </span>
+        <h2 className="text-xl font-bold text-slate-800">{title}</h2>
+        <span className={`px-3 py-1 rounded-full text-sm font-bold ${accent} text-white`}>
+          {count}
+        </span>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {children}
+      </div>
+    </div>
+  );
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-12">
       {planningPending.length > 0 && (
-        <div>
-          <div className="flex items-center gap-3 mb-4">
-            <ExclamationTriangleIcon className="w-6 h-6 text-amber-500" />
-            <h2 className="text-xl font-bold text-text-primary">Planning Pending</h2>
-            <span className="px-2.5 py-0.5 bg-amber-100 text-amber-700 rounded-full text-sm font-bold">
-              {planningPending.length}
-            </span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {planningPending.map((project, index) => (
-              <ProjectCard key={project.id} project={project} index={index} />
-            ))}
-          </div>
-        </div>
+        <SectionBlock
+          icon={ExclamationTriangleIcon}
+          title="Planning Pending"
+          count={planningPending.length}
+          accent="bg-amber-500"
+        >
+          {planningPending.map((project, index) => (
+            <ProjectCard key={project.id} project={project} index={index} />
+          ))}
+        </SectionBlock>
       )}
       {awaitingApproval.length > 0 && (
-        <div>
-          <div className="flex items-center gap-3 mb-4">
-            <ClockIcon className="w-6 h-6 text-blue-500" />
-            <h2 className="text-xl font-bold text-text-primary">Awaiting Approval</h2>
-            <span className="px-2.5 py-0.5 bg-blue-100 text-blue-700 rounded-full text-sm font-bold">
-              {awaitingApproval.length}
-            </span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {awaitingApproval.map((project, index) => (
-              <ProjectCard key={project.id} project={project} index={index} />
-            ))}
-          </div>
-        </div>
+        <SectionBlock
+          icon={ClockIcon}
+          title="Awaiting Approval"
+          count={awaitingApproval.length}
+          accent="bg-blue-500"
+        >
+          {awaitingApproval.map((project, index) => (
+            <ProjectCard key={project.id} project={project} index={index} />
+          ))}
+        </SectionBlock>
       )}
       {executionActive.length > 0 && (
-        <div>
-          <div className="flex items-center gap-3 mb-4">
-            <CheckBadgeIcon className="w-6 h-6 text-green-500" />
-            <h2 className="text-xl font-bold text-text-primary">Execution Active</h2>
-            <span className="px-2.5 py-0.5 bg-green-100 text-green-700 rounded-full text-sm font-bold">
-              {executionActive.length}
-            </span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {executionActive.map((project, index) => (
-              <ProjectCard key={project.id} project={project} index={index} />
-            ))}
-          </div>
-        </div>
+        <SectionBlock
+          icon={CheckBadgeIcon}
+          title="Execution Active"
+          count={executionActive.length}
+          accent="bg-emerald-500"
+        >
+          {executionActive.map((project, index) => (
+            <ProjectCard key={project.id} project={project} index={index} />
+          ))}
+        </SectionBlock>
       )}
       {completed.length > 0 && (
-        <div>
-          <div className="flex items-center gap-3 mb-4">
-            <CheckBadgeIcon className="w-6 h-6 text-gray-500" />
-            <h2 className="text-xl font-bold text-text-primary">Completed</h2>
-            <span className="px-2.5 py-0.5 bg-gray-100 text-gray-600 rounded-full text-sm font-bold">
-              {completed.length}
-            </span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {completed.map((project, index) => (
-              <ProjectCard key={project.id} project={project} index={index} />
-            ))}
-          </div>
-        </div>
+        <SectionBlock
+          icon={CheckBadgeIcon}
+          title="Completed"
+          count={completed.length}
+          accent="bg-slate-500"
+        >
+          {completed.map((project, index) => (
+            <ProjectCard key={project.id} project={project} index={index} />
+          ))}
+        </SectionBlock>
       )}
       {myProjects.length === 0 && (
-        <div className="text-center py-16 bg-surface rounded-xl border border-border">
-          <ClipboardDocumentListIcon className="w-16 h-16 text-text-tertiary mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-text-primary mb-2">No Projects Yet</h3>
-          <p className="text-text-secondary max-w-md mx-auto">
+        <div className="text-center py-20 px-6 bg-white rounded-2xl border border-slate-200/80 shadow-sm">
+          <div className="w-20 h-20 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-6">
+            <ClipboardDocumentListIcon className="w-10 h-10 text-slate-400" />
+          </div>
+          <h3 className="text-xl font-bold text-slate-800 mb-2">No Projects Yet</h3>
+          <p className="text-slate-600 max-w-md mx-auto leading-relaxed">
             You don&apos;t have any projects assigned to you. When a project is created and you&apos;re set as Project
             Head, it will appear here.
           </p>

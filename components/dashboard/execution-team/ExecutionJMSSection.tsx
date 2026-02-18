@@ -77,16 +77,18 @@ const ExecutionJMSSection: React.FC<Props> = ({ caseId, caseData, plan, onUpdate
     }
   };
 
-  // Show locked state for completed projects
   if (isCompleted) {
     return (
-      <section className="bg-surface border border-border rounded-xl p-6">
-        <h2 className="text-lg font-bold text-text-primary mb-4">7. Project Closure (JMS)</h2>
-        <div className="flex items-center gap-3 p-4 rounded-lg bg-gray-50 border border-gray-200">
-          <LockClosedIcon className="w-5 h-5 text-gray-500" />
+      <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+        <div className="flex items-center gap-3 mb-5">
+          <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-slate-500 text-white text-sm font-bold">7</span>
+          <h2 className="text-lg font-bold text-slate-800">Project Closure (JMS)</h2>
+        </div>
+        <div className="flex items-center gap-4 p-5 rounded-xl bg-slate-50 border border-slate-100">
+          <LockClosedIcon className="w-5 h-5 text-slate-500" />
           <div>
-            <p className="font-medium text-gray-700">JMS Locked</p>
-            <p className="text-sm text-gray-600">Cannot modify JMS for completed projects.</p>
+            <p className="font-semibold text-slate-700">JMS Locked</p>
+            <p className="text-sm text-slate-600 mt-0.5">Cannot modify JMS for completed projects.</p>
           </div>
         </div>
       </section>
@@ -95,13 +97,16 @@ const ExecutionJMSSection: React.FC<Props> = ({ caseId, caseData, plan, onUpdate
 
   if (completed) {
     return (
-      <section className="bg-surface border border-border rounded-xl p-6">
-        <h2 className="text-lg font-bold text-text-primary mb-4">7. Project Closure (JMS)</h2>
-        <div className="flex items-center gap-3 p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-          <CheckCircleIcon className="w-8 h-8 text-green-600" />
+      <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+        <div className="flex items-center gap-3 mb-5">
+          <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-slate-500 text-white text-sm font-bold">7</span>
+          <h2 className="text-lg font-bold text-slate-800">Project Closure (JMS)</h2>
+        </div>
+        <div className="flex items-center gap-4 p-5 rounded-xl bg-emerald-50 border border-emerald-200">
+          <CheckCircleIcon className="w-8 h-8 text-emerald-600" />
           <div>
-            <p className="font-semibold text-green-800 dark:text-green-200">Project completed</p>
-            <p className="text-sm text-green-700 dark:text-green-300">JMS signed. Project is locked.</p>
+            <p className="font-semibold text-emerald-800">Project completed</p>
+            <p className="text-sm text-emerald-700 mt-0.5">JMS signed. Project is locked.</p>
           </div>
         </div>
       </section>
@@ -109,17 +114,20 @@ const ExecutionJMSSection: React.FC<Props> = ({ caseId, caseData, plan, onUpdate
   }
 
   return (
-    <section className="bg-surface border border-border rounded-xl p-6">
-      <h2 className="text-lg font-bold text-text-primary mb-4">7. Project Closure (JMS)</h2>
+    <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+      <div className="flex items-center gap-3 mb-5">
+        <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-slate-500 text-white text-sm font-bold">7</span>
+        <h2 className="text-lg font-bold text-slate-800">Project Closure (JMS)</h2>
+      </div>
       <div className="space-y-4">
         {!markedComplete && isProjectHead && (
           <div>
-            <p className="text-sm text-text-secondary mb-2">Mark execution as complete before launching JMS.</p>
+            <p className="text-sm text-slate-600 mb-2">Mark execution as complete before launching JMS.</p>
             <button
               type="button"
               onClick={handleMarkComplete}
               disabled={busy}
-              className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium disabled:opacity-50"
+              className="px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-medium disabled:opacity-50 hover:bg-primary/90 transition-colors"
             >
               {busy ? '…' : 'Mark Execution Complete'}
             </button>
@@ -127,24 +135,24 @@ const ExecutionJMSSection: React.FC<Props> = ({ caseId, caseData, plan, onUpdate
         )}
         {markedComplete && !jmsLaunched && isProjectHead && (
           <div>
-            <p className="text-sm text-text-secondary mb-2">Launch JMS so the client can fill and sign.</p>
+            <p className="text-sm text-slate-600 mb-2">Launch JMS so the client can fill and sign.</p>
             <button
               type="button"
               onClick={handleLaunchJMS}
               disabled={busy}
-              className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium disabled:opacity-50"
+              className="px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-medium disabled:opacity-50 hover:bg-primary/90 transition-colors"
             >
               {busy ? '…' : 'Launch JMS'}
             </button>
           </div>
         )}
         {jmsLaunched && !jmsSigned && (
-          <p className="text-sm text-text-secondary">
+          <p className="text-sm text-slate-600 p-4 rounded-xl bg-slate-50 border border-slate-100">
             JMS launched. Client must fill items delivered, quantities, missing items, and sign in the Client Dashboard.
           </p>
         )}
         {jmsSigned && (
-          <p className="text-sm text-green-600">JMS signed. Project will be marked completed.</p>
+          <p className="text-sm text-emerald-600 font-medium">JMS signed. Project will be marked completed.</p>
         )}
       </div>
     </section>
