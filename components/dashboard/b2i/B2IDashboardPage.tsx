@@ -20,9 +20,12 @@ const B2IDashboardPage: React.FC<B2IDashboardPageProps> = ({ currentPage, setCur
     const [loadingOrgs, setLoadingOrgs] = useState(true);
     const [loadingCases, setLoadingCases] = useState(true);
 
-    const b2iId = currentUser?.b2iId;
+    const b2iId =
+        currentUser?.b2iId != null && typeof currentUser.b2iId === 'string' && currentUser.b2iId.trim()
+            ? currentUser.b2iId.trim()
+            : '';
 
-    // Fetch child organizations
+    // Fetch child organizations — never run query with undefined/empty b2iId
     useEffect(() => {
         if (!db || !b2iId) {
             setLoadingOrgs(false);
@@ -106,7 +109,7 @@ const B2IDashboardPage: React.FC<B2IDashboardPageProps> = ({ currentPage, setCur
         });
 
         return () => unsubs.forEach(u => u());
-    }, [childOrgs]);
+    }, [childOrgs.length, childOrgs.map((o) => o.id).join(',')]);
 
     // Derived stats
     const stats = useMemo(() => {

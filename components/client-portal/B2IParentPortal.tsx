@@ -3,15 +3,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     BuildingOfficeIcon,
     ArrowRightIcon,
-    ArrowLeftIcon,
     ArrowRightOnRectangleIcon,
     ChartBarSquareIcon,
     FolderIcon,
     CheckCircleIcon,
     ClockIcon,
-    ExclamationTriangleIcon,
-    CurrencyRupeeIcon,
     BanknotesIcon,
+    EnvelopeIcon,
+    PhoneIcon,
+    MapPinIcon,
+    UserIcon,
 } from '@heroicons/react/24/outline';
 import { db } from '../../firebase';
 import { collection, query, where, onSnapshot, doc } from 'firebase/firestore';
@@ -33,12 +34,12 @@ const STATUS_LABELS: Record<string, string> = {
     [CaseStatus.EXECUTION_ACTIVE]: 'Execution Active',
     [CaseStatus.COMPLETED]: 'Completed',
 };
-import ClientDashboardPage from '../landing/ClientDashboardPage';
-
 interface B2IParentPortalProps {
     b2iId: string;
     clientName: string;
     onLogout: () => void;
+    /** Navigate to organization view (org info + project list). Do not open project directly. */
+    onOpenOrganization: (orgId: string) => void;
 }
 
 // Active statuses for determining org status
@@ -66,36 +67,36 @@ const item = {
     show: { opacity: 1, y: 0, transition: { type: 'spring' as const, bounce: 0.3 } },
 };
 
-const B2IParentPortal: React.FC<B2IParentPortalProps> = ({ b2iId, clientName, onLogout }) => {
+const B2IParentPortal: React.FC<B2IParentPortalProps> = ({ b2iId, clientName, onLogout, onOpenOrganization }) => {
     const [b2iData, setB2IData] = useState<any>(null);
     const [childOrgs, setChildOrgs] = useState<any[]>([]);
     const [allProjects, setAllProjects] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
 
-    // Fetch B2I client data
+    // Fetch B2I client data — never pass undefined/empty to doc() or where()
+    const safeB2iId = typeof b2iId === 'string' && b2iId.trim() ? b2iId.trim() : '';
     useEffect(() => {
-        if (!b2iId || !db) return;
-        const unsub = onSnapshot(doc(db, FIRESTORE_COLLECTIONS.B2I_CLIENTS, b2iId), (snap) => {
+        if (!safeB2iId || !db) return;
+        const unsub = onSnapshot(doc(db, FIRESTORE_COLLECTIONS.B2I_CLIENTS, safeB2iId), (snap) => {
             if (snap.exists()) {
                 setB2IData({ id: snap.id, ...snap.data() });
             }
         });
         return () => unsub();
-    }, [b2iId]);
+    }, [safeB2iId]);
 
     // Fetch child organizations
     useEffect(() => {
-        if (!b2iId || !db) return;
+        if (!safeB2iId || !db) return;
         const q = query(
             collection(db, FIRESTORE_COLLECTIONS.ORGANIZATIONS),
-            where('b2iParentId', '==', b2iId)
+            where('b2iParentId', '==', safeB2iId)
         );
         const unsub = onSnapshot(q, (snap) => {
             setChildOrgs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
         return () => unsub();
-    }, [b2iId]);
+    }, [safeB2iId]);
 
     // Fetch all projects (cases with isProject: true)
     useEffect(() => {
@@ -153,24 +154,10 @@ const B2IParentPortal: React.FC<B2IParentPortalProps> = ({ b2iId, clientName, on
         return projects.some(p => ACTIVE_STATUSES.includes(p.status)) ? 'active' : 'inactive';
     };
 
-    // Handle org click — find project and open dashboard
+    // Open organization view (org info + project list). Do not open project directly.
     const handleOrgClick = (orgId: string) => {
-        const projects = getOrgProjects(orgId);
-        if (projects.length === 0) return;
-        setSelectedCaseId(projects[0].id);
+        onOpenOrganization(orgId);
     };
-
-    // If viewing a project detail
-    if (selectedCaseId) {
-        return (
-            <ClientDashboardPage
-                clientUser={null}
-                onLogout={() => { }}
-                caseId={selectedCaseId}
-                onBack={() => setSelectedCaseId(null)}
-            />
-        );
-    }
 
     if (loading) {
         return (
@@ -213,15 +200,65 @@ const B2IParentPortal: React.FC<B2IParentPortalProps> = ({ b2iId, clientName, on
             </header>
 
             <main className="max-w-7xl mx-auto px-6 lg:px-10 py-10 space-y-10">
-                {/* Welcome */}
-                <motion.div
+                {/* Company header: name, contact, email, phone, address, status, counts */}
+                <motion.section
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
+                    className="bg-white rounded-2xl border border-gray-100 shadow-lg overflow-hidden"
                 >
-                    <h2 className="text-3xl font-bold text-gray-900 mb-1">Welcome back</h2>
-                    <p className="text-gray-500">Here's an overview of your organizations and projects.</p>
-                </motion.div>
+                    <div className="p-8 lg:p-10">
+                        <div className="flex flex-wrap items-start justify-between gap-6 mb-6">
+                            <div>
+                                <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
+                                    {b2iData?.name || 'Enterprise Portal'}
+                                </h1>
+                                {b2iData?.contactPerson && (
+                                    <p className="flex items-center gap-2 text-lg text-gray-600">
+                                        <UserIcon className="w-5 h-5 text-gray-400" />
+                                        {b2iData.contactPerson}
+                                    </p>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <span className={`px-4 py-2 rounded-xl text-sm font-bold ${
+                                    b2iData?.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                                }`}>
+                                    {b2iData?.status === 'active' ? 'Active' : 'Inactive'}
+                                </span>
+                                <span className="text-sm text-gray-500 font-medium">
+                                    {stats.totalOrgs} organization{stats.totalOrgs !== 1 ? 's' : ''}
+                                </span>
+                                <span className="text-sm text-gray-500 font-medium">
+                                    {stats.activeProjects} active project{stats.activeProjects !== 1 ? 's' : ''}
+                                </span>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-gray-600">
+                            {b2iData?.email && (
+                                <div className="flex items-center gap-2">
+                                    <EnvelopeIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                                    <span>{b2iData.email}</span>
+                                </div>
+                            )}
+                            {(b2iData?.phone) && (
+                                <div className="flex items-center gap-2">
+                                    <PhoneIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                                    <span>{b2iData.phone}</span>
+                                </div>
+                            )}
+                            {b2iData?.address && (
+                                <div className="flex items-start gap-2 sm:col-span-2 lg:col-span-3">
+                                    <MapPinIcon className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                                    <span>{b2iData.address}</span>
+                                </div>
+                            )}
+                        </div>
+                        <p className="text-gray-500 mt-6 text-sm">
+                            Logged in as <span className="font-medium text-gray-700">{clientName}</span>
+                        </p>
+                    </div>
+                </motion.section>
 
                 {/* Stats Cards */}
                 <motion.div
@@ -382,7 +419,7 @@ const B2IParentPortal: React.FC<B2IParentPortalProps> = ({ b2iId, clientName, on
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
                                                     <button
-                                                        onClick={() => setSelectedCaseId(proj.id)}
+                                                        onClick={() => proj.organizationId && onOpenOrganization(proj.organizationId)}
                                                         className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
                                                     >
                                                         View
@@ -432,11 +469,8 @@ const B2IParentPortal: React.FC<B2IParentPortalProps> = ({ b2iId, clientName, on
                                     <motion.div
                                         key={org.id}
                                         variants={item}
-                                        onClick={() => hasProjects && handleOrgClick(org.id)}
-                                        className={`group relative bg-white rounded-2xl border border-gray-100 p-6 shadow-sm transition-all duration-300 ${hasProjects
-                                            ? 'hover:shadow-xl hover:border-green-200 hover:-translate-y-1 cursor-pointer'
-                                            : 'opacity-80'
-                                            }`}
+                                        onClick={() => handleOrgClick(org.id)}
+                                        className="group relative bg-white rounded-2xl border border-gray-100 p-6 shadow-sm transition-all duration-300 hover:shadow-xl hover:border-green-200 hover:-translate-y-1 cursor-pointer"
                                     >
                                         {/* Status indicator dot */}
                                         <div className={`absolute top-4 right-4 w-2.5 h-2.5 rounded-full ${orgStatus === 'active' ? 'bg-green-500 animate-pulse' :
@@ -478,9 +512,7 @@ const B2IParentPortal: React.FC<B2IParentPortalProps> = ({ b2iId, clientName, on
                                                         Completed
                                                     </span>
                                                 )}
-                                                {hasProjects && (
-                                                    <ArrowRightIcon className="w-4 h-4 text-gray-300 group-hover:text-green-500 group-hover:translate-x-1 transition-all" />
-                                                )}
+                                                <ArrowRightIcon className="w-4 h-4 text-gray-300 group-hover:text-green-500 group-hover:translate-x-1 transition-all" />
                                             </div>
                                         </div>
                                     </motion.div>

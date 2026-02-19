@@ -63,7 +63,7 @@ const B2IClientsPage: React.FC<B2IClientsPageProps> = ({ setCurrentPage, onSelec
                     createdBy: currentUser?.id || 'unknown',
                 });
 
-                // 2. Create Auth User & Staff User (B2I_PARENT)
+                // 2. Create Auth User + clients doc (role B2I_PARENT). No staff user.
                 try {
                     const authUid = await createB2IParentAccount(
                         formData.email,

@@ -14,6 +14,7 @@ import ExecutionTimelinePage from './execution-team/ExecutionTimelinePage';
 import RequestValidationPage from './shared/RequestValidationPage';
 import ExecutionMyDayPage from './execution-team/ExecutionMyDayPage';
 import ExecutionTeamMembersPage from './execution-team/ExecutionTeamMembersPage';
+import EscalateIssuePage from '../escalation/EscalateIssuePage';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
 interface Props {
@@ -26,6 +27,10 @@ const ExecutionTeamDashboard: React.FC<Props> = ({ currentPage, setCurrentPage }
   const { cases, loading } = useCases();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+
+  if (currentPage === 'escalate-issue') {
+    return <EscalateIssuePage setCurrentPage={setCurrentPage} />;
+  }
 
   if (currentPage === 'request-validation') {
     return <RequestValidationPage />;

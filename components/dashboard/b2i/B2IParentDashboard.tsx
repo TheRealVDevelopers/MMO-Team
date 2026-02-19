@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { db } from '../../../firebase';
 import { collection, query, where, onSnapshot, doc, getDocs } from 'firebase/firestore';
@@ -12,54 +12,61 @@ import {
 
 const B2IParentDashboard: React.FC = () => {
     const { currentUser } = useAuth();
-    const [childOrgs, setChildOrgs] = useState<any[]>([]); // Using any for flexibility or define a type
+    const [childOrgs, setChildOrgs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
     const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+    const orgUnsubRef = useRef<(() => void) | null>(null);
 
     useEffect(() => {
         if (!currentUser || currentUser.role !== UserRole.B2I_PARENT) {
             setLoading(false);
             return;
         }
-        // Never run Firestore queries when b2iId is undefined — prevents "Unsupported field value: undefined"
-        if (!currentUser.b2iId) {
+        const b2iId =
+            currentUser.b2iId != null && typeof currentUser.b2iId === 'string' && currentUser.b2iId.trim()
+                ? currentUser.b2iId.trim()
+                : '';
+        if (!b2iId) {
             setLoading(false);
             return;
         }
 
-        const b2iId = currentUser.b2iId;
-        {
-            const b2iRef = doc(db, FIRESTORE_COLLECTIONS.B2I_CLIENTS, b2iId);
-            const unsubscribeValid = onSnapshot(b2iRef, (docSnap) => {
-                if (!docSnap.exists()) {
-                    setLoading(false);
-                    return;
-                }
-                // Guard: never pass undefined to where() - Firestore throws "Unsupported field value: undefined"
-                if (!b2iId) {
-                    setLoading(false);
-                    return;
-                }
-                const b2iData = docSnap.data();
-                // Fetch child organizations linked to this B2I Parent (same field used in admin and B2IDashboardPage)
-                const orgsRef = collection(db, FIRESTORE_COLLECTIONS.ORGANIZATIONS);
-                const q = query(orgsRef, where('b2iParentId', '==', b2iId));
-
-                    // Also fetch cases for these organizations
-                onSnapshot(q, (snapshot) => {
+        const b2iRef = doc(db, FIRESTORE_COLLECTIONS.B2I_CLIENTS, b2iId);
+        const unsubscribeB2I = onSnapshot(b2iRef, (docSnap) => {
+            if (!docSnap.exists()) {
+                setLoading(false);
+                return;
+            }
+            // Clean up previous org listener if any
+            if (orgUnsubRef.current) {
+                orgUnsubRef.current();
+                orgUnsubRef.current = null;
+            }
+            const orgsRef = collection(db, FIRESTORE_COLLECTIONS.ORGANIZATIONS);
+            const q = query(orgsRef, where('b2iParentId', '==', b2iId));
+            orgUnsubRef.current = onSnapshot(
+                q,
+                (snapshot) => {
                     const orgs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
                     setChildOrgs(orgs);
                     setLoading(false);
-                }, (err) => {
+                },
+                (err) => {
                     console.error('[B2IParentDashboard] Error fetching child orgs:', err);
                     setLoading(false);
-                });
-            });
-            return () => unsubscribeValid();
-        }
+                }
+            );
+        });
 
-    }, [currentUser]);
+        return () => {
+            unsubscribeB2I();
+            if (orgUnsubRef.current) {
+                orgUnsubRef.current();
+                orgUnsubRef.current = null;
+            }
+        };
+    }, [currentUser?.id, currentUser?.b2iId]);
 
     // Helper to find case for an org when clicked (cases linked via organizationId)
     const handleOrgClick = async (org: any) => {

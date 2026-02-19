@@ -19,7 +19,6 @@ import DesignAndSiteEngineeringDashboard from './DesignAndSiteEngineeringDashboa
 import WorkflowOverview from './WorkflowOverview';
 import TasksPage from './shared/TasksPage';
 import B2IDashboardPage from './b2i/B2IDashboardPage';
-import B2IParentDashboard from './b2i/B2IParentDashboard';
 
 const Dashboard: React.FC<{ currentPage: string; setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser, currentVendor } = useAuth();
@@ -76,8 +75,7 @@ const Dashboard: React.FC<{ currentPage: string; setCurrentPage: (page: string) 
       case UserRole.PROJECT_HEAD:
         // Rebuilt execution dashboard with Firestore-driven architecture
         return <ExecutionTeamDashboard currentPage={currentPage} setCurrentPage={setCurrentPage} />;
-      case UserRole.B2I_PARENT:
-        return <B2IParentDashboard />;
+      // B2I Parent is client-side only; they use Client Login and B2IParentPortal (no staff dashboard).
       case UserRole.B2I_CLIENT:
         return <B2IDashboardPage currentPage={currentPage} setCurrentPage={setCurrentPage} />;
       default:

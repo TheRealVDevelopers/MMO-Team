@@ -43,13 +43,17 @@ export const useCases = (options: UseCasesOptions = {}) => {
       // FLAT STRUCTURE: cases at root level
       const casesRef = collection(db, FIRESTORE_COLLECTIONS.CASES);
 
-      // Build query with filters
-      let constraints = [];
+      // Build query with filters. Never pass undefined to where() — Firestore throws.
+      let constraints: ReturnType<typeof where>[] = [];
 
       // OPTIONAL: Filter by organizationId (include null for individual leads)
       // Skip when fetchAll is true (admin pages need all cases across orgs)
-      if (options.organizationId && !options.fetchAll) {
-        constraints.push(where('organizationId', 'in', [options.organizationId, null]));
+      const organizationId =
+        options.organizationId != null && typeof options.organizationId === 'string'
+          ? options.organizationId.trim()
+          : '';
+      if (organizationId && !options.fetchAll) {
+        constraints.push(where('organizationId', 'in', [organizationId, null]));
       }
 
       // Apply isProject filter
@@ -57,9 +61,13 @@ export const useCases = (options: UseCasesOptions = {}) => {
         constraints.push(where('isProject', '==', options.isProject));
       }
 
-      // When loading projects for execution, restrict to assigned project head only
-      if (options.isProject === true && options.projectHeadId) {
-        constraints.push(where('projectHeadId', '==', options.projectHeadId));
+      // When loading projects for execution, restrict to assigned project head only (never pass undefined)
+      const projectHeadId =
+        options.projectHeadId != null && typeof options.projectHeadId === 'string'
+          ? options.projectHeadId.trim()
+          : '';
+      if (options.isProject === true && projectHeadId) {
+        constraints.push(where('projectHeadId', '==', projectHeadId));
       }
 
       // Apply status filter
@@ -124,7 +132,14 @@ export const useCases = (options: UseCasesOptions = {}) => {
       setError(err.message);
       setLoading(false);
     }
-  }, [options.organizationId, options.fetchAll, options.userId, options.isProject, options.projectHeadId, JSON.stringify(options.status)]);
+  }, [
+    options.organizationId ?? '',
+    options.fetchAll,
+    options.userId ?? '',
+    options.isProject,
+    options.projectHeadId ?? '',
+    JSON.stringify(options.status),
+  ]);
 
   // Create new case (lead)
   const createCase = useCallback(

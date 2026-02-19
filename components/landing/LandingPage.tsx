@@ -19,6 +19,7 @@ import ClientDashboardPage from './ClientDashboardPage';
 import ClientChangePasswordPage from '../client-portal/ClientChangePasswordPage';
 import ClientProjectSelector from '../client-portal/ClientProjectSelector';
 import B2IParentPortal from '../client-portal/B2IParentPortal';
+import OrganizationPage from '../client-portal/OrganizationPage';
 
 /**
  * Utility function to merge tailwind classes
@@ -35,7 +36,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [loginModalType, setLoginModalType] = useState<'staff' | 'vendor'>('staff');
   // Initialize view based on localStorage existence to prevent flash (optional optimization)
-  const [currentView, setCurrentView] = useState<'home' | 'services' | 'portfolio' | 'about' | 'contact' | 'start-project' | 'client-login' | 'client-dashboard' | 'client-change-password' | 'client-project-selector' | 'b2i-parent-dashboard'>(() => {
+  type ClientView = 'home' | 'services' | 'portfolio' | 'about' | 'contact' | 'start-project' | 'client-login' | 'client-dashboard' | 'client-change-password' | 'client-project-selector' | 'b2i-parent-dashboard' | 'client-organization' | 'client-project';
+  const [currentView, setCurrentView] = useState<ClientView>(() => {
     if (typeof localStorage !== 'undefined' && localStorage.getItem('mmo-client-user')) {
       return 'client-dashboard';
     }
@@ -43,6 +45,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
   });
   const [isScrolled, setIsScrolled] = useState(false);
   const [clientUser, setClientUser] = useState<{ uid: string, email: string, isFirstLogin: boolean, cases?: any[], selectedCaseId?: string | null, isB2IParent?: boolean, b2iId?: string } | null>(null);
+  const [clientOrganizationId, setClientOrganizationId] = useState<string | null>(null);
+  const [clientProjectCaseId, setClientProjectCaseId] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Restore client session on load: only if Firebase Auth has the same user (persistence)
@@ -202,7 +206,39 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
           b2iId={clientUser?.b2iId || ''}
           clientName={clientUser?.email || ''}
           onLogout={handleClientLogout}
+          onOpenOrganization={(orgId) => {
+            setClientOrganizationId(orgId);
+            setCurrentView('client-organization');
+          }}
         />;
+      case 'client-organization':
+        return clientOrganizationId ? (
+          <OrganizationPage
+            orgId={clientOrganizationId}
+            onBack={() => {
+              setClientOrganizationId(null);
+              setCurrentView(clientUser?.isB2IParent ? 'b2i-parent-dashboard' : 'client-dashboard');
+            }}
+            onOpenProject={(caseId) => {
+              setClientProjectCaseId(caseId);
+              setCurrentView('client-project');
+            }}
+            onLogout={handleClientLogout}
+          />
+        ) : null;
+      case 'client-project':
+        return clientProjectCaseId ? (
+          <ClientDashboardPage
+            clientUser={clientUser}
+            onLogout={handleClientLogout}
+            caseId={clientProjectCaseId}
+            isReadOnly={true}
+            onBack={() => {
+              setClientProjectCaseId(null);
+              setCurrentView(clientOrganizationId ? 'client-organization' : (clientUser?.isB2IParent ? 'b2i-parent-dashboard' : 'client-dashboard'));
+            }}
+          />
+        ) : null;
       case 'client-dashboard':
         return <ClientDashboardPage
           clientUser={clientUser}
@@ -240,8 +276,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
   return (
     <div className="min-h-screen bg-background text-text-primary font-sans overflow-x-hidden flex flex-col selection:bg-primary selection:text-white">
 
-      {/* 1. HEADER + TOP BAR - Hide on client dashboard */}
-      {currentView !== 'client-dashboard' && currentView !== 'b2i-parent-dashboard' && (
+      {/* 1. HEADER + TOP BAR - Hide on client dashboard and client sub-views */}
+      {currentView !== 'client-dashboard' && currentView !== 'b2i-parent-dashboard' && currentView !== 'client-organization' && currentView !== 'client-project' && (
         <nav
           className={cn(
             "fixed top-0 w-full z-50 transition-all duration-500",
@@ -318,7 +354,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
       )}
 
       {/* Mobile Slide-in Menu */}
-      {currentView !== 'client-dashboard' && currentView !== 'b2i-parent-dashboard' && (
+      {currentView !== 'client-dashboard' && currentView !== 'b2i-parent-dashboard' && currentView !== 'client-organization' && currentView !== 'client-project' && (
         <>
           {/* Backdrop */}
           {isMobileMenuOpen && (
@@ -448,7 +484,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
       </main>
 
       {/* 14. FOOTER - Hide on client dashboard and client login */}
-      {currentView !== 'client-dashboard' && currentView !== 'client-login' && currentView !== 'b2i-parent-dashboard' && (
+      {currentView !== 'client-dashboard' && currentView !== 'client-login' && currentView !== 'b2i-parent-dashboard' && currentView !== 'client-organization' && currentView !== 'client-project' && (
         <footer className="bg-surface pt-24 pb-12 text-text-primary border-t border-border">
           <div className="max-w-7xl mx-auto px-6 lg:px-12">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-20">

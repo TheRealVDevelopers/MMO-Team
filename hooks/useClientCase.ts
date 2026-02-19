@@ -26,85 +26,82 @@ import {
     ActivityItem,
     ClientRequest,
     TransparencyData,
-    ProjectHealth
+    ProjectHealth,
+    LeadJourneyStep
 } from '../components/client-portal/types';
+
+// Stable primitives for dependency array — avoids infinite loop when caller passes new object ref each render
+function getStableId(identifier: { type: 'clientUid' | 'caseId'; value: string } | string | undefined): { idValue: string; idType: 'clientUid' | 'caseId' } {
+    if (identifier == null) return { idValue: '', idType: 'clientUid' };
+    if (typeof identifier === 'string') {
+        const v = identifier.trim();
+        return { idValue: v, idType: 'clientUid' };
+    }
+    const v = (identifier.value != null && String(identifier.value).trim()) ? String(identifier.value).trim() : '';
+    const t = identifier.type === 'caseId' ? 'caseId' : 'clientUid';
+    return { idValue: v, idType: t };
+}
 
 export const useClientCase = (identifier: { type: 'clientUid' | 'caseId'; value: string } | string | undefined) => {
     const [project, setProject] = useState<ClientProject | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    const { idValue, idType } = getStableId(identifier);
+
     useEffect(() => {
-        if (!identifier || !db) {
+        if (!db) {
             setLoading(false);
             return;
         }
-
-        const idValue = typeof identifier === 'string' ? identifier : identifier.value;
-        const idType = typeof identifier === 'string' ? 'clientUid' : identifier.type;
-
-        // Never pass undefined to where() — Firestore throws "Unsupported field value: undefined"
-        if (idValue == null || idValue === '') {
+        // Never run query with undefined/empty — Firestore where() throws; also prevents infinite loop
+        if (!idValue || typeof idValue !== 'string') {
+            setProject(null);
             setLoading(false);
             return;
         }
 
         setLoading(true);
-
         let unsubscribeCase: () => void = () => { };
 
-        const fetchCase = async () => {
-            try {
-                if (idType === 'caseId') {
-                    // Fetch specific case by ID
-                    const caseRef = doc(db, 'cases', idValue);
-                    unsubscribeCase = onSnapshot(caseRef, (docSnap) => {
-                        if (docSnap.exists()) {
-                            const caseData = docSnap.data() as Case;
-                            setupSubListeners(docSnap.ref, caseData, setProject, () => setLoading(false));
-                        } else {
-                            console.log("No case found for ID:", idValue);
-                            setProject(null);
-                            setLoading(false);
-                        }
-                    }, (err) => {
-                        console.error("Error fetching case:", err);
-                        setError(err.message);
-                        setLoading(false);
-                    });
+        if (idType === 'caseId') {
+            const caseRef = doc(db, 'cases', idValue);
+            unsubscribeCase = onSnapshot(caseRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const caseData = docSnap.data() as Case;
+                    setupSubListeners(docSnap.ref, caseData, setProject, () => setLoading(false));
                 } else {
-                    // Query by clientUid
-                    const casesRef = collection(db, 'cases');
-                    const q = query(casesRef, where('clientUid', '==', idValue));
-                    unsubscribeCase = onSnapshot(q, (snapshot) => {
-                        if (snapshot.empty) {
-                            console.log("No case found for client:", idValue);
-                            setProject(null);
-                            setLoading(false);
-                            return;
-                        }
-                        const caseDoc = snapshot.docs[0];
-                        const caseData = caseDoc.data() as Case;
-                        setupSubListeners(caseDoc.ref, caseData, setProject, () => setLoading(false));
-                    }, (err) => {
-                        console.error("Error fetching case:", err);
-                        setError(err.message);
-                        setLoading(false);
-                    });
+                    setProject(null);
+                    setLoading(false);
                 }
-            } catch (err: any) {
-                console.error("Error setting up case listener:", err);
+            }, (err) => {
+                console.error("Error fetching case:", err);
                 setError(err.message);
                 setLoading(false);
-            }
-        };
-
-        fetchCase();
+            });
+        } else {
+            const casesRef = collection(db, 'cases');
+            const q = query(casesRef, where('clientUid', '==', idValue));
+            unsubscribeCase = onSnapshot(q, (snapshot) => {
+                if (snapshot.empty) {
+                    setProject(null);
+                    setLoading(false);
+                    return;
+                }
+                const caseDoc = snapshot.docs[0];
+                const caseData = caseDoc.data() as Case;
+                setupSubListeners(caseDoc.ref, caseData, setProject, () => setLoading(false));
+            }, (err) => {
+                console.error("Error fetching case:", err);
+                setError(err.message);
+                setLoading(false);
+            });
+        }
 
         return () => {
-            if (unsubscribeCase) unsubscribeCase();
+            unsubscribeCase();
         };
-    }, [identifier]); // Deep comparison or simplified dep check might be needed if object passed dynamically
+    }, [idValue, idType]);
 
     return { project, loading, error };
 };
@@ -179,12 +176,13 @@ const setupSubListeners = (
         update();
     });
 
-    // 5. Invoices (skip if individual lead with null organizationId)
-    const invoicesRef = caseData.organizationId
+    // 5. Invoices (skip if individual lead with null organizationId; never pass undefined to where())
+    const caseId = caseData?.id != null && String(caseData.id).trim() ? String(caseData.id).trim() : '';
+    const invoicesRef = caseData.organizationId && caseId
         ? collection(db, `organizations/${caseData.organizationId}/invoices`)
         : null;
     const invoicesUnsub = invoicesRef
-        ? onSnapshot(query(invoicesRef, where('caseId', '==', caseData.id)), (snap) => {
+        ? onSnapshot(query(invoicesRef, where('caseId', '==', caseId)), (snap) => {
             invoices = snap.docs
                 .map(d => ({ id: d.id, ...d.data() } as Invoice))
                 .filter(inv => inv.visibleToClient === true && inv.approvalStatus === 'approved');
@@ -347,16 +345,113 @@ const mapToClientProject = (
         conversation: []
     }));
 
-    // 4. Map Payment Milestones
-    // If we have budget/payment terms, map here.
-    const paymentMilestones: PaymentMilestone[] = []; // Populate from c.paymentTerms if available
+    // 4. Map Payment Milestones (dynamic: from paymentTerms or default 3 from totalBudget)
+    const totalBudgetVal = c.financial?.totalBudget ?? c.paymentTerms?.totalProjectValue ?? 0;
+    const pt = c.paymentTerms;
+    const paymentMilestones: PaymentMilestone[] = [];
+    if (pt && (pt.advanceAmount > 0 || pt.secondAmount > 0 || pt.finalAmount > 0)) {
+        const planStart = c.executionPlan?.startDate ? toDate(c.executionPlan.startDate) : undefined;
+        const planEnd = c.executionPlan?.endDate ? toDate(c.executionPlan.endDate) : undefined;
+        const baseDate = planStart ?? (payments.length > 0 ? toDate((payments as any)[0]?.createdAt) : undefined) ?? created;
+        const advanceDue = baseDate;
+        const secondDue = planStart ? new Date(planStart.getTime() + 30 * 24 * 60 * 60 * 1000) : undefined;
+        const finalDue = planEnd ?? (planStart ? new Date(planStart.getTime() + 60 * 24 * 60 * 60 * 1000) : undefined);
+        const paidTotal = c.financial?.totalCollected ?? 0;
+        if (pt.advanceAmount > 0) {
+            paymentMilestones.push({
+                id: 'advance',
+                stageName: 'Advance',
+                stageId: 1,
+                amount: pt.advanceAmount,
+                percentage: pt.advancePercent ?? 0,
+                isPaid: paidTotal >= pt.advanceAmount,
+                paidAt: paidTotal >= pt.advanceAmount ? baseDate : undefined,
+                dueDate: advanceDue,
+                unlocksStage: 2,
+                description: 'Advance payment',
+            });
+        }
+        if (pt.secondAmount > 0) {
+            const secondPaid = paidTotal >= (pt.advanceAmount + pt.secondAmount);
+            paymentMilestones.push({
+                id: 'second',
+                stageName: 'Second Installment',
+                stageId: 2,
+                amount: pt.secondAmount,
+                percentage: pt.secondPercent ?? 0,
+                isPaid: secondPaid,
+                dueDate: secondDue,
+                unlocksStage: 3,
+                description: 'Second installment',
+            });
+        }
+        if (pt.finalAmount > 0) {
+            const finalPaid = paidTotal >= (pt.advanceAmount + pt.secondAmount + pt.finalAmount);
+            paymentMilestones.push({
+                id: 'final',
+                stageName: 'Final',
+                stageId: 3,
+                amount: pt.finalAmount,
+                percentage: pt.finalPercent ?? 0,
+                isPaid: finalPaid,
+                dueDate: finalDue,
+                unlocksStage: allStages.length,
+                description: 'Final payment',
+            });
+        }
+    }
+    // If no paymentTerms, create one milestone from totalBudget for display
+    if (paymentMilestones.length === 0 && totalBudgetVal > 0) {
+        const paid = c.financial?.totalCollected ?? 0;
+        paymentMilestones.push({
+            id: 'budget',
+            stageName: 'Project value',
+            stageId: 1,
+            amount: totalBudgetVal,
+            percentage: 100,
+            isPaid: paid >= totalBudgetVal,
+            paidAt: paid >= totalBudgetVal ? new Date() : undefined,
+            unlocksStage: allStages.length,
+            description: 'Total project value',
+        });
+    }
+
+    // 4b. Lead Journey steps (Phase 1) for Command Center timeline
+    const hasDrawing = docs.some((d: any) => ['2d', '3d', 'recce'].includes(d.type));
+    const hasBOQ = docs.some((d: any) => d.type === 'boq') || workflow.boqDone;
+    const hasQuotation = quotations.length > 0 || workflow.quotationDone;
+    const poReceived = c.status === CaseStatus.WAITING_FOR_PAYMENT || c.status === CaseStatus.WAITING_FOR_PLANNING || c.status === CaseStatus.PLANNING_SUBMITTED || c.status === CaseStatus.EXECUTION_ACTIVE || c.status === CaseStatus.COMPLETED;
+    const converted = c.isProject && (planStart ?? payments.length > 0);
+    const leadJourneySteps: LeadJourneyStep[] = [
+        { key: 'call', label: 'Call Initiated', date: created, status: 'completed', description: 'First contact' },
+        { key: 'site_sched', label: 'Site Visit Scheduled', date: siteDone ? quotationDate : undefined, status: siteDone ? 'completed' : (c.status === CaseStatus.SITE_VISIT ? 'in-progress' : 'upcoming') },
+        { key: 'site_done', label: 'Site Visit Completed', date: siteDone ? (quotationDate ?? created) : undefined, status: siteDone ? 'completed' : 'upcoming' },
+        { key: 'drawing_upload', label: 'Drawing Uploaded', date: hasDrawing ? toDate((docs.find((d: any) => ['2d', '3d', 'recce'].includes(d.type)) as any)?.uploadedAt) : undefined, status: hasDrawing ? 'completed' : (c.status === CaseStatus.DRAWING ? 'in-progress' : 'upcoming') },
+        { key: 'drawing_approve', label: 'Drawing Approved / Revision', status: hasDrawing ? 'completed' : 'upcoming', revisionInfo: hasDrawing ? 'From documents' : undefined },
+        { key: 'boq_upload', label: 'BOQ Uploaded', status: hasBOQ ? 'completed' : (c.status === CaseStatus.BOQ ? 'in-progress' : 'upcoming') },
+        { key: 'boq_approve', label: 'BOQ Approved', status: hasBOQ ? 'completed' : 'upcoming' },
+        { key: 'quot_upload', label: 'Quotation Uploaded', status: hasQuotation ? 'completed' : 'upcoming' },
+        { key: 'quot_approve', label: 'Quotation Approved', status: quotDone ? 'completed' : 'upcoming' },
+        { key: 'wait_po', label: 'Waiting for PO', status: poReceived || converted ? 'completed' : (quotDone ? 'in-progress' : 'upcoming') },
+        { key: 'po_received', label: 'PO Received', status: converted ? 'completed' : (poReceived ? 'in-progress' : 'upcoming') },
+        { key: 'converted', label: 'Converted to Project', date: projectStartDate, status: converted ? 'completed' : 'upcoming' },
+    ].map((s, i) => ({
+        ...s,
+        status: s.status as LeadJourneyStep['status'],
+    }));
+
+    const planEnd = c.executionPlan?.endDate ? toDate(c.executionPlan.endDate) : undefined;
+    const planStartDate = c.executionPlan?.startDate ? toDate(c.executionPlan.startDate) : undefined;
+    const totalDurationDays = planStartDate && planEnd ? Math.ceil((planEnd.getTime() - planStartDate.getTime()) / (24 * 60 * 60 * 1000)) : 60;
+    const daysRemaining = planEnd ? Math.max(0, Math.ceil((planEnd.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))) : 50;
+    const daysCompleted = totalDurationDays - daysRemaining;
 
     // 5. Transparency
     const transparency: TransparencyData = {
-        totalDurationDays: 60, // Calc
-        daysCompleted: 10,
-        daysRemaining: 50,
-        projectHealth: 'on-track',
+        totalDurationDays,
+        daysCompleted: Math.max(0, daysCompleted),
+        daysRemaining,
+        projectHealth: daysRemaining < 0 ? 'at-risk' : (daysRemaining < 14 ? 'minor-delay' : 'on-track'),
         delays: [],
         nextAction: approvals.length > 0 ? {
             actor: 'client',
@@ -366,7 +461,7 @@ const mapToClientProject = (
             actor: 'company',
             action: 'Work in progress'
         },
-        estimatedCompletion: new Date()
+        estimatedCompletion: planEnd ?? new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)
     };
 
     return {
@@ -396,9 +491,25 @@ const mapToClientProject = (
             name: d.fileName,
             category: mapDocTypeToCategory(d.type),
             date: d.uploadedAt instanceof Timestamp ? d.uploadedAt.toDate() : new Date(d.uploadedAt),
-            size: 'N/A', // Size not in CaseDocument
-            url: d.fileUrl
+            size: 'N/A',
+            url: d.fileUrl,
+            documentType: (d as any).type,
+            approvalStatus: (d as any).approvalStatus,
+            uploadedBy: (d as any).uploadedBy,
+            remarks: (d as any).notes,
         })),
+        leadJourneySteps,
+        dailyUpdates: updates.map(u => ({
+            id: u.id,
+            date: u.date instanceof Timestamp ? u.date.toDate() : new Date(u.date),
+            workDescription: u.workDescription,
+            completionPercent: u.completionPercent ?? 0,
+            manpowerCount: u.manpowerCount ?? 0,
+            photos: (u as any).photos ?? [],
+            blocker: (u as any).blocker,
+        })),
+        daysRemaining,
+        budgetUtilizationPercent: totalBudgetVal > 0 ? Math.round(((c.financial?.totalCollected ?? 0) / totalBudgetVal) * 100) : 0,
         totalPaid: c.financial?.totalCollected || 0,
         totalBudget: c.financial?.totalBudget || 0,
         planDays: (c.executionPlan?.days ?? []).map((d: { date: any }) => ({

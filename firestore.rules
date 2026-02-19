@@ -64,6 +64,14 @@ service cloud.firestore {
       allow read, write: if isAuthenticated();
     }
 
+    // ========================================
+    // STAFF USERS (staff login: Auth → staffUsers/{uid})
+    // ========================================
+    match /staffUsers/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if isAuthenticated();
+    }
+
     // BASELINE SECURITY: Require authentication for everything
     match /{document=**} {
       allow read: if isAuthenticated();

@@ -100,16 +100,16 @@ export const useTimeAnalytics = (
     //   2) Apply the dateKey window in-memory when computing analytics
     //
     // This keeps the UI working even if indexes are not configured.
-    let q;
+    // Never pass undefined/empty to where() — Firestore throws.
+    const uid = typeof userId === 'string' && userId.trim() ? userId.trim() : '';
+    const orgId = typeof organizationId === 'string' && organizationId.trim() ? organizationId.trim() : '';
 
-    if (userId) {
-      // Query for specific user (all time; date window applied later)
-      q = query(entriesRef, where('userId', '==', userId));
-    } else if (organizationId) {
-      // Query for organization (all time; date window applied later)
-      q = query(entriesRef, where('organizationId', '==', organizationId));
+    let q;
+    if (uid) {
+      q = query(entriesRef, where('userId', '==', uid));
+    } else if (orgId) {
+      q = query(entriesRef, where('organizationId', '==', orgId));
     } else {
-      // No filters - return empty (require at least userId or orgId)
       setEntries([]);
       setLoading(false);
       return;
@@ -337,7 +337,11 @@ export const useTeamTimeAnalytics = (
   const { startDateKey, endDateKey } = getMonthBounds(targetYear, targetMonth);
 
   useEffect(() => {
-    if (!organizationId) {
+    const orgId =
+      organizationId != null && typeof organizationId === 'string' && organizationId.trim()
+        ? organizationId.trim()
+        : '';
+    if (!orgId) {
       setEntries([]);
       setLoading(false);
       return;
@@ -345,13 +349,10 @@ export const useTeamTimeAnalytics = (
 
     setLoading(true);
 
-    // Same pattern as useTimeAnalytics:
-    // Only filter by organizationId at query level, then
-    // apply the date window in-memory. This keeps things
-    // working even if composite indexes are missing.
+    // Same pattern as useTimeAnalytics: only filter by organizationId at query level (never undefined).
     const q = query(
       collection(db, FIRESTORE_COLLECTIONS.TIME_ENTRIES),
-      where('organizationId', '==', organizationId)
+      where('organizationId', '==', orgId)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {

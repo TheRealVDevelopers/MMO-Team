@@ -8,16 +8,7 @@ import {
     ExclamationCircleIcon,
     CheckCircleIcon
 } from '@heroicons/react/24/outline';
-import { signInClient, signInClientFirstTime } from '../../services/authService';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-/**
- * Utility function to merge tailwind classes
- */
-function cn(...inputs: ClassValue[]) {
-    return twMerge(clsx(inputs));
-}
+import { signInClient, signInClientFirstTime, CLIENT_DEFAULT_FIRST_PASSWORD } from '../../services/authService';
 
 // Animation Hook
 const useOnScreen = (options: IntersectionObserverInit) => {
@@ -58,11 +49,9 @@ interface ClientLoginPageProps {
 
 const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => {
     const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+    const [password, setPassword] = useState(CLIENT_DEFAULT_FIRST_PASSWORD);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    /** true = First time user (email only), false = Already have account (email + password) */
-    const [isFirstTimeUser, setIsFirstTimeUser] = useState(true);
 
     const handleAuth = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -76,36 +65,42 @@ const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => 
                 setIsLoading(false);
                 return;
             }
+            if (!password || !password.trim()) {
+                setError('Please enter your password.');
+                setIsLoading(false);
+                return;
+            }
 
-            if (isFirstTimeUser) {
-                const result = await signInClientFirstTime(email.trim());
-                if (result && result.user) {
-                    onLoginSuccess(result.user, result.isFirstLogin);
-                } else {
-                    setError('Unable to sign in. Please try "Already have account" with your password.');
-                }
-            } else {
-                if (!password) {
-                    setError('Please enter your password.');
+            const result = await signInClient(email.trim(), password.trim());
+            if (result && result.user) {
+                onLoginSuccess(result.user, result.isFirstLogin, {
+                    isB2IParent: result.isB2IParent,
+                    b2iId: result.b2iId,
+                });
+                return;
+            }
+
+            setError('Invalid email or password.');
+        } catch (err: any) {
+            console.error('Client auth error:', err);
+            const code = err?.code || '';
+            const isInvalidCredential = code === 'auth/wrong-password' || code === 'auth/user-not-found' || code === 'auth/invalid-credential';
+            if (err.message === 'ALREADY_HAVE_ACCOUNT') {
+                setError('You already have an account. Sign in with your email and password.');
+            } else if (isInvalidCredential && password.trim() === CLIENT_DEFAULT_FIRST_PASSWORD) {
+                try {
+                    const firstTimeResult = await signInClientFirstTime(email.trim());
+                    if (firstTimeResult && firstTimeResult.user) {
+                        onLoginSuccess(firstTimeResult.user, firstTimeResult.isFirstLogin);
+                        return;
+                    }
+                } catch (firstErr: any) {
+                    setError(firstErr.message || 'No project found for this email. Use the email registered with your project.');
                     setIsLoading(false);
                     return;
                 }
-                const result = await signInClient(email.trim(), password);
-                if (result && result.user) {
-                    onLoginSuccess(result.user, result.isFirstLogin, {
-                        isB2IParent: result.isB2IParent,
-                        b2iId: result.b2iId,
-                    });
-                } else {
-                    setError('Invalid email or password.');
-                }
-            }
-        } catch (err: any) {
-            console.error('Client auth error:', err);
-            if (err.message === 'ALREADY_HAVE_ACCOUNT') {
-                setError('You already have an account. Switch to "Already have account" and sign in with your email and password.');
-            } else if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-                setError('Invalid email or password.');
+            } else if (isInvalidCredential) {
+                setError('Invalid email or password. First time? Use default password 123456, then set a new one after login.');
             } else {
                 setError(err.message || 'Unable to process request. Please try again.');
             }
@@ -148,30 +143,6 @@ const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => 
                     <div className="bg-surface/80 backdrop-blur-2xl border border-white/20 rounded-[3rem] shadow-luxury p-10 md:p-16 relative overflow-hidden group">
                         <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors duration-1000"></div>
 
-                        {/* Toggle: First time / Already have account */}
-                        <div className="flex justify-center gap-2 mb-8 relative z-10">
-                            <button
-                                type="button"
-                                onClick={() => { setIsFirstTimeUser(true); setError(''); setPassword(''); }}
-                                className={cn(
-                                    "px-6 py-3 rounded-full text-sm font-bold uppercase tracking-wider transition-all",
-                                    isFirstTimeUser ? "bg-primary text-white shadow-lg" : "bg-background/80 text-text-secondary hover:text-primary border border-border"
-                                )}
-                            >
-                                First time user
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => { setIsFirstTimeUser(false); setError(''); }}
-                                className={cn(
-                                    "px-6 py-3 rounded-full text-sm font-bold uppercase tracking-wider transition-all",
-                                    !isFirstTimeUser ? "bg-primary text-white shadow-lg" : "bg-background/80 text-text-secondary hover:text-primary border border-border"
-                                )}
-                            >
-                                Already have account
-                            </button>
-                        </div>
-
                         <form onSubmit={handleAuth} className="space-y-8 relative z-10">
                             <div>
                                 <label className="block text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] mb-4">
@@ -191,31 +162,31 @@ const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => 
                                     />
                                 </div>
                                 <p className="text-[10px] uppercase tracking-widest text-text-secondary/40 mt-3 ml-1">
-                                    {isFirstTimeUser ? 'Use the email we have on file for your project' : 'Enter your registered email address'}
+                                    Use the email we have on file for your project
                                 </p>
                             </div>
 
-                            {!isFirstTimeUser && (
-                                <div>
-                                    <label className="block text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] mb-4">
-                                        Password
-                                    </label>
-                                    <div className="relative group">
-                                        <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-text-secondary/50 group-focus-within:text-primary transition-colors">
-                                            <LockClosedIcon className="w-5 h-5" />
-                                        </div>
-                                        <input
-                                            type="password"
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            placeholder="Enter your password"
-                                            className="w-full pl-14 pr-6 py-5 bg-background border-2 border-border rounded-2xl focus:border-primary outline-none transition-all text-text-primary text-lg placeholder:text-text-secondary/60"
-                                            required={!isFirstTimeUser}
-                                        />
+                            <div>
+                                <label className="block text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] mb-4">
+                                    Password
+                                </label>
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-text-secondary/50 group-focus-within:text-primary transition-colors">
+                                        <LockClosedIcon className="w-5 h-5" />
                                     </div>
-                                    <p className="text-[10px] uppercase tracking-widest text-text-secondary/40 mt-3 ml-1">The password you set after first login</p>
+                                    <input
+                                        type="password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        placeholder="Default: 123456 (first time)"
+                                        className="w-full pl-14 pr-6 py-5 bg-background border-2 border-border rounded-2xl focus:border-primary outline-none transition-all text-text-primary text-lg placeholder:text-text-secondary/60"
+                                        required
+                                    />
                                 </div>
-                            )}
+                                <p className="text-[10px] uppercase tracking-widest text-text-secondary/40 mt-3 ml-1">
+                                    First time? Use default password 123456 — you&apos;ll set a new one after login.
+                                </p>
+                            </div>
 
                             {error && (
                                 <div className="flex items-start space-x-3 p-4 bg-red-50 border border-red-200 rounded-xl">
@@ -239,7 +210,7 @@ const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => 
                                     </div>
                                 ) : (
                                     <>
-                                        {isFirstTimeUser ? 'Log in' : 'Access Project'}
+                                        Access Project
                                         <ArrowRightIcon className="w-4 h-4 ml-3 group-hover:translate-x-1 transition-transform" />
                                     </>
                                 )}
@@ -252,7 +223,7 @@ const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => 
                             <div className="space-y-4 text-sm text-text-secondary">
                                 <div className="flex items-start space-x-3">
                                     <CheckCircleIcon className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                                    <p className="font-light">Your login credentials were sent via email after project initiation</p>
+                                    <p className="font-light">First time? Use default password <span className="font-semibold text-primary">123456</span>, then set a new one after login</p>
                                 </div>
                                 <div className="flex items-start space-x-3">
                                     <CheckCircleIcon className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />

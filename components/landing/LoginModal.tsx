@@ -55,6 +55,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
                 setRegion('');
                 setRole(UserRole.SALES_TEAM_MEMBER);
             } else if (loginType === 'staff') {
+                // Staff login only: Firebase Auth → staffUsers/{uid}. No fallback to clients (B2I parent uses Client Login).
                 try {
                     const user = await signInStaff(email, password);
                     if (user) {
@@ -66,7 +67,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
                     }
                 } catch (staffErr: any) {
                     const code = staffErr?.code || '';
-                    const isInvalidCredential = code === 'auth/invalid-credential' || code === 'auth/wrong-password';
+                    const isInvalidCredential = code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found';
                     if (isInvalidCredential) {
                         const { signInVendor } = await import('../../services/authService');
                         const vendor = await signInVendor(email, password);
@@ -95,11 +96,12 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, initi
                 }
             }
         } catch (err: any) {
-            const msg = err.message || 'An error occurred. Please try again.';
+            const msg = err?.message || 'An error occurred. Please try again.';
             const code = err?.code || '';
-            const isInvalidCredential = code === 'auth/invalid-credential' || code === 'auth/wrong-password' || /invalid-credential|invalid credential|wrong password/i.test(msg);
+            if (code) console.warn('Login error:', { code, message: msg });
+            const isInvalidCredential = code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found' || /invalid-credential|invalid credential|wrong password/i.test(msg);
             if (isInvalidCredential && loginType === 'staff') {
-                setError('Invalid email or password for Staff. If you are a vendor, click the "Vendor" tab above and sign in with your vendor email and temporary password (123456).');
+                setError('Invalid email or password for Staff. If you are a vendor, click the "Vendor" tab above. B2I Parent accounts must use Client Login on the main site.');
             } else {
                 setError(msg);
             }

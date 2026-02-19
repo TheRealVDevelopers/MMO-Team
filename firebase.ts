@@ -1,6 +1,6 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp, FirebaseApp } from "firebase/app";
-import { getAnalytics, Analytics } from "firebase/analytics";
+import { getAnalytics, isSupported, Analytics } from "firebase/analytics";
 import { getFirestore, Firestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getAuth, Auth, connectAuthEmulator } from "firebase/auth";
 import { getStorage, FirebaseStorage, connectStorageEmulator } from "firebase/storage";
@@ -70,9 +70,18 @@ if (!DEMO_MODE) {
       console.error('Error setting auth persistence:', error);
     });
 
-    // Initialize Analytics only if in a browser environment and NOT using emulator
+    // Initialize Analytics only when supported (avoids IndexedDB errors in iframes, private browsing, etc.)
     if (typeof window !== 'undefined' && firebaseConfig.measurementId && !USE_EMULATOR) {
-      analytics = getAnalytics(app);
+      isSupported().then((supported) => {
+        if (supported) {
+          analytics = getAnalytics(app);
+          console.log('  Analytics: Enabled');
+        } else {
+          console.log('  Analytics: Skipped (IndexedDB/cookies unavailable in this environment)');
+        }
+      }).catch(() => {
+        console.log('  Analytics: Skipped (check failed)');
+      });
     }
   } catch (error) {
     console.error("Firebase initialization failed:", error);

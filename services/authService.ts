@@ -26,8 +26,7 @@ import {
 } from 'firebase/firestore';
 import { auth, db, logAgent, firebaseConfig } from '../firebase';
 import {
-    StaffUser, UserRole, Vendor, CaseStatus, B2IClient,
-    B2I_PARENT
+    StaffUser, UserRole, Vendor, CaseStatus, B2IClient
 } from '../types';
 import { FIRESTORE_COLLECTIONS, DEFAULT_ORGANIZATION_ID } from '../constants';
 
@@ -61,11 +60,14 @@ export const convertToAppUser = async (firebaseUser: User): Promise<StaffUser | 
             role: userData.role as UserRole,
             avatar: userData.avatar,
             email: userData.email,
-            phone: userData.phone,
+            phone: userData.phone ?? '',
             organizationId: userData.organizationId,
             isActive: userData.isActive !== false,
             createdAt: userData.createdAt?.toDate() || new Date(),
-        };
+            lastUpdateTimestamp: userData.lastUpdateTimestamp?.toDate?.() ?? undefined,
+            mustChangePassword: userData.mustChangePassword ?? undefined,
+            b2iId: userData.b2iId,
+        } as StaffUser;
     } catch (error) {
         console.error('Error converting Firebase user to app user:', error);
         return null;
@@ -142,17 +144,26 @@ export const signInStaff = async (email: string, password: string): Promise<Staf
 
         return staffUser;
     } catch (error: any) {
+        const code = error?.code ?? '';
+        const msg = error?.message ?? '';
         logAgent({
             location: 'authService.ts:sign-in',
             message: 'Sign-in failed',
-            data: { email, errorCode: error.code, errorMessage: error.message },
+            data: { email, errorCode: code, errorMessage: msg },
             timestamp: Date.now(),
             sessionId: 'debug-session',
             runId: 'run1',
             hypothesisId: 'D',
         });
-        console.error('Staff sign-in error:', error);
-        throw new Error(error.message || 'Failed to sign in');
+        console.error('Staff sign-in error:', { code, message: msg, error });
+        const userMessage = code === 'auth/network-request-failed'
+            ? 'Authentication service unavailable (auth/network-request-failed). Check your network, firewall, or try again.'
+            : code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found'
+                ? 'Invalid email or password.'
+                : msg || 'Failed to sign in';
+        const err = new Error(userMessage) as Error & { code?: string };
+        err.code = code;
+        throw err;
     }
 };
 
@@ -651,7 +662,13 @@ export const signInVendor = async (email: string, password: string): Promise<Ven
             gstNumber: userData.gstNumber,
         };
     } catch (error: any) {
-        console.error('Vendor sign-in error:', error);
+        const code = error?.code ?? '';
+        console.error('Vendor sign-in error:', { code, message: error?.message, error });
+        if (code === 'auth/network-request-failed') {
+            const err = new Error('Authentication service unavailable (auth/network-request-failed). Check your network or try again.') as Error & { code?: string };
+            err.code = code;
+            throw err;
+        }
         return null;
     }
 };
@@ -660,10 +677,13 @@ export const signInVendor = async (email: string, password: string): Promise<Ven
 
 const CLIENTS_COLLECTION = 'clients';
 
+/** Default password for first-time client accounts; they must change it after first login. */
+export const CLIENT_DEFAULT_FIRST_PASSWORD = '123456';
+
 /**
- * First-time client login: email only. Looks up client by email in cases (clientEmail);
- * if found, creates Firebase Auth account + client profile and signs them in.
- * Next time they must use "Already have account" with password.
+ * First-time client account creation: looks up client by email in cases (clientEmail);
+ * if found, creates Firebase Auth account with default password 123456 + client profile and signs them in.
+ * Client must then set a new password on the change-password screen.
  */
 export const signInClientFirstTime = async (
     email: string
@@ -700,12 +720,11 @@ export const signInClientFirstTime = async (
         const clientName = caseData.clientName || 'Client';
         const caseId = firstCase.id;
 
-        // 3. Create Firebase Auth user with a one-time random password (user never sees it)
-        const randomPassword = `MMO${Date.now()}${Math.random().toString(36).slice(2, 10)}!`;
-        const userCredential = await createUserWithEmailAndPassword(auth, trimmedEmail, randomPassword);
+        // 3. Create Firebase Auth user with default first-time password (client will change it after login)
+        const userCredential = await createUserWithEmailAndPassword(auth, trimmedEmail, CLIENT_DEFAULT_FIRST_PASSWORD);
         const user = userCredential.user;
 
-        // 4. Create client profile (store email lowercase for "already have account" lookup)
+        // 4. Create client profile (store email lowercase for lookup)
         await setDoc(doc(db, CLIENTS_COLLECTION, user.uid), {
             id: user.uid,
             name: clientName,
@@ -748,7 +767,7 @@ export const signInClient = async (
         if (clientDoc.exists()) {
             const data = clientDoc.data();
             isFirstLogin = data.isFirstLogin === true;
-            isB2IParent = data.isB2IParent === true;
+            isB2IParent = data.role === 'B2I_PARENT' || data.isB2IParent === true;
             b2iId = data.b2iId;
         } else {
             try {
@@ -768,8 +787,16 @@ export const signInClient = async (
 
         return { user, isFirstLogin, isB2IParent, b2iId };
     } catch (error: any) {
-        console.error('Error signing in client:', error);
-        throw error;
+        const code = error?.code ?? '';
+        console.error('Error signing in client:', { code, message: error?.message, error });
+        if (code === 'auth/network-request-failed') {
+            const err = new Error('Authentication service unavailable (auth/network-request-failed). Check your network or try again.') as Error & { code?: string };
+            err.code = code;
+            throw err;
+        }
+        const err = new Error(error?.message || 'Failed to sign in') as Error & { code?: string };
+        err.code = code;
+        throw err;
     }
 };
 
@@ -910,10 +937,14 @@ export const onAuthStateChange = (callback: (user: StaffUser | null) => void) =>
 export const getClientCases = async (clientUid: string): Promise<any[]> => {
     try {
         if (!db) throw new Error("Firebase not initialized");
-
+        if (clientUid == null || typeof clientUid !== 'string' || !clientUid.trim()) {
+            console.warn('[getClientCases] clientUid is missing or empty. Skipping query.');
+            return [];
+        }
+        const uid = clientUid.trim();
         const casesQuery = query(
             collection(db, 'cases'),
-            where('clientUid', '==', clientUid)
+            where('clientUid', '==', uid)
         );
         const snapshot = await getDocs(casesQuery);
 
@@ -928,12 +959,9 @@ export const getClientCases = async (clientUid: string): Promise<any[]> => {
 };
 
 /**
- * Create a B2I Parent Account (B2I_PARENT role).
- * Creates Auth User + Staff User (Role: B2I_PARENT).
- * NOTE: Does NOT link to B2I Client doc here; that should be done by the caller (B2IClientsPage) 
- * or we can pass b2iId to link it.
- * Actually, the plan says: update B2IClientsPage to call this.
- * This function handles the Auth + StaffUser creation.
+ * Create a B2I Parent Account (client-side only).
+ * Creates Auth User + clients/{uid} with role B2I_PARENT. Does NOT create staffUsers.
+ * B2I Parent must use Client Login only.
  */
 export const createB2IParentAccount = async (
     email: string,
@@ -945,74 +973,46 @@ export const createB2IParentAccount = async (
         if (!auth || !db) throw new Error("Firebase not initialized");
         const password = DEFAULT_STAFF_PASSWORD; // Default '123456'
 
-        // Initialize a secondary Firebase app to create the user without logging out the admin
         let secondaryApp;
         let secondaryAuth;
-        let newUserUid;
+        let newUserUid: string;
 
         try {
             const appName = `SecondaryApp-B2I-${Date.now()}`;
             secondaryApp = initializeApp(firebaseConfig, appName);
             secondaryAuth = getAuth(secondaryApp);
 
-            // Create Firebase Auth account
             const userCredential = await createUserWithEmailAndPassword(
                 secondaryAuth,
                 email,
                 password
             );
             newUserUid = userCredential.user.uid;
-
-            // Immediately sign out from secondary
             await signOut(secondaryAuth);
         } catch (authError) {
-            throw authError; // Pass up
+            throw authError;
         } finally {
             if (secondaryApp) {
                 await deleteApp(secondaryApp);
             }
         }
 
-        // Create Staff User Document
-        const staffData: StaffUser = {
-            id: newUserUid,
-            name: name,
-            email: email,
-            role: UserRole.B2I_PARENT,
-            organizationId: 'B2I_GLOBAL', // Placeholder or specific B2I Org ID if applicable
-            isActive: true,
-            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
-            phone: phone || '',
-            createdAt: new Date(),
-            currentTask: '',
-            lastUpdateTimestamp: new Date(),
-            mustChangePassword: true, // Specific field we added
-            b2iId: b2iId, // Link to B2I Client Doc
-            region: 'Global',
-        } as StaffUser;
-
-        // Use setDoc
-        await setDoc(doc(db, FIRESTORE_COLLECTIONS.STAFF_USERS, newUserUid), {
-            ...staffData,
-            createdAt: serverTimestamp(),
-            lastUpdateTimestamp: serverTimestamp(),
-        });
-
-        // Also create a clients collection record so B2I parent can login via Client Login
+        // Client document only (no staffUsers). Role lives in clients/{uid}.
         await setDoc(doc(db, CLIENTS_COLLECTION, newUserUid), {
             id: newUserUid,
             name: name,
             email: email,
+            phone: phone || null,
             isFirstLogin: true,
-            isB2IParent: true,
+            role: 'B2I_PARENT',
             b2iId: b2iId,
+            isB2IParent: true, // legacy
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
         });
 
-        console.log(`B2I Parent account created (staff + client): ${name} (${email})`);
+        console.log(`B2I Parent account created (client only): ${name} (${email})`);
         return newUserUid;
-
     } catch (error: any) {
         console.error('Error creating B2I parent account:', error);
         throw new Error(error.message || 'Failed to create B2I parent account');

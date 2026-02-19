@@ -21,6 +21,16 @@ export type ActivityType = 'upload' | 'approval' | 'site_visit' | 'progress' | '
 // Project health status
 export type ProjectHealth = 'on-track' | 'minor-delay' | 'at-risk';
 
+/** Single step in Phase 1 Lead Journey (synced from staff-side activities/documents/quotations) */
+export interface LeadJourneyStep {
+    key: string;
+    label: string;
+    date?: Date;
+    status: 'completed' | 'in-progress' | 'upcoming';
+    description?: string;
+    revisionInfo?: string;
+}
+
 // Request types for client requests
 export type RequestType = 'question' | 'concern' | 'change_request' | 'approval';
 
@@ -196,9 +206,28 @@ export interface ClientProject {
     activities: ActivityItem[];
     requests: ClientRequest[];
     transparency: TransparencyData;
-    documents: ClientDocument[]; // Added for Documents Archive
+    documents: ClientDocument[];
+    /** Phase 1 lead journey steps (from workflow, documents, quotations) */
+    leadJourneySteps?: LeadJourneyStep[];
+    /** Daily updates from execution (for Phase 2 per-phase grouping) */
+    dailyUpdates?: ClientDailyUpdateItem[];
+    /** Days remaining to expected completion (from executionPlan.endDate) */
+    daysRemaining?: number;
+    /** Budget utilization % (paid vs total) */
+    budgetUtilizationPercent?: number;
     totalPaid: number;
     totalBudget: number;
+}
+
+/** Single daily update item (from cases/{caseId}/dailyUpdates) */
+export interface ClientDailyUpdateItem {
+    id: string;
+    date: Date;
+    workDescription: string;
+    completionPercent: number;
+    manpowerCount: number;
+    photos: string[];
+    blocker?: string;
 }
 
 export interface ClientDocument {
@@ -208,6 +237,11 @@ export interface ClientDocument {
     date: Date;
     size: string;
     url: string;
+    /** For revision system: document type (2d, 3d, recce, boq, quotation) */
+    documentType?: string;
+    approvalStatus?: 'pending' | 'approved' | 'rejected';
+    uploadedBy?: string;
+    remarks?: string;
 }
 
 /**

@@ -187,13 +187,7 @@ const navConfig = {
       { id: 'escalate-issue', label: 'Escalate Issue', icon: <ShieldExclamationIcon className="w-6 h-6" /> },
     ]
   },
-  [UserRole.B2I_PARENT]: {
-    title: 'B2I Dashboard',
-    navItems: [
-      { id: 'overview', label: 'Overview', icon: <RectangleGroupIcon className="w-6 h-6" /> },
-      // { id: 'organizations', label: 'Organizations', icon: <BuildingOfficeIcon className="w-6 h-6" /> },
-    ]
-  },
+  // B2I Parent uses Client Login only (no staff nav).
   [UserRole.ACCOUNTS_TEAM]: {
     title: 'Financial Command Center',
     navItems: [

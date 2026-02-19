@@ -21,14 +21,20 @@ export const useApprovals = (role?: UserRole) => {
   const [pendingApprovals, setPendingApprovals] = useState<ApprovalRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. Listen for Pending Approvals (Collection Group); MUST filter by organizationId
+  // 1. Listen for Pending Approvals (Collection Group); MUST filter by organizationId (never undefined)
   useEffect(() => {
     if (!role || !currentUser?.organizationId) {
       setLoading(false);
       return;
     }
-
-    const orgId = currentUser.organizationId;
+    const orgId =
+      typeof currentUser.organizationId === 'string' && currentUser.organizationId.trim()
+        ? currentUser.organizationId.trim()
+        : '';
+    if (!orgId) {
+      setLoading(false);
+      return;
+    }
     const q = query(
       collectionGroup(db, FIRESTORE_COLLECTIONS.APPROVALS),
       where('status', '==', 'pending'),

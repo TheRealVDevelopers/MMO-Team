@@ -22,24 +22,24 @@ const PaymentWidget: React.FC<PaymentWidgetProps> = ({
     return (
         <div className={`bg-white rounded-2xl shadow-lg overflow-hidden ${className}`}>
             {/* Header */}
-            <div className="px-5 py-4 border-b border-gray-100">
+            <div className="px-5 py-4 border-b border-slate-100">
                 <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-gray-800">Payments</h3>
-                    <span className="text-sm text-gray-500">
+                    <h3 className="font-bold text-slate-800">Payments</h3>
+                    <span className="text-sm text-slate-600 font-medium">
                         {paidCount}/{milestones.length} paid
                     </span>
                 </div>
 
                 {/* Simple progress bar */}
-                <div className="mt-3 h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div className="mt-3 h-2 bg-slate-100 rounded-full overflow-hidden">
                     <div
                         className="h-full bg-emerald-500 rounded-full transition-all duration-1000"
                         style={{ width: `${paidPercentage}%` }}
                     />
                 </div>
                 <div className="flex justify-between mt-2 text-xs">
-                    <span className="text-emerald-600 font-medium">₹{(totalPaid / 100000).toFixed(1)}L paid</span>
-                    <span className="text-gray-500">₹{(totalBudget / 100000).toFixed(1)}L total</span>
+                    <span className="text-emerald-700 font-medium">₹{(totalPaid / 100000).toFixed(1)}L paid</span>
+                    <span className="text-slate-600 font-medium">₹{(totalBudget / 100000).toFixed(1)}L total</span>
                 </div>
             </div>
 
@@ -54,7 +54,7 @@ const PaymentWidget: React.FC<PaymentWidgetProps> = ({
                                 ? 'bg-emerald-50'
                                 : index === paidCount
                                     ? 'bg-amber-50 border border-amber-200'
-                                    : 'bg-gray-50'
+                                    : 'bg-slate-50'
                             }
                         `}
                     >
@@ -65,7 +65,7 @@ const PaymentWidget: React.FC<PaymentWidgetProps> = ({
                                 ? 'bg-emerald-500 text-white'
                                 : index === paidCount
                                     ? 'bg-amber-500 text-white'
-                                    : 'bg-gray-200 text-gray-400'
+                                    : 'bg-slate-200 text-slate-500'
                             }
                         `}>
                             {milestone.isPaid ? (
@@ -79,7 +79,7 @@ const PaymentWidget: React.FC<PaymentWidgetProps> = ({
 
                         {/* Info */}
                         <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-medium truncate ${milestone.isPaid ? 'text-emerald-700' : 'text-gray-700'}`}>
+                            <p className={`text-sm font-medium truncate ${milestone.isPaid ? 'text-emerald-700' : 'text-slate-800'}`}>
                                 {milestone.stageName}
                             </p>
                             {index === paidCount && !milestone.isPaid && (
@@ -90,7 +90,7 @@ const PaymentWidget: React.FC<PaymentWidgetProps> = ({
                         </div>
 
                         {/* Amount */}
-                        <span className={`text-sm font-bold ${milestone.isPaid ? 'text-emerald-600' : 'text-gray-600'}`}>
+                        <span className={`text-sm font-bold ${milestone.isPaid ? 'text-emerald-700' : 'text-slate-700'}`}>
                             ₹{(milestone.amount / 1000).toFixed(0)}K
                         </span>
                     </div>
@@ -102,8 +102,8 @@ const PaymentWidget: React.FC<PaymentWidgetProps> = ({
                 <div className="px-5 py-4 bg-gradient-to-r from-amber-50 to-amber-100/50 border-t border-amber-200">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-xs text-gray-500">Next Payment</p>
-                            <p className="text-lg font-bold text-gray-800">
+                            <p className="text-xs text-slate-600 font-medium">Next Payment</p>
+                            <p className="text-lg font-bold text-slate-900">
                                 ₹{(nextMilestone.amount / 1000).toFixed(0)}K
                             </p>
                         </div>

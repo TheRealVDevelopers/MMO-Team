@@ -787,6 +787,9 @@ export interface Invoice {
 // Path: clients/{clientId}
 // ========================================
 
+/** Client-side roles only. Stored in clients/{uid}, NOT in staffUsers. */
+export type ClientRole = 'CLIENT_ORG' | 'B2I_PARENT' | 'B2I_CHILD';
+
 export interface Client {
   id: string; // matches Auth UID
   name: string;
@@ -796,6 +799,14 @@ export interface Client {
   isFirstLogin: boolean; // For forcing password reset
   createdAt: Date;
   updatedAt?: Date;
+  /** Client role (client-side only). */
+  role?: ClientRole;
+  /** Set when role is CLIENT_ORG or B2I_CHILD. */
+  organizationId?: string;
+  /** Set when role is B2I_PARENT; links to b2iClients/{b2iId}. */
+  b2iId?: string;
+  // Legacy: keep for backward compatibility with existing client docs
+  isB2IParent?: boolean;
 }
 
 // ========================================

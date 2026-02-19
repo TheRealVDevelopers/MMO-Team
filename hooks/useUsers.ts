@@ -34,11 +34,15 @@ export const useUsers = (options: UseUsersOptions = {}) => {
       const usersRef = collection(db, FIRESTORE_COLLECTIONS.STAFF_USERS);
       let q = query(usersRef);
 
-      // Apply filters
-      if (options.organizationId) {
-        q = query(q, where('organizationId', '==', options.organizationId));
+      // Apply filters — never pass undefined to where(); Firestore throws.
+      const organizationId =
+        options.organizationId != null && typeof options.organizationId === 'string'
+          ? options.organizationId.trim()
+          : '';
+      if (organizationId) {
+        q = query(q, where('organizationId', '==', organizationId));
       }
-      if (options.role) {
+      if (options.role != null && options.role !== '') {
         q = query(q, where('role', '==', options.role));
       }
       if (options.isActive !== undefined) {

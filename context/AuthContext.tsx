@@ -75,108 +75,135 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [currentVendor]);
 
   useEffect(() => {
-    // Listen for Firebase auth changes
-    const unsubscribe = onAuthStateChanged(auth!, async (firebaseUser) => {
-      console.log('Auth State Changed. User:', firebaseUser?.email || 'None');
+    // If Firebase auth is not initialized (e.g. demo mode), show app immediately
+    if (!auth) {
+      setLoading(false);
+      return;
+    }
 
-      if (firebaseUser && db) {
-        // Fetch user data from Firestore
-        try {
-          const userDoc = await getDoc(doc(db, FIRESTORE_COLLECTIONS.STAFF_USERS, firebaseUser.uid));
-          if (userDoc.exists()) {
-            const userData = userDoc.data() as StaffUser;
-            const staffUser = { ...userData, id: firebaseUser.uid };
-            setCurrentUser(staffUser);
-            console.log('User data loaded from Firestore:', userData.name);
-            // If role is VENDOR, load vendor from root vendors collection (vendors are not per-organization)
-            if (userData.role === UserRole.VENDOR && userData.vendorId) {
-              const vendorRef = doc(db, FIRESTORE_COLLECTIONS.VENDORS, userData.vendorId);
-              const vendorSnap = await getDoc(vendorRef);
-              if (vendorSnap.exists()) {
-                const v = vendorSnap.data();
-                setCurrentVendor({
-                  id: vendorSnap.id,
-                  name: v.name ?? '',
-                  phone: v.phone,
-                  email: v.email,
-                  category: v.category ?? '',
-                  gstNumber: v.gstNumber,
-                  contact: v.contact ?? '', // Fix for missing property
-                });
-              } else {
-                setCurrentVendor(null);
-              }
-            } else {
-              setCurrentVendor(null);
-            }
+    let cancelled = false;
+    // Safety: stop showing loading after 8s so user at least sees landing page if auth/firestore hangs
+    const timeoutId = setTimeout(() => {
+      if (cancelled) return;
+      setLoading(false);
+    }, 8000);
 
-            // Check for forced password change
-            if (userData.mustChangePassword) {
-              // We don't block login here, but the UI should redirect to /set-password
-              // This logic is usually better handled in a protected route or App.tsx, 
-              // but we can set a flag or just let the user object carry the property.
-              console.log("User must change password.");
-            }
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      try {
+        if (cancelled) return;
+        console.log('Auth State Changed. User:', firebaseUser?.email || 'None');
 
-            // If role is B2I_CLIENT, verify B2I client status
-            if (userData.role === UserRole.B2I_CLIENT && userData.b2iId) {
-              const b2iRef = doc(db, FIRESTORE_COLLECTIONS.B2I_CLIENTS, userData.b2iId);
-              const b2iSnap = await getDoc(b2iRef);
-              if (b2iSnap.exists()) {
-                const b2iData = b2iSnap.data();
-                if (b2iData.status === 'inactive') {
-                  console.warn('B2I Client is inactive, blocking login');
-                  setCurrentUser(null);
-                  setCurrentVendor(null);
-                  setLoading(false);
-                  return;
-                }
-              } else {
-                console.warn('B2I Client document not found, blocking login');
+        if (firebaseUser && db) {
+          // Fetch user data from Firestore
+          try {
+            const userDoc = await getDoc(doc(db, FIRESTORE_COLLECTIONS.STAFF_USERS, firebaseUser.uid));
+            if (cancelled) return;
+            if (userDoc.exists()) {
+              const userData = userDoc.data() as StaffUser;
+              // B2I Parent is client-side only; block staff session and sign out.
+              if (userData.role === UserRole.B2I_PARENT) {
+                console.warn('AuthContext: B2I Parent detected in staffUsers. Clearing staff session; use Client Login instead.');
                 setCurrentUser(null);
                 setCurrentVendor(null);
-                setLoading(false);
+                try {
+                  if (auth) await auth.signOut();
+                } catch (e) {
+                  console.error('Error signing out B2I Parent from staff session:', e);
+                }
                 return;
               }
+              const staffUser = { ...userData, id: firebaseUser.uid };
+              setCurrentUser(staffUser);
+              console.log('User data loaded from Firestore:', userData.name);
+              // If role is VENDOR, load vendor from root vendors collection (vendors are not per-organization)
+              if (userData.role === UserRole.VENDOR && userData.vendorId) {
+                const vendorRef = doc(db, FIRESTORE_COLLECTIONS.VENDORS, userData.vendorId);
+                const vendorSnap = await getDoc(vendorRef);
+                if (vendorSnap.exists()) {
+                  const v = vendorSnap.data();
+                  setCurrentVendor({
+                    id: vendorSnap.id,
+                    name: v.name ?? '',
+                    phone: v.phone,
+                    email: v.email,
+                    category: v.category ?? '',
+                    gstNumber: v.gstNumber,
+                    contact: v.contact ?? '', // Fix for missing property
+                  });
+                } else {
+                  setCurrentVendor(null);
+                }
+              } else {
+                setCurrentVendor(null);
+              }
+
+              // Check for forced password change
+              if (userData.mustChangePassword) {
+                console.log("User must change password.");
+              }
+
+              // If role is B2I_CLIENT, verify B2I client status
+              if (userData.role === UserRole.B2I_CLIENT && userData.b2iId) {
+                const b2iRef = doc(db, FIRESTORE_COLLECTIONS.B2I_CLIENTS, userData.b2iId);
+                const b2iSnap = await getDoc(b2iRef);
+                if (b2iSnap.exists()) {
+                  const b2iData = b2iSnap.data();
+                  if (b2iData.status === 'inactive') {
+                    console.warn('B2I Client is inactive, blocking login');
+                    setCurrentUser(null);
+                    setCurrentVendor(null);
+                    return;
+                  }
+                } else {
+                  console.warn('B2I Client document not found, blocking login');
+                  setCurrentUser(null);
+                  setCurrentVendor(null);
+                  return;
+                }
+              }
+            } else {
+              console.warn('User exists in Auth but not in Firestore');
+              setCurrentUser(null);
+              setCurrentVendor(null);
             }
-          } else {
-            console.warn('User exists in Auth but not in Firestore');
+          } catch (error) {
+            console.error('Error fetching user data:', error);
             setCurrentUser(null);
             setCurrentVendor(null);
           }
-        } catch (error) {
-          console.error('Error fetching user data:', error);
-          setCurrentUser(null);
-          setCurrentVendor(null);
-        }
-      } else {
-        // Check if we have a mock/local user session
-        const localData = localStorage.getItem('mmo-current-user');
-        let isMockUser = false;
-
-        if (localData) {
-          try {
-            const parsed = JSON.parse(localData);
-            // Mock users have simple IDs like 'user-1'
-            if (parsed.id && parsed.id.length < 20) {
-              isMockUser = true;
-            }
-          } catch (e) { }
-        }
-
-        if (isMockUser) {
-          console.log('Keeping mock user session active');
-          // Keep current user from localStorage
         } else {
-          console.log('No Firebase session -> Clearing session');
-          setCurrentUser(null);
-          setCurrentVendor(null);
+          // Check if we have a mock/local user session
+          const localData = localStorage.getItem('mmo-current-user');
+          let isMockUser = false;
+
+          if (localData) {
+            try {
+              const parsed = JSON.parse(localData);
+              // Mock users have simple IDs like 'user-1'
+              if (parsed.id && parsed.id.length < 20) {
+                isMockUser = true;
+              }
+            } catch (e) { }
+          }
+
+          if (isMockUser) {
+            console.log('Keeping mock user session active');
+          } else {
+            console.log('No Firebase session -> Clearing session');
+            setCurrentUser(null);
+            setCurrentVendor(null);
+          }
         }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+      unsubscribe();
+    };
   }, []);
 
   const updateCurrentUserAvatar = (avatarDataUrl: string) => {
@@ -192,7 +219,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = async () => {
     console.log('Logging out...');
     try {
-      await auth.signOut();
+      if (auth) await auth.signOut();
     } catch (error) {
       console.error("Error signing out from Firebase:", error);
     }
@@ -210,9 +237,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   );
 };
 
-export const useAuth = () => {
+/** Safe defaults when context is missing (e.g. during HMR or before provider mounts). */
+const defaultAuthContext: AuthContextType = {
+  currentUser: null,
+  setCurrentUser: () => {},
+  currentVendor: null,
+  setCurrentVendor: () => {},
+  updateCurrentUserAvatar: () => {},
+  loading: true,
+  logout: () => {},
+};
+
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
+    if (import.meta.env.DEV) {
+      console.warn('useAuth: no AuthProvider in tree (e.g. HMR). Using defaults.');
+      return defaultAuthContext;
+    }
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
