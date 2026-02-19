@@ -77,7 +77,7 @@ const QuotationWorkQueuePageNew: React.FC = () => {
 
     // Load tasks for quotation team
     useEffect(() => {
-        if (!db || !currentUser) return;
+        if (!db || !currentUser?.id) return; // Never pass undefined to where()
 
         const tasksQuery = query(
             collectionGroup(db, FIRESTORE_COLLECTIONS.TASKS),

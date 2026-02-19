@@ -25,10 +25,10 @@ const DesignAndSiteEngineeringDashboard: React.FC<{ currentPage: string, setCurr
 
     // FETCH BOTH SITE_VISIT AND DRAWING_TASK
     useEffect(() => {
-        if (!db || !currentUser) {
+        if (!db || !currentUser?.id) {
             setLoading(false);
             return;
-        }
+        } // Never pass undefined to where()
 
         const siteQuery = query(
             collectionGroup(db, FIRESTORE_COLLECTIONS.TASKS),

@@ -19,11 +19,10 @@ const AdminTaskRequests: React.FC<AdminTaskRequestsProps> = ({ onNavigateToProje
 
     // Fetch all tasks (not just current user's tasks)
     React.useEffect(() => {
-        if (!db || !currentUser) return;
+        if (!db || !currentUser?.id) return; // Never pass undefined to where()
 
         const tasksRef = collection(db, 'myDayTasks');
 
-        // Query for tasks created by current user or tasks they should see
         const q = query(
             tasksRef,
             where('createdBy', '==', currentUser.id)

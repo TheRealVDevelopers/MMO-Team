@@ -368,6 +368,17 @@ export const uploadSitePhotos = async (
 };
 
 /**
+ * Upload project files (e.g. admin attachments)
+ */
+export const uploadProjectFiles = async (
+  projectId: string,
+  files: File[]
+): Promise<UploadResult[]> => {
+  const path = buildPath(STORAGE_PATHS.PROJECT_FILES, { projectId });
+  return uploadMultipleFiles(files, path);
+};
+
+/**
  * Upload chat attachment
  */
 export const uploadChatAttachment = async (
@@ -483,6 +494,7 @@ export default {
   uploadDrawing,
   uploadUserAvatar,
   uploadSitePhotos,
+  uploadProjectFiles,
   uploadChatAttachment,
   uploadReceipt,
   uploadCatalogImage,

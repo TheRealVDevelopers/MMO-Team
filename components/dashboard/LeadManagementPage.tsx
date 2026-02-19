@@ -15,6 +15,7 @@ import { Lead, LeadCommunicationMessage, LeadFile, ProjectMilestone, LeadPipelin
 import { formatCurrencyINR, safeDate, FIRESTORE_COLLECTIONS } from '../../constants';
 import { useAuth } from '../../context/AuthContext';
 import { mapCaseStatusToLeadStatus } from '../../hooks/useLeads';
+import { uploadMultipleLeadAttachments } from '../../services/leadAttachmentService';
 
 interface LeadManagementPageProps {
   leadId: string;
@@ -147,49 +148,50 @@ const LeadManagementPage: React.FC<LeadManagementPageProps> = ({ leadId, onClose
     const files = event.target.files;
     if (!files || files.length === 0 || !leadId || !currentUser) return;
 
-    const fileToBase64 = (file: File): Promise<string> => {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = error => reject(error);
-      });
-    };
-
     setUploading(true);
     try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i] as File;
-        const fileUrl = await fileToBase64(file);
+      // 1. Upload files to Firebase Storage (not base64 in Firestore)
+      const fileArray = Array.from(files) as File[];
+      const urls = await uploadMultipleLeadAttachments(leadId, fileArray);
 
+      if (urls.length === 0) {
+        alert('No files were uploaded. Please try again.');
+        return;
+      }
+
+      // 2. Save metadata + Storage URLs to Firestore
+      const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, leadId);
+      const newFiles: Omit<LeadFile, 'uploadedAt'>[] = fileArray.slice(0, urls.length).map((file, i) => {
         const fileType = file.type.startsWith('image/') ? 'image' :
           file.type.includes('pdf') || file.type.includes('document') ? 'document' : 'other';
-
-        const leadFile: LeadFile = {
+        return {
           id: `file-${Date.now()}-${i}`,
           leadId,
           fileName: file.name,
-          fileUrl,
+          fileUrl: urls[i],
           fileType,
           uploadedBy: currentUser.id,
           uploadedByName: currentUser.name,
           uploadedAt: new Date(),
         };
+      });
 
-        const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, leadId);
-        await updateDoc(caseRef, {
-          files: arrayUnion({
-            ...leadFile,
-            uploadedAt: serverTimestamp(),
-          }),
-        });
-      }
+      await updateDoc(caseRef, {
+        files: arrayUnion(
+          ...newFiles.map((f) => ({ ...f, uploadedAt: serverTimestamp() }))
+        ),
+      });
 
       await fetchLead();
       alert('Files uploaded successfully!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading files:', error);
-      alert('Failed to upload files. Please try again.');
+      const msg = error?.message || 'Failed to upload files. Please try again.';
+      if (msg.includes('not initialized')) {
+        alert('File storage is not available in this mode. Please use a normal (non-demo) environment.');
+      } else {
+        alert(msg);
+      }
     } finally {
       setUploading(false);
       if (fileInputRef.current) {

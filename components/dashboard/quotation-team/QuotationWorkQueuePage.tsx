@@ -60,10 +60,10 @@ const QuotationWorkQueuePage: React.FC = () => {
 
     // Fetch quotation tasks
     useEffect(() => {
-        if (!db || !currentUser) {
+        if (!db || !currentUser?.id) {
             setLoading(false);
             return;
-        }
+        } // Never pass undefined to where()
 
         console.log('[Quotation Queue] Setting up listener for user:', currentUser.id);
 

@@ -59,7 +59,13 @@ const B2IDashboardPage: React.FC<B2IDashboardPageProps> = ({ currentPage, setCur
             return;
         }
 
-        const orgIds = childOrgs.map(o => o.id);
+        // Never pass undefined to Firestore 'in' — filter out falsy ids
+        const orgIds = childOrgs.map(o => o.id).filter((id): id is string => id != null && id !== '');
+        if (orgIds.length === 0) {
+            setCases([]);
+            setLoadingCases(false);
+            return;
+        }
 
         // Firestore 'in' queries support up to 30 values — batch if needed
         const batches: string[][] = [];

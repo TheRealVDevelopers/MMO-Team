@@ -3,6 +3,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { db } from '../../../firebase';
 import { collection, query, where, onSnapshot, doc, getDocs } from 'firebase/firestore';
 import { UserRole } from '../../../types';
+import { FIRESTORE_COLLECTIONS } from '../../../constants';
 import ClientDashboardPage from '../../landing/ClientDashboardPage';
 import {
     BuildingOfficeIcon,
@@ -10,69 +11,72 @@ import {
 } from '@heroicons/react/24/outline';
 
 const B2IParentDashboard: React.FC = () => {
-    const { user, staffUser } = useAuth();
+    const { currentUser } = useAuth();
     const [childOrgs, setChildOrgs] = useState<any[]>([]); // Using any for flexibility or define a type
     const [loading, setLoading] = useState(true);
     const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
     const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!staffUser || staffUser.role !== UserRole.B2I_PARENT) {
+        if (!currentUser || currentUser.role !== UserRole.B2I_PARENT) {
+            setLoading(false);
+            return;
+        }
+        // Never run Firestore queries when b2iId is undefined — prevents "Unsupported field value: undefined"
+        if (!currentUser.b2iId) {
             setLoading(false);
             return;
         }
 
-        // Fetch B2I Client details to get the list of child organizations
-        // The b2iId is stored in staffUser.b2iId
-        if (staffUser.b2iId) {
-            const b2iRef = doc(db, 'b2i_clients', staffUser.b2iId);
+        const b2iId = currentUser.b2iId;
+        {
+            const b2iRef = doc(db, FIRESTORE_COLLECTIONS.B2I_CLIENTS, b2iId);
             const unsubscribeValid = onSnapshot(b2iRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const b2iData = docSnap.data();
-                    // Now fetch organizations linked to this B2I Client
-                    // Assuming organizations have a field 'b2iClientId'
-                    const orgsRef = collection(db, 'organizations');
-                    const q = query(orgsRef, where('b2iClientId', '==', staffUser.b2iId));
+                if (!docSnap.exists()) {
+                    setLoading(false);
+                    return;
+                }
+                // Guard: never pass undefined to where() - Firestore throws "Unsupported field value: undefined"
+                if (!b2iId) {
+                    setLoading(false);
+                    return;
+                }
+                const b2iData = docSnap.data();
+                // Fetch child organizations linked to this B2I Parent (same field used in admin and B2IDashboardPage)
+                const orgsRef = collection(db, FIRESTORE_COLLECTIONS.ORGANIZATIONS);
+                const q = query(orgsRef, where('b2iParentId', '==', b2iId));
 
                     // Also fetch cases for these organizations
-                    onSnapshot(q, async (snapshot) => {
-                        const orgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-                        // For each org, try to find an active case
-                        // Optimization: can fetch all cases relevant to these orgs if needed, or fetch on demand.
-
-                        setChildOrgs(orgs);
-                        setLoading(false);
-                    });
-                } else {
+                onSnapshot(q, (snapshot) => {
+                    const orgs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                    setChildOrgs(orgs);
                     setLoading(false);
-                }
+                }, (err) => {
+                    console.error('[B2IParentDashboard] Error fetching child orgs:', err);
+                    setLoading(false);
+                });
             });
             return () => unsubscribeValid();
-        } else {
-            setLoading(false);
         }
 
-    }, [staffUser]);
+    }, [currentUser]);
 
-    // Helper to find case for an org when clicked
+    // Helper to find case for an org when clicked (cases linked via organizationId)
     const handleOrgClick = async (org: any) => {
+        if (!org?.id) {
+            console.warn('[B2IParentDashboard] Org has no id');
+            return;
+        }
         setLoading(true);
         try {
-            // Find a case associated with this organization
-            // Strategy: Query Cases where 'clientUid' == org.id 
-            // OR checks if there is a 'client' document with this orgId?
-
-            // Assuming Org ID matches Client UID for B2B or checking direct mapping
-            let q = query(collection(db, 'cases'), where('clientUid', '==', org.id));
-            let snapshot = await getDocs(q);
+            // Find cases associated with this organization via organizationId (never pass undefined to where())
+            const q = query(
+                collection(db, FIRESTORE_COLLECTIONS.CASES),
+                where('organizationId', '==', org.id)
+            );
+            const snapshot = await getDocs(q);
 
             if (snapshot.empty) {
-                // Try searching by organizationId field on case if it exists
-                // q = query(collection(db, 'cases'), where('organizationId', '==', org.id));
-                // snapshot = await getDocs(q);
-
-                // If that also fails, alert user
                 alert("No active project found for this organization.");
                 setLoading(false);
                 return;

@@ -49,10 +49,10 @@ const DrawingWorkQueuePage: React.FC = () => {
 
     // FETCH BOTH SITE_VISIT AND DRAWING_TASK
     useEffect(() => {
-        if (!db || !currentUser) {
+        if (!db || !currentUser?.id) {
             setLoading(false);
             return;
-        }
+        } // Never pass undefined to where()
 
         console.log('[Work Queue] Setting up listeners for user:', currentUser.id);
 

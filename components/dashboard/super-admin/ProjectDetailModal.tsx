@@ -87,54 +87,41 @@ const ProjectDetailModal: React.FC<{ project: Project; isOpen: boolean; onClose:
             const updates: Partial<Project> = { status: newStatus };
             const uploadedFiles: any[] = []; // Using any to avoid LeadFile strictness issues if imports missing, but essentially LeadFile
 
-            // Handle File Uploads first
+            // Handle File Uploads first (upload to Firebase Storage, then save URLs in Firestore)
             if (files.length > 0) {
                 setIsUploading(true);
-                // Dynamically import to avoid top-level issues if any
                 const { arrayUnion, doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
                 const { db } = await import('../../../firebase');
+                const { uploadProjectFiles } = await import('../../../services/storageService');
 
-                // Basic Base64 upload for demo/MVP (similar to LeadManagementPage)
-                const fileToBase64 = (file: File): Promise<string> => {
-                    return new Promise((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.readAsDataURL(file);
-                        reader.onload = () => resolve(reader.result as string);
-                        reader.onerror = error => reject(error);
-                    });
-                };
+                const fileArray = Array.from(files);
+                const results = await uploadProjectFiles(project.id, fileArray);
 
-                for (let i = 0; i < files.length; i++) {
-                    const file = files[i];
-                    const fileUrl = await fileToBase64(file);
+                for (let i = 0; i < results.length; i++) {
+                    const file = fileArray[i];
+                    const result = results[i];
                     const fileType = file.type.startsWith('image/') ? 'image' : 'document';
-
-                    const newFile = {
+                    uploadedFiles.push({
                         id: `file-${Date.now()}-${i}`,
-                        leadId: project.id, // Using project ID as leadId for compatibility
+                        leadId: project.id,
                         fileName: file.name,
-                        fileUrl: fileUrl,
-                        fileType: fileType,
-                        uploadedBy: 'admin', // defaulted as this is admin modal
+                        fileUrl: result.url,
+                        fileType,
+                        uploadedBy: 'admin',
                         uploadedByName: 'System Admin',
                         uploadedAt: new Date(),
                         category: 'activity_attachment'
-                    };
-                    uploadedFiles.push(newFile);
+                    });
                 }
 
-                // Update project documents
                 if (uploadedFiles.length > 0) {
-                    const projectRef = doc(db, 'projects', project.files ? project.id : project.id); // Guard check
-                    // Check if 'files' field exists on project type, if not use 'documents' or creating new field 'files'
-                    // Project interface has 'documents' and 'files'. Let's use 'files' to match LeadFile type.
+                    const projectRef = doc(db, 'projects', project.id);
                     await updateDoc(projectRef, {
                         files: arrayUnion(...uploadedFiles.map(f => ({
                             ...f,
-                            uploadedAt: serverTimestamp() // Use server timestamp for Firestore
+                            uploadedAt: serverTimestamp()
                         })))
                     });
-                    // Local state update for immediate reflection if needed, but we rely on re-fetch usually
                 }
                 setIsUploading(false);
             }

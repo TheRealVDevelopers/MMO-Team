@@ -51,10 +51,10 @@ const ProcurementWorkQueuePage: React.FC<{
     const [statusFilter, setStatusFilter] = useState<'ALL' | TaskStatus>('ALL');
 
     useEffect(() => {
-        if (!db || !currentUser) {
+        if (!db || !currentUser?.id) {
             setLoading(false);
             return;
-        }
+        } // Never pass undefined to where()
 
         const taskQuery = query(
             collectionGroup(db, FIRESTORE_COLLECTIONS.TASKS),

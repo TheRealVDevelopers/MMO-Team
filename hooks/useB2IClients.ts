@@ -71,6 +71,7 @@ export const useB2IClients = () => {
 
     const deleteB2IClient = async (id: string) => {
         if (!db) throw new Error('Database not initialized');
+        if (!id) throw new Error('B2I client id is required'); // Never pass undefined to where()
 
         try {
             // Unlink all child organizations first

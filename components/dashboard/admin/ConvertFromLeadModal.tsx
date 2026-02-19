@@ -57,6 +57,7 @@ const ConvertFromLeadModal: React.FC<ConvertFromLeadModalProps> = ({
     }, [isOpen, organizationId]);
 
     const fetchLeads = async () => {
+        if (!organizationId) return; // Never pass undefined to where()
         setLoading(true);
         setError(null);
 

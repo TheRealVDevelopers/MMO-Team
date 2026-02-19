@@ -43,7 +43,8 @@ export const useClientCase = (identifier: { type: 'clientUid' | 'caseId'; value:
         const idValue = typeof identifier === 'string' ? identifier : identifier.value;
         const idType = typeof identifier === 'string' ? 'clientUid' : identifier.type;
 
-        if (!idValue) {
+        // Never pass undefined to where() — Firestore throws "Unsupported field value: undefined"
+        if (idValue == null || idValue === '') {
             setLoading(false);
             return;
         }

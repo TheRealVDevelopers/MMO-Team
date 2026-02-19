@@ -83,10 +83,10 @@ const BOQsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!db || !currentUser) {
+    if (!db || !currentUser?.id) {
       setLoading(false);
       return;
-    }
+    } // Never pass undefined to where()
 
     setQueryError(null);
     const boqQuery = query(

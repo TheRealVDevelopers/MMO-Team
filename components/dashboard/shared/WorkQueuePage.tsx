@@ -77,14 +77,12 @@ const WorkQueuePage: React.FC = () => {
 
     // Fetch tasks using collectionGroup - SINGLE SOURCE OF TRUTH
     useEffect(() => {
-        if (!db || !currentUser) {
+        if (!db || !currentUser?.id) {
             setLoading(false);
             return;
-        }
+        } // Never pass undefined to where()
 
         try {
-            // CRITICAL: collectionGroup query with assignedTo filter
-            // NO client-side filtering, NO role-based filtering, NO organization filtering
             const tasksQuery = query(
                 collectionGroup(db, FIRESTORE_COLLECTIONS.TASKS),
                 where('assignedTo', '==', currentUser.id)
