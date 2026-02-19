@@ -18,13 +18,25 @@ service cloud.firestore {
     // B2I CLIENTS
     // ========================================
     match /b2iClients/{b2iId} {
-      // Super Admin: all; B2I Parent / B2I Client: read own doc (where staffUsers.b2iId == b2iId)
+      // Super Admin: all access
+      // B2I Parent (staff or client login): read own B2I doc
       allow read: if request.auth != null && (
         get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data.role == 'Super Admin' ||
-        get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data.b2iId == b2iId
+        get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data.b2iId == b2iId ||
+        get(/databases/$(database)/documents/clients/$(request.auth.uid)).data.b2iId == b2iId
       );
       allow write: if isAuthenticated() &&
         get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data.role == 'Super Admin';
+    }
+
+    // ========================================
+    // CLIENTS (client portal users)
+    // ========================================
+    match /clients/{clientId} {
+      // Clients can read/write their own doc
+      allow read, write: if request.auth != null && request.auth.uid == clientId;
+      // Staff can read all client docs
+      allow read: if isAuthenticated();
     }
 
     // ========================================
@@ -55,7 +67,7 @@ service cloud.firestore {
     // BASELINE SECURITY: Require authentication for everything
     match /{document=**} {
       allow read: if isAuthenticated();
-      // B2I clients are read-only — block writes for them everywhere
+      // Block writes for B2I clients (read-only); allow all other authenticated users
       allow write: if isAuthenticated() &&
         get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data.role != 'B2I Client';
     }

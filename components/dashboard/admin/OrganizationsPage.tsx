@@ -3,8 +3,8 @@ import { motion } from 'framer-motion';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import { PlusIcon, BuildingOfficeIcon, MagnifyingGlassIcon, UserIcon, MapPinIcon, XMarkIcon, CurrencyRupeeIcon, UserCircleIcon, MapIcon, CheckCircleIcon, PencilIcon, RocketLaunchIcon, BanknotesIcon } from '@heroicons/react/24/outline';
-import { Organization, ProjectStatus, Project, ExecutionStage, PaymentTerm } from '../../../types';
-import { useProjects } from '../../../hooks/useProjects';
+import { Organization, ProjectStatus, Project, ExecutionStage, PaymentTerm, CaseStatus, Case } from '../../../types';
+import { useCases } from '../../../hooks/useCases';
 import { useLeads } from '../../../hooks/useLeads';
 import { formatCurrencyINR } from '../../../constants';
 import CreateOrganizationModal from './CreateOrganizationModal';
@@ -35,7 +35,8 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
     const [isProjectDetailOpen, setIsProjectDetailOpen] = useState(false);
 
-    const { addProject, projects: allProjects } = useProjects();
+    const { cases: allCases } = useCases({ isProject: true, fetchAll: true });
+    const allProjects = allCases as unknown as Project[];
     const { leads } = useLeads();
     const { organizations: realOrgs, addOrganization, updateOrganization, loading: orgsLoading, error: orgsError } = useOrganizations();
     const { users } = useUsers();
@@ -114,6 +115,28 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
     // Count projects for each organization
     const getOrgProjectCount = (orgId: string) => {
         return (allProjects || []).filter(p => p.organizationId === orgId).length;
+    };
+
+    // Determine active/inactive project status for an organization
+    const ACTIVE_STATUSES: string[] = [
+        CaseStatus.EXECUTION_ACTIVE,
+        CaseStatus.PLANNING_SUBMITTED,
+        CaseStatus.WAITING_FOR_PLANNING,
+        CaseStatus.WAITING_FOR_PAYMENT,
+        CaseStatus.NEGOTIATION,
+        CaseStatus.QUOTATION,
+        CaseStatus.BOQ,
+        CaseStatus.DRAWING,
+        CaseStatus.SITE_VISIT,
+        CaseStatus.CONTACTED,
+        CaseStatus.LEAD,
+    ];
+
+    const getOrgProjectStatus = (orgId: string): 'active' | 'inactive' | 'none' => {
+        const orgProjects = (allProjects || []).filter(p => p.organizationId === orgId);
+        if (orgProjects.length === 0) return 'none';
+        const hasActive = orgProjects.some(p => ACTIVE_STATUSES.includes(p.status as string));
+        return hasActive ? 'active' : 'inactive';
     };
 
     return (
@@ -200,6 +223,20 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                                     <span className="text-xs font-medium px-2 py-1 bg-subtle-background rounded-full text-text-secondary">
                                         {getOrgProjectCount(org?.id ?? '')} Projects
                                     </span>
+                                    {(() => {
+                                        const status = getOrgProjectStatus(org?.id ?? '');
+                                        if (status === 'active') return (
+                                            <span className="text-xs font-bold px-2 py-1 rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                                Active
+                                            </span>
+                                        );
+                                        if (status === 'inactive') return (
+                                            <span className="text-xs font-bold px-2 py-1 rounded-full bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                                                Inactive
+                                            </span>
+                                        );
+                                        return null;
+                                    })()}
                                 </div>
                             </div>
 

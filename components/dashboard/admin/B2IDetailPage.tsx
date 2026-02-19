@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeftIcon, BuildingOfficeIcon, BuildingLibraryIcon, PlusIcon, PhoneIcon, EnvelopeIcon, MapPinIcon, UserIcon } from '@heroicons/react/24/outline';
-import { B2IClient, Organization } from '../../../types';
+import { B2IClient, Organization, CaseStatus } from '../../../types';
 import { useB2IClients } from '../../../hooks/useB2IClients';
 import { useOrganizations } from '../../../hooks/useOrganizations';
+import { useCases } from '../../../hooks/useCases';
 import CreateOrganizationModal from './CreateOrganizationModal';
 
 interface B2IDetailPageProps {
@@ -15,6 +16,7 @@ interface B2IDetailPageProps {
 const B2IDetailPage: React.FC<B2IDetailPageProps> = ({ b2iId, onBack, setCurrentPage }) => {
     const { b2iClients } = useB2IClients();
     const { organizations, addOrganization } = useOrganizations();
+    const { cases: allProjects } = useCases({ isProject: true, fetchAll: true });
     const [isCreateOrgModalOpen, setIsCreateOrgModalOpen] = useState(false);
 
     const b2iClient = b2iClients.find(c => c.id === b2iId);
@@ -22,6 +24,30 @@ const B2IDetailPage: React.FC<B2IDetailPageProps> = ({ b2iId, onBack, setCurrent
         organizations.filter(org => org.b2iParentId === b2iId),
         [organizations, b2iId]
     );
+
+    // Active status constants
+    const ACTIVE_STATUSES: string[] = [
+        CaseStatus.EXECUTION_ACTIVE,
+        CaseStatus.PLANNING_SUBMITTED,
+        CaseStatus.WAITING_FOR_PLANNING,
+        CaseStatus.WAITING_FOR_PAYMENT,
+        CaseStatus.NEGOTIATION,
+        CaseStatus.QUOTATION,
+        CaseStatus.BOQ,
+        CaseStatus.DRAWING,
+        CaseStatus.SITE_VISIT,
+        CaseStatus.CONTACTED,
+        CaseStatus.LEAD,
+    ];
+
+    const getOrgProjects = (orgId: string) =>
+        (allProjects || []).filter(p => p.organizationId === orgId);
+
+    const getOrgProjectStatus = (orgId: string): 'active' | 'inactive' | 'none' => {
+        const orgProjects = getOrgProjects(orgId);
+        if (orgProjects.length === 0) return 'none';
+        return orgProjects.some(p => ACTIVE_STATUSES.includes(p.status as string)) ? 'active' : 'inactive';
+    };
 
     if (!b2iClient) {
         return (
@@ -65,8 +91,8 @@ const B2IDetailPage: React.FC<B2IDetailPageProps> = ({ b2iId, onBack, setCurrent
                     <p className="text-gray-500 dark:text-gray-400">B2I Client Details</p>
                 </div>
                 <span className={`ml-auto text-sm font-bold px-3 py-1 rounded-full ${b2iClient.status === 'active'
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                        : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                    : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
                     }`}>
                     {b2iClient.status === 'active' ? 'Active' : 'Inactive'}
                 </span>
@@ -149,8 +175,29 @@ const B2IDetailPage: React.FC<B2IDetailPageProps> = ({ b2iId, onBack, setCurrent
                                 </div>
                             )}
                         </div>
-                        <div className="mt-4 pt-3 border-t border-border text-xs text-text-tertiary">
-                            Since {org.createdAt ? new Date(org.createdAt).toLocaleDateString() : 'N/A'}
+                        <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
+                            <span className="text-xs text-text-tertiary">
+                                Since {org.createdAt ? new Date(org.createdAt).toLocaleDateString() : 'N/A'}
+                            </span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-medium px-2 py-1 bg-subtle-background rounded-full text-text-secondary">
+                                    {getOrgProjects(org.id).length} Projects
+                                </span>
+                                {(() => {
+                                    const status = getOrgProjectStatus(org.id);
+                                    if (status === 'active') return (
+                                        <span className="text-xs font-bold px-2 py-1 rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                            Active
+                                        </span>
+                                    );
+                                    if (status === 'inactive') return (
+                                        <span className="text-xs font-bold px-2 py-1 rounded-full bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                                            Inactive
+                                        </span>
+                                    );
+                                    return null;
+                                })()}
+                            </div>
                         </div>
                     </motion.div>
                 ))}
