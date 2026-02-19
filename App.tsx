@@ -162,6 +162,7 @@ const navConfig = {
   [UserRole.EXECUTION_TEAM]: {
     title: 'Execution Hub',
     navItems: [
+      { id: 'my-day', label: 'My Day', icon: <ClockIcon className="w-6 h-6" /> },
       { id: 'planning', label: 'Projects', icon: <ViewColumnsIcon className="w-6 h-6" /> },
       { id: 'timeline', label: 'Timeline', icon: <CalendarIcon className="w-6 h-6" /> },
       { id: 'request-validation', label: 'Request Validation', icon: <ClipboardDocumentCheckIcon className="w-6 h-6" /> },
@@ -306,16 +307,25 @@ const AppContent: React.FC = () => {
 
   // Show app content when staff is logged in
   if (currentUser) {
-    const currentNavConfig = navConfig[currentUser.role];
+    const baseNavConfig = navConfig[currentUser.role];
+
+    // Allow Execution Team managers to see Team Members tab without changing role
+    const navItems =
+      currentUser.role === UserRole.EXECUTION_TEAM && (currentUser as any).isExecutionManager
+        ? [
+            ...(baseNavConfig?.navItems || []),
+            { id: 'team', label: 'Team Members', icon: <UsersIcon className="w-6 h-6" /> },
+          ]
+        : baseNavConfig?.navItems;
 
     return (
       <>
         <InternalLayout
           currentPage={currentPage}
           setCurrentPage={handleSetPage}
-          title={currentNavConfig?.title}
-          navItems={currentNavConfig?.navItems}
-          secondaryNavItems={currentNavConfig?.secondaryNavItems}
+          title={baseNavConfig?.title}
+          navItems={navItems}
+          secondaryNavItems={baseNavConfig?.secondaryNavItems}
           onOpenSettings={handleOpenSettings}
         >
           {isSettingsOpen ? (

@@ -818,6 +818,8 @@ export interface StaffUser {
   region?: string;
   currentTask?: string;
   lastUpdateTimestamp?: Date;
+  /** Execution Team manager flag (role remains EXECUTION_TEAM) */
+  isExecutionManager?: boolean;
   // Admin settings
   showUserSelector?: boolean; // Toggle to show/hide user selector dropdown in header (Admin only)
   // B2I fields

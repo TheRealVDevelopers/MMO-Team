@@ -12,6 +12,8 @@ import ExecutionProjectsPage from './execution-team/ExecutionProjectsPage';
 import ExecutionWorkspace from './execution-team/ExecutionWorkspace';
 import ExecutionTimelinePage from './execution-team/ExecutionTimelinePage';
 import RequestValidationPage from './shared/RequestValidationPage';
+import ExecutionMyDayPage from './execution-team/ExecutionMyDayPage';
+import ExecutionTeamMembersPage from './execution-team/ExecutionTeamMembersPage';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
 interface Props {
@@ -27,6 +29,17 @@ const ExecutionTeamDashboard: React.FC<Props> = ({ currentPage, setCurrentPage }
 
   if (currentPage === 'request-validation') {
     return <RequestValidationPage />;
+  }
+
+  if (currentPage === 'my-day') {
+    return <ExecutionMyDayPage />;
+  }
+
+  if (currentPage === 'team') {
+    if (!(currentUser as any)?.isExecutionManager) {
+      return null;
+    }
+    return <ExecutionTeamMembersPage />;
   }
 
   const paramId = searchParams.get('project');
