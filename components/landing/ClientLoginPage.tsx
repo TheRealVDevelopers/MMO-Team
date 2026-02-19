@@ -53,7 +53,7 @@ const FadeInSection: React.FC<{ children: React.ReactNode; delay?: string; class
 };
 
 interface ClientLoginPageProps {
-    onLoginSuccess: (user: any, isFirstLogin: boolean) => void;
+    onLoginSuccess: (user: any, isFirstLogin: boolean, extra?: { isB2IParent?: boolean; b2iId?: string }) => void;
 }
 
 const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => {
@@ -92,7 +92,10 @@ const ClientLoginPage: React.FC<ClientLoginPageProps> = ({ onLoginSuccess }) => 
                 }
                 const result = await signInClient(email.trim(), password);
                 if (result && result.user) {
-                    onLoginSuccess(result.user, result.isFirstLogin);
+                    onLoginSuccess(result.user, result.isFirstLogin, {
+                        isB2IParent: result.isB2IParent,
+                        b2iId: result.b2iId,
+                    });
                 } else {
                     setError('Invalid email or password.');
                 }

@@ -132,7 +132,15 @@ export const signInStaff = async (email: string, password: string): Promise<Staf
             runId: 'run1',
             hypothesisId: 'C',
         });
-        return await convertToAppUser(userCredential.user);
+        const staffUser = await convertToAppUser(userCredential.user);
+
+        // Block B2I Parent users from staff login — they should use Client Login
+        if (staffUser && staffUser.role === UserRole.B2I_PARENT) {
+            await signOut(auth);
+            throw new Error('B2I Parent accounts must use the Client Login portal. Please click "Client Login" to access your dashboard.');
+        }
+
+        return staffUser;
     } catch (error: any) {
         logAgent({
             location: 'authService.ts:sign-in',
@@ -721,11 +729,12 @@ export const signInClientFirstTime = async (
 
 /**
  * Existing client login: email + password. Returns user and isFirstLogin (for password change prompt).
+ * Also returns isB2IParent and b2iId if the client is a B2I parent.
  */
 export const signInClient = async (
     email: string,
     password: string
-): Promise<{ user: any; isFirstLogin: boolean } | null> => {
+): Promise<{ user: any; isFirstLogin: boolean; isB2IParent?: boolean; b2iId?: string } | null> => {
     try {
         if (!auth || !db) throw new Error("Firebase not initialized");
 
@@ -734,9 +743,13 @@ export const signInClient = async (
 
         const clientDoc = await getDoc(doc(db, CLIENTS_COLLECTION, user.uid));
         let isFirstLogin = false;
+        let isB2IParent = false;
+        let b2iId: string | undefined;
         if (clientDoc.exists()) {
             const data = clientDoc.data();
             isFirstLogin = data.isFirstLogin === true;
+            isB2IParent = data.isB2IParent === true;
+            b2iId = data.b2iId;
         } else {
             try {
                 await setDoc(doc(db, CLIENTS_COLLECTION, user.uid), {
@@ -753,7 +766,7 @@ export const signInClient = async (
             }
         }
 
-        return { user, isFirstLogin };
+        return { user, isFirstLogin, isB2IParent, b2iId };
     } catch (error: any) {
         console.error('Error signing in client:', error);
         throw error;
@@ -985,7 +998,19 @@ export const createB2IParentAccount = async (
             lastUpdateTimestamp: serverTimestamp(),
         });
 
-        console.log(`B2I Parent account created: ${name} (${email})`);
+        // Also create a clients collection record so B2I parent can login via Client Login
+        await setDoc(doc(db, CLIENTS_COLLECTION, newUserUid), {
+            id: newUserUid,
+            name: name,
+            email: email,
+            isFirstLogin: true,
+            isB2IParent: true,
+            b2iId: b2iId,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        });
+
+        console.log(`B2I Parent account created (staff + client): ${name} (${email})`);
         return newUserUid;
 
     } catch (error: any) {

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head><title>Firebase Storage 412 Diagnostic</title></head>
+<body>
+<h1>Firebase Storage 412 Diagnostic</h1>
+<pre id="log" style="white-space:pre-wrap; background:#222; color:#0f0; padding:16px; font-size:13px; max-height:80vh; overflow:auto;"></pre>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js';
+
+const logEl = document.getElementById('log');
+function log(msg) { logEl.textContent += msg + '\n'; console.log(msg); }
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAJr5z0XiOL-SRHA6hgM3V2NHJbN3BolPQ",
+  authDomain: "kurchi-app.firebaseapp.com",
+  projectId: "kurchi-app",
+  storageBucket: "kurchi-app.firebasestorage.app",
+  messagingSenderId: "140677067488",
+  appId: "1:140677067488:web:803d5ec5f091bdfc015685",
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+log('=== Firebase Storage 412 Diagnostic ===');
+log('');
+
+// Test 1: Raw REST upload to public path (no auth, no SDK)
+log('--- Test 1: Raw REST upload to repro_public (no auth) ---');
+try {
+  const testContent = new Blob(['test ' + Date.now()], { type: 'text/plain' });
+  const url = `https://firebasestorage.googleapis.com/v0/b/kurchi-app.firebasestorage.app/o?name=${encodeURIComponent('repro_public/diag-test.txt')}`;
+  const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: testContent });
+  log(`  Status: ${resp.status} ${resp.statusText}`);
+  const body = await resp.text();
+  log(`  Body: ${body.substring(0, 500)}`);
+  if (resp.status === 412) {
+    log('  🚨 412 on public path w/o SDK = SERVICE ACCOUNT PERMISSIONS ISSUE');
+  } else if (resp.ok) {
+    log('  ✅ Raw REST upload works!');
+  }
+} catch (e) {
+  log(`  ❌ Error: ${e.message}`);
+}
+
+log('');
+
+// Test 2: SDK upload to public path without auth (getStorage with NO bucket arg)
+log('--- Test 2: SDK upload to repro_public (no auth, default bucket) ---');
+try {
+  const storage = getStorage(app);
+  log(`  Storage bucket: ${storage._bucket?.bucket || 'unknown'}`);
+  const testBlob = new Blob(['sdk-test-no-auth ' + Date.now()], { type: 'text/plain' });
+  const testRef = ref(storage, 'repro_public/sdk-no-auth-test.txt');
+  const snap = await uploadBytes(testRef, testBlob, { contentType: 'text/plain' });
+  const dlUrl = await getDownloadURL(snap.ref);
+  log(`  ✅ Upload succeeded! URL: ${dlUrl.substring(0, 80)}...`);
+} catch (e) {
+  log(`  ❌ Upload failed: ${e.code} - ${e.message}`);
+  log(`  Server response: ${e.serverResponse || 'none'}`);
+  log(`  Custom data: ${JSON.stringify(e.customData || {})}`);
+}
+
+log('');
+
+// Test 3: SDK upload to public path WITH explicit gs:// bucket
+log('--- Test 3: SDK upload with gs:// bucket prefix ---');
+try {
+  const storage2 = getStorage(app, 'gs://kurchi-app.firebasestorage.app');
+  log(`  Storage bucket: ${storage2._bucket?.bucket || 'unknown'}`);
+  const testBlob = new Blob(['sdk-test-gs ' + Date.now()], { type: 'text/plain' });
+  const testRef = ref(storage2, 'repro_public/sdk-gs-test.txt');
+  const snap = await uploadBytes(testRef, testBlob, { contentType: 'text/plain' });
+  const dlUrl = await getDownloadURL(snap.ref);
+  log(`  ✅ Upload succeeded! URL: ${dlUrl.substring(0, 80)}...`);
+} catch (e) {
+  log(`  ❌ Upload failed: ${e.code} - ${e.message}`);
+  log(`  Server response: ${e.serverResponse || 'none'}`);
+  log(`  Custom data: ${JSON.stringify(e.customData || {})}`);
+}
+
+log('');
+
+// Test 4: Authenticated upload to cases/ path
+log('--- Test 4: Authenticated upload to cases/ (requires login) ---');
+try {
+  log('  Signing in as admin@mmo.com ...');
+  const email = prompt('Enter email (default: admin@mmo.com):', 'admin@mmo.com');
+  const password = prompt('Enter password:');
+  if (!password) { log('  Skipped (no password)'); }
+  else {
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+    log(`  ✅ Signed in as: ${cred.user.email} (uid: ${cred.user.uid})`);
+    
+    const storage = getStorage(app);
+    const testBlob = new Blob(['auth-test ' + Date.now()], { type: 'text/plain' });
+    const testRef = ref(storage, 'cases/diag-test-case/documents/diag-test.txt');
+    const snap = await uploadBytes(testRef, testBlob, { contentType: 'text/plain' });
+    const dlUrl = await getDownloadURL(snap.ref);
+    log(`  ✅ Authenticated upload succeeded! URL: ${dlUrl.substring(0, 80)}...`);
+  }
+} catch (e) {
+  log(`  ❌ Failed: ${e.code} - ${e.message}`);
+  log(`  Server response: ${e.serverResponse || 'none'}`);
+  log(`  Custom data: ${JSON.stringify(e.customData || {})}`);
+}
+
+log('');
+log('=== Diagnostic complete ===');
+</script>
+</body>
+</html>

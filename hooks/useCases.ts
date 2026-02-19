@@ -20,6 +20,7 @@ import { FIRESTORE_COLLECTIONS } from '../constants';
 
 interface UseCasesOptions {
   organizationId?: string;
+  fetchAll?: boolean; // Skip org filter — fetch all cases across all orgs
   userId?: string; // Filter by assigned user
   isProject?: boolean; // Filter leads vs projects
   projectHeadId?: string; // When set with isProject, only cases assigned to this project head
@@ -46,7 +47,8 @@ export const useCases = (options: UseCasesOptions = {}) => {
       let constraints = [];
 
       // OPTIONAL: Filter by organizationId (include null for individual leads)
-      if (options.organizationId) {
+      // Skip when fetchAll is true (admin pages need all cases across orgs)
+      if (options.organizationId && !options.fetchAll) {
         constraints.push(where('organizationId', 'in', [options.organizationId, null]));
       }
 
@@ -122,7 +124,7 @@ export const useCases = (options: UseCasesOptions = {}) => {
       setError(err.message);
       setLoading(false);
     }
-  }, [options.organizationId, options.userId, options.isProject, options.projectHeadId, JSON.stringify(options.status)]);
+  }, [options.organizationId, options.fetchAll, options.userId, options.isProject, options.projectHeadId, JSON.stringify(options.status)]);
 
   // Create new case (lead)
   const createCase = useCallback(
