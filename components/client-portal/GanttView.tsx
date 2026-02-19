@@ -46,9 +46,12 @@ const GanttView: React.FC<GanttViewProps> = ({ stages, paymentMilestones = [], i
   };
 
   const executionStages = stages.filter((s) => s.startDate && s.expectedEndDate);
+  const textPrimary = isDark ? 'text-white' : 'text-[#111111]';
+  const textMuted = isDark ? 'text-slate-400' : 'text-[#111111]';
+
   if (executionStages.length === 0) {
     return (
-      <div className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+      <div className={`text-sm ${textMuted}`}>
         No phase dates yet. Execution plan phases will appear here once approved.
       </div>
     );
@@ -74,18 +77,20 @@ const GanttView: React.FC<GanttViewProps> = ({ stages, paymentMilestones = [], i
                 : isCurrent
                   ? 'bg-blue-500'
                   : 'bg-slate-300 dark:bg-slate-600';
+            const tooltip = `${s.name}: ${formatDate(start)} – ${formatDate(end)}${isDelayed ? ' (Delayed)' : ''}`;
             return (
-              <div key={s.id} className="flex items-center gap-4">
+              <div key={s.id} className="flex items-center gap-4 group">
                 <div className="w-36 flex-shrink-0">
-                  <p className={`text-sm font-medium truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>{s.name}</p>
-                  <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                  <p className={`text-sm font-medium truncate ${textPrimary}`}>{s.name}</p>
+                  <p className={`text-xs ${textMuted}`}>
                     {formatDate(start)} – {formatDate(end)}
                   </p>
                 </div>
                 <div className="flex-1 h-9 bg-slate-100 dark:bg-slate-800 rounded-lg relative overflow-visible">
                   <div
-                    className={`absolute h-full rounded-lg transition-all duration-500 ${barClass}`}
+                    className={`absolute h-full rounded-lg transition-all duration-500 ease-out ${barClass}`}
                     style={{ left: `${left}%`, width: `${width}%` }}
+                    title={tooltip}
                   />
                   {actualEnd != null && !isDone && (
                     <div
@@ -94,17 +99,16 @@ const GanttView: React.FC<GanttViewProps> = ({ stages, paymentMilestones = [], i
                       title="Actual progress"
                     />
                   )}
-                  {idx === 0 && (
-                    <div
-                      className="absolute top-0 bottom-0 w-0.5 bg-amber-400 z-10 shadow-sm"
-                      style={{ left: `${todayPercent}%` }}
-                      title="Today"
-                    />
-                  )}
+                  {/* Today: red vertical line on every row */}
+                  <div
+                    className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10 shadow-md pointer-events-none"
+                    style={{ left: `${todayPercent}%` }}
+                    title="Today"
+                  />
                 </div>
                 <span
                   className={`text-xs font-medium w-20 flex-shrink-0 ${
-                    isDone ? 'text-emerald-600 dark:text-emerald-400' : isDelayed ? 'text-red-600' : isCurrent ? 'text-blue-600' : isDark ? 'text-slate-400' : 'text-slate-600'
+                    isDone ? 'text-emerald-600 dark:text-emerald-400' : isDelayed ? 'text-red-600' : isCurrent ? 'text-blue-600' : textMuted
                   }`}
                 >
                   {isDone ? 'Done' : isDelayed ? 'Delayed' : isCurrent ? 'In progress' : 'Upcoming'}
@@ -116,7 +120,7 @@ const GanttView: React.FC<GanttViewProps> = ({ stages, paymentMilestones = [], i
       </div>
       {paymentMilestones.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-200 dark:border-amber-500/20">
-          <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Payments on timeline</span>
+          <span className={`text-xs font-bold uppercase tracking-wider ${textMuted}`}>Payments on timeline</span>
           {paymentMilestones.map((pm) => {
             if (!pm.dueDate) return null;
             const pct = getLeftPercent(pm.dueDate);

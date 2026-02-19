@@ -39,10 +39,13 @@ const Phase2ExecutionSection: React.FC<Phase2ExecutionSectionProps> = ({
     });
   };
 
+  const textPrimary = isDark ? 'text-white' : 'text-[#111111]';
+  const textMuted = isDark ? 'text-slate-400' : 'text-[#111111]';
+
   if (executionStages.length === 0) {
     return (
-      <div className={`rounded-2xl border ${isDark ? 'bg-white/5 border-amber-500/20' : 'bg-white border-slate-200'} shadow-lg p-5`}>
-        <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+      <div className={`rounded-2xl border shadow-sm p-5 ${isDark ? 'bg-white/[0.06] border-amber-500/20' : 'bg-white border-slate-200/80'}`}>
+        <p className={`text-sm ${textMuted}`}>
           Planning not yet approved. Execution phases will appear here once the plan is approved.
         </p>
       </div>
@@ -50,7 +53,7 @@ const Phase2ExecutionSection: React.FC<Phase2ExecutionSectionProps> = ({
   }
 
   return (
-    <div className={`rounded-2xl border overflow-hidden ${isDark ? 'bg-white/5 border-amber-500/20' : 'bg-white border-slate-200'} shadow-lg`}>
+    <div className={`rounded-2xl border overflow-hidden shadow-sm ${isDark ? 'bg-white/[0.06] border-amber-500/20' : 'bg-white border-slate-200/80'}`}>
       <button
         type="button"
         onClick={() => setCollapsed(!collapsed)}
@@ -58,10 +61,10 @@ const Phase2ExecutionSection: React.FC<Phase2ExecutionSectionProps> = ({
           isDark ? 'hover:bg-white/5' : 'hover:bg-slate-50'
         } transition-colors`}
       >
-        <span className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-amber-400' : 'text-slate-600'}`}>
+        <span className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-amber-400' : 'text-[#111111]'}`}>
           Phase 2 — Project Execution
         </span>
-        {collapsed ? <ChevronRightIcon className="w-5 h-5" /> : <ChevronDownIcon className="w-5 h-5" />}
+        {collapsed ? <ChevronRightIcon className={`w-5 h-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} /> : <ChevronDownIcon className={`w-5 h-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} />}
       </button>
       {!collapsed && (
         <div className="px-5 pb-5 space-y-4">
@@ -90,16 +93,16 @@ const Phase2ExecutionSection: React.FC<Phase2ExecutionSectionProps> = ({
                 >
                   <div className="flex items-center gap-3">
                     {isExpanded ? <ChevronDownIcon className={`w-5 h-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} /> : <ChevronRightIcon className={`w-5 h-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} />}
-                    <span className={`font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>{stage.name}</span>
+                    <span className={`font-medium ${textPrimary}`}>{stage.name}</span>
                     {stage.startDate && stage.expectedEndDate && (
-                      <span className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                      <span className={`text-xs ${textMuted}`}>
                         {formatDate(stage.startDate)} – {formatDate(stage.expectedEndDate)}
                       </span>
                     )}
                   </div>
                   <div className="flex items-center gap-3">
                     {stage.progressPercent != null && (
-                      <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{stage.progressPercent}%</span>
+                      <span className={`text-sm font-bold ${textPrimary}`}>{stage.progressPercent}%</span>
                     )}
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                       isComplete ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' :
@@ -108,22 +111,22 @@ const Phase2ExecutionSection: React.FC<Phase2ExecutionSectionProps> = ({
                     }`}>
                       {isComplete ? 'Done' : inProgress ? 'In progress' : 'Upcoming'}
                     </span>
-                    <span className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{updates.length} daily log{updates.length !== 1 ? 's' : ''}</span>
+                    <span className={`text-xs ${textMuted}`}>{updates.length} daily log{updates.length !== 1 ? 's' : ''}</span>
                   </div>
                 </button>
                 {isExpanded && (
-                  <div className="border-t border-slate-200 dark:border-amber-500/20 px-4 py-3 space-y-3">
-                    {stage.description && <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{stage.description}</p>}
-                    <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Daily updates</p>
+                  <div className="border-t border-slate-200 dark:border-amber-500/20 px-4 py-3 space-y-3 transition-all duration-200">
+                    {stage.description && <p className={`text-sm ${textMuted}`}>{stage.description}</p>}
+                    <p className={`text-xs font-bold uppercase tracking-wider ${textMuted}`}>Daily updates</p>
                     {updates.length === 0 ? (
-                      <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>No logs for this phase yet.</p>
+                      <p className={`text-sm ${textMuted}`}>No logs for this phase yet.</p>
                     ) : (
                       <ul className="space-y-2">
                         {updates.slice(0, 10).map((u) => (
                           <li key={u.id} className={`p-3 rounded-lg ${isDark ? 'bg-white/5' : 'bg-slate-50'}`}>
-                            <p className="text-sm font-medium text-slate-900 dark:text-white">{formatDate(u.date)}</p>
-                            <p className="text-sm text-slate-700 dark:text-slate-300 mt-0.5">{u.workDescription}</p>
-                            <div className={`flex gap-3 mt-1 text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                            <p className={`text-sm font-medium ${textPrimary}`}>{formatDate(u.date)}</p>
+                            <p className={`text-sm ${textMuted} mt-0.5`}>{u.workDescription}</p>
+                            <div className={`flex gap-3 mt-1 text-xs ${textMuted}`}>
                               <span>Completion: {u.completionPercent}%</span>
                               <span>Manpower: {u.manpowerCount}</span>
                               {u.blocker && <span className="text-amber-600 dark:text-amber-400">Blocker: {u.blocker}</span>}
@@ -137,7 +140,7 @@ const Phase2ExecutionSection: React.FC<Phase2ExecutionSectionProps> = ({
                             )}
                           </li>
                         ))}
-                        {updates.length > 10 && <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>+{updates.length - 10} more</p>}
+                        {updates.length > 10 && <p className={`text-xs ${textMuted}`}>+{updates.length - 10} more</p>}
                       </ul>
                     )}
                   </div>
