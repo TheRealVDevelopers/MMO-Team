@@ -948,10 +948,12 @@ export const getClientCases = async (clientUid: string): Promise<any[]> => {
         );
         const snapshot = await getDocs(casesQuery);
 
-        return snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
+        const results = snapshot.docs.map(d => ({
+            ...d.data(),
+            id: d.id, // Always use Firestore doc ID (string) — must come LAST to avoid being overridden by doc.data().id
         }));
+        console.log('[getClientCases] Found', results.length, 'cases for uid', uid, results.map(r => ({ id: r.id, type: typeof r.id })));
+        return results;
     } catch (error) {
         console.error('Error fetching client cases:', error);
         return [];

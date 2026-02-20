@@ -5,7 +5,7 @@
  */
 
 import { db } from '../firebase';
-import { collection, addDoc, serverTimestamp, query, where, onSnapshot, updateDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, onSnapshot, updateDoc, doc, arrayUnion, Timestamp } from 'firebase/firestore';
 import { FIRESTORE_COLLECTIONS } from '../constants';
 import { useState, useEffect } from 'react';
 
@@ -46,6 +46,23 @@ export const createApprovalRequest = async (data: ApprovalRequestData): Promise<
     status: 'pending',
     createdAt: serverTimestamp(),
   });
+
+  // Sync to case.approvals array for Single Source of Truth
+  if (data.caseId) {
+    const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, data.caseId);
+    try {
+      await updateDoc(caseRef, {
+        approvals: arrayUnion({
+          id: docRef.id,
+          ...data,
+          status: 'pending',
+          createdAt: Timestamp.now(), // Use Timestamp for consistency
+        })
+      });
+    } catch (e) {
+      console.error('Failed to sync approval to case array:', e);
+    }
+  }
 
   console.log(`✅ Approval request created: ${docRef.id}`);
   return docRef.id;
@@ -100,6 +117,11 @@ export const approveRequest = async (requestId: string, caseId?: string, userId?
     respondedAt: serverTimestamp(),
     respondedBy: userId || 'system',
   });
+
+  // Sync array
+  if (caseId) {
+    await syncApprovalStatusInCase(caseId, requestId, 'approved', userId);
+  }
 };
 
 export const rejectRequest = async (requestId: string, caseId?: string, userId?: string, reason?: string): Promise<void> => {
@@ -115,7 +137,38 @@ export const rejectRequest = async (requestId: string, caseId?: string, userId?:
     respondedBy: userId || 'system',
     rejectionReason: reason,
   });
+
+  // Sync array
+  if (caseId) {
+    await syncApprovalStatusInCase(caseId, requestId, 'rejected', userId);
+  }
 };
+
+// Helper to update array item
+async function syncApprovalStatusInCase(caseId: string, requestId: string, status: 'approved' | 'rejected', userId?: string) {
+  const { getDoc } = await import('firebase/firestore'); // Dynamic import to avoid circular dep issues if any, or just use existing
+  const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, caseId);
+  try {
+    const snap = await getDoc(caseRef);
+    if (snap.exists()) {
+      const data = snap.data();
+      const approvals = data.approvals || [];
+      const idx = approvals.findIndex((a: any) => a.id === requestId);
+      if (idx > -1) {
+        const updated = [...approvals];
+        updated[idx] = {
+          ...updated[idx],
+          status,
+          respondedBy: userId || 'system',
+          respondedAt: Timestamp.now()
+        };
+        await updateDoc(caseRef, { approvals: updated });
+      }
+    }
+  } catch (e) {
+    console.error('Failed to sync approval status to array:', e);
+  }
+}
 
 // Legacy compatibility exports
 export const useMyApprovalRequests = () => ({

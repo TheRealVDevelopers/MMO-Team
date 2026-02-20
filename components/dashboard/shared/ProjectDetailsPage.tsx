@@ -149,9 +149,14 @@ const ProjectDetailsPage: React.FC<ProjectDetailsPageProps> = ({ initialTab = 'o
                             <h1 className="text-3xl font-bold text-text-primary mb-2">{projectCase.title}</h1>
                             <p className="text-lg text-text-secondary">{projectCase.clientName}</p>
                         </div>
-                        <SecondaryButton onClick={() => navigate('/projects')}>
-                            ← Back to Projects
-                        </SecondaryButton>
+                        <div className="flex gap-2">
+                            <PrimaryButton onClick={() => navigate(`/project-reference?project=${caseId}`)}>
+                                ⚙️ Manage Project
+                            </PrimaryButton>
+                            <SecondaryButton onClick={() => navigate('/projects')}>
+                                ← Back to Projects
+                            </SecondaryButton>
+                        </div>
                     </div>
 
                     {/* Key Info Grid */}

@@ -1,10 +1,18 @@
 /**
- * Phase 1 – Lead Journey: gamified vertical step wizard.
- * Each step: large icon, title, date, status (Completed / In progress / Pending), expand arrow.
- * Connecting vertical animated line. Slide-over for document review (Drawing/BOQ/Quotation).
+ * Phase 1 – Lead Journey (Client Side)
+ * Full gated approval workflow visible to the client.
+ *
+ * The client can:
+ * - See all milestones (Call, Site Visit)
+ * - See each document stage with revision history
+ * - Approve or Reject (with mandatory remark) each submission
+ * - View / download submitted documents
+ * - Track which stage is current
  */
 
 import React, { useState } from 'react';
+import { doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { db } from '../../../firebase';
 import {
   ChevronDownIcon,
   ChevronRightIcon,
@@ -12,142 +20,184 @@ import {
   ClockIcon,
   DocumentTextIcon,
   XCircleIcon,
+  EyeIcon,
+  ArrowDownTrayIcon,
+  LockClosedIcon,
+  ChatBubbleLeftEllipsisIcon,
 } from '@heroicons/react/24/outline';
-import { CheckCircleIcon as CheckSolid } from '@heroicons/react/24/solid';
-import type { LeadJourneyStep } from '../types';
-import type { ClientDocument } from '../types';
+import { CheckCircleIcon as CheckSolid, ClockIcon as ClockSolid } from '@heroicons/react/24/solid';
 import { formatDate } from '../../../constants';
 
-const STEP_KEYS_WITH_DOCS = ['drawing_upload', 'drawing_approve', 'boq_upload', 'boq_approve', 'quot_upload', 'quot_approve'];
+/** Ordered stages that require client approval */
+const LEAD_STAGES = [
+  { key: 'recce_report', label: 'Recce / Site Measurement Report' },
+  { key: '2d_drawing', label: '2D Layout / Floor Plan' },
+  { key: '3d_drawing', label: '3D Visualization / Renders' },
+  { key: 'boq', label: 'Bill of Quantities (BOQ)' },
+  { key: 'quotation', label: 'Quotation / Proposal' },
+  { key: 'purchase_order', label: 'Purchase Order (PO)' },
+] as const;
 
-const STEP_ICONS: Record<string, typeof DocumentTextIcon> = {
-  drawing_upload: DocumentTextIcon,
-  drawing_approve: CheckSolid,
-  boq_upload: DocumentTextIcon,
-  boq_approve: CheckSolid,
-  quot_upload: DocumentTextIcon,
-  quot_approve: CheckSolid,
-};
+const MILESTONE_STEPS = [
+  { key: 'callInitiated', label: 'Inquiry Initiated' },
+  { key: 'siteVisitScheduled', label: 'Site Visit Scheduled' },
+  { key: 'siteVisitCompleted', label: 'Site Visit Completed' },
+] as const;
 
 interface Phase1LeadSectionProps {
-  steps: LeadJourneyStep[];
-  documents: ClientDocument[];
+  caseId: string;
+  leadJourney: any;
+  clientName?: string;
   isDark?: boolean;
   defaultExpanded?: boolean;
 }
 
 const Phase1LeadSection: React.FC<Phase1LeadSectionProps> = ({
-  steps,
-  documents,
-  isDark,
+  caseId,
+  leadJourney,
+  clientName,
+  isDark = true,
   defaultExpanded = true,
 }) => {
   const [collapsed, setCollapsed] = useState(!defaultExpanded);
-  const [expandedStepKey, setExpandedStepKey] = useState<string | null>(null);
-  const [slideOverDoc, setSlideOverDoc] = useState<ClientDocument | null>(null);
+  const [expandedStage, setExpandedStage] = useState<string | null>(null);
+  const [reviewingSubmission, setReviewingSubmission] = useState<{ stageKey: string; subId: string } | null>(null);
+  const [remarks, setRemarks] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
 
-  const getDocsForStep = (key: string) => {
-    if (key.includes('drawing')) return documents.filter((d) => d.category === 'Drawing' || d.documentType === '2d' || d.documentType === '3d' || d.documentType === 'recce');
-    if (key.includes('boq')) return documents.filter((d) => d.documentType === 'boq' || d.category === 'Contract');
-    if (key.includes('quot')) return documents.filter((d) => d.documentType === 'quotation' || (d.category === 'Contract' && d.documentType !== 'boq'));
-    return [];
+  const journey = leadJourney || {};
+  const stages = journey.stages || {};
+
+  const textP = isDark ? 'text-white' : 'text-slate-900';
+  const textS = isDark ? 'text-slate-400' : 'text-slate-500';
+  const bgCard = isDark ? 'bg-white/[0.04] border-white/10' : 'bg-white border-slate-200';
+  const bgHover = isDark ? 'hover:bg-white/5' : 'hover:bg-slate-50';
+
+  // Check milestone status
+  const isMilestoneDone = (key: string) => !!journey[key];
+  const getDate = (v: any): Date | null => {
+    if (!v) return null;
+    if (v.seconds) return new Date(v.seconds * 1000);
+    if (v instanceof Date) return v;
+    return new Date(v);
+  };
+  const allMilestonesDone = MILESTONE_STEPS.every(m => isMilestoneDone(m.key));
+
+  // Get stage info
+  const getStage = (key: string) => stages[key] || { label: '', status: 'not_started', submissions: [] };
+  const isStageUnlocked = (idx: number): boolean => {
+    if (!allMilestonesDone) return false;
+    if (idx === 0) return true;
+    const prevStage = getStage(LEAD_STAGES[idx - 1].key);
+    return prevStage.status === 'approved';
   };
 
-  const textPrimary = isDark ? 'text-white' : 'text-[#111111]';
-  const textMuted = isDark ? 'text-slate-400' : 'text-[#111111]';
+  // Handle approve / reject
+  const handleApproval = async (stageKey: string, subId: string, action: 'approved' | 'rejected') => {
+    if (action === 'rejected' && !remarks.trim()) {
+      alert('Please provide remarks when rejecting a document.');
+      return;
+    }
+    setActionLoading(true);
+    try {
+      const stage = getStage(stageKey);
+      const updatedSubmissions = (stage.submissions || []).map((s: any) => {
+        if (s.id === subId) {
+          return {
+            ...s,
+            approvalStatus: action,
+            reviewedAt: new Date().toISOString(),
+            reviewedBy: clientName || 'Client',
+            clientRemarks: remarks.trim() || undefined,
+          };
+        }
+        return s;
+      });
+
+      const newStageStatus = action === 'approved' ? 'approved' : 'rejected';
+
+      const caseRef = doc(db as any, 'cases', caseId);
+      await updateDoc(caseRef, {
+        [`leadJourney.stages.${stageKey}.submissions`]: updatedSubmissions,
+        [`leadJourney.stages.${stageKey}.status`]: newStageStatus,
+        updatedAt: Timestamp.now(),
+      });
+
+      setReviewingSubmission(null);
+      setRemarks('');
+    } catch (error) {
+      console.error('Error updating approval:', error);
+      alert('Failed to submit review. Please try again.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Status badge
+  const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
+    const configs: Record<string, { bg: string; text: string; label: string }> = {
+      not_started: { bg: isDark ? 'bg-white/10' : 'bg-slate-100', text: isDark ? 'text-slate-400' : 'text-slate-500', label: 'Not Started' },
+      awaiting_upload: { bg: isDark ? 'bg-yellow-500/20' : 'bg-yellow-100', text: isDark ? 'text-yellow-300' : 'text-yellow-700', label: 'In Progress' },
+      awaiting_approval: { bg: isDark ? 'bg-blue-500/20' : 'bg-blue-100', text: isDark ? 'text-blue-300' : 'text-blue-700', label: 'Your Review Needed' },
+      approved: { bg: isDark ? 'bg-emerald-500/20' : 'bg-green-100', text: isDark ? 'text-emerald-300' : 'text-green-700', label: 'Approved' },
+      rejected: { bg: isDark ? 'bg-red-500/20' : 'bg-red-100', text: isDark ? 'text-red-300' : 'text-red-700', label: 'Changes Requested' },
+      pending: { bg: isDark ? 'bg-amber-500/20' : 'bg-amber-100', text: isDark ? 'text-amber-300' : 'text-amber-700', label: 'Pending Review' },
+    };
+    const c = configs[status] || configs.not_started;
+    return (
+      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${c.bg} ${c.text}`}>
+        {c.label}
+      </span>
+    );
+  };
 
   return (
-    <>
-      <div className={`rounded-2xl border overflow-hidden shadow-sm transition-all duration-300 ${isDark ? 'bg-white/[0.06] border-amber-500/20' : 'bg-white border-slate-200/80'}`}>
-        <button
-          type="button"
-          onClick={() => setCollapsed(!collapsed)}
-          className={`w-full flex items-center justify-between px-5 py-4 text-left transition-colors ${isDark ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}
-        >
-          <span className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-amber-400' : 'text-[#111111]'}`}>
+    <div className={`rounded-2xl border overflow-hidden shadow-sm transition-all duration-300 ${bgCard}`}>
+      {/* Header */}
+      <button
+        type="button"
+        onClick={() => setCollapsed(!collapsed)}
+        className={`w-full flex items-center justify-between px-5 py-4 text-left transition-colors ${bgHover}`}
+      >
+        <div className="flex items-center gap-3">
+          <span className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-amber-400' : 'text-slate-800'}`}>
             Phase 1 — Lead Journey
           </span>
-          {collapsed ? <ChevronRightIcon className={`w-5 h-5 ${textMuted}`} /> : <ChevronDownIcon className={`w-5 h-5 ${textMuted}`} />}
-        </button>
-        {!collapsed && (
-          <div className="px-5 pb-5">
-            <div className="relative pl-8 border-l-2 border-slate-200 dark:border-amber-500/30 space-y-0">
-              {steps.map((step, index) => {
-                const isDone = step.status === 'completed';
-                const isCurrent = step.status === 'in-progress';
-                const hasDetail = STEP_KEYS_WITH_DOCS.includes(step.key);
-                const stepDocs = hasDetail ? getDocsForStep(step.key) : [];
-                const isDrawerOpen = expandedStepKey === step.key;
-                const StepIcon = STEP_ICONS[step.key] ?? DocumentTextIcon;
+          {/* Progress indicator */}
+          {allMilestonesDone && (
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${isDark ? 'bg-white/10 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
+              {LEAD_STAGES.filter(s => getStage(s.key).status === 'approved').length}/{LEAD_STAGES.length} completed
+            </span>
+          )}
+        </div>
+        {collapsed ? <ChevronRightIcon className={`w-5 h-5 ${textS}`} /> : <ChevronDownIcon className={`w-5 h-5 ${textS}`} />}
+      </button>
 
+      {!collapsed && (
+        <div className="px-5 pb-5 space-y-6">
+          {/* ── Milestones ── */}
+          <div className="space-y-2">
+            <p className={`text-[10px] font-bold uppercase tracking-wider ${textS}`}>Initial Contact</p>
+            <div className="relative pl-8 space-y-0">
+              {/* Vertical line */}
+              <div className={`absolute left-3 top-2 bottom-2 w-0.5 ${isDark ? 'bg-white/10' : 'bg-slate-200'}`} />
+
+              {MILESTONE_STEPS.map((ms) => {
+                const done = isMilestoneDone(ms.key);
+                const date = getDate(journey[ms.key]);
                 return (
-                  <div key={step.key} className="relative pb-6 last:pb-0">
-                    {/* Connecting line */}
-                    {index < steps.length - 1 && (
-                      <div className="absolute left-[-9px] top-8 bottom-0 w-0.5 bg-gradient-to-b from-slate-200 to-slate-100 dark:from-amber-500/30 dark:to-transparent" />
-                    )}
-                    {/* Step circle + icon */}
-                    <span
-                      className={`absolute -left-8 w-10 h-10 rounded-full border-2 flex items-center justify-center ${
-                        isDone
-                          ? 'bg-emerald-500 border-emerald-500 text-white'
-                          : isCurrent
-                            ? 'bg-blue-500 border-blue-500 text-white shadow-lg shadow-blue-500/30'
-                            : 'bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-500'
-                      }`}
-                    >
-                      {isDone ? <CheckSolid className="w-5 h-5" /> : <StepIcon className={`w-5 h-5 ${isDone ? 'text-white' : isCurrent ? 'text-white' : textMuted}`} />}
-                    </span>
-                    <div className="flex flex-col gap-1">
-                      <button
-                        type="button"
-                        onClick={() => hasDetail && setExpandedStepKey(isDrawerOpen ? null : step.key)}
-                        className={`flex flex-wrap items-center gap-2 text-left w-full rounded-lg px-3 py-2 transition-all ${hasDetail ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5' : ''}`}
-                      >
-                        <span className={`font-semibold ${textPrimary}`}>{step.label}</span>
-                        {step.date && <span className={`text-xs ${textMuted}`}>{formatDate(step.date)}</span>}
-                        {isDone && <CheckCircleIcon className="w-4 h-4 text-emerald-500" />}
-                        {isCurrent && <ClockIcon className="w-4 h-4 text-blue-500" />}
-                        {hasDetail && stepDocs.length > 0 && (
-                          <span className={`text-xs ${textMuted}`}>({stepDocs.length} doc{stepDocs.length !== 1 ? 's' : ''})</span>
-                        )}
-                        {hasDetail && (
-                          <span className="ml-auto">
-                            {isDrawerOpen ? <ChevronDownIcon className={`w-4 h-4 ${textMuted}`} /> : <ChevronRightIcon className={`w-4 h-4 ${textMuted}`} />}
-                          </span>
-                        )}
-                      </button>
-                      {(step.description || step.revisionInfo) && (
-                        <p className={`text-xs pl-3 ${textMuted} opacity-90`}>{step.description || step.revisionInfo}</p>
-                      )}
-                      {isDrawerOpen && stepDocs.length > 0 && (
-                        <div className="mt-3 pl-4 space-y-2 border-l-2 border-slate-100 dark:border-amber-500/20">
-                          <p className={`text-xs font-bold uppercase tracking-wider ${textMuted}`}>Revision history</p>
-                          {stepDocs.map((doc, idx) => (
-                            <div
-                              key={doc.id}
-                              className={`flex items-center gap-3 p-3 rounded-xl transition-all hover:shadow-md ${isDark ? 'bg-white/5' : 'bg-slate-50'} border ${isDark ? 'border-amber-500/20' : 'border-slate-100'}`}
-                            >
-                              <DocumentTextIcon className={`w-5 h-5 flex-shrink-0 ${textMuted}`} />
-                              <div className="flex-1 min-w-0">
-                                <p className={`text-sm font-medium truncate ${textPrimary}`}>Rev {stepDocs.length - idx} — {doc.name}</p>
-                                <p className={`text-xs ${textMuted}`}>{formatDate(doc.date)} · {doc.approvalStatus ?? 'pending'}</p>
-                              </div>
-                              {doc.approvalStatus === 'approved' && <CheckCircleIcon className="w-4 h-4 text-emerald-500 flex-shrink-0" />}
-                              {doc.approvalStatus === 'rejected' && <XCircleIcon className="w-4 h-4 text-red-500 flex-shrink-0" />}
-                              {doc.url && (
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                  <button type="button" onClick={() => setSlideOverDoc(doc)} className="text-sm font-semibold text-primary hover:underline">
-                                    View
-                                  </button>
-                                  <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-primary hover:underline">
-                                    Download
-                                  </a>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
+                  <div key={ms.key} className="relative flex items-center gap-3 py-2.5">
+                    {/* Circle */}
+                    <div className={`absolute -left-5 w-6 h-6 rounded-full border-2 flex items-center justify-center ${done
+                      ? 'bg-emerald-500 border-emerald-500 text-white'
+                      : isDark ? 'bg-[#111] border-white/20' : 'bg-white border-slate-300'
+                      }`}>
+                      {done ? <CheckSolid className="w-3.5 h-3.5" /> : <ClockSolid className={`w-3 h-3 ${isDark ? 'text-white/30' : 'text-slate-300'}`} />}
+                    </div>
+                    <div>
+                      <p className={`text-sm font-semibold ${done ? textP : textS}`}>{ms.label}</p>
+                      {done && date && (
+                        <p className="text-[10px] text-emerald-500 font-medium">{formatDate(date)}</p>
                       )}
                     </div>
                   </div>
@@ -155,48 +205,239 @@ const Phase1LeadSection: React.FC<Phase1LeadSectionProps> = ({
               })}
             </div>
           </div>
-        )}
-      </div>
 
-      {/* Document review slide-over */}
-      {slideOverDoc && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSlideOverDoc(null)} />
-          <div className={`relative w-full max-w-md shadow-2xl overflow-y-auto ${isDark ? 'bg-[#111] border-l border-amber-500/20' : 'bg-white border-l border-slate-200'}`}>
-            <div className="sticky top-0 flex items-center justify-between p-4 border-b border-slate-200 dark:border-amber-500/20 bg-inherit">
-              <h3 className={`text-lg font-bold ${textPrimary}`}>Document Review</h3>
-              <button type="button" onClick={() => setSlideOverDoc(null)} className={`p-2 rounded-lg ${isDark ? 'hover:bg-white/10' : 'hover:bg-slate-100'}`} aria-label="Close">
-                ×
-              </button>
-            </div>
-            <div className="p-4 space-y-4">
-              <div>
-                <p className={`text-sm font-semibold ${textPrimary}`}>{slideOverDoc.name}</p>
-                <p className={`text-xs ${textMuted} mt-1`}>{formatDate(slideOverDoc.date)}</p>
-                {slideOverDoc.uploadedBy && <p className={`text-xs ${textMuted}`}>Uploaded by {slideOverDoc.uploadedBy}</p>}
+          {/* ── Document Stages ── */}
+          <div className="space-y-2">
+            <p className={`text-[10px] font-bold uppercase tracking-wider ${textS}`}>Documents & Approvals</p>
+
+            {!allMilestonesDone && (
+              <div className={`text-xs p-3 rounded-lg ${isDark ? 'bg-white/5 text-slate-500' : 'bg-slate-50 text-slate-400'}`}>
+                Document stages will be available after initial contact is completed.
               </div>
-              {slideOverDoc.url && (
-                <div className="rounded-xl border border-slate-200 dark:border-amber-500/20 overflow-hidden bg-slate-50 dark:bg-white/5">
-                  <iframe title="Preview" src={slideOverDoc.url} className="w-full h-64" />
+            )}
+
+            {LEAD_STAGES.map((stg, idx) => {
+              const stage = getStage(stg.key);
+              const unlocked = isStageUnlocked(idx);
+              const isExpanded = expandedStage === stg.key;
+              const submissions = stage.submissions || [];
+              const latestSub = submissions[submissions.length - 1];
+              const isApproved = stage.status === 'approved';
+              const needsReview = latestSub?.approvalStatus === 'pending';
+              const isReviewing = reviewingSubmission?.stageKey === stg.key;
+
+              return (
+                <div key={stg.key} className={`rounded-xl border transition-all overflow-hidden ${isApproved
+                  ? isDark ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-emerald-200 bg-emerald-50/30'
+                  : needsReview
+                    ? isDark ? 'border-blue-500/30 bg-blue-500/5' : 'border-blue-200 bg-blue-50/30'
+                    : !unlocked
+                      ? isDark ? 'border-white/5 bg-white/[0.02] opacity-50' : 'border-slate-100 bg-slate-50/30 opacity-50'
+                      : isDark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-white'
+                  }`}>
+                  {/* Stage header */}
+                  <button
+                    onClick={() => unlocked && submissions.length > 0 && setExpandedStage(isExpanded ? null : stg.key)}
+                    className={`w-full flex items-center gap-3 p-4 text-left transition-colors ${unlocked && submissions.length > 0 ? 'cursor-pointer' : 'cursor-default'} ${bgHover}`}
+                    disabled={!unlocked || submissions.length === 0}
+                  >
+                    {/* Status circle */}
+                    <div className={`p-2 rounded-lg flex-shrink-0 ${isApproved
+                      ? isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-600'
+                      : needsReview
+                        ? isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600'
+                        : !unlocked
+                          ? isDark ? 'bg-white/5 text-white/20' : 'bg-slate-100 text-slate-300'
+                          : isDark ? 'bg-white/5 text-white/40' : 'bg-slate-100 text-slate-400'
+                      }`}>
+                      {isApproved ? <CheckSolid className="w-5 h-5" />
+                        : !unlocked ? <LockClosedIcon className="w-5 h-5" />
+                          : needsReview ? <ClockIcon className="w-5 h-5 animate-pulse" />
+                            : <DocumentTextIcon className="w-5 h-5" />}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`font-semibold text-sm ${unlocked ? textP : textS}`}>
+                          {stg.label}
+                        </span>
+                        {unlocked && <StatusBadge status={needsReview ? 'awaiting_approval' : stage.status} />}
+                      </div>
+                      {submissions.length > 0 && (
+                        <p className={`text-xs mt-0.5 ${textS}`}>
+                          {submissions.length} revision{submissions.length !== 1 ? 's' : ''}
+                          {needsReview && (
+                            <span className={isDark ? 'text-blue-400 ml-2' : 'text-blue-600 ml-2'}>
+                              · Action required
+                            </span>
+                          )}
+                        </p>
+                      )}
+                    </div>
+
+                    {unlocked && submissions.length > 0 && (
+                      <span>
+                        {isExpanded ? <ChevronDownIcon className={`w-4 h-4 ${textS}`} /> : <ChevronRightIcon className={`w-4 h-4 ${textS}`} />}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Expanded: Revision list + review actions */}
+                  {isExpanded && unlocked && (
+                    <div className={`px-4 pb-4 border-t ${isDark ? 'border-white/10' : 'border-slate-100'}`}>
+                      <div className="space-y-3 mt-3">
+                        <p className={`text-[10px] font-bold uppercase tracking-wider ${textS}`}>Revision History</p>
+
+                        {[...submissions].reverse().map((sub: any, rIdx: number) => {
+                          const rev = submissions.length - rIdx;
+                          const isLatest = rIdx === 0;
+                          const canReview = isLatest && sub.approvalStatus === 'pending';
+                          const isThisReviewing = isReviewing && reviewingSubmission?.subId === sub.id;
+
+                          return (
+                            <div key={sub.id} className={`rounded-lg border p-3 transition-all ${sub.approvalStatus === 'approved'
+                              ? isDark ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50 border-emerald-200'
+                              : sub.approvalStatus === 'rejected'
+                                ? isDark ? 'bg-red-500/10 border-red-500/20' : 'bg-red-50 border-red-200'
+                                : isDark ? 'bg-white/[0.03] border-white/10' : 'bg-white border-slate-100'
+                              }`}>
+                              {/* Revision header */}
+                              <div className="flex items-start gap-3">
+                                <div className={`p-1.5 rounded-full flex-shrink-0 ${sub.approvalStatus === 'approved'
+                                  ? isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-600'
+                                  : sub.approvalStatus === 'rejected'
+                                    ? isDark ? 'bg-red-500/20 text-red-400' : 'bg-red-100 text-red-600'
+                                    : isDark ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-100 text-amber-600'
+                                  }`}>
+                                  {sub.approvalStatus === 'approved' ? <CheckCircleIcon className="w-4 h-4" />
+                                    : sub.approvalStatus === 'rejected' ? <XCircleIcon className="w-4 h-4" />
+                                      : <ClockSolid className="w-4 h-4" />}
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className={`font-bold text-sm ${textP}`}>Rev {rev}</span>
+                                    <span className={`text-xs ${textS}`}>·</span>
+                                    <span className={`text-xs truncate ${textS}`}>{sub.fileName}</span>
+                                    {isLatest && <StatusBadge status={sub.approvalStatus} />}
+                                  </div>
+                                  <p className={`text-[10px] mt-0.5 ${textS}`}>
+                                    Submitted {sub.uploadedAt ? formatDate(new Date(sub.uploadedAt)) : '—'}
+                                    {sub.fileSize && ` · ${sub.fileSize}`}
+                                  </p>
+                                </div>
+
+                                {/* View / Download buttons */}
+                                {sub.fileUrl && (
+                                  <div className="flex items-center gap-1 flex-shrink-0">
+                                    <a href={sub.fileUrl} target="_blank" rel="noopener noreferrer"
+                                      className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg transition-colors ${isDark ? 'text-amber-400 hover:bg-white/5' : 'text-emerald-600 hover:bg-emerald-50'}`}>
+                                      <EyeIcon className="w-3.5 h-3.5" /> View
+                                    </a>
+                                    <a href={sub.fileUrl} download target="_blank" rel="noopener noreferrer"
+                                      className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg transition-colors ${isDark ? 'text-slate-400 hover:bg-white/5' : 'text-slate-500 hover:bg-slate-50'}`}>
+                                      <ArrowDownTrayIcon className="w-3.5 h-3.5" />
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Client remarks (for reviewed submissions) */}
+                              {sub.clientRemarks && (
+                                <div className={`mt-2 flex items-start gap-2 px-3 py-2 rounded-lg text-xs ${sub.approvalStatus === 'rejected'
+                                  ? isDark ? 'bg-red-500/10 text-red-300' : 'bg-red-100/50 text-red-700'
+                                  : isDark ? 'bg-emerald-500/10 text-emerald-300' : 'bg-emerald-100/50 text-emerald-700'
+                                  }`}>
+                                  <ChatBubbleLeftEllipsisIcon className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                                  <span>Your feedback: "{sub.clientRemarks}"</span>
+                                </div>
+                              )}
+
+                              {/* ── Review Actions (only for latest pending submission) ── */}
+                              {canReview && !isThisReviewing && (
+                                <div className="mt-3 flex items-center gap-2">
+                                  <button
+                                    onClick={() => {
+                                      setRemarks('');
+                                      handleApproval(stg.key, sub.id, 'approved');
+                                    }}
+                                    disabled={actionLoading}
+                                    className="flex-1 py-2.5 rounded-xl bg-emerald-500 text-white font-semibold text-sm hover:bg-emerald-600 disabled:opacity-50 transition-colors"
+                                  >
+                                    ✓ Approve
+                                  </button>
+                                  <button
+                                    onClick={() => setReviewingSubmission({ stageKey: stg.key, subId: sub.id })}
+                                    className={`flex-1 py-2.5 rounded-xl border font-semibold text-sm transition-colors ${isDark
+                                      ? 'border-red-500/30 text-red-400 hover:bg-red-500/10'
+                                      : 'border-red-200 text-red-600 hover:bg-red-50'
+                                      }`}
+                                  >
+                                    ✕ Request Changes
+                                  </button>
+                                </div>
+                              )}
+
+                              {/* Rejection remarks form */}
+                              {isThisReviewing && (
+                                <div className="mt-3 space-y-3">
+                                  <div>
+                                    <label className={`text-[10px] font-bold uppercase tracking-wider ${textS} block mb-1.5`}>
+                                      What changes do you need? <span className="text-red-500">*</span>
+                                    </label>
+                                    <textarea
+                                      value={remarks}
+                                      onChange={(e) => setRemarks(e.target.value)}
+                                      placeholder="Please describe the changes needed..."
+                                      rows={3}
+                                      className={`w-full rounded-xl border px-3 py-2.5 text-sm resize-none outline-none transition-all ${isDark
+                                        ? 'bg-white/5 border-white/10 text-white placeholder-slate-600 focus:border-red-500/50'
+                                        : 'bg-white border-slate-200 text-slate-900 placeholder-slate-400 focus:border-red-400 focus:ring-2 focus:ring-red-100'
+                                        }`}
+                                    />
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => handleApproval(stg.key, sub.id, 'rejected')}
+                                      disabled={actionLoading || !remarks.trim()}
+                                      className="flex-1 py-2 rounded-xl bg-red-500 text-white font-semibold text-sm hover:bg-red-600 disabled:opacity-50 transition-colors"
+                                    >
+                                      {actionLoading ? 'Submitting...' : 'Submit Feedback'}
+                                    </button>
+                                    <button
+                                      onClick={() => { setReviewingSubmission(null); setRemarks(''); }}
+                                      className={`px-4 py-2 rounded-xl border text-sm font-medium transition-colors ${isDark ? 'border-white/10 text-slate-400 hover:bg-white/5' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-              <div className="flex gap-2">
-                <button type="button" className="flex-1 py-2.5 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 transition-colors">
-                  Approve
-                </button>
-                <button type="button" className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-amber-500/30 font-semibold hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
-                  Request changes
-                </button>
-              </div>
-              <textarea
-                placeholder="Add review comment (optional)..."
-                className={`w-full rounded-xl border px-3 py-2 text-sm min-h-[80px] ${isDark ? 'bg-white/5 border-amber-500/20 text-white placeholder-slate-500' : 'bg-white border-slate-200 text-[#111111] placeholder-slate-400'}`}
-              />
-            </div>
+              );
+            })}
           </div>
+
+          {/* PO Status */}
+          {journey.poStatus && (
+            <div className={`p-4 rounded-xl ${isDark ? 'bg-violet-500/10 border border-violet-500/20' : 'bg-violet-50 border border-violet-200'}`}>
+              <div className="flex items-center gap-2">
+                <CheckSolid className={`w-5 h-5 ${isDark ? 'text-violet-400' : 'text-violet-600'}`} />
+                <span className={`font-bold text-sm ${isDark ? 'text-violet-300' : 'text-violet-800'}`}>
+                  Purchase Order: {journey.poStatus}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       )}
-    </>
+    </div>
   );
 };
 

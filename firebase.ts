@@ -44,8 +44,8 @@ if (!DEMO_MODE) {
     app = initializeApp(firebaseConfig);
     db = getFirestore(app);
     auth = getAuth(app);
-    // Use bucket explicitly so Storage always targets the same project (kurchi-app)
-    storage = getStorage(app, firebaseConfig.storageBucket);
+    // Let Firebase auto-detect the bucket from the config (storageBucket field)
+    storage = getStorage(app);
 
     console.log('🔥 Firebase Initialized:');
     console.log('  Project ID:', firebaseConfig.projectId);

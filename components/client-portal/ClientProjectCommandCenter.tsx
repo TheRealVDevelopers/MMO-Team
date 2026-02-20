@@ -15,7 +15,6 @@ import {
   CurrencyRupeeIcon,
   ClipboardDocumentCheckIcon,
   FolderOpenIcon,
-  ChatBubbleLeftRightIcon,
   ChartBarIcon,
 } from '@heroicons/react/24/outline';
 import { useTheme } from '../../context/ThemeContext';
@@ -31,6 +30,7 @@ import Phase1LeadSection from './PhaseTimeline/Phase1LeadSection';
 import Phase2ExecutionSection from './PhaseTimeline/Phase2ExecutionSection';
 import DocumentIntelligencePanel from './DocumentIntelligencePanel';
 import CaseChat from './CaseChat';
+
 import WarrantyClosureSection from './WarrantyClosureSection';
 import type { ClientProject, JourneyStage, ProjectHealth } from './types';
 import type { Invoice } from '../../types';
@@ -100,7 +100,7 @@ const ClientProjectCommandCenter: React.FC<ClientProjectCommandCenterProps> = (p
   const health = project.transparency?.projectHealth ?? 'on-track';
 
   const currentStage = useMemo(
-    () => project.stages.find((s) => s.id === project.currentStageId) || project.stages[0],
+    () => project.stages?.find((s) => s.id === project.currentStageId) || project.stages?.[0] || null,
     [project.stages, project.currentStageId]
   );
 
@@ -112,9 +112,11 @@ const ClientProjectCommandCenter: React.FC<ClientProjectCommandCenterProps> = (p
   const budgetUtilizationPercent = project.budgetUtilizationPercent ?? completionPercent;
   const isJMSCompleted = !!signedJMS && !pendingJMS;
 
+
+
   const cardBase = `rounded-2xl border shadow-sm transition-all duration-300 ${isDark
-      ? 'bg-[#151515] border-white/5 hover:border-amber-500/30'
-      : 'bg-white border-slate-200/60 hover:shadow-xl hover:shadow-slate-200/40'
+    ? 'bg-[#151515] border-white/5 hover:border-amber-500/30'
+    : 'bg-white border-slate-200/60 hover:shadow-xl hover:shadow-slate-200/40'
     }`;
   const cardPadding = 'p-6 sm:p-8';
   const textPrimary = isDark ? 'text-white' : 'text-slate-900';
@@ -182,7 +184,13 @@ const ClientProjectCommandCenter: React.FC<ClientProjectCommandCenterProps> = (p
       {/* Enhanced Today's Snapshot */}
       <div className="max-w-[1700px] mx-auto px-6 sm:px-10 py-8">
         <div className="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
-          <TodaysWork currentStage={currentStage} isDark={isDark} onViewDetails={() => onStageClick(currentStage)} />
+          {currentStage ? (
+            <TodaysWork currentStage={currentStage} isDark={isDark} onViewDetails={() => onStageClick(currentStage)} />
+          ) : (
+            <div className={`rounded-3xl border p-8 text-center ${isDark ? 'bg-[#151515] border-white/5' : 'bg-white border-slate-200/60'}`}>
+              <p className={`text-sm font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>No active work items yet. Your project stages will appear here once set up.</p>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
@@ -203,8 +211,8 @@ const ClientProjectCommandCenter: React.FC<ClientProjectCommandCenterProps> = (p
                   type="button"
                   onClick={() => setTimelineView('vertical')}
                   className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${timelineView === 'vertical'
-                      ? (isDark ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20' : 'bg-white text-slate-900 shadow-md')
-                      : (isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-900')
+                    ? (isDark ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20' : 'bg-white text-slate-900 shadow-md')
+                    : (isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-900')
                     }`}
                 >
                   <CalendarDaysIcon className="w-5 h-5" />
@@ -214,8 +222,8 @@ const ClientProjectCommandCenter: React.FC<ClientProjectCommandCenterProps> = (p
                   type="button"
                   onClick={() => setTimelineView('gantt')}
                   className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${timelineView === 'gantt'
-                      ? (isDark ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20' : 'bg-white text-slate-900 shadow-md')
-                      : (isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-900')
+                    ? (isDark ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20' : 'bg-white text-slate-900 shadow-md')
+                    : (isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-900')
                     }`}
                 >
                   <ChartBarIcon className="w-5 h-5" />
@@ -228,10 +236,16 @@ const ClientProjectCommandCenter: React.FC<ClientProjectCommandCenterProps> = (p
             <div className="animate-in fade-in duration-500">
               {timelineView === 'vertical' ? (
                 <div className="space-y-8">
-                  {project.leadJourneySteps && project.leadJourneySteps.length > 0 && (
-                    <Phase1LeadSection steps={project.leadJourneySteps} documents={project.documents} isDark={isDark} defaultExpanded />
+                  {(project.leadJourney || project.leadJourneySteps?.length) && (
+                    <Phase1LeadSection
+                      caseId={project.projectId}
+                      leadJourney={project.leadJourney}
+                      clientName={project.clientName}
+                      isDark={isDark}
+                      defaultExpanded
+                    />
                   )}
-                  <Phase2ExecutionSection stages={project.stages} dailyUpdates={project.dailyUpdates ?? []} isDark={isDark} defaultExpanded onStageClick={onStageClick} />
+                  <Phase2ExecutionSection stages={project.stages ?? []} dailyUpdates={project.dailyUpdates ?? []} isDark={isDark} defaultExpanded onStageClick={onStageClick} />
                 </div>
               ) : (
                 <div className={`${cardBase} ${cardPadding} space-y-8`}>
@@ -244,7 +258,7 @@ const ClientProjectCommandCenter: React.FC<ClientProjectCommandCenterProps> = (p
                       <p className={`text-xs ${textSecondary}`}>Visualizing project phases, dependencies, and payment milestones.</p>
                     </div>
                   </div>
-                  <GanttView stages={project.stages} paymentMilestones={project.paymentMilestones} isDark={isDark} />
+                  <GanttView stages={project.stages ?? []} paymentMilestones={project.paymentMilestones ?? []} isDark={isDark} />
                 </div>
               )}
             </div>
@@ -259,7 +273,11 @@ const ClientProjectCommandCenter: React.FC<ClientProjectCommandCenterProps> = (p
                 </div>
                 Daily Progress Stream
               </h3>
-              <ClientDailyUpdatesReadOnly caseId={project.projectId} planDays={project.planDays ?? []} />
+              <ClientDailyUpdatesReadOnly
+                caseId={project.projectId}
+                planDays={project.planDays ?? []}
+                updates={project.dailyUpdates ?? []}
+              />
             </section>
           </div>
 
@@ -333,14 +351,15 @@ const ClientProjectCommandCenter: React.FC<ClientProjectCommandCenterProps> = (p
             <div className="space-y-6">
               <h4 className={`text-xs font-black uppercase tracking-[0.2em] ${isDark ? 'text-amber-500/60' : 'text-slate-400'} px-1`}>Communication Hub</h4>
 
-              <div className={`${cardBase} p-0 overflow-hidden`}>
-                <div className="p-6 border-b dark:border-white/5 bg-slate-50/50 dark:bg-white/5">
-                  <h5 className="flex items-center gap-3 font-black text-sm uppercase tracking-wider">
-                    <ChatBubbleLeftRightIcon className="w-5 h-5 text-violet-500" />
-                    Project secure chat
-                  </h5>
-                </div>
-                <CaseChat caseId={project.projectId} clientUserId={clientUser?.uid ?? ''} clientUserName={project.clientName} isReadOnly={isReadOnly} isDark={isDark} />
+              <div className={`${cardBase} overflow-hidden`}>
+                <CaseChat
+                  caseId={project.projectId}
+                  messages={project.chat || []}
+                  clientUserId={clientUser?.uid ?? ''}
+                  clientName={project.clientName}
+                  isReadOnly={isReadOnly}
+                  isDark={isDark}
+                />
               </div>
 
               <div className={`${cardBase} p-6 overflow-hidden`}>
@@ -360,7 +379,7 @@ const ClientProjectCommandCenter: React.FC<ClientProjectCommandCenterProps> = (p
             )}
 
             {/* Completion Buttons */}
-            {!jmsLoading && !pendingJMS && !signedJMS && project.stages.length > 0 && project.currentStageId >= project.stages.length && (
+            {!jmsLoading && !pendingJMS && !signedJMS && (project.stages?.length ?? 0) > 0 && project.currentStageId >= (project.stages?.length ?? 0) && (
               <button
                 type="button"
                 onClick={onSignJMS}

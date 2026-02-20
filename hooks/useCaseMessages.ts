@@ -1,87 +1,37 @@
 /**
- * Chat messages under cases/{caseId}/messages.
- * Used for lead → project group chat (Client, Sales, SGM, Super Admin, Project Head when converted).
+ * Chat utilities for Case-Centric Architecture.
+ * Writes to cases/{caseId} 'chat' array.
  */
 
-import { useState, useEffect } from 'react';
 import {
-  collection,
-  query,
-  orderBy,
-  onSnapshot,
-  addDoc,
-  serverTimestamp,
+  doc,
+  updateDoc,
+  arrayUnion,
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import { v4 as uuidv4 } from 'uuid'; // Assuming uuid is available or use simpler generator
+
+// Fallback ID generator if uuid not available
+function generateId() {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+}
 
 export interface CaseMessage {
   id: string;
-  caseId: string;
   senderId: string;
   senderName: string;
-  senderRole: string;
-  content: string;
-  type: 'text' | 'image' | 'file' | 'voice';
+  senderRole: string; // 'client' | 'admin' | 'sales' etc
+  content: string; // mapped from 'message' in schema
+  message: string; // actual schema field
+  type: 'text' | 'image' | 'file';
   timestamp: Date;
-  readBy?: string[];
-  attachmentUrl?: string;
+  attachments?: string[];
 }
 
-function toDate(v: unknown): Date {
-  if (v == null) return new Date();
-  if (v instanceof Date) return v;
-  if (typeof (v as any).toDate === 'function') return (v as any).toDate();
-  if (typeof (v as any).seconds === 'number') return new Date((v as any).seconds * 1000);
-  return new Date(v as string | number);
-}
-
-export function useCaseMessages(caseId: string | undefined) {
-  const [messages, setMessages] = useState<CaseMessage[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  useEffect(() => {
-    if (!db || !caseId || typeof caseId !== 'string') {
-      setMessages([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    const messagesRef = collection(db, 'cases', caseId, 'messages');
-    const q = query(messagesRef, orderBy('timestamp', 'asc'));
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const list: CaseMessage[] = snapshot.docs.map((doc) => {
-          const d = doc.data();
-          return {
-            id: doc.id,
-            caseId: d.caseId ?? caseId,
-            senderId: d.senderId ?? '',
-            senderName: d.senderName ?? 'Unknown',
-            senderRole: d.senderRole ?? 'team',
-            content: d.content ?? '',
-            type: d.type ?? 'text',
-            timestamp: toDate(d.timestamp),
-            readBy: d.readBy ?? [],
-            attachmentUrl: d.attachmentUrl,
-          };
-        });
-        setMessages(list);
-        setLoading(false);
-      },
-      (err) => {
-        setError(err);
-        setLoading(false);
-      }
-    );
-    return () => unsubscribe();
-  }, [caseId]);
-
-  return { messages, loading, error };
-}
-
+/**
+ * Sends a message by updating the case document's chat array.
+ */
 export async function sendCaseMessage(
   caseId: string,
   payload: {
@@ -89,21 +39,27 @@ export async function sendCaseMessage(
     senderName: string;
     senderRole: string;
     content: string;
-    type?: 'text' | 'image' | 'file' | 'voice';
-    attachmentUrl?: string;
+    type?: 'text' | 'image' | 'file';
+    attachments?: string[];
   }
 ): Promise<string> {
-  const messagesRef = collection(db, 'cases', caseId, 'messages');
-  const docRef = await addDoc(messagesRef, {
-    caseId,
+  const caseRef = doc(db, 'cases', caseId);
+  const messageId = generateId();
+
+  const newMessage = {
+    id: messageId,
     senderId: payload.senderId,
     senderName: payload.senderName,
-    senderRole: payload.senderRole,
-    content: payload.content,
-    type: payload.type ?? 'text',
-    attachmentUrl: payload.attachmentUrl ?? null,
-    timestamp: serverTimestamp(),
-    readBy: [],
+    role: payload.senderRole,
+    message: payload.content, // Schema uses 'message'
+    type: payload.type || 'text',
+    timestamp: Timestamp.now(), // Firestore timestamp
+    attachments: payload.attachments || []
+  };
+
+  await updateDoc(caseRef, {
+    chat: arrayUnion(newMessage)
   });
-  return docRef.id;
+
+  return messageId;
 }

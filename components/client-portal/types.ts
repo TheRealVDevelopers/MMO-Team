@@ -211,12 +211,27 @@ export interface ClientProject {
     leadJourneySteps?: LeadJourneyStep[];
     /** Daily updates from execution (for Phase 2 per-phase grouping) */
     dailyUpdates?: ClientDailyUpdateItem[];
+    /** Raw lead journey data from Firestore (for gated approval workflow) */
+    leadJourney?: any;
     /** Days remaining to expected completion (from executionPlan.endDate) */
     daysRemaining?: number;
     /** Budget utilization % (paid vs total) */
     budgetUtilizationPercent?: number;
     totalPaid: number;
     totalBudget: number;
+    // New fields for Case-Centric Architecture
+    chat?: Array<{
+        id: string;
+        senderId: string;
+        senderName: string;
+        role: string;
+        message: string;
+        content?: string;
+        timestamp: Date;
+        type?: 'text' | 'image' | 'file';
+        attachments?: string[];
+        fileName?: string;
+    }>;
 }
 
 /** Single daily update item (from cases/{caseId}/dailyUpdates) */

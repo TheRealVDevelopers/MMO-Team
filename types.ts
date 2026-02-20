@@ -269,6 +269,48 @@ export interface Case {
     totalInvoiced?: number;
     totalCollected?: number;
     totalExpenses?: number;
+    // New fields for Case-Centric Architecture
+    totalPending?: number;
+    installmentSchedule?: Array<{
+      id: string;
+      milestoneName: string;
+      percentage: number;
+      amount: number;
+      dueDate?: Date;
+      status: 'Paid' | 'Pending' | 'Overdue';
+      paidAt?: Date;
+    }>;
+  };
+
+  // Project Health (New)
+  health?: {
+    status: 'On Track' | 'Minor Delay' | 'At Risk';
+    completionPercentage: number;
+    daysRemaining: number;
+    riskLevel: 'Low' | 'Medium' | 'High';
+    lastUpdated?: Date;
+  };
+
+  // Lead Journey Tracking — gated approval workflow
+  // Each document stage supports multiple revisions until client approves.
+  leadJourney?: {
+    // Phase 1: Initial contact
+    callInitiated?: Date;
+    siteVisitScheduled?: Date;
+    siteVisitCompleted?: Date;
+
+    // Phase 2: Document stages — each with revision history
+    // Staff uploads → Client reviews → Approve / Reject with remark → repeat until approved
+    stages?: {
+      [stageKey: string]: LeadJourneyDocStage;
+    };
+
+    // Phase 3: Conversion
+    poStatus?: 'Pending' | 'Received';
+    convertedToProjectAt?: Date;
+
+    // Overall current active stage key (for gating)
+    currentStageKey?: string;
   };
 
   // Execution planning (populated by Project Head) — day-wise, catalog-only
@@ -296,6 +338,8 @@ export interface Case {
       name: string;
       startDate: Date;
       endDate: Date;
+      completionPercent?: number;
+      status?: 'pending' | 'in_progress' | 'completed' | 'delayed';
       materials: Array<{ name: string; quantity: number; unit: string; estimatedCost: number }>;
       estimatedCost: number;
       laborCost: number;
@@ -314,13 +358,23 @@ export interface Case {
     salaries: number;
   };
 
-  // Budget (only when isProject = true)
+  // Arrays for Single Source of Truth (No subcollections)
+  dailyLogs?: CaseDailyUpdate[]; // Array of logs
+  chat?: Array<{
+    id: string;
+    senderId: string;
+    senderName: string;
+    role: string;
+    message: string;
+    timestamp: Date;
+    attachments?: string[];
+    type?: 'text' | 'image' | 'file';
+  }>;
+  approvals?: ApprovalRequest[]; // Array of approval requests
+
+  // Legacy / Unused fields to be deprecated
   budget?: CaseBudget;
-
-  // Execution (only when isProject = true)
   execution?: CaseExecution;
-
-  // Execution fund requests (money required for execution; not client payment)
   executionFundRequests?: Array<{
     id: string;
     requestedDate?: string;
@@ -348,6 +402,29 @@ export interface Case {
   files?: Array<Record<string, any>>;
   milestones?: Array<Record<string, any>>;
   currentStage?: number;
+}
+
+/** A single document stage in the lead journey (e.g. Drawing, BOQ, Quotation) */
+export interface LeadJourneyDocStage {
+  label: string;
+  status: 'not_started' | 'awaiting_upload' | 'awaiting_approval' | 'approved' | 'rejected';
+  submissions: LeadJourneySubmission[];
+}
+
+/** A single submission/revision within a document stage */
+export interface LeadJourneySubmission {
+  id: string;
+  version: number;
+  fileUrl: string;
+  fileName: string;
+  fileSize?: string;
+  uploadedAt: Date;
+  uploadedBy: string;
+  // Client response
+  approvalStatus: 'pending' | 'approved' | 'rejected';
+  reviewedAt?: Date;
+  reviewedBy?: string;
+  clientRemarks?: string;
 }
 
 // ... (Keep existing interfaces) ...

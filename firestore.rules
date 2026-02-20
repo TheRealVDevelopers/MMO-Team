@@ -65,6 +65,28 @@ service cloud.firestore {
     }
 
     // ========================================
+    // CASES (Central Source of Truth)
+    // ========================================
+    match /cases/{caseId} {
+       // Helper: Check if user is the assigned client (via email matches)
+       function isCaseClient() {
+         return request.auth.token.email == resource.data.clientEmail;
+       }
+       
+       // Staff: Read/Write all (if they have a staff profile)
+       allow read, write: if isAuthenticated() && 
+         exists(/databases/$(database)/documents/staffUsers/$(request.auth.uid));
+         
+       // Client: Read own case
+       allow read: if isAuthenticated() && isCaseClient();
+       
+       // Client: Restricted Update (Chat, Approvals & Lead Journey Reviews only)
+       // They cannot delete or create cases, only update specific fields
+       allow update: if isAuthenticated() && isCaseClient() && 
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['chat', 'approvals', 'leadJourney', 'updatedAt']);
+    }
+
+    // ========================================
     // STAFF USERS (staff login: Auth → staffUsers/{uid})
     // ========================================
     match /staffUsers/{uid} {

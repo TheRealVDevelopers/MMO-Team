@@ -25,7 +25,7 @@ const MOCK_COMPANY_INFO: CompanyInfo = {
 };
 
 interface ClientDashboardPageProps {
-    clientUser: { uid: string; email: string; isFirstLogin: boolean } | null;
+    clientUser: { uid: string; email: string; isFirstLogin: boolean; selectedCaseId?: string; cases?: any[] } | null;
     onLogout: () => void;
     caseId?: string; // Optional: For B2I Parent View
     isReadOnly?: boolean; // Optional: Disables actions
@@ -33,14 +33,18 @@ interface ClientDashboardPageProps {
 }
 
 const ClientDashboardPage: React.FC<ClientDashboardPageProps> = ({ clientUser, onLogout, caseId, isReadOnly, onBack }) => {
+    // Determine the active case ID — ensure it's always a string
+    const rawId = caseId || clientUser?.selectedCaseId || clientUser?.cases?.[0]?.id || '';
+    const activeCaseId = typeof rawId === 'string' ? rawId : String(rawId || '');
+
+    console.log('[ClientDashboardPage] activeCaseId:', activeCaseId, 'type:', typeof activeCaseId, 'clientUser:', clientUser ? { uid: clientUser.uid, selectedCaseId: clientUser.selectedCaseId, casesCount: clientUser.cases?.length } : null);
+
     // 1. Data Fetching
-    const { project, loading, error } = useClientCase(
-        caseId
-            ? { type: 'caseId', value: caseId }
-            : (clientUser?.uid ? { type: 'clientUid', value: clientUser.uid } : undefined)
-    );
-    const { invoices, loading: invoicesLoading } = useInvoices(project?.projectId || '');
-    const { pendingDoc: pendingJMS, signedDoc: signedJMS, loading: jmsLoading } = usePendingJMS(project?.projectId);
+    const { project, loading, error } = useClientCase(activeCaseId);
+    const projectId = project?.projectId || '';
+    console.log('[ClientDashboardPage] projectId for invoices/JMS:', projectId, 'type:', typeof projectId);
+    const { invoices, loading: invoicesLoading } = useInvoices(projectId);
+    const { pendingDoc: pendingJMS, signedDoc: signedJMS, loading: jmsLoading } = usePendingJMS(projectId || undefined);
 
     // 2. UI State
     const [selectedStage, setSelectedStage] = useState<JourneyStage | null>(null);

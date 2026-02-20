@@ -105,13 +105,22 @@ export const uploadFile = async (
   console.log('[StorageService] Uploading file to:', fullPath); // Debug log
 
   try {
-    // Upload the file
-    const snapshot = await uploadBytes(storageRef, file, {
+    // Use resumable upload (avoids 412 Precondition Failed on some bucket configs)
+    const uploadTask = uploadBytesResumable(storageRef, file, {
       contentType: file.type,
       customMetadata: {
         originalName: file.name,
         uploadedAt: new Date().toISOString(),
       },
+    });
+
+    // Wait for upload to complete
+    const snapshot = await new Promise<any>((resolve, reject) => {
+      uploadTask.on('state_changed',
+        null,
+        (error) => reject(error),
+        () => resolve(uploadTask.snapshot)
+      );
     });
 
     // Get download URL
@@ -129,6 +138,14 @@ export const uploadFile = async (
     fetch('http://127.0.0.1:7242/ingest/e4336b3f-e354-4a9b-9c27-6ecee71671c2', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'storageService.ts:uploadFile:catch', message: 'upload failed', data: { fullPath, errorCode: error?.code, errorMessage: error?.message }, timestamp: Date.now(), hypothesisId: 'H4' }) }).catch(() => { });
     // #endregion
     console.error('[StorageService] Upload failed:', error);
+    // Log the full server response for debugging 412 errors
+    if (error?.serverResponse) {
+      console.error('[StorageService] Server response:', error.serverResponse);
+    }
+    if (error?.customData) {
+      console.error('[StorageService] Custom data:', JSON.stringify(error.customData));
+    }
+    console.error('[StorageService] Error code:', error?.code, '| Status:', error?.status);
     throw new Error(`Failed to upload file: ${error.message}`);
   }
 };

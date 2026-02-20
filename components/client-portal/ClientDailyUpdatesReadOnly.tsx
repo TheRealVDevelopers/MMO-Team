@@ -1,11 +1,11 @@
 import React from 'react';
-import { useDailyUpdates, type DailyUpdateRecord } from '../../hooks/useDailyUpdates';
-import type { ClientPlanDay } from './types';
+import type { ClientPlanDay, ClientDailyUpdateItem } from './types';
 import { formatDate } from '../../constants';
 
 interface ClientDailyUpdatesReadOnlyProps {
-  caseId: string;
+  caseId?: string; // Optional now if we pass updates directly
   planDays?: ClientPlanDay[];
+  updates?: ClientDailyUpdateItem[]; // New prop
 }
 
 function toDateKey(d: string | Date): string {
@@ -13,32 +13,14 @@ function toDateKey(d: string | Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-const ClientDailyUpdatesReadOnly: React.FC<ClientDailyUpdatesReadOnlyProps> = ({ caseId, planDays = [] }) => {
-  const { updates, loading, error } = useDailyUpdates(caseId);
+const ClientDailyUpdatesReadOnly: React.FC<ClientDailyUpdatesReadOnlyProps> = ({ planDays = [], updates = [] }) => {
+  // Logic simplified to use passed updates
 
   const loggedDates = new Set(updates.map((u) => toDateKey(u.date)));
   const plannedDates = planDays.map((p) => toDateKey(p.date));
   const missingDates = plannedDates.filter((d) => !loggedDates.has(d));
   const todayKey = new Date().toISOString().slice(0, 10);
   const missingPast = missingDates.filter((d) => d < todayKey);
-
-  if (loading) {
-    return (
-      <div className="bg-white dark:bg-gray-800 rounded-[2rem] shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Daily updates</h3>
-        <p className="text-sm text-gray-500">Loading…</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-white dark:bg-gray-800 rounded-[2rem] shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Daily updates</h3>
-        <p className="text-sm text-red-500">{error}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-[2rem] shadow-sm border border-gray-100 dark:border-gray-700 p-6">
@@ -58,7 +40,7 @@ const ClientDailyUpdatesReadOnly: React.FC<ClientDailyUpdatesReadOnlyProps> = ({
         {updates.length === 0 ? (
           <p className="text-sm text-gray-500">No daily updates yet.</p>
         ) : (
-          updates.slice(0, 20).map((u: DailyUpdateRecord) => (
+          updates.slice(0, 20).map((u) => (
             <div key={u.id} className="text-sm border-b border-gray-100 dark:border-gray-700 pb-2 last:border-0">
               <span className="font-medium text-gray-700 dark:text-gray-300">
                 {formatDate(u.date)}

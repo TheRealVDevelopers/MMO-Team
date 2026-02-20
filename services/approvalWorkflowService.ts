@@ -1,5 +1,5 @@
 import { db } from '../firebase';
-import { doc, updateDoc, arrayUnion, serverTimestamp, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, serverTimestamp, getDoc, Timestamp } from 'firebase/firestore';
 import { Case, Task, ApprovalRequest, ApprovalStatus, UserRole } from '../types';
 import { logActivity } from '../utils/activityLogger';
 
@@ -27,7 +27,7 @@ const WORKFLOW_STAGES: Record<string, WorkflowStage> = {
   },
   BOQ: {
     name: 'BOQ',
-    requiredApprovals: [UserRole.QUOTATION_TEAM, UserRole.SITE_ENGINEER], 
+    requiredApprovals: [UserRole.QUOTATION_TEAM, UserRole.SITE_ENGINEER],
     autoActions: ['Create Quotation Task']
   },
   QUOTATION: {
@@ -48,7 +48,7 @@ const WORKFLOW_STAGES: Record<string, WorkflowStage> = {
 };
 
 export class ApprovalWorkflowService {
-  
+
   /**
    * Initiates a new approval request for a workflow stage
    */
@@ -65,7 +65,7 @@ export class ApprovalWorkflowService {
 
     // Create approval request document
     const approvalRef = doc(db, 'approvals', `${caseId}_${stage}_${Date.now()}`);
-    
+
     const approvalRequest: Omit<ApprovalRequest, 'id'> = {
       caseId,
       stage,
@@ -77,12 +77,12 @@ export class ApprovalWorkflowService {
       approvedBy: [],
       rejectedBy: [],
       comments: [],
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
+      createdAt: serverTimestamp() as any,
+      updatedAt: serverTimestamp() as any
     };
 
     await updateDoc(approvalRef, approvalRequest as any);
-    
+
     // Log activity
     await logActivity({
       type: 'APPROVAL_INITIATED',
@@ -93,6 +93,21 @@ export class ApprovalWorkflowService {
         requiredRoles: stageConfig.requiredApprovals
       }
     });
+
+    // Sync to case.approvals array
+    try {
+      const caseRef = doc(db, 'cases', caseId);
+      await updateDoc(caseRef, {
+        approvals: arrayUnion({
+          id: approvalRef.id,
+          ...approvalRequest,
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        })
+      });
+    } catch (e) {
+      console.error('Failed to sync workflow approval to case array', e);
+    }
   }
 
   /**
@@ -107,13 +122,13 @@ export class ApprovalWorkflowService {
   ): Promise<void> {
     const approvalRef = doc(db, 'approvals', approvalId);
     const approvalSnap = await getDoc(approvalRef);
-    
+
     if (!approvalSnap.exists()) {
       throw new Error('Approval request not found');
     }
 
     const approval = approvalSnap.data() as ApprovalRequest;
-    
+
     // Check if user has required role
     if (!approval.requiredRoles.includes(approverRole)) {
       throw new Error('User not authorized to approve this stage');
@@ -131,7 +146,7 @@ export class ApprovalWorkflowService {
         userId: approverId,
         userName: approverName,
         role: approverRole,
-        timestamp: serverTimestamp(),
+        timestamp: serverTimestamp() as any,
         comments: comments || ''
       }
     ];
@@ -161,6 +176,9 @@ export class ApprovalWorkflowService {
     if (isFullyApproved) {
       await this.triggerNextStage(approval);
     }
+
+    // Sync array status
+    await this.syncArrayStatus(approval.caseId, approvalId, newStatus, approverName);
   }
 
   /**
@@ -175,7 +193,7 @@ export class ApprovalWorkflowService {
   ): Promise<void> {
     const approvalRef = doc(db, 'approvals', approvalId);
     const approvalSnap = await getDoc(approvalRef);
-    
+
     if (!approvalSnap.exists()) {
       throw new Error('Approval request not found');
     }
@@ -193,7 +211,7 @@ export class ApprovalWorkflowService {
         userId: rejectorId,
         userName: rejectorName,
         role: rejectorRole,
-        timestamp: serverTimestamp(),
+        timestamp: serverTimestamp() as any,
         reason
       }),
       updatedAt: serverTimestamp()
@@ -210,6 +228,33 @@ export class ApprovalWorkflowService {
         reason
       }
     });
+
+    // Sync array status
+    await this.syncArrayStatus(approval.caseId, approvalId, ApprovalStatus.REJECTED, rejectorName);
+  }
+
+  private static async syncArrayStatus(caseId: string, approvalId: string, status: string, by: string) {
+    const caseRef = doc(db, 'cases', caseId);
+    try {
+      const snap = await getDoc(caseRef);
+      if (snap.exists()) {
+        const data = snap.data();
+        const approvals = data.approvals || [];
+        const idx = approvals.findIndex((a: any) => a.id === approvalId);
+        if (idx > -1) {
+          const updated = [...approvals];
+          updated[idx] = {
+            ...updated[idx],
+            status,
+            updatedAt: Timestamp.now(),
+            [status === ApprovalStatus.REJECTED ? 'rejectedBy' : 'approvedBy']: arrayUnion({ name: by, timestamp: Timestamp.now() }) // Simplification
+          };
+          await updateDoc(caseRef, { approvals: updated });
+        }
+      }
+    } catch (e) {
+      console.error('Failed to sync workflow status to array', e);
+    }
   }
 
   /**
@@ -297,23 +342,23 @@ export class ApprovalWorkflowService {
   private static async convertToProject(caseId: string): Promise<void> {
     const caseRef = doc(db, 'cases', caseId);
     const caseSnap = await getDoc(caseRef);
-    
+
     if (!caseSnap.exists()) {
       throw new Error(`Case ${caseId} not found`);
     }
-    
+
     const caseData = caseSnap.data();
-    
+
     // HARD RULE: No project before payment verification
     if (!caseData.financial?.paymentVerified) {
       throw new Error('BLOCKED: Cannot convert to project - payment not verified by accountant');
     }
-    
+
     // HARD RULE: Must be in WAITING_FOR_PLANNING status
     if (caseData.status !== 'waiting_for_planning') {
       throw new Error(`BLOCKED: Cannot convert to project - invalid status: ${caseData.status}. Must be WAITING_FOR_PLANNING.`);
     }
-    
+
     await updateDoc(caseRef, {
       isProject: true,
       projectStartDate: serverTimestamp(),
