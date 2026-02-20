@@ -38,12 +38,6 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
     // Filter active users in component (more flexible)
     const salesExecutives = allSalesUsers.filter(user => user.isActive !== false);
 
-    // Debug: Log sales executives
-    console.log('🔍 All Sales Users from DB:', allSalesUsers);
-    console.log('🔍 Filtered Active Sales:', salesExecutives);
-    console.log('🔍 Users Loading:', usersLoading);
-    console.log('🔍 Current User:', currentUser);
-
     // Form data - separated into sections
     const [formData, setFormData] = useState({
         // From Organization (auto-filled, editable)
@@ -117,8 +111,6 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
             currentUser?.role === UserRole.SALES_GENERAL_MANAGER ||
             currentUser?.role === UserRole.SALES_TEAM_MEMBER;
 
-        console.log('DEBUG: Permission Check:', { role: currentUser?.role, canCreateLead });
-
         if (!canCreateLead) {
             setErrors({ submit: 'You do not have permission to create leads.' });
             return;
@@ -127,7 +119,6 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
         setIsSubmitting(true);
 
         try {
-            console.log('DEBUG: Starting lead creation...');
 
             // Direct Firestore write - HARD RULE: ONLY write to cases collection
             const { db } = await import('../../../firebase');
@@ -139,7 +130,6 @@ const CreateLeadModal: React.FC<CreateLeadModalProps> = ({
 
             // Create case document at ROOT level: cases/{caseId}
             const casesRef = collection(db, FIRESTORE_COLLECTIONS.CASES);
-            console.log('DEBUG: Firestore ref created', casesRef.path);
 
             const caseData: any = {
                 leadType,

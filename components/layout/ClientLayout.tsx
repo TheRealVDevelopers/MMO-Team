@@ -34,7 +34,7 @@ const ClientLayout: React.FC<ClientLayoutProps> = ({
               <button
                 type="button"
                 onClick={onBack}
-                className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                className="flex items-center gap-2 text-sm font-medium text-[#111111] hover:text-green-700 transition-colors"
               >
                 <ArrowLeftIcon className="w-5 h-5" />
                 {backLabel}
@@ -45,7 +45,7 @@ const ClientLayout: React.FC<ClientLayoutProps> = ({
                 <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-green-500/20">
                   <img src="/mmo-logo.png" alt="MMO" className="h-6 w-auto object-contain brightness-0 invert" />
                 </div>
-                <span className="text-lg font-bold text-gray-900">
+                <span className="text-lg font-bold text-[#111111]">
                   {title || 'Client Portal'}
                 </span>
               </>
@@ -54,7 +54,7 @@ const ClientLayout: React.FC<ClientLayoutProps> = ({
           <button
             type="button"
             onClick={onLogout}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-red-50 text-gray-600 hover:text-red-600 rounded-xl transition-all duration-300 text-sm font-medium"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-red-50 text-[#111111] hover:text-red-700 rounded-xl transition-all duration-300 text-sm font-medium"
           >
             <ArrowLeftOnRectangleIcon className="w-4 h-4" />
             Logout

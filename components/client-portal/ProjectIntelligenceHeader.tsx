@@ -3,7 +3,6 @@
  * Row 1: Project name, code, health badge.
  * Row 2: Metrics grid (Budget, Paid %, Remaining %, Days Left, Completion %).
  * Row 3: Project head, contact, View Team.
- * All text on light background: #111111 (no faded text).
  */
 
 import React from 'react';
@@ -64,127 +63,153 @@ const ProjectIntelligenceHeader: React.FC<ProjectIntelligenceHeaderProps> = (pro
 
   const countdownText = nextPaymentDueDate
     ? (() => {
-        const now = new Date();
-        const due = new Date(nextPaymentDueDate);
-        const days = Math.ceil((due.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
-        if (days < 0) return `${Math.abs(days)} days overdue`;
-        if (days === 0) return 'Due today';
-        if (days === 1) return 'Due tomorrow';
-        return `${days} days to due`;
-      })()
+      const now = new Date();
+      const due = new Date(nextPaymentDueDate);
+      const diffTime = due.getTime() - now.getTime();
+      const days = Math.ceil(diffTime / (24 * 60 * 60 * 1000));
+      if (days < 0) return `${Math.abs(days)}d Overdue`;
+      if (days === 0) return 'Due today';
+      return `${days}d Left`;
+    })()
     : null;
 
-  const textPrimary = isDark ? 'text-white' : 'text-[#111111]';
-  const textMuted = isDark ? 'text-slate-400' : 'text-[#111111]'; // labels still black for contrast
-  const labelClass = `text-[10px] font-semibold uppercase tracking-wider ${textMuted} opacity-90`;
+  const textPrimary = isDark ? 'text-white' : 'text-slate-900';
+  const textSecondary = isDark ? 'text-slate-400' : 'text-slate-500';
+  const labelClass = `text-[9px] font-black uppercase tracking-[0.15em] ${isDark ? 'text-white/40' : 'text-slate-400'} mb-1.5`;
 
   return (
-    <header
-      className={`sticky top-0 z-40 w-full border-b ${
-        isDark ? 'bg-[#0c0c0c]/95 border-amber-500/20' : 'bg-white border-slate-200 shadow-sm'
-      } backdrop-blur-md`}
-    >
-      {/* Progress bar */}
-      <div className="h-1 w-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-        <div
-          className={`h-full ${config.bar} transition-all duration-700 ease-out`}
-          style={{ width: `${Math.min(100, Math.max(0, completionPercent))}%` }}
-        />
+    <header className={`relative z-40 w-full overflow-hidden ${isDark ? 'bg-[#0f0f0f]' : 'bg-white'}`}>
+      {/* Dynamic Background Accent */}
+      <div className="absolute top-0 right-0 w-1/3 h-full overflow-hidden pointer-events-none opacity-20">
+        <div className={`absolute -top-1/2 -right-1/4 w-[600px] h-[600px] rounded-full blur-[120px] ${config.bg.replace('/10', '/30')}`} />
       </div>
 
-      <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-5">
-        {/* Row 1: Project name, code, health badge */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
-          <div className="min-w-0">
-            <h1 className={`text-2xl sm:text-3xl font-bold truncate ${textPrimary}`}>{projectName}</h1>
-            <p className={`text-sm truncate ${textMuted} mt-0.5`}>{clientName}</p>
-            <p className={`text-xs ${textMuted} mt-0.5`}>
-              <span className="font-semibold">Code:</span> <span className={textPrimary}>{projectCode || '—'}</span>
-            </p>
+      <div className="max-w-[1700px] mx-auto px-6 sm:px-10 py-8 relative">
+        {/* Row 1: Identity & Health */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-10">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-4 mb-2">
+              <span className={`px-2.5 py-1 rounded-md text-[10px] font-black tracking-widest uppercase border ${isDark ? 'border-amber-500/30 text-amber-500' : 'border-slate-200 text-slate-500'}`}>
+                {projectCode || 'MMO-PN-001'}
+              </span>
+              <div className="h-4 w-px bg-slate-200 dark:bg-white/10" />
+              <p className={`text-sm font-bold tracking-tight ${textSecondary}`}>{clientName}</p>
+            </div>
+            <h1 className={`text-3xl sm:text-5xl font-black tracking-tighter ${textPrimary} leading-[1.1]`}>
+              {projectName}
+            </h1>
           </div>
-          <div className={`flex items-center gap-2 px-4 py-2 rounded-xl ${config.bg} ${config.text}`}>
-            <Icon className="w-5 h-5" />
-            <span className="text-sm font-bold">{config.label}</span>
-          </div>
-        </div>
 
-        {/* Row 2: Metrics grid – 5 mini glass cards */}
-        <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5`}>
-          <div className={`rounded-xl border p-3 ${isDark ? 'bg-white/5 border-amber-500/20' : 'bg-blue-50/80 border-blue-100'}`}>
-            <p className={labelClass}>Budget</p>
-            <p className={`text-lg font-bold ${textPrimary} truncate`}>{formatCurrencyINR(totalBudget)}</p>
-          </div>
-          <div className={`rounded-xl border p-3 ${isDark ? 'bg-white/5 border-amber-500/20' : 'bg-emerald-50/80 border-emerald-100'}`}>
-            <p className={labelClass}>Paid %</p>
-            <p className={`text-lg font-bold ${textPrimary}`}>{paidPercent}%</p>
-          </div>
-          <div className={`rounded-xl border p-3 ${isDark ? 'bg-white/5 border-amber-500/20' : 'bg-amber-50/80 border-amber-100'}`}>
-            <p className={labelClass}>Remaining</p>
-            <p className={`text-lg font-bold ${textPrimary}`}>{formatCurrencyINR(remaining)}</p>
-            <p className={`text-[10px] ${textMuted}`}>{remainingPercent}%</p>
-          </div>
-          <div className={`rounded-xl border p-3 ${isDark ? 'bg-white/5 border-amber-500/20' : 'bg-violet-50/80 border-violet-100'}`}>
-            <p className={labelClass}>Days left</p>
-            <p className={`text-lg font-bold ${textPrimary}`}>{daysRemaining}</p>
-          </div>
-          <div className={`rounded-xl border p-3 ${isDark ? 'bg-white/5 border-amber-500/20' : 'bg-slate-50/80 border-slate-200'}`}>
-            <p className={labelClass}>Completion</p>
-            <p className={`text-lg font-bold ${textPrimary}`}>{completionPercent}%</p>
-          </div>
-        </div>
-
-        {/* Row 3: Project head, contact, View Team */}
-        <div className={`flex flex-wrap items-center justify-between gap-4 pt-4 border-t ${isDark ? 'border-amber-500/10' : 'border-slate-200'}`}>
           <div className="flex flex-wrap items-center gap-4">
+            <div className={`flex items-center gap-3 px-6 py-4 rounded-2xl ${config.bg} ${config.text} border border-current opacity-80 backdrop-blur-sm transition-all hover:opacity-100`}>
+              <Icon className="w-6 h-6 animate-pulse" />
+              <div className="leading-none">
+                <p className="text-[10px] font-black uppercase tracking-widest mb-1 opacity-70">Status</p>
+                <p className="text-lg font-black">{config.label}</p>
+              </div>
+            </div>
+
+            {onViewTeam && (
+              <button
+                type="button"
+                onClick={onViewTeam}
+                className={`hidden sm:flex items-center gap-3 px-6 py-4 rounded-2xl font-black text-sm transition-all active:scale-95 ${isDark ? 'bg-white/5 text-white hover:bg-white/10' : 'bg-slate-900 text-white hover:bg-slate-800'
+                  }`}
+              >
+                <UserGroupIcon className="w-5 h-5" />
+                TEAM ACCESS
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Row 2: Deep Metrics */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 lg:gap-6 mb-10">
+          {[
+            { label: 'Total Value', value: formatCurrencyINR(totalBudget), sub: 'Master Budget', color: 'blue' },
+            { label: 'Payment Progress', value: `${paidPercent}%`, sub: `${formatCurrencyINR(totalPaid)} Paid`, color: 'emerald' },
+            { label: 'Unused Credit', value: formatCurrencyINR(remaining), sub: `${remainingPercent}% Remaining`, color: 'amber' },
+            { label: 'Time Horizon', value: `${daysRemaining} Days`, sub: 'To Completion', color: 'violet' },
+            { label: 'Milestone Depth', value: `${completionPercent}%`, sub: 'Actual Progress', color: 'teal' },
+          ].map((m, i) => (
+            <div key={i} className={`group relative p-6 rounded-2xl border transition-all duration-500 ${isDark ? 'bg-white/[0.03] border-white/5 hover:border-white/20' : 'bg-slate-50 border-slate-200/60 hover:border-slate-300'}`}>
+              <p className={labelClass}>{m.label}</p>
+              <p className={`text-2xl font-black tracking-tighter ${textPrimary} truncate group-hover:scale-105 transition-transform origin-left`}>
+                {m.value}
+              </p>
+              <p className={`text-[11px] font-bold ${textSecondary} mt-1.5 opacity-80 uppercase tracking-wide`}>{m.sub}</p>
+              <div className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-1 bg-${m.color}-500 group-hover:w-1/2 transition-all duration-500 rounded-t-full`} />
+            </div>
+          ))}
+        </div>
+
+        {/* Row 3: Bottom Action Strip */}
+        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-6 pt-8 border-t ${isDark ? 'border-white/5' : 'border-slate-100'}`}>
+          <div className="flex flex-wrap items-center gap-8">
             {projectHeadName && (
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? 'bg-amber-500/20' : 'bg-slate-100'}`}>
-                  <UserCircleIcon className={`w-6 h-6 ${isDark ? 'text-amber-400' : 'text-[#111111]'}`} />
+              <div className="flex items-center gap-4">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-transform hover:rotate-3 ${isDark ? 'bg-white/5' : 'bg-slate-100'}`}>
+                  <UserCircleIcon className={`w-7 h-7 ${isDark ? 'text-amber-500' : 'text-slate-900'}`} />
                 </div>
                 <div>
-                  <p className={labelClass}>Project Head</p>
-                  <p className={`text-sm font-bold ${textPrimary}`}>{projectHeadName}</p>
-                  {(projectHeadPhone || projectHeadEmail) && (
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {projectHeadPhone && (
-                        <a href={`tel:${projectHeadPhone}`} className={`text-xs font-medium ${isDark ? 'text-amber-300 hover:text-amber-200' : 'text-[#111111] hover:underline'}`}>
-                          {projectHeadPhone}
-                        </a>
-                      )}
-                      {projectHeadEmail && (
-                        <a href={`mailto:${projectHeadEmail}`} className={`text-xs font-medium ${isDark ? 'text-amber-300 hover:text-amber-200' : 'text-[#111111] hover:underline'}`}>
-                          {projectHeadEmail}
-                        </a>
-                      )}
-                    </div>
-                  )}
+                  <p className={labelClass}>Project Lead</p>
+                  <p className={`text-sm font-black ${textPrimary}`}>{projectHeadName}</p>
+                  <div className="flex gap-3 mt-1">
+                    <a href={`tel:${projectHeadPhone}`} className="text-[10px] font-black uppercase text-amber-500 hover:underline">Direct Line</a>
+                    <a href={`mailto:${projectHeadEmail}`} className="text-[10px] font-black uppercase text-amber-500 hover:underline">Secure Email</a>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {nextPaymentDueDate && (
+              <div className="h-10 w-px bg-slate-200 dark:bg-white/5 hidden md:block" />
+            )}
+
+            {nextPaymentDueDate && (
+              <div className="flex items-center gap-4">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isDark ? 'bg-amber-500/10' : 'bg-amber-50'}`}>
+                  <ClockIcon className={`w-7 h-7 text-amber-500`} />
+                </div>
+                <div>
+                  <p className={labelClass}>Upcoming Payment</p>
+                  <p className={`text-sm font-black ${textPrimary}`}>
+                    {formatCurrencyINR(nextPaymentAmount ?? 0)}
+                  </p>
+                  <p className={`text-[10px] font-bold ${health === 'at-risk' ? 'text-red-500' : 'text-amber-600'} uppercase tracking-wide`}>
+                    {countdownText} • {formatDate(nextPaymentDueDate)}
+                  </p>
                 </div>
               </div>
             )}
           </div>
-          {onViewTeam && (
-            <button
-              type="button"
-              onClick={onViewTeam}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                isDark ? 'bg-amber-500/20 text-amber-200 hover:bg-amber-500/30' : 'bg-slate-100 text-[#111111] hover:bg-slate-200'
-              }`}
-            >
-              <UserGroupIcon className="w-5 h-5" />
-              View Team
-            </button>
-          )}
-        </div>
 
-        {/* Next payment strip (if present) */}
-        {nextPaymentDueDate != null && nextPaymentAmount != null && nextPaymentAmount > 0 && (
-          <div className={`mt-4 flex flex-wrap items-center gap-3 px-4 py-2 rounded-xl ${isDark ? 'bg-amber-500/10' : 'bg-amber-50'} border ${isDark ? 'border-amber-500/20' : 'border-amber-200'}`}>
-            <span className={`text-xs font-semibold ${textMuted}`}>Next payment</span>
-            <span className={`text-sm font-bold ${textPrimary}`}>{formatDate(nextPaymentDueDate)}</span>
-            {countdownText && <span className={`text-xs font-medium ${health === 'at-risk' ? 'text-red-600' : 'text-amber-700'}`}>{countdownText}</span>}
-            <span className={`text-sm font-bold ${textPrimary}`}>{formatCurrencyINR(nextPaymentAmount)}</span>
+          <div className="flex items-center gap-4">
+            <div className="text-right hidden sm:block">
+              <p className={labelClass}>Current Pace</p>
+              <p className={`text-sm font-black ${textPrimary}`}>{completionPercent > 80 ? 'Peak Execution' : 'Steady Flow'}</p>
+            </div>
+            <div className="w-12 h-12 rounded-full border-4 border-slate-100 dark:border-white/5 flex items-center justify-center p-1.5 relative group">
+              <svg className="w-full h-full transform -rotate-90">
+                <circle
+                  cx="20" cy="20" r="18"
+                  stroke="currentColor" strokeWidth="4" fill="transparent"
+                  className="text-slate-200 dark:text-white/5"
+                />
+                <circle
+                  cx="20" cy="20" r="18"
+                  stroke="currentColor" strokeWidth="4" fill="transparent"
+                  strokeDasharray={113}
+                  strokeDashoffset={113 - (113 * completionPercent) / 100}
+                  className="text-amber-500 transition-all duration-1000 ease-out"
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black group-hover:scale-110 transition-transform">
+                {completionPercent}%
+              </div>
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </header>
   );

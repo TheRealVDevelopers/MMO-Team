@@ -70,8 +70,6 @@ const ProjectCard: React.FC<{ project: Project; onSelect: () => void; onAction: 
         );
     }
 
-    console.log('ActionButton for', project.projectName, ':', ActionButton ? 'Rendered' : 'NULL');
-
     return (
         <div onClick={onSelect} className="bg-surface p-3 rounded-md border border-border space-y-3 cursor-pointer hover:shadow-lg transition-all duration-200 hover:-translate-y-1 group relative">
             <div className="flex justify-between items-start">
@@ -115,26 +113,6 @@ const ProjectsBoardPage: React.FC<{ onProjectSelect: (project: Project) => void;
     // Drawing Upload Modal State
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [selectedProjectForUpload, setSelectedProjectForUpload] = useState<Project | null>(null);
-
-    // Debug: Log projects and user info
-    React.useEffect(() => {
-        console.log('Drawing Team User ID:', currentUser?.id);
-        console.log('Drawing Team User Name:', currentUser?.name);
-        console.log('Projects fetched:', projects.length);
-        console.log('Projects data:', projects);
-        if (projects.length > 0) {
-            console.log('First project assignedTeam:', projects[0].assignedTeam);
-        }
-    }, [currentUser, projects]);
-
-    // Debug: Log selected project state changes
-    React.useEffect(() => {
-        if (selectedProjectForBOQ) {
-            console.log('UseEffect: selectedProjectForBOQ updated:', selectedProjectForBOQ.projectName);
-        } else {
-            console.log('UseEffect: selectedProjectForBOQ is null');
-        }
-    }, [selectedProjectForBOQ]);
 
     if (!currentUser) return null;
 

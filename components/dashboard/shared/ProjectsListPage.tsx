@@ -99,10 +99,6 @@ const ProjectsListPage: React.FC = () => {
                             <span className="text-text-tertiary">Projects: <span className="font-bold text-primary">{projectCount}</span></span>
                             <span className="text-text-tertiary">Leads: <span className="font-bold text-purple-500">{leadCount}</span></span>
                         </div>
-                        {/* DEBUG: Remove after testing */}
-                        <div className="mt-2 text-xs text-red-500 bg-red-50 p-1 rounded inline-block">
-                            Debug Role: {currentUser?.role} (ID: {currentUser?.id})
-                        </div>
                     </div>
                     <div className="flex gap-3">
                         {/* View Toggle */}

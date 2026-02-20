@@ -1,5 +1,5 @@
 /**
- * Client Project Command Center â€” premium redesign.
+ * Client Project Command Center — premium redesign.
  * 3 zones: Top Header Bar | Left Main Panel (70%) | Right Side Panel (30%).
  * All data synced from staff-side Firestore (cases, subcollections). No backend structure change.
  */
@@ -10,16 +10,12 @@ import {
   CheckCircleIcon,
   ClockIcon,
   ExclamationTriangleIcon,
-  DocumentArrowDownIcon,
   KeyIcon,
   CalendarDaysIcon,
   CurrencyRupeeIcon,
   ClipboardDocumentCheckIcon,
-  DocumentTextIcon,
   FolderOpenIcon,
   ChatBubbleLeftRightIcon,
-  HeartIcon,
-  BriefcaseIcon,
   ChartBarIcon,
 } from '@heroicons/react/24/outline';
 import { useTheme } from '../../context/ThemeContext';
@@ -29,7 +25,6 @@ import PaymentWidget from './PaymentMilestones/PaymentWidget';
 import PendingApprovalsWidget from './PendingApprovalsWidget';
 import PayAdvanceSection from './PayAdvanceSection';
 import ClientDailyUpdatesReadOnly from './ClientDailyUpdatesReadOnly';
-import ClientJMSForm from './ClientJMSForm';
 import GanttView from './GanttView';
 import ProjectIntelligenceHeader from './ProjectIntelligenceHeader';
 import Phase1LeadSection from './PhaseTimeline/Phase1LeadSection';
@@ -39,7 +34,6 @@ import CaseChat from './CaseChat';
 import WarrantyClosureSection from './WarrantyClosureSection';
 import type { ClientProject, JourneyStage, ProjectHealth } from './types';
 import type { Invoice } from '../../types';
-import { formatCurrencyINR, formatDate } from '../../constants';
 
 const MOCK_COMPANY = {
   name: 'Make My Office',
@@ -81,8 +75,6 @@ export interface ClientProjectCommandCenterProps {
 const ClientProjectCommandCenter: React.FC<ClientProjectCommandCenterProps> = (props) => {
   const {
     project,
-    invoices,
-    invoicesLoading,
     pendingJMS,
     signedJMS,
     jmsLoading,
@@ -106,140 +98,194 @@ const ClientProjectCommandCenter: React.FC<ClientProjectCommandCenterProps> = (p
   const [timelineView, setTimelineView] = useState<'vertical' | 'gantt'>('vertical');
 
   const health = project.transparency?.projectHealth ?? 'on-track';
-  const healthStyle = healthConfig[health];
-  const HealthIcon = healthStyle.icon;
 
   const currentStage = useMemo(
     () => project.stages.find((s) => s.id === project.currentStageId) || project.stages[0],
     [project.stages, project.currentStageId]
   );
-  const paidCount = project.paymentMilestones.filter((m) => m.isPaid).length;
-  const unlockedUntilStage =
-    paidCount > 0 && project.paymentMilestones[paidCount - 1]
-      ? project.paymentMilestones[paidCount - 1].unlocksStage + 1
-      : Math.max(2, project.stages?.length ?? 10);
 
-  const pendingAmount = Math.max(0, (project.totalBudget || 0) - (project.totalPaid || 0));
   const completionPercent =
     project.totalBudget && project.totalBudget > 0
       ? Math.round(((project.totalPaid || 0) / project.totalBudget) * 100)
       : 0;
   const daysRemaining = project.daysRemaining ?? project.transparency?.daysRemaining ?? 0;
   const budgetUtilizationPercent = project.budgetUtilizationPercent ?? completionPercent;
-  const warrantyDocs = project.documents?.filter((d) => d.documentType === 'warranty' || d.name?.toLowerCase().includes('warranty')) ?? [];
   const isJMSCompleted = !!signedJMS && !pendingJMS;
 
-  const cardBase = `rounded-2xl border shadow-sm transition-all duration-300 ${isDark ? 'bg-white/[0.06] border-amber-500/20 hover:border-amber-500/30 hover:shadow-lg' : 'bg-white border-slate-200/80 hover:shadow-md hover:ring-2 hover:ring-slate-200/50'}`;
-  const cardPadding = 'p-6';
-  const textPrimary = isDark ? 'text-white' : 'text-[#111111]';
-  const sectionTitle = `flex items-center gap-2.5 text-lg font-bold ${textPrimary} mb-4`;
+  const cardBase = `rounded-2xl border shadow-sm transition-all duration-300 ${isDark
+      ? 'bg-[#151515] border-white/5 hover:border-amber-500/30'
+      : 'bg-white border-slate-200/60 hover:shadow-xl hover:shadow-slate-200/40'
+    }`;
+  const cardPadding = 'p-6 sm:p-8';
+  const textPrimary = isDark ? 'text-white' : 'text-slate-900';
+  const textSecondary = isDark ? 'text-slate-400' : 'text-slate-600';
+  const sectionTitle = `flex items-center gap-3 text-xl font-black tracking-tight ${textPrimary} mb-6`;
 
   return (
-    <div className={`min-h-screen ${isDark ? 'bg-[#0a0a0a] text-gray-100' : 'bg-gradient-to-b from-slate-50 via-slate-50/95 to-slate-100/80'}`}>
+    <div className={`min-h-screen font-sans selection:bg-amber-500/30 ${isDark ? 'bg-[#0a0a0a] text-gray-100' : 'bg-[#f8fafc]'}`}>
       {/* Top nav bar */}
-      <div className={`fixed top-0 left-0 right-0 h-14 border-b z-50 ${isDark ? 'bg-[#0c0c0c] border-amber-500/20' : 'bg-white border-slate-200 shadow-sm'} backdrop-blur-md flex items-center justify-between px-4 sm:px-6`}>
-        <div className="flex items-center gap-4 min-w-0">
-          <img src={MOCK_COMPANY.logoUrl} alt={MOCK_COMPANY.name} className="h-8 w-auto flex-shrink-0" />
-          <div className="hidden sm:block border-l pl-4 border-slate-200 dark:border-amber-500/30">
-            <p className={`text-sm font-bold truncate ${textPrimary}`}>{MOCK_COMPANY.name}</p>
-            <p className={`text-xs ${isDark ? 'text-amber-200/90' : 'text-[#111111]'}`}>GST: {MOCK_COMPANY.gstin}</p>
+      <nav className={`fixed top-0 left-0 right-0 h-16 border-b z-50 ${isDark ? 'bg-[#0c0c0c]/80 border-white/10' : 'bg-white/80 border-slate-200'} backdrop-blur-xl flex items-center justify-between px-6 sm:px-10`}>
+        <div className="flex items-center gap-6 min-w-0">
+          <img src={MOCK_COMPANY.logoUrl} alt={MOCK_COMPANY.name} className="h-9 w-auto flex-shrink-0" />
+          <div className="hidden lg:block h-6 w-px bg-slate-200 dark:bg-white/10" />
+          <div className="hidden lg:block min-w-0">
+            <p className={`text-sm font-black tracking-tight truncate ${textPrimary}`}>{MOCK_COMPANY.name}</p>
+            <p className={`text-[10px] font-bold uppercase tracking-widest ${isDark ? 'text-amber-500/80' : 'text-slate-500'}`}>Premium Project Experience</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-          <a href={`mailto:${MOCK_COMPANY.supportEmail}`} className={`hidden md:flex items-center gap-1.5 text-xs font-medium ${isDark ? 'text-amber-200/90' : 'text-[#111111]'}`}>Support</a>
-          <a href={`tel:${MOCK_COMPANY.supportPhone}`} className={`hidden md:flex items-center gap-1.5 text-xs font-medium ${isDark ? 'text-amber-200/90' : 'text-[#111111]'}`}>Phone</a>
-          {onResetPassword && !isReadOnly && <button type="button" onClick={onResetPassword} className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium ${isDark ? 'text-amber-200/90' : 'text-[#111111]'}`}><KeyIcon className="w-4 h-4" /> Reset</button>}
-          {onBack && <button type="button" onClick={onBack} className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium ${isDark ? 'bg-amber-500/10 text-amber-200' : 'bg-slate-100 text-[#111111]'}`}><ArrowLeftIcon className="w-4 h-4" /><span className="hidden sm:inline">Back</span></button>}
-          {!onBack && <button type="button" onClick={onLogout} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400">Logout</button>}
+
+        <div className="flex items-center gap-3 sm:gap-6 flex-shrink-0">
+          <div className="hidden md:flex items-center gap-4 border-r dark:border-white/10 pr-6 mr-3">
+            <a href={`mailto:${MOCK_COMPANY.supportEmail}`} className={`text-xs font-bold uppercase tracking-wider hover:text-amber-500 transition-colors ${textSecondary}`}>Support</a>
+            <a href={`tel:${MOCK_COMPANY.supportPhone}`} className={`text-xs font-bold uppercase tracking-wider hover:text-amber-500 transition-colors ${textSecondary}`}>Call Direct</a>
+          </div>
+          {onResetPassword && !isReadOnly && (
+            <button type="button" onClick={onResetPassword} className={`p-2 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-white/10 transition-all ${textSecondary}`}>
+              <KeyIcon className="w-5 h-5" />
+            </button>
+          )}
+          {onBack ? (
+            <button type="button" onClick={onBack} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${isDark ? 'bg-amber-500 text-black hover:bg-amber-400' : 'bg-slate-900 text-white hover:bg-slate-800 shadow-lg shadow-slate-900/20'}`}>
+              <ArrowLeftIcon className="w-4 h-4 stroke-[3]" />
+              <span className="hidden sm:inline">Project Hub</span>
+            </button>
+          ) : (
+            <button type="button" onClick={onLogout} className="px-5 py-2.5 rounded-xl text-sm font-bold bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all">Logout</button>
+          )}
+        </div>
+      </nav>
+
+      {/* Hero Intelligence Section */}
+      <div className="pt-16">
+        <div className={`w-full ${isDark ? 'bg-gradient-to-b from-[#0c0c0c] to-[#0a0a0a]' : 'bg-white shadow-sm'}`}>
+          <ProjectIntelligenceHeader
+            projectName={project.projectName ?? 'Project'}
+            clientName={project.clientName}
+            projectCode={project.projectId}
+            health={health}
+            completionPercent={completionPercent}
+            daysRemaining={daysRemaining}
+            budgetUtilizationPercent={budgetUtilizationPercent}
+            totalBudget={project.totalBudget ?? 0}
+            totalPaid={project.totalPaid ?? 0}
+            nextMilestoneName={nextUnpaidMilestone?.stageName}
+            nextPaymentDueDate={nextUnpaidMilestone?.dueDate ?? null}
+            nextPaymentAmount={nextUnpaidMilestone?.amount}
+            projectHeadName={project.consultant?.name}
+            projectHeadPhone={project.consultant?.phone}
+            projectHeadEmail={project.consultant?.email}
+            isDark={isDark}
+          />
         </div>
       </div>
 
-      {/* Project Intelligence Header (3-row) â€“ below nav */}
-      <div className="pt-14">
-        <ProjectIntelligenceHeader
-          projectName={project.projectName ?? 'Project'}
-          clientName={project.clientName}
-          projectCode={project.projectId}
-          health={health}
-          completionPercent={completionPercent}
-          daysRemaining={daysRemaining}
-          budgetUtilizationPercent={budgetUtilizationPercent}
-          totalBudget={project.totalBudget ?? 0}
-          totalPaid={project.totalPaid ?? 0}
-          nextMilestoneName={nextUnpaidMilestone?.stageName}
-          nextPaymentDueDate={nextUnpaidMilestone?.dueDate ?? null}
-          nextPaymentAmount={nextUnpaidMilestone?.amount}
-          projectHeadName={project.consultant?.name}
-          projectHeadPhone={project.consultant?.phone}
-          projectHeadEmail={project.consultant?.email}
-          isDark={isDark}
-        />
-      </div>
+      {/* Enhanced Today's Snapshot */}
+      <div className="max-w-[1700px] mx-auto px-6 sm:px-10 py-8">
+        <div className="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
+          <TodaysWork currentStage={currentStage} isDark={isDark} onViewDetails={() => onStageClick(currentStage)} />
+        </div>
 
-      {/* Today's Work â€“ full width panel just below header */}
-      <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-        <TodaysWork currentStage={currentStage} isDark={isDark} onViewDetails={() => onStageClick(currentStage)} />
-      </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+          {/* Main Content Area (8/12) */}
+          <div className="lg:col-span-8 space-y-12">
 
-      {/* Main content */}
-      <main className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-10 gap-8 lg:gap-10">
-          {/* Left: Timeline (70%) */}
-          <div className="lg:col-span-7 space-y-8">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <h2 className={`flex items-center gap-2.5 text-2xl font-bold tracking-tight ${textPrimary}`}>
-                <span className={`p-2 rounded-xl ${isDark ? 'bg-amber-500/20' : 'bg-slate-100'}`}>
-                  <CalendarDaysIcon className={`w-6 h-6 ${isDark ? 'text-amber-400' : 'text-[#111111]'}`} />
-                </span>
-                Timeline
-              </h2>
-              <div className="flex rounded-xl bg-slate-100 dark:bg-white/5 p-1.5 border border-slate-200/80 dark:border-amber-500/20">
-                <button type="button" onClick={() => setTimelineView('vertical')} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${timelineView === 'vertical' ? 'bg-white dark:bg-amber-500/20 shadow-sm ' + textPrimary : (isDark ? 'text-slate-400 hover:text-slate-300' : 'text-[#111111] hover:opacity-80')}`}>
-                  <CalendarDaysIcon className="w-4 h-4" /> Timeline
+            {/* Timeline Header with Toggle */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-2">
+              <div>
+                <h2 className={`text-3xl sm:text-4xl font-black tracking-tight ${textPrimary}`}>
+                  Project Roadmap
+                </h2>
+                <p className={`text-sm mt-1 font-medium ${textSecondary}`}>Track milestones, documents, and execution stages in real-time.</p>
+              </div>
+
+              <div className={`inline-flex p-1.5 rounded-2xl ${isDark ? 'bg-white/5 border border-white/5' : 'bg-slate-100 border border-slate-200'}`}>
+                <button
+                  type="button"
+                  onClick={() => setTimelineView('vertical')}
+                  className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${timelineView === 'vertical'
+                      ? (isDark ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20' : 'bg-white text-slate-900 shadow-md')
+                      : (isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-900')
+                    }`}
+                >
+                  <CalendarDaysIcon className="w-5 h-5" />
+                  Journey
                 </button>
-                <button type="button" onClick={() => setTimelineView('gantt')} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${timelineView === 'gantt' ? 'bg-white dark:bg-amber-500/20 shadow-sm ' + textPrimary : (isDark ? 'text-slate-400 hover:text-slate-300' : 'text-[#111111] hover:opacity-80')}`}>
-                  <ChartBarIcon className="w-4 h-4" /> Gantt
+                <button
+                  type="button"
+                  onClick={() => setTimelineView('gantt')}
+                  className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${timelineView === 'gantt'
+                      ? (isDark ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20' : 'bg-white text-slate-900 shadow-md')
+                      : (isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-900')
+                    }`}
+                >
+                  <ChartBarIcon className="w-5 h-5" />
+                  Gantt
                 </button>
               </div>
             </div>
 
-            {timelineView === 'vertical' && (
-              <div className="space-y-6">
-                {project.leadJourneySteps && project.leadJourneySteps.length > 0 && (
-                  <Phase1LeadSection steps={project.leadJourneySteps} documents={project.documents} isDark={isDark} defaultExpanded />
-                )}
-                <Phase2ExecutionSection stages={project.stages} dailyUpdates={project.dailyUpdates ?? []} isDark={isDark} defaultExpanded onStageClick={onStageClick} />
-              </div>
-            )}
-            {timelineView === 'gantt' && (
-              <div className={`${cardBase} ${cardPadding} border-l-4 ${isDark ? 'border-l-amber-500/50' : 'border-l-slate-300'}`}>
-                {project.leadJourneySteps && project.leadJourneySteps.length > 0 && <Phase1LeadSection steps={project.leadJourneySteps} documents={project.documents} isDark={isDark} defaultExpanded={false} />}
-                <h3 className={`flex items-center gap-2 text-sm font-bold uppercase tracking-wider mt-6 mb-4 ${isDark ? 'text-amber-400/90' : 'text-[#111111]'}`}>
-                  <ChartBarIcon className="w-4 h-4" /> Phase 2 â€” Gantt
-                </h3>
-                <GanttView stages={project.stages} paymentMilestones={project.paymentMilestones} isDark={isDark} />
-              </div>
-            )}
+            {/* Dynamic Timeline Content */}
+            <div className="animate-in fade-in duration-500">
+              {timelineView === 'vertical' ? (
+                <div className="space-y-8">
+                  {project.leadJourneySteps && project.leadJourneySteps.length > 0 && (
+                    <Phase1LeadSection steps={project.leadJourneySteps} documents={project.documents} isDark={isDark} defaultExpanded />
+                  )}
+                  <Phase2ExecutionSection stages={project.stages} dailyUpdates={project.dailyUpdates ?? []} isDark={isDark} defaultExpanded onStageClick={onStageClick} />
+                </div>
+              ) : (
+                <div className={`${cardBase} ${cardPadding} space-y-8`}>
+                  <div className="flex items-center gap-4 pb-4 border-b dark:border-white/5">
+                    <div className="p-3 rounded-2xl bg-amber-500/10 text-amber-500">
+                      <ChartBarIcon className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className={`text-lg font-black tracking-tight ${textPrimary}`}>Execution Gantt Chart</h3>
+                      <p className={`text-xs ${textSecondary}`}>Visualizing project phases, dependencies, and payment milestones.</p>
+                    </div>
+                  </div>
+                  <GanttView stages={project.stages} paymentMilestones={project.paymentMilestones} isDark={isDark} />
+                </div>
+              )}
+            </div>
 
-            <div className={`${cardBase} ${cardPadding} border-l-4 ${isDark ? 'border-l-emerald-500/50' : 'border-l-emerald-400'}`}>
+            {/* Daily Progress Section */}
+            <section className={`${cardBase} ${cardPadding} relative overflow-hidden`}>
+              {/* Background accent */}
+              <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500" />
               <h3 className={sectionTitle}>
-                <ChartBarIcon className={`w-5 h-5 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} /> Daily Progress
+                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
+                  <ChartBarIcon className="w-6 h-6" />
+                </div>
+                Daily Progress Stream
               </h3>
               <ClientDailyUpdatesReadOnly caseId={project.projectId} planDays={project.planDays ?? []} />
-            </div>
+            </section>
           </div>
 
-          {/* RIGHT: 30% â€” Payment, Approvals, Documents, Chat */}
-          <aside className="lg:col-span-3 space-y-8">
+          {/* Right Sidebar Area (4/12) */}
+          <aside className="lg:col-span-4 space-y-10">
+
+            {/* Payment Urgency Notification */}
             {nextUnpaidMilestone && nextUnpaidMilestone.dueDate && new Date() > nextUnpaidMilestone.dueDate && (
-              <div className="rounded-xl bg-red-500/10 border border-red-500/30 p-4 flex items-center gap-3 shadow-sm">
-                <ExclamationTriangleIcon className="w-8 h-8 text-red-500 flex-shrink-0" />
-                <div>
-                  <p className="font-bold text-red-700 dark:text-red-400">Payment overdue</p>
-                  <p className="text-sm text-red-600 dark:text-red-300">Please clear pending amount to avoid delays.</p>
+              <div className="rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 p-6 text-white shadow-xl shadow-red-500/20 border border-white/10 animate-pulse">
+                <div className="flex items-start gap-4">
+                  <ExclamationTriangleIcon className="w-8 h-8 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-black text-lg">Action Required: Payment Overdue</h4>
+                    <p className="text-white/80 text-sm mt-1 leading-relaxed">Your current milestone payment is overdue. Please settle to ensure zero interruptions in site activity.</p>
+                    <button
+                      onClick={() => onPayClick(nextUnpaidMilestone!.amount, nextUnpaidMilestone!.stageName)}
+                      className="mt-4 px-6 py-2.5 bg-white text-red-600 rounded-xl text-sm font-black hover:bg-slate-100 transition-all active:scale-95"
+                    >
+                      Pay Securely Now
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
+
+            {/* Next Milestone Quick Pay */}
             {nextUnpaidMilestone && (
               <PayAdvanceSection
                 amount={nextUnpaidMilestone.amount}
@@ -250,12 +296,15 @@ const ClientProjectCommandCenter: React.FC<ClientProjectCommandCenterProps> = (p
               />
             )}
 
-            <div className="space-y-4">
-              <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-amber-400/80' : 'text-[#111111]'}`}>Payments & Billing</p>
-              <div className={`${cardBase} ${cardPadding} border-l-4 ${isDark ? 'border-l-emerald-500/50' : 'border-l-emerald-500'}`}>
-                <h3 className={sectionTitle}>
-                  <CurrencyRupeeIcon className={`w-5 h-5 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} /> Payment Summary
-                </h3>
+            {/* Financial Overview Groups */}
+            <div className="space-y-6">
+              <h4 className={`text-xs font-black uppercase tracking-[0.2em] ${isDark ? 'text-amber-500/60' : 'text-slate-400'} px-1`}>Financials & Audit</h4>
+
+              <div className={`${cardBase} p-6 border-l-4 ${isDark ? 'border-l-emerald-500/50' : 'border-l-emerald-500'}`}>
+                <h5 className="flex items-center gap-3 font-black text-sm uppercase tracking-wider mb-6">
+                  <CurrencyRupeeIcon className="w-5 h-5 text-emerald-500" />
+                  Payment Lifecycle
+                </h5>
                 <PaymentWidget
                   milestones={project.paymentMilestones}
                   totalPaid={project.totalPaid ?? 0}
@@ -266,10 +315,11 @@ const ClientProjectCommandCenter: React.FC<ClientProjectCommandCenterProps> = (p
                 />
               </div>
 
-              <div className={`${cardBase} ${cardPadding} border-l-4 ${isDark ? 'border-l-amber-500/50' : 'border-l-amber-500'}`}>
-                <h3 className={sectionTitle}>
-                  <ClipboardDocumentCheckIcon className={`w-5 h-5 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} /> Pending Approvals
-                </h3>
+              <div className={`${cardBase} p-6 border-l-4 ${isDark ? 'border-l-amber-500/50' : 'border-l-amber-500'}`}>
+                <h5 className="flex items-center gap-3 font-black text-sm uppercase tracking-wider mb-6">
+                  <ClipboardDocumentCheckIcon className="w-5 h-5 text-amber-500" />
+                  Pending approvals
+                </h5>
                 <PendingApprovalsWidget
                   requests={project.requests}
                   onApprove={onApprove}
@@ -277,121 +327,63 @@ const ClientProjectCommandCenter: React.FC<ClientProjectCommandCenterProps> = (p
                   isDark={isDark}
                 />
               </div>
-
-              <div className={`${cardBase} ${cardPadding} border-l-4 ${isDark ? 'border-l-slate-400/50' : 'border-l-slate-400'}`}>
-                <h3 className={sectionTitle}>
-                  <DocumentTextIcon className={`w-5 h-5 ${isDark ? 'text-slate-400' : 'text-[#111111]'}`} /> Billing & Invoices
-                </h3>
-                {invoicesLoading ? (
-                  <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-[#111111]'}`}>Loading...</p>
-                ) : invoices.length === 0 ? (
-                  <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-[#111111]'}`}>No invoices yet.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {invoices.slice(0, 5).map((inv: any) => (
-                      <div
-                        key={inv.id}
-                        className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10"
-                      >
-                        <div>
-                          <p className={`text-sm font-bold ${textPrimary}`}>{inv.invoiceNumber}</p>
-                          <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-[#111111]'}`}>{formatDate(inv.issueDate || inv.issuedAt)}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-sm font-bold ${textPrimary}`}>
-                            {formatCurrencyINR(inv.totalAmount ?? inv.total ?? 0)}
-                          </span>
-                          {inv.attachments?.[0]?.url && (
-                            <a
-                              href={inv.attachments[0].url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-primary hover:text-secondary"
-                            >
-                              <DocumentArrowDownIcon className="w-5 h-5" />
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
             </div>
 
-            <div className="space-y-4">
-              <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-amber-400/80' : 'text-[#111111]'}`}>Project & Team</p>
-              <div className={`${cardBase} ${cardPadding} border-l-4 ${isDark ? 'border-l-blue-500/50' : 'border-l-blue-500'}`}>
-                <h3 className={sectionTitle}>
-                  <FolderOpenIcon className={`w-5 h-5 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} /> Document Intelligence
-                </h3>
-                <DocumentIntelligencePanel documents={project.documents} isDark={isDark} />
-              </div>
+            {/* Intelligence & Collaboration */}
+            <div className="space-y-6">
+              <h4 className={`text-xs font-black uppercase tracking-[0.2em] ${isDark ? 'text-amber-500/60' : 'text-slate-400'} px-1`}>Communication Hub</h4>
 
-              <div className={`${cardBase} ${cardPadding} border-l-4 ${isDark ? 'border-l-violet-500/50' : 'border-l-violet-500'}`}>
-                <h3 className={sectionTitle}>
-                  <ChatBubbleLeftRightIcon className={`w-5 h-5 ${isDark ? 'text-violet-400' : 'text-violet-600'}`} /> Project Chat
-                </h3>
+              <div className={`${cardBase} p-0 overflow-hidden`}>
+                <div className="p-6 border-b dark:border-white/5 bg-slate-50/50 dark:bg-white/5">
+                  <h5 className="flex items-center gap-3 font-black text-sm uppercase tracking-wider">
+                    <ChatBubbleLeftRightIcon className="w-5 h-5 text-violet-500" />
+                    Project secure chat
+                  </h5>
+                </div>
                 <CaseChat caseId={project.projectId} clientUserId={clientUser?.uid ?? ''} clientUserName={project.clientName} isReadOnly={isReadOnly} isDark={isDark} />
               </div>
 
-              {isJMSCompleted && (
-                <WarrantyClosureSection isCompleted={true} completedAt={signedJMS?.signedAt ? new Date(signedJMS.signedAt) : undefined} warrantyDocuments={warrantyDocs} warrantyEndDate={project.transparency?.estimatedCompletion ? new Date(project.transparency.estimatedCompletion.getTime() + 365 * 24 * 60 * 60 * 1000) : undefined} isDark={isDark} />
-              )}
-
-              <div className={`${cardBase} ${cardPadding} border-l-4 ${health === 'on-track' ? (isDark ? 'border-l-emerald-500/50' : 'border-l-emerald-500') : health === 'minor-delay' ? (isDark ? 'border-l-amber-500/50' : 'border-l-amber-500') : (isDark ? 'border-l-red-500/50' : 'border-l-red-500')}`}>
-                <h3 className={sectionTitle}>
-                  <HeartIcon className={`w-5 h-5 ${healthStyle.text}`} /> Project Health
-                </h3>
-                <div className={`flex items-center gap-3 p-4 rounded-xl ${healthStyle.bg} border border-transparent`}>
-                  <HealthIcon className={`w-8 h-8 ${healthStyle.text}`} />
-                  <div>
-                    <p className={`font-bold ${healthStyle.text}`}>{healthStyle.label}</p>
-                    <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-[#111111]'}`}>
-                      {project.transparency?.nextAction?.description ?? 'Work in progress'}
-                    </p>
-                  </div>
-                </div>
+              <div className={`${cardBase} p-6 overflow-hidden`}>
+                <h5 className="flex items-center gap-3 font-black text-sm uppercase tracking-wider mb-6">
+                  <FolderOpenIcon className="w-5 h-5 text-blue-500" />
+                  Project Documents
+                </h5>
+                <DocumentIntelligencePanel documents={project.documents} isDark={isDark} />
               </div>
             </div>
 
+            {/* Warranty & Closure (Only if active) */}
+            {isJMSCompleted && (
+              <div className="animate-in zoom-in-95 duration-500">
+                <WarrantyClosureSection isCompleted={true} completedAt={signedJMS?.signedAt ? new Date(signedJMS.signedAt) : undefined} warrantyDocuments={project.documents?.filter(d => d.documentType === 'warranty')} isDark={isDark} />
+              </div>
+            )}
 
-            {/* JMS */}
-            {!jmsLoading && pendingJMS && (
-              <div className="rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 p-6 text-white shadow-lg border border-emerald-400/20">
-                <h3 className="text-lg font-bold mb-2">Project Completion – JMS</h3>
-                <p className="text-emerald-100 text-sm mb-4">Sign off the Joint Measurement Sheet.</p>
-                <ClientJMSForm
-                  caseId={project.projectId}
-                  jmsDoc={pendingJMS}
-                  clientId={clientUser?.uid ?? 'viewer'}
-                  clientName={project.clientName}
-                  onSuccess={() => {}}
-                  onError={(msg) => alert(msg)}
-                />
-              </div>
-            )}
-            {!jmsLoading && signedJMS && !pendingJMS && (
-              <div className="rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 p-6 text-white text-center shadow-lg border border-emerald-400/20">
-                <h3 className="text-lg font-bold mb-2">Project Completed</h3>
-                <p className="text-emerald-100 text-sm">JMS signed. Thank you.</p>
-              </div>
-            )}
+            {/* Completion Buttons */}
             {!jmsLoading && !pendingJMS && !signedJMS && project.stages.length > 0 && project.currentStageId >= project.stages.length && (
               <button
                 type="button"
                 onClick={onSignJMS}
                 disabled={isReadOnly}
-                className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl disabled:opacity-50 shadow-md hover:shadow-lg transition-shadow"
+                className="w-full py-5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black rounded-2xl shadow-xl shadow-emerald-500/20 active:scale-95 transition-all"
               >
-                Sign Off Project (JMS)
+                Launch Final Step: JMS Review
               </button>
             )}
           </aside>
         </div>
-      </main>
+      </div>
 
+      {/* Dynamic Detail Sheet */}
       <StageBottomSheet stage={selectedStage} isOpen={isSheetOpen} onClose={onCloseSheet} />
+
+      {/* Footer bar */}
+      <footer className={`py-12 mt-20 border-t ${isDark ? 'bg-[#080808] border-white/5' : 'bg-white border-slate-200'} text-center px-6`}>
+        <img src={MOCK_COMPANY.logoUrl} alt="Logo" className="h-6 mx-auto opacity-30 grayscale mb-4" />
+        <p className={`text-xs font-bold uppercase tracking-[0.3em] ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>
+          &copy; {new Date().getFullYear()} Make My Office. All Rights Reserved.
+        </p>
+      </footer>
     </div>
   );
 };

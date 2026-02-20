@@ -953,10 +953,6 @@ const DocumentsTab: React.FC<{ projectCase: Case }> = ({ projectCase }) => {
                         </PrimaryButton>
                     )}
                 </div>
-                {/* DEBUG: Remove after testing */}
-                <div className="mb-4 text-xs text-red-500 bg-red-50 p-2 rounded">
-                    Debug: Role={currentUser?.role} | canUpload={canUpload ? 'YES' : 'NO'} | canManageVisibility={canManageVisibility ? 'YES' : 'NO'}
-                </div>
 
                 {documents.length === 0 ? (
                     <div className="text-center py-10 bg-subtle-background rounded-xl border border-dashed border-gray-200">
