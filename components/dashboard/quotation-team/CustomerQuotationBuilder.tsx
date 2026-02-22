@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Card from '../../shared/Card';
-import { PlusIcon, TrashIcon, CheckCircleIcon, CalculatorIcon, DocumentTextIcon } from '../../icons/IconComponents';
+import { PlusIcon, TrashIcon, CheckCircleIcon, CalculatorIcon, DocumentTextIcon, PencilSquareIcon, ArrowLeftIcon, MagnifyingGlassIcon, ChevronRightIcon, TagIcon, RectangleStackIcon } from '../../icons/IconComponents';
 import { PrimaryButton, SecondaryButton } from '../shared/DashboardUI';
 import { useAuth } from '../../../context/AuthContext';
 import { useCases, addCaseQuotation, useCaseQuotations, useCaseBOQs } from '../../../hooks/useCases';
@@ -11,7 +11,10 @@ import { formatCurrencyINR, safeDate } from '../../../constants';
 import { createNotification } from '../../../services/liveDataService';
 import QuotationPDFTemplate from './QuotationPDFTemplate';
 import EditQuotationModal from './EditQuotationModal';
+import Modal from '../../shared/Modal';
 import { db } from '../../../firebase';
+
+const CATEGORY_ORDER = ['Electrical', 'Civil', 'Furniture', 'Plumbing', 'General'];
 import { collection, doc, updateDoc, addDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { FIRESTORE_COLLECTIONS } from '../../../constants';
 import { PaperAirplaneIcon } from '@heroicons/react/24/outline';
@@ -124,6 +127,19 @@ const CustomerQuotationBuilder: React.FC = () => {
     const { cases } = useCases();
     const { items: catalogItems, loading: catalogLoading } = useCatalog();
 
+    // Category-first catalog picker (for Add from Catalog modal)
+    const categoriesWithItems = React.useMemo(() => {
+        const unique = Array.from(new Set(catalogItems.map((i) => i.category).filter(Boolean))) as string[];
+        return unique.sort((a, b) => {
+            const ia = CATEGORY_ORDER.indexOf(a);
+            const ib = CATEGORY_ORDER.indexOf(b);
+            if (ia === -1 && ib === -1) return a.localeCompare(b);
+            if (ia === -1) return 1;
+            if (ib === -1) return -1;
+            return ia - ib;
+        });
+    }, [catalogItems]);
+
     // State
     const [viewMode, setViewMode] = useState<'list' | 'select-case' | 'build' | 'view-quotations'>('list');
     const [selectedCase, setSelectedCase] = useState<Case | null>(null);
@@ -148,9 +164,31 @@ const CustomerQuotationBuilder: React.FC = () => {
     const [submittingForAuditCaseId, setSubmittingForAuditCaseId] = useState<string | null>(null);
 
     // Form inputs for adding line item
-    const [selectedCatalogId, setSelectedCatalogId] = useState('');
     const [quantity, setQuantity] = useState(1);
     const [discount, setDiscount] = useState(0);
+
+    // Catalog picker modal: category → items → selected item + qty/discount
+    const [isCatalogPickerOpen, setIsCatalogPickerOpen] = useState(false);
+    const [catalogPickerCategory, setCatalogPickerCategory] = useState<string | null>(null);
+    const [catalogPickerSearch, setCatalogPickerSearch] = useState('');
+    const [catalogPickerSelectedItem, setCatalogPickerSelectedItem] = useState<CatalogItem | null>(null);
+    const [catalogPickerQty, setCatalogPickerQty] = useState(1);
+    const [catalogPickerDiscount, setCatalogPickerDiscount] = useState(0);
+
+    // Edit line item modal
+    const [editingLineIndex, setEditingLineIndex] = useState<number | null>(null);
+    const [editLineQty, setEditLineQty] = useState(1);
+    const [editLineDiscount, setEditLineDiscount] = useState(0);
+
+    const catalogItemsInCategory = React.useMemo(() => {
+        if (!catalogPickerCategory) return [];
+        return catalogItems.filter((i) => i.category === catalogPickerCategory);
+    }, [catalogItems, catalogPickerCategory]);
+
+    const catalogPickerFilteredItems = React.useMemo(() => {
+        const term = catalogPickerSearch.toLowerCase();
+        return catalogItemsInCategory.filter((i) => i.name.toLowerCase().includes(term));
+    }, [catalogItemsInCategory, catalogPickerSearch]);
     const [ssLeft, setSsLeft] = useState<number | ''>(''); // SS Left value
     const [ssRight, setSsRight] = useState<number | ''>(''); // SS Right value
 
@@ -331,33 +369,64 @@ const CustomerQuotationBuilder: React.FC = () => {
         setViewMode('build');
     };
 
-    const handleAddItem = () => {
-        if (!selectedCatalogId || quantity <= 0) return;
-
-        const catalogItem = catalogItems.find(i => i.id === selectedCatalogId);
-        if (!catalogItem) return;
-
-        const baseTotal = catalogItem.price * quantity;
-        const discountAmount = (baseTotal * discount) / 100;
+    const addLineItemFromCatalog = (catalogItem: CatalogItem, qty: number, disc: number) => {
+        const baseTotal = catalogItem.price * qty;
+        const discountAmount = (baseTotal * disc) / 100;
         const finalTotal = baseTotal - discountAmount;
-
         const newItem: QuoteLineItem = {
             ...catalogItem,
-            quantity: quantity,
-            discount: discount,
+            quantity: qty,
+            discount: disc,
             total: finalTotal
         };
-
         setQuoteItems(prev => [...prev, newItem]);
+    };
 
-        // Reset inputs
-        setSelectedCatalogId('');
-        setQuantity(1);
-        setDiscount(0);
+    const handleAddFromPicker = () => {
+        if (!catalogPickerSelectedItem || catalogPickerQty <= 0) return;
+        addLineItemFromCatalog(catalogPickerSelectedItem, catalogPickerQty, catalogPickerDiscount);
+        setCatalogPickerSelectedItem(null);
+        setCatalogPickerQty(1);
+        setCatalogPickerDiscount(0);
+        setIsCatalogPickerOpen(false);
+        setCatalogPickerCategory(null);
+        setCatalogPickerSearch('');
+    };
+
+    const closeCatalogPicker = () => {
+        setIsCatalogPickerOpen(false);
+        setCatalogPickerCategory(null);
+        setCatalogPickerSearch('');
+        setCatalogPickerSelectedItem(null);
+        setCatalogPickerQty(1);
+        setCatalogPickerDiscount(0);
     };
 
     const handleRemoveItem = (index: number) => {
         setQuoteItems(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleEditLineItem = (index: number) => {
+        const item = quoteItems[index];
+        if (!item) return;
+        setEditLineQty(item.quantity);
+        setEditLineDiscount(item.discount);
+        setEditingLineIndex(index);
+    };
+
+    const handleSaveEditLineItem = () => {
+        if (editingLineIndex === null) return;
+        const item = quoteItems[editingLineIndex];
+        if (!item) return;
+        const baseTotal = item.price * editLineQty;
+        const discountAmount = (baseTotal * editLineDiscount) / 100;
+        const finalTotal = baseTotal - discountAmount;
+        setQuoteItems(prev => prev.map((it, i) =>
+            i === editingLineIndex
+                ? { ...it, quantity: editLineQty, discount: editLineDiscount, total: finalTotal }
+                : it
+        ));
+        setEditingLineIndex(null);
     };
 
     const calculateGrandTotal = () => {
@@ -777,6 +846,179 @@ const CustomerQuotationBuilder: React.FC = () => {
     return (
         <>
             {renderModals()}
+
+            {/* Catalog Picker Modal - category first, then items, then qty/discount */}
+            <Modal
+                isOpen={isCatalogPickerOpen}
+                onClose={closeCatalogPicker}
+                title="Add from Catalog"
+                size="2xl"
+            >
+                <div className="min-h-[320px]">
+                    {!catalogPickerCategory ? (
+                        /* Step 1: Categories */
+                        <>
+                            <p className="text-sm text-text-secondary mb-4">Choose a category to see its items.</p>
+                            {categoriesWithItems.length === 0 ? (
+                                <div className="py-12 text-center text-text-secondary">
+                                    <TagIcon className="w-12 h-12 mx-auto mb-2 text-text-tertiary" />
+                                    <p>No categories with items yet. Add items in Items Catalog first.</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                    {categoriesWithItems.map((cat) => {
+                                        const count = catalogItems.filter((i) => i.category === cat).length;
+                                        return (
+                                            <button
+                                                key={cat}
+                                                type="button"
+                                                onClick={() => setCatalogPickerCategory(cat)}
+                                                className="bg-subtle-background border border-border rounded-lg p-4 text-left hover:border-primary/50 hover:shadow transition-all flex items-center justify-between group"
+                                            >
+                                                <div>
+                                                    <span className="font-medium text-text-primary group-hover:text-primary block">{cat}</span>
+                                                    <span className="text-xs text-text-tertiary">{count} item{count !== 1 ? 's' : ''}</span>
+                                                </div>
+                                                <ChevronRightIcon className="w-5 h-5 text-text-secondary flex-shrink-0" />
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </>
+                    ) : !catalogPickerSelectedItem ? (
+                        /* Step 2: Items in category */
+                        <>
+                            <div className="flex items-center gap-3 mb-4">
+                                <button
+                                    type="button"
+                                    onClick={() => { setCatalogPickerCategory(null); setCatalogPickerSearch(''); }}
+                                    className="p-2 rounded-lg border border-border hover:bg-subtle-background"
+                                >
+                                    <ArrowLeftIcon className="w-5 h-5" />
+                                </button>
+                                <span className="font-medium text-text-primary">{catalogPickerCategory} — select an item</span>
+                            </div>
+                            <div className="relative mb-4">
+                                <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
+                                <input
+                                    type="text"
+                                    placeholder="Search in this category..."
+                                    value={catalogPickerSearch}
+                                    onChange={(e) => setCatalogPickerSearch(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-surface"
+                                />
+                            </div>
+                            <div className="max-h-[280px] overflow-y-auto space-y-2">
+                                {catalogPickerFilteredItems.map((item) => (
+                                    <button
+                                        key={item.id}
+                                        type="button"
+                                        onClick={() => { setCatalogPickerSelectedItem(item); setCatalogPickerQty(1); setCatalogPickerDiscount(0); }}
+                                        className="w-full flex items-center justify-between p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-green-50/50 text-left"
+                                    >
+                                        <div className="flex-1 min-w-0">
+                                            <span className="font-medium text-text-primary block truncate">{item.name}</span>
+                                            <span className="text-sm text-text-secondary">{formatCurrencyINR(item.price)}</span>
+                                        </div>
+                                        <ChevronRightIcon className="w-5 h-5 text-text-secondary flex-shrink-0 ml-2" />
+                                    </button>
+                                ))}
+                                {catalogPickerFilteredItems.length === 0 && (
+                                    <p className="py-6 text-center text-text-secondary">No items found{catalogPickerSearch ? ' matching search' : ''}.</p>
+                                )}
+                            </div>
+                        </>
+                    ) : (
+                        /* Step 3: Quantity & discount, then Add */
+                        <>
+                            <div className="flex items-center gap-3 mb-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setCatalogPickerSelectedItem(null)}
+                                    className="p-2 rounded-lg border border-border hover:bg-subtle-background"
+                                >
+                                    <ArrowLeftIcon className="w-5 h-5" />
+                                </button>
+                                <span className="font-medium text-text-primary truncate">{catalogPickerSelectedItem.name}</span>
+                            </div>
+                            <p className="text-sm text-text-secondary mb-4">{formatCurrencyINR(catalogPickerSelectedItem.price)} per unit</p>
+                            <div className="grid grid-cols-2 gap-4 mb-6">
+                                <div>
+                                    <label className="block text-sm font-medium text-text-secondary mb-1">Quantity</label>
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        value={catalogPickerQty}
+                                        onChange={(e) => setCatalogPickerQty(Number(e.target.value) || 1)}
+                                        className="w-full px-4 py-2.5 border border-border rounded-lg focus:ring-2 focus:ring-primary"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-text-secondary mb-1">Discount (%)</label>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        max={100}
+                                        value={catalogPickerDiscount}
+                                        onChange={(e) => setCatalogPickerDiscount(Number(e.target.value) || 0)}
+                                        className="w-full px-4 py-2.5 border border-border rounded-lg focus:ring-2 focus:ring-primary"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex gap-3">
+                                <PrimaryButton onClick={handleAddFromPicker} disabled={catalogPickerQty <= 0}>
+                                    <PlusIcon className="w-5 h-5 mr-2" />
+                                    Add to Quotation
+                                </PrimaryButton>
+                                <SecondaryButton onClick={() => { setCatalogPickerSelectedItem(null); }}>Choose another item</SecondaryButton>
+                            </div>
+                        </>
+                    )}
+                </div>
+            </Modal>
+
+            {/* Edit line item modal */}
+            <Modal
+                isOpen={editingLineIndex !== null}
+                onClose={() => setEditingLineIndex(null)}
+                title="Edit item"
+                size="md"
+            >
+                {editingLineIndex !== null && quoteItems[editingLineIndex] && (
+                    <>
+                        <p className="text-sm text-text-secondary mb-4">{quoteItems[editingLineIndex].name}</p>
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                            <div>
+                                <label className="block text-sm font-medium text-text-secondary mb-1">Quantity</label>
+                                <input
+                                    type="number"
+                                    min={1}
+                                    value={editLineQty}
+                                    onChange={(e) => setEditLineQty(Number(e.target.value) || 1)}
+                                    className="w-full px-4 py-2.5 border border-border rounded-lg focus:ring-2 focus:ring-primary"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-text-secondary mb-1">Discount (%)</label>
+                                <input
+                                    type="number"
+                                    min={0}
+                                    max={100}
+                                    value={editLineDiscount}
+                                    onChange={(e) => setEditLineDiscount(Number(e.target.value) || 0)}
+                                    className="w-full px-4 py-2.5 border border-border rounded-lg focus:ring-2 focus:ring-primary"
+                                />
+                            </div>
+                        </div>
+                        <div className="flex gap-3">
+                            <PrimaryButton onClick={handleSaveEditLineItem}>Save</PrimaryButton>
+                            <SecondaryButton onClick={() => setEditingLineIndex(null)}>Cancel</SecondaryButton>
+                        </div>
+                    </>
+                )}
+            </Modal>
+
             <div className="p-6 space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
@@ -894,7 +1136,7 @@ const CustomerQuotationBuilder: React.FC = () => {
 
                     {/* RIGHT PANEL: Quotation Builder (3 cols) */}
                     <div className="lg:col-span-3 space-y-5">
-                        {/* Add Item Form */}
+                        {/* Add Item from Catalog - opens category-first picker */}
                         <Card>
                             <div className="p-5 border-b border-border bg-gradient-to-r from-green-50 to-transparent">
                                 <h3 className="text-lg font-bold text-text-primary flex items-center gap-2">
@@ -903,50 +1145,11 @@ const CustomerQuotationBuilder: React.FC = () => {
                                 </h3>
                             </div>
                             <div className="p-5">
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                    <div className="md:col-span-2">
-                                        <label className="block text-sm font-medium text-text-secondary mb-2">Item</label>
-                                        <select
-                                            value={selectedCatalogId}
-                                            onChange={(e) => setSelectedCatalogId(e.target.value)}
-                                            className="w-full px-4 py-2.5 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white"
-                                        >
-                                            <option value="">Select an item...</option>
-                                            {catalogItems.map(item => (
-                                                <option key={item.id} value={item.id}>
-                                                    {item.name} - {formatCurrencyINR(item.price)}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-text-secondary mb-2">Quantity</label>
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            value={quantity}
-                                            onChange={(e) => setQuantity(Number(e.target.value))}
-                                            className="w-full px-4 py-2.5 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-text-secondary mb-2">Discount (%)</label>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            max="100"
-                                            value={discount}
-                                            onChange={(e) => setDiscount(Number(e.target.value))}
-                                            className="w-full px-4 py-2.5 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="mt-4">
-                                    <PrimaryButton onClick={handleAddItem} disabled={!selectedCatalogId || quantity <= 0}>
-                                        <PlusIcon className="w-5 h-5 mr-2" />
-                                        Add Item
-                                    </PrimaryButton>
-                                </div>
+                                <p className="text-sm text-text-secondary mb-4">Choose a category, then pick items to add to your quotation.</p>
+                                <PrimaryButton onClick={() => { setCatalogPickerCategory(null); setCatalogPickerSelectedItem(null); setCatalogPickerSearch(''); setCatalogPickerQty(1); setCatalogPickerDiscount(0); setIsCatalogPickerOpen(true); }}>
+                                    <PlusIcon className="w-5 h-5 mr-2" />
+                                    Add from Catalog
+                                </PrimaryButton>
                             </div>
                         </Card>
 
@@ -981,11 +1184,19 @@ const CustomerQuotationBuilder: React.FC = () => {
                                                             {item.discount > 0 && <span className="text-green-600 ml-1">(-{item.discount}%)</span>}
                                                         </p>
                                                     </div>
-                                                    <div className="flex items-center gap-4">
+                                                    <div className="flex items-center gap-2">
                                                         <span className="font-bold text-primary text-lg">{formatCurrencyINR(item.total)}</span>
+                                                        <button
+                                                            onClick={() => handleEditLineItem(index)}
+                                                            className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                                                            title="Edit quantity & discount"
+                                                        >
+                                                            <PencilSquareIcon className="w-5 h-5" />
+                                                        </button>
                                                         <button
                                                             onClick={() => handleRemoveItem(index)}
                                                             className="p-2 text-error hover:bg-red-50 rounded-lg transition-colors"
+                                                            title="Remove item"
                                                         >
                                                             <TrashIcon className="w-5 h-5" />
                                                         </button>

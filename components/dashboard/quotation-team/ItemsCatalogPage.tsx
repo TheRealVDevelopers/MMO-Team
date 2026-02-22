@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import Card from '../../shared/Card';
 import { formatCurrencyINR } from '../../../constants';
 import { Item } from '../../../types';
-import { ArrowLeftIcon, PlusIcon, MagnifyingGlassIcon, PencilSquareIcon, TrashIcon } from '../../icons/IconComponents';
+import { ArrowLeftIcon, PlusIcon, MagnifyingGlassIcon, PencilSquareIcon, TrashIcon, RectangleStackIcon, ChevronRightIcon, TagIcon } from '../../icons/IconComponents';
 import { useCatalog } from '../../../hooks/useCatalog';
 import { PrimaryButton, SecondaryButton } from '../shared/DashboardUI';
 
@@ -11,29 +11,35 @@ interface CatalogItem extends Item {
     warranty?: string;
 }
 
-const ItemCard: React.FC<{ 
-    item: Item; 
-    onEdit: (item: Item) => void; 
-    onDelete: (id: string) => void; 
+const ItemCard: React.FC<{
+    item: Item;
+    onEdit: (item: Item) => void;
+    onDelete: (id: string) => void;
 }> = ({ item, onEdit, onDelete }) => (
     <div className="bg-surface border border-border rounded-lg p-3 flex flex-col relative group">
         <div className="absolute top-2 right-2 flex gap-1 z-10">
-            <button 
-                onClick={() => onEdit(item)} 
+            <button
+                onClick={() => onEdit(item)}
                 className="p-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all shadow-sm"
                 title="Edit item"
             >
                 <PencilSquareIcon className="w-3.5 h-3.5" />
             </button>
-            <button 
-                onClick={() => onDelete(item.id)} 
+            <button
+                onClick={() => onDelete(item.id)}
                 className="p-1.5 rounded-md bg-error/10 text-error hover:bg-error hover:text-white transition-all shadow-sm"
                 title="Delete item"
             >
                 <TrashIcon className="w-3.5 h-3.5" />
             </button>
         </div>
-        <img src={item.imageUrl} alt={item.name} className="h-24 w-full object-cover rounded" />
+        {item.imageUrl ? (
+            <img src={item.imageUrl} alt={item.name} className="h-24 w-full object-cover rounded" />
+        ) : (
+            <div className="h-24 w-full rounded bg-subtle-background flex items-center justify-center">
+                <RectangleStackIcon className="w-10 h-10 text-text-secondary/50" />
+            </div>
+        )}
         <div className="mt-2 flex-grow">
             <h4 className="font-bold text-sm text-text-primary">{item.name}</h4>
             <p className="text-xs text-text-secondary">{item.category}</p>
@@ -48,13 +54,33 @@ interface ItemsCatalogPageProps {
     setCurrentPage: (page: string) => void;
 }
 
+const CATEGORY_ORDER = ['Electrical', 'Civil', 'Furniture', 'Plumbing', 'General'];
+
 const ItemsCatalogPage: React.FC<ItemsCatalogPageProps> = ({ setCurrentPage }) => {
     const { items, loading, addItem, updateItem, removeItem } = useCatalog();
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [categoryFilter, setCategoryFilter] = useState('All');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<CatalogItem | null>(null);
-    
+
+    // Categories that have at least one item, in a consistent order
+    const categoriesWithItems = useMemo(() => {
+        const unique = Array.from(new Set(items.map((i) => i.category).filter(Boolean))) as string[];
+        return unique.sort((a, b) => {
+            const ia = CATEGORY_ORDER.indexOf(a);
+            const ib = CATEGORY_ORDER.indexOf(b);
+            if (ia === -1 && ib === -1) return a.localeCompare(b);
+            if (ia === -1) return 1;
+            if (ib === -1) return -1;
+            return ia - ib;
+        });
+    }, [items]);
+
+    const itemsInCategory = useMemo(() => {
+        if (!selectedCategory) return [];
+        return items.filter((i) => i.category === selectedCategory);
+    }, [items, selectedCategory]);
+
     // Form State
     const [formData, setFormData] = useState<Partial<CatalogItem>>({
         name: '',
@@ -126,27 +152,27 @@ const ItemsCatalogPage: React.FC<ItemsCatalogPageProps> = ({ setCurrentPage }) =
         }
     };
 
-    const categories = useMemo(() => ['All', ...new Set(items.map(item => item.category))], [items]);
-
     const filteredItems = useMemo(() => {
-        return items.filter(item =>
-            (item.name.toLowerCase().includes(searchTerm.toLowerCase())) &&
-            (categoryFilter === 'All' || item.category === categoryFilter)
+        if (!selectedCategory) return [];
+        return itemsInCategory.filter((item) =>
+            item.name.toLowerCase().includes(searchTerm.toLowerCase())
         );
-    }, [searchTerm, categoryFilter, items]);
+    }, [itemsInCategory, searchTerm]);
 
     return (
         <div className="space-y-6">
             <div className="sm:flex justify-between items-center">
                 <div className="flex items-center gap-4">
                     <button
-                        onClick={() => setCurrentPage('overview')}
+                        onClick={() => selectedCategory ? setSelectedCategory(null) : setCurrentPage('overview')}
                         className="flex items-center space-x-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
                     >
                         <ArrowLeftIcon className="w-5 h-5" />
-                        <span>Back</span>
+                        <span>{selectedCategory ? 'Back to categories' : 'Back'}</span>
                     </button>
-                    <h2 className="text-2xl font-bold text-text-primary">Items Catalog</h2>
+                    <h2 className="text-2xl font-bold text-text-primary">
+                        {selectedCategory ? `${selectedCategory} items` : 'Items Catalog'}
+                    </h2>
                 </div>
                 <button
                     onClick={() => handleOpenModal()}
@@ -157,44 +183,74 @@ const ItemsCatalogPage: React.FC<ItemsCatalogPageProps> = ({ setCurrentPage }) =
                 </button>
             </div>
 
-            <Card>
-                <div className="flex flex-col sm:flex-row gap-4 mb-4">
-                    <div className="relative flex-grow">
-                        <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
-                        <input
-                            type="text"
-                            placeholder="Search items..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-border rounded-md bg-surface"
-                        />
+            {selectedCategory === null ? (
+                /* Category-first view: show categories */
+                <Card>
+                    {categoriesWithItems.length === 0 ? (
+                        <div className="text-center py-16 text-text-secondary">
+                            <TagIcon className="w-16 h-16 mx-auto mb-4 text-text-secondary/50" />
+                            <p className="font-medium text-text-primary">No categories yet</p>
+                            <p className="text-sm mt-1">Add your first item to create categories. Use &quot;Add New Item&quot; and choose a category.</p>
+                        </div>
+                    ) : (
+                        <>
+                            <p className="text-sm text-text-secondary mb-4">Choose a category to view its items.</p>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                {categoriesWithItems.map((cat) => {
+                                    const count = items.filter((i) => i.category === cat).length;
+                                    return (
+                                        <button
+                                            key={cat}
+                                            type="button"
+                                            onClick={() => setSelectedCategory(cat)}
+                                            className="bg-surface border border-border rounded-lg p-5 text-left hover:border-primary/50 hover:shadow-md transition-all group"
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-bold text-text-primary group-hover:text-primary transition-colors">{cat}</span>
+                                                <ChevronRightIcon className="w-5 h-5 text-text-secondary group-hover:text-primary transition-colors" />
+                                            </div>
+                                            <p className="text-sm text-text-secondary mt-1">{count} item{count !== 1 ? 's' : ''}</p>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </>
+                    )}
+                </Card>
+            ) : (
+                /* Items view: items in selected category */
+                <Card>
+                    <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                        <div className="relative flex-grow">
+                            <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
+                            <input
+                                type="text"
+                                placeholder="Search items in this category..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2 border border-border rounded-md bg-surface"
+                            />
+                        </div>
                     </div>
-                    <select
-                        value={categoryFilter}
-                        onChange={(e) => setCategoryFilter(e.target.value)}
-                        className="py-2 px-4 border border-border rounded-md bg-surface"
-                    >
-                        {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                    </select>
-                </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                    {filteredItems.map(item => (
-                        <ItemCard 
-                            key={item.id} 
-                            item={item} 
-                            onEdit={handleOpenModal}
-                            onDelete={handleDelete}
-                        />
-                    ))}
-                </div>
-                {filteredItems.length === 0 && (
-                    <div className="text-center py-12 text-text-secondary">
-                        <p>No items found.</p>
-                        <p className="text-sm">Try adjusting your search or filter.</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                        {filteredItems.map((item) => (
+                            <ItemCard
+                                key={item.id}
+                                item={item}
+                                onEdit={handleOpenModal}
+                                onDelete={handleDelete}
+                            />
+                        ))}
                     </div>
-                )}
-            </Card>
+                    {filteredItems.length === 0 && (
+                        <div className="text-center py-12 text-text-secondary">
+                            <p>No items found{searchTerm ? ' matching your search' : ''} in {selectedCategory}.</p>
+                            <p className="text-sm mt-1">Try a different search or add a new item.</p>
+                        </div>
+                    )}
+                </Card>
+            )}
 
             {/* Add/Edit Modal */}
             {isModalOpen && (
