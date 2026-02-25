@@ -9,9 +9,10 @@ import {
     EnvelopeIcon,
     UserCircleIcon,
     ClockIcon,
-    MapPinIcon
+    MapPinIcon,
+    TrashIcon
 } from '@heroicons/react/24/outline';
-import { Lead, LeadPipelineStatus } from '../../../types';
+import { Lead, LeadPipelineStatus, UserRole } from '../../../types';
 import { formatCurrencyINR, formatDateTime } from '../../../constants';
 import PaymentVerificationRequest from '../sales-team/PaymentVerificationRequest';
 import ScheduleVisitModal from '../sales-manager/ScheduleVisitModal';
@@ -25,8 +26,11 @@ interface LeadDetailModalProps {
     onUpdate: (lead: Lead) => void;
     users: User[]; // Added users prop
 }
+import { useAuth } from '../../../context/AuthContext';
+import { deleteLead } from '../../../hooks/useLeads';
 
 const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead, onUpdate, users }) => {
+    const { currentUser } = useAuth();
     const [isPaymentRequestOpen, setIsPaymentRequestOpen] = useState(false);
     const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -192,13 +196,35 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ isOpen, onClose, lead
                                                     Schedule Visit
                                                 </button>
 
-                                                <button
-                                                    onClick={() => setIsEditModalOpen(true)}
-                                                    className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-all"
-                                                >
-                                                    <PencilSquareIcon className="w-5 h-5" />
-                                                    Edit Details
-                                                </button>
+                                                {/* Role-Based Actions */}
+                                                {(currentUser?.role === UserRole.ADMIN || currentUser?.role === UserRole.SALES_GENERAL_MANAGER || currentUser?.role === UserRole.SALES_TEAM_MEMBER || currentUser?.role === UserRole.SUPER_ADMIN) && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => setIsEditModalOpen(true)}
+                                                            className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-all"
+                                                        >
+                                                            <PencilSquareIcon className="w-5 h-5" />
+                                                            Edit Details
+                                                        </button>
+
+                                                        <button
+                                                            onClick={async () => {
+                                                                if (window.confirm(`Are you sure you want to delete ${lead.clientName}? This action cannot be undone.`)) {
+                                                                    try {
+                                                                        await deleteLead(lead.id);
+                                                                        onClose();
+                                                                    } catch (err) {
+                                                                        alert('Failed to delete lead.');
+                                                                    }
+                                                                }
+                                                            }}
+                                                            className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-bold hover:bg-red-50 transition-all"
+                                                        >
+                                                            <TrashIcon className="w-5 h-5" />
+                                                            Delete Lead
+                                                        </button>
+                                                    </>
+                                                )}
 
                                                 {/* Status Changer */}
                                                 <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 mt-6">

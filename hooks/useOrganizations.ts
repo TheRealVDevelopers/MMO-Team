@@ -46,7 +46,7 @@ export const useOrganizations = () => {
 
     const addOrganization = async (orgData: Omit<Organization, 'id' | 'createdAt'>) => {
         if (!db) throw new Error('Database not initialized');
-        
+
         try {
             const docRef = await addDoc(collection(db, FIRESTORE_COLLECTIONS.ORGANIZATIONS), {
                 ...orgData,
@@ -61,7 +61,7 @@ export const useOrganizations = () => {
 
     const updateOrganization = async (id: string, data: Partial<Organization>) => {
         if (!db) throw new Error('Database not initialized');
-        
+
         try {
             const docRef = doc(db, FIRESTORE_COLLECTIONS.ORGANIZATIONS, id);
             await updateDoc(docRef, data);
@@ -71,5 +71,17 @@ export const useOrganizations = () => {
         }
     };
 
-    return { organizations, loading, error, addOrganization, updateOrganization };
+    const deleteOrganization = async (id: string) => {
+        if (!db) throw new Error('Database not initialized');
+        try {
+            const { deleteDoc, doc } = await import('firebase/firestore');
+            const docRef = doc(db, FIRESTORE_COLLECTIONS.ORGANIZATIONS, id);
+            await deleteDoc(docRef);
+        } catch (err) {
+            console.error("Error deleting organization:", err);
+            throw err;
+        }
+    };
+
+    return { organizations, loading, error, addOrganization, updateOrganization, deleteOrganization };
 };

@@ -26,6 +26,7 @@ import NotificationPopover from './NotificationPopover';
 import { ErrorBoundary } from '../../shared/ErrorBoundary';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../firebase';
+import GlobalTimerWidget from './GlobalTimerWidget';
 
 interface NavItemProp {
     id: string;
@@ -285,6 +286,7 @@ const InternalLayout: React.FC<InternalLayoutProps> = ({
                 {/* Decorative background effects */}
                 <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] -z-10 pointer-events-none" />
                 <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-secondary/5 rounded-full blur-[120px] -z-10 pointer-events-none" />
+                <GlobalTimerWidget />
             </main>
 
             {/* Mobile Sidebar Overlay */}

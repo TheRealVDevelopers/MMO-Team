@@ -9,6 +9,7 @@ import { useCases } from './useCases';
 import { Case, CaseStatus } from '../types';
 import { DEFAULT_ORGANIZATION_ID } from '../constants';
 import { useAuth } from '../context/AuthContext';
+import { db } from '../firebase';
 
 // Legacy Project type for backward compatibility
 export interface Project extends Omit<Case, 'isProject' | 'budget'> {
@@ -78,4 +79,21 @@ export const addProject = async () => {
 
 export const updateProjectStage = async () => {
   console.warn('updateProjectStage stub');
+};
+
+export const deleteProject = async (projectId: string) => {
+  if (!db) {
+    console.error('[deleteProject] Database not initialized');
+    return;
+  }
+  try {
+    const { deleteDoc, doc } = await import('firebase/firestore');
+    const { FIRESTORE_COLLECTIONS } = await import('../constants');
+    const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, projectId);
+    await deleteDoc(caseRef);
+    console.log(`[deleteProject standalone] Successfully deleted project ${projectId}`);
+  } catch (error) {
+    console.error('[deleteProject standalone] Error:', error);
+    throw error;
+  }
 };

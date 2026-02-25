@@ -70,7 +70,7 @@ const CommunicationDashboard: React.FC = () => {
     if (!currentUser) return null;
 
     return (
-        <ContentCard className="h-full flex flex-col md:flex-row !p-0 overflow-hidden relative">
+        <ContentCard className="h-[calc(100vh-12rem)] min-h-[500px] flex flex-col md:flex-row !p-0 overflow-hidden relative">
             <CommunicationSidebar
                 channels={channels}
                 selectedChannelId={selectedChannelId || ''}

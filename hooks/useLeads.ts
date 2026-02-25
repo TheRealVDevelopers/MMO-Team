@@ -253,3 +253,19 @@ export const addLead = async (leadData: Omit<Lead, 'id' | 'createdAt' | 'updated
   console.warn('addLead: Please use the hook version - useLeads().createLead');
   // This is a placeholder - components should use the hook
 };
+
+export const deleteLead = async (leadId: string) => {
+  if (!db) {
+    console.error('[deleteLead] Database not initialized');
+    return;
+  }
+  try {
+    const { deleteDoc } = await import('firebase/firestore');
+    const caseRef = doc(db, FIRESTORE_COLLECTIONS.CASES, leadId);
+    await deleteDoc(caseRef);
+    console.log(`[deleteLead standalone] Successfully deleted lead ${leadId}`);
+  } catch (error) {
+    console.error('[deleteLead standalone] Error:', error);
+    throw error;
+  }
+};

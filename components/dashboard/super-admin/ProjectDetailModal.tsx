@@ -1,12 +1,13 @@
 import React from 'react';
-import { Project, User, MaterialRequestStatus, ProjectStatus } from '../../../types';
+import { Project, User, MaterialRequestStatus, ProjectStatus, UserRole } from '../../../types';
 import { formatCurrencyINR } from '../../../constants';
 import { useActivities } from '../../../hooks/useActivities';
 import { useUsers } from '../../../hooks/useUsers';
 import { useVendorBills } from '../../../hooks/useVendorBills';
 import { logActivity } from '../../../services/liveDataService';
-import { updateProject } from '../../../hooks/useProjects';
+import { updateProject, deleteProject } from '../../../hooks/useProjects';
 import Modal from '../../shared/Modal';
+import { useAuth } from '../../../context/AuthContext';
 import {
     BanknotesIcon,
     BuildingStorefrontIcon,
@@ -21,24 +22,26 @@ import {
     ChevronDownIcon,
     PencilSquareIcon,
     PaperClipIcon,
-    XMarkIcon
+    XMarkIcon,
+    TrashIcon
 } from '@heroicons/react/24/outline';
 import ProjectActivityHistory from '../../shared/ProjectActivityHistory';
 import { ContentCard, cn } from '../shared/DashboardUI';
 import { motion } from 'framer-motion';
 import ProjectEditModal from '../execution-team/ProjectEditModal';
 
-const getStatusConfig = (status: MaterialRequestStatus) => {
+const getStatusConfig = (status: MaterialRequestStatus | string) => {
     switch (status) {
-        case MaterialRequestStatus.RFQ_PENDING: return { color: 'bg-amber-500/10 text-amber-500 border-amber-500/20', label: 'RFQ Pending' };
-        case MaterialRequestStatus.BIDDING_OPEN: return { color: 'bg-primary-500/10 text-primary-500 border-primary-500/20', label: 'Bidding Open' };
-        case MaterialRequestStatus.ORDER_PLACED: return { color: 'bg-secondary-500/10 text-secondary-500 border-secondary-500/20', label: 'Order Placed' };
+        case 'RFQ Pending': return { color: 'bg-amber-500/10 text-amber-500 border-amber-500/20', label: 'RFQ Pending' };
+        case 'Bidding Open': return { color: 'bg-primary-500/10 text-primary-500 border-primary-500/20', label: 'Bidding Open' };
+        case 'Order Placed': return { color: 'bg-secondary-500/10 text-secondary-500 border-secondary-500/20', label: 'Order Placed' };
         case MaterialRequestStatus.DELIVERED: return { color: 'bg-green-500/10 text-green-500 border-green-500/20', label: 'Delivered' };
         default: return { color: 'bg-slate-500/10 text-slate-500 border-slate-500/20', label: status };
     }
 }
 
 const ProjectDetailModal: React.FC<{ project: Project; isOpen: boolean; onClose: () => void; }> = ({ project: initialProject, isOpen, onClose }) => {
+    const { currentUser } = useAuth();
     const [project, setProject] = React.useState(initialProject);
 
     React.useEffect(() => {
@@ -169,13 +172,33 @@ const ProjectDetailModal: React.FC<{ project: Project; isOpen: boolean; onClose:
         <>
             <Modal isOpen={isOpen} onClose={onClose} title={`${project.projectName} Detail View`} size="7xl">
                 <div className="flex justify-end mb-6 border-b border-border/40 pb-4">
-                    <button
-                        onClick={() => setIsEditModalOpen(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all shadow-md hover:shadow-lg active:scale-95 shadow-primary/20"
-                    >
-                        <PencilSquareIcon className="w-5 h-5" />
-                        <span className="font-bold tracking-wide text-sm">Edit Full Project</span>
-                    </button>
+                    {(currentUser?.role === UserRole.ADMIN || currentUser?.role === UserRole.SALES_GENERAL_MANAGER || currentUser?.role === UserRole.SALES_TEAM_MEMBER || currentUser?.role === UserRole.SUPER_ADMIN) && (
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setIsEditModalOpen(true)}
+                                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all shadow-md hover:shadow-lg active:scale-95 shadow-primary/20"
+                            >
+                                <PencilSquareIcon className="w-5 h-5" />
+                                <span className="font-bold tracking-wide text-sm">Edit Full Project</span>
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    if (window.confirm(`Are you sure you want to delete ${project.projectName}? This action cannot be undone.`)) {
+                                        try {
+                                            await deleteProject(project.id);
+                                            onClose();
+                                        } catch (err) {
+                                            alert('Failed to delete project.');
+                                        }
+                                    }
+                                }}
+                                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all shadow-md hover:shadow-lg active:scale-95 shadow-red-600/20"
+                            >
+                                <TrashIcon className="w-5 h-5" />
+                                <span className="font-bold tracking-wide text-sm">Delete Project</span>
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 p-1">
@@ -398,8 +421,8 @@ const ProjectDetailModal: React.FC<{ project: Project; isOpen: boolean; onClose:
             <ProjectEditModal
                 isOpen={isEditModalOpen}
                 onClose={() => setIsEditModalOpen(false)}
-                project={project}
-                onSave={handleFullProjectUpdate}
+                project={project as any}
+                onSave={handleFullProjectUpdate as any}
             />
         </>
     );

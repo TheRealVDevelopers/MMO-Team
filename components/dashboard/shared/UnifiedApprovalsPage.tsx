@@ -1,12 +1,14 @@
 /**
  * Unified Approvals Page - Admin and Sales Manager
- * Lists pending quotations and execution plan approvals (PLANNING_SUBMITTED).
+ * Lists pending quotations, payment verifications, expense/budget/material approvals,
+ * execution plan approvals (PLANNING_SUBMITTED), and validation requests.
  */
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { UserRole, CaseStatus } from '../../../types';
 import { useNormalizedApprovals } from '../../../hooks/useNormalizedApprovals';
+import { useApprovals as useCaseApprovals } from '../../../hooks/useApprovals';
 import { useValidationRequests, approveValidationRequest } from '../../../hooks/useValidationRequests';
 import { ContentCard, SectionHeader } from './DashboardUI';
 import {
@@ -15,6 +17,8 @@ import {
   XMarkIcon,
   ClipboardDocumentCheckIcon,
   DocumentTextIcon,
+  BanknotesIcon,
+  CurrencyRupeeIcon,
 } from '@heroicons/react/24/outline';
 import { formatCurrencyINR, safeDateTime } from '../../../constants';
 import { DEFAULT_ORGANIZATION_ID } from '../../../constants';
@@ -49,6 +53,18 @@ const TYPE_LABELS: Record<string, string> = {
   OTHER: 'Other',
 };
 
+const TYPE_BADGE_COLORS: Record<string, string> = {
+  quotation: 'bg-purple-100 text-purple-700',
+  payment: 'bg-orange-100 text-orange-700',
+  expense: 'bg-red-100 text-red-700',
+  budget: 'bg-blue-100 text-blue-700',
+  material: 'bg-green-100 text-green-700',
+  boq: 'bg-teal-100 text-teal-700',
+  drawing: 'bg-indigo-100 text-indigo-700',
+  invoice: 'bg-yellow-100 text-yellow-700',
+  procurement: 'bg-cyan-100 text-cyan-700',
+};
+
 import DocumentVisibilityBackfill from './DocumentVisibilityBackfill';
 
 const UnifiedApprovalsPage: React.FC = () => {
@@ -56,6 +72,7 @@ const UnifiedApprovalsPage: React.FC = () => {
   const { currentUser } = useAuth();
   const orgId = currentUser?.organizationId || DEFAULT_ORGANIZATION_ID;
   const { items, loading } = useNormalizedApprovals();
+  const { approveRequest: approveCaseApproval, rejectRequest: rejectCaseApproval } = useCaseApprovals(currentUser?.role);
   const { requests: validationRequests, loading: validationLoading } = useValidationRequests({ organizationId: orgId, status: 'PENDING' });
   const [processing, setProcessing] = useState<string | null>(null);
   const [validationProcessing, setValidationProcessing] = useState<string | null>(null);
@@ -120,63 +137,106 @@ const UnifiedApprovalsPage: React.FC = () => {
     }
   };
 
+  // ─── Handle approve for different types ───
   const handleApprove = async (item: NormalizedApprovalItem) => {
-    if (!currentUser || item.type !== 'quotation') return;
-    if (!window.confirm(`Approve quotation for ${item.caseName}?`)) return;
+    if (!currentUser) return;
 
     setProcessing(item.id);
     try {
-      const batch = writeBatch(db!);
-      const quotRef = doc(db!, FIRESTORE_COLLECTIONS.CASES, item.caseId, FIRESTORE_COLLECTIONS.QUOTATIONS, item.sourceRef.id);
-      batch.update(quotRef, { auditStatus: 'approved', auditedBy: currentUser.id, auditedAt: serverTimestamp() });
-
-      if (item.documentUrl) {
-        const docRef = doc(collection(db!, FIRESTORE_COLLECTIONS.CASES, item.caseId, FIRESTORE_COLLECTIONS.DOCUMENTS));
-        batch.set(docRef, {
-          type: 'quotation',
-          caseId: item.caseId,
-          name: `Quotation - ${item.caseName}`,
-          url: item.documentUrl,
-          fileUrl: item.documentUrl,
-
-          // Visibility & Approval Logic
-          visibleToClient: true,
-          approvalStatus: 'approved',
-          approvedBy: currentUser.id,
-          approvedAt: serverTimestamp(),
-
-          uploadedBy: currentUser.id,
-          uploadedAt: serverTimestamp(),
-          quotationId: item.sourceRef.id,
-          amount: item.metadata?.grandTotal,
-        });
-      }
-
-      const activityRef = doc(collection(db!, FIRESTORE_COLLECTIONS.CASES, item.caseId, FIRESTORE_COLLECTIONS.ACTIVITIES));
-      batch.set(activityRef, {
-        caseId: item.caseId,
-        action: `Quotation approved (₹${((item.metadata?.grandTotal as number) || 0).toLocaleString('en-IN')})`,
-        by: currentUser.id,
-        timestamp: serverTimestamp(),
-      });
-
-      const boqId = item.metadata?.boqId as string | undefined;
-      if (boqId?.trim()) {
-        const boqRef = doc(db!, FIRESTORE_COLLECTIONS.CASES, item.caseId, FIRESTORE_COLLECTIONS.BOQ, boqId);
-        batch.update(boqRef, { locked: true, referencedByQuotation: item.sourceRef.id });
-      }
-
-      await batch.commit();
-
-      const tasksRef = collection(db!, FIRESTORE_COLLECTIONS.CASES, item.caseId, FIRESTORE_COLLECTIONS.TASKS);
-      const taskSnap = await getDocs(query(tasksRef, where('type', '==', 'procurement_audit')));
-      for (const t of taskSnap.docs) {
-        const data = t.data();
-        if (data.status === 'pending' || data.status === 'started') {
-          await updateDoc(t.ref, { status: 'completed', completedAt: serverTimestamp() });
+      if (item.type === 'quotation') {
+        // Quotation approval logic (same as before)
+        if (!window.confirm(`Approve quotation for ${item.caseName}?`)) {
+          setProcessing(null);
+          return;
         }
+
+        const batch = writeBatch(db!);
+        const quotRef = doc(db!, FIRESTORE_COLLECTIONS.CASES, item.caseId, FIRESTORE_COLLECTIONS.QUOTATIONS, item.sourceRef.id);
+        batch.update(quotRef, { auditStatus: 'approved', auditedBy: currentUser.id, auditedAt: serverTimestamp() });
+
+        if (item.documentUrl) {
+          const docRef = doc(collection(db!, FIRESTORE_COLLECTIONS.CASES, item.caseId, FIRESTORE_COLLECTIONS.DOCUMENTS));
+          batch.set(docRef, {
+            type: 'quotation',
+            caseId: item.caseId,
+            name: `Quotation - ${item.caseName}`,
+            url: item.documentUrl,
+            fileUrl: item.documentUrl,
+            visibleToClient: true,
+            approvalStatus: 'approved',
+            approvedBy: currentUser.id,
+            approvedAt: serverTimestamp(),
+            uploadedBy: currentUser.id,
+            uploadedAt: serverTimestamp(),
+            quotationId: item.sourceRef.id,
+            amount: item.metadata?.grandTotal,
+          });
+        }
+
+        const activityRef = doc(collection(db!, FIRESTORE_COLLECTIONS.CASES, item.caseId, FIRESTORE_COLLECTIONS.ACTIVITIES));
+        batch.set(activityRef, {
+          caseId: item.caseId,
+          action: `Quotation approved (₹${((item.metadata?.grandTotal as number) || 0).toLocaleString('en-IN')})`,
+          by: currentUser.id,
+          timestamp: serverTimestamp(),
+        });
+
+        const boqId = item.metadata?.boqId as string | undefined;
+        if (boqId?.trim()) {
+          const boqRef = doc(db!, FIRESTORE_COLLECTIONS.CASES, item.caseId, FIRESTORE_COLLECTIONS.BOQ, boqId);
+          batch.update(boqRef, { locked: true, referencedByQuotation: item.sourceRef.id });
+        }
+
+        await batch.commit();
+
+        const tasksRef = collection(db!, FIRESTORE_COLLECTIONS.CASES, item.caseId, FIRESTORE_COLLECTIONS.TASKS);
+        const taskSnap = await getDocs(query(tasksRef, where('type', '==', 'procurement_audit')));
+        for (const t of taskSnap.docs) {
+          const data = t.data();
+          if (data.status === 'pending' || data.status === 'started') {
+            await updateDoc(t.ref, { status: 'completed', completedAt: serverTimestamp() });
+          }
+        }
+        alert('Quotation approved successfully');
+
+      } else if (['payment', 'expense', 'budget', 'material'].includes(item.type)) {
+        // Case approval types (PAYMENT, EXPENSE, BUDGET, MATERIAL)
+        const amount = item.metadata?.amount as number | undefined;
+        const typeLabel = item.type.charAt(0).toUpperCase() + item.type.slice(1);
+
+        const confirmMsg = item.type === 'payment'
+          ? `Approve payment verification for ${item.caseName}?${amount ? ` Amount: ₹${amount.toLocaleString('en-IN')}` : ''}`
+          : `Approve ${typeLabel} request for ${item.caseName}?${amount ? ` Amount: ₹${amount.toLocaleString('en-IN')}` : ''}`;
+
+        if (!window.confirm(confirmMsg)) {
+          setProcessing(null);
+          return;
+        }
+
+        // Use the useApprovals hook's approve logic
+        await approveCaseApproval({
+          id: item.sourceRef.id,
+          caseId: item.caseId,
+          type: (item.metadata?.approvalType as any) || item.type.toUpperCase(),
+          status: 'pending',
+          payloadSnapshot: {
+            paymentId: item.metadata?.paymentId as string | undefined,
+            amount: amount,
+            expenseId: item.metadata?.expenseId as string | undefined,
+            notes: item.metadata?.notes as string | undefined,
+          },
+          payload: {
+            paymentId: item.metadata?.paymentId as string | undefined,
+            amount: amount,
+            expenseId: item.metadata?.expenseId as string | undefined,
+            notes: item.metadata?.notes as string | undefined,
+          },
+          requestedBy: item.submittedBy,
+          organizationId: item.metadata?.organizationId as string | undefined,
+        });
+
+        alert(`${typeLabel} approved successfully`);
       }
-      alert('Approved successfully');
     } catch (e) {
       console.error(e);
       alert('Failed to approve');
@@ -185,24 +245,49 @@ const UnifiedApprovalsPage: React.FC = () => {
     }
   };
 
+  // ─── Handle reject for different types ───
   const handleReject = async (item: NormalizedApprovalItem) => {
-    if (!currentUser || item.type !== 'quotation') return;
+    if (!currentUser) return;
     const reason = window.prompt('Enter reason for rejection:');
     if (!reason?.trim()) return;
 
     setProcessing(item.id);
     try {
-      await updateDoc(
-        doc(db!, FIRESTORE_COLLECTIONS.CASES, item.caseId, FIRESTORE_COLLECTIONS.QUOTATIONS, item.sourceRef.id),
-        { auditStatus: 'rejected', auditedBy: currentUser.id, auditedAt: serverTimestamp(), rejectionReason: reason }
-      );
-      await addDoc(collection(db!, FIRESTORE_COLLECTIONS.CASES, item.caseId, FIRESTORE_COLLECTIONS.ACTIVITIES), {
-        caseId: item.caseId,
-        action: `Quotation rejected. Reason: ${reason}`,
-        by: currentUser.id,
-        timestamp: serverTimestamp(),
-      });
-      alert('Rejected');
+      if (item.type === 'quotation') {
+        await updateDoc(
+          doc(db!, FIRESTORE_COLLECTIONS.CASES, item.caseId, FIRESTORE_COLLECTIONS.QUOTATIONS, item.sourceRef.id),
+          { auditStatus: 'rejected', auditedBy: currentUser.id, auditedAt: serverTimestamp(), rejectionReason: reason }
+        );
+        await addDoc(collection(db!, FIRESTORE_COLLECTIONS.CASES, item.caseId, FIRESTORE_COLLECTIONS.ACTIVITIES), {
+          caseId: item.caseId,
+          action: `Quotation rejected. Reason: ${reason}`,
+          by: currentUser.id,
+          timestamp: serverTimestamp(),
+        });
+        alert('Quotation rejected');
+
+      } else if (['payment', 'expense', 'budget', 'material'].includes(item.type)) {
+        await rejectCaseApproval({
+          id: item.sourceRef.id,
+          caseId: item.caseId,
+          type: (item.metadata?.approvalType as any) || item.type.toUpperCase(),
+          status: 'pending',
+          payloadSnapshot: {
+            paymentId: item.metadata?.paymentId as string | undefined,
+            amount: item.metadata?.amount as number | undefined,
+            expenseId: item.metadata?.expenseId as string | undefined,
+            notes: item.metadata?.notes as string | undefined,
+          },
+          payload: {
+            paymentId: item.metadata?.paymentId as string | undefined,
+            amount: item.metadata?.amount as number | undefined,
+          },
+          requestedBy: item.submittedBy,
+        }, reason);
+
+        const typeLabel = item.type.charAt(0).toUpperCase() + item.type.slice(1);
+        alert(`${typeLabel} rejected`);
+      }
     } catch (e) {
       console.error(e);
       alert('Failed to reject');
@@ -258,7 +343,7 @@ const UnifiedApprovalsPage: React.FC = () => {
     <div className="space-y-6">
       <SectionHeader
         title="Approvals"
-        subtitle="Pending quotations, BOQs, drawings, invoices. Approve or reject with remarks."
+        subtitle="Pending quotations, payments, expenses, budget requests, and more. Approve or reject with remarks."
       />
 
       {loading ? (
@@ -280,7 +365,7 @@ const UnifiedApprovalsPage: React.FC = () => {
               <thead>
                 <tr className="border-b border-border">
                   <th className="text-left py-3 px-4 text-xs font-bold uppercase text-text-tertiary">Type</th>
-                  <th className="text-left py-3 px-4 text-xs font-bold uppercase text-text-tertiary">Case</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold uppercase text-text-tertiary">Case / Project</th>
                   <th className="text-left py-3 px-4 text-xs font-bold uppercase text-text-tertiary">Submitted By</th>
                   <th className="text-left py-3 px-4 text-xs font-bold uppercase text-text-tertiary">Date</th>
                   <th className="text-left py-3 px-4 text-xs font-bold uppercase text-text-tertiary">Amount</th>
@@ -291,7 +376,7 @@ const UnifiedApprovalsPage: React.FC = () => {
                 {items.map((item) => (
                   <tr key={`${item.sourceRef.path}-${item.sourceRef.id}`} className="border-b border-border/50 hover:bg-subtle-background/30">
                     <td className="py-3 px-4">
-                      <span className="px-2 py-0.5 rounded text-xs font-bold bg-primary/10 text-primary capitalize">
+                      <span className={`px-2 py-0.5 rounded text-xs font-bold capitalize ${TYPE_BADGE_COLORS[item.type] || 'bg-primary/10 text-primary'}`}>
                         {item.type}
                       </span>
                     </td>
@@ -301,7 +386,9 @@ const UnifiedApprovalsPage: React.FC = () => {
                     <td className="py-3 px-4 text-sm">
                       {(item.metadata?.grandTotal as number) != null
                         ? formatCurrencyINR(item.metadata.grandTotal as number)
-                        : '—'}
+                        : (item.metadata?.amount as number) != null
+                          ? formatCurrencyINR(item.metadata.amount as number)
+                          : '—'}
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex justify-end gap-2">

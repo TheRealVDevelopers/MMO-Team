@@ -100,15 +100,15 @@ const ItemsCatalogPage: React.FC<ItemsCatalogPageProps> = ({ setCurrentPage }) =
             setFormData(item);
         } else {
             setEditingItem(null);
-            setFormData({ 
-                name: '', 
-                category: 'General', 
-                price: 0, 
-                description: '', 
-                warranty: '', 
-                gstRate: 18, 
-                unit: 'pcs', 
-                material: '', 
+            setFormData({
+                name: '',
+                category: 'General',
+                price: 0,
+                description: '',
+                warranty: '',
+                gstRate: 18,
+                unit: 'pcs',
+                material: '',
                 imageUrl: ''
             });
         }
@@ -118,13 +118,17 @@ const ItemsCatalogPage: React.FC<ItemsCatalogPageProps> = ({ setCurrentPage }) =
     const handleSave = async () => {
         if (!formData.name || !formData.price) return;
 
+        const finalCategory = formData.category === 'new'
+            ? ((formData as any).newCategoryName || 'General')
+            : formData.category || 'General';
+
         try {
             if (editingItem) {
-                await updateItem(editingItem.id, formData);
+                await updateItem(editingItem.id, { ...formData, category: finalCategory });
             } else {
                 await addItem({
                     name: formData.name,
-                    category: formData.category || 'General',
+                    category: finalCategory,
                     price: Number(formData.price),
                     description: formData.description,
                     warranty: formData.warranty,
@@ -320,17 +324,35 @@ const ItemsCatalogPage: React.FC<ItemsCatalogPageProps> = ({ setCurrentPage }) =
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium mb-1">Category</label>
-                                    <select
-                                        className="w-full rounded-lg border border-border bg-subtle-background p-2"
-                                        value={formData.category}
-                                        onChange={e => setFormData({ ...formData, category: e.target.value })}
-                                    >
-                                        <option value="General">General</option>
-                                        <option value="Electrical">Electrical</option>
-                                        <option value="Plumbing">Plumbing</option>
-                                        <option value="Furniture">Furniture</option>
-                                        <option value="Civil">Civil</option>
-                                    </select>
+                                    {formData.category === 'new' ? (
+                                        <input
+                                            type="text"
+                                            className="w-full rounded-lg border border-border bg-subtle-background p-2"
+                                            placeholder="New Category Name"
+                                            value={(formData as any).newCategoryName || ''}
+                                            onChange={e => setFormData({ ...formData, newCategoryName: e.target.value })}
+                                        />
+                                    ) : (
+                                        <select
+                                            className="w-full rounded-lg border border-border bg-subtle-background p-2"
+                                            value={formData.category}
+                                            onChange={e => setFormData({ ...formData, category: e.target.value })}
+                                        >
+                                            {categoriesWithItems.map(cat => (
+                                                <option key={cat} value={cat}>{cat}</option>
+                                            ))}
+                                            <option value="new">+ Add New Category</option>
+                                        </select>
+                                    )}
+                                    {formData.category === 'new' && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, category: 'General' })}
+                                            className="text-[10px] text-primary mt-1 hover:underline"
+                                        >
+                                            Cancel
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 

@@ -1,7 +1,7 @@
 /**
  * useNormalizedApprovals - Unified Approvals
  * Normalizes all approval types into a single shape for the Approvals page.
- * No type-specific UI branching at page level.
+ * Covers: quotations (pending audit), AND case approvals (PAYMENT, EXPENSE, BUDGET, MATERIAL).
  */
 import { useState, useEffect } from 'react';
 import {
@@ -19,7 +19,7 @@ import { Case } from '../types';
 
 export interface NormalizedApprovalItem {
   id: string;
-  type: 'quotation' | 'boq' | 'drawing' | 'invoice' | 'procurement';
+  type: 'quotation' | 'boq' | 'drawing' | 'invoice' | 'procurement' | 'payment' | 'expense' | 'budget' | 'material';
   caseId: string;
   caseName: string;
   submittedBy: string;
@@ -31,18 +31,19 @@ export interface NormalizedApprovalItem {
 }
 
 export function useNormalizedApprovals() {
-  const [items, setItems] = useState<NormalizedApprovalItem[]>([]);
+  const [quotationItems, setQuotationItems] = useState<NormalizedApprovalItem[]>([]);
+  const [approvalItems, setApprovalItems] = useState<NormalizedApprovalItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingApprovals, setLoadingApprovals] = useState(true);
 
   useEffect(() => {
     if (!db) {
       setLoading(false);
+      setLoadingApprovals(false);
       return;
     }
 
-    const normalized: NormalizedApprovalItem[] = [];
-
-    // 1. Pending quotations (covers procurement submissions)
+    // ─── 1. Pending quotations (covers procurement submissions) ───
     const quotQuery = query(
       collectionGroup(db, FIRESTORE_COLLECTIONS.QUOTATIONS),
       where('auditStatus', '==', 'pending')
@@ -76,7 +77,7 @@ export function useNormalizedApprovals() {
         });
       }
 
-      setItems(
+      setQuotationItems(
         all
           .filter((i) => i.status === 'pending')
           .sort((a, b) => b.submittedAt.getTime() - a.submittedAt.getTime())
@@ -84,8 +85,81 @@ export function useNormalizedApprovals() {
       setLoading(false);
     });
 
-    return () => unsubQuot();
+    // ─── 2. Pending case approvals (PAYMENT, EXPENSE, BUDGET, MATERIAL) ───
+    const approvalsQuery = query(
+      collectionGroup(db, FIRESTORE_COLLECTIONS.APPROVALS),
+      where('status', '==', 'pending')
+    );
+
+    const unsubApprovals = onSnapshot(approvalsQuery, async (snapshot) => {
+      const all: NormalizedApprovalItem[] = [];
+
+      for (const d of snapshot.docs) {
+        const data = d.data();
+        const caseId = data.caseId;
+        if (!caseId) continue;
+
+        let caseName = 'Unknown';
+        try {
+          const caseSnap = await getDoc(doc(db, FIRESTORE_COLLECTIONS.CASES, caseId));
+          if (caseSnap.exists()) {
+            caseName = (caseSnap.data() as Case).title || (caseSnap.data() as Case).clientName || caseName;
+          }
+        } catch {
+          // ignore
+        }
+
+        // Map approval type to normalized type
+        const rawType = (data.type || '').toUpperCase();
+        let normalizedType: NormalizedApprovalItem['type'] = 'expense';
+        if (rawType === 'PAYMENT') normalizedType = 'payment';
+        else if (rawType === 'EXPENSE') normalizedType = 'expense';
+        else if (rawType === 'BUDGET') normalizedType = 'budget';
+        else if (rawType === 'MATERIAL') normalizedType = 'material';
+
+        const payload = data.payloadSnapshot || data.payload || {};
+
+        all.push({
+          id: d.id,
+          type: normalizedType,
+          caseId,
+          caseName,
+          submittedBy: data.requestedBy || data.requesterId || '—',
+          submittedAt: data.requestedAt instanceof Timestamp
+            ? data.requestedAt.toDate()
+            : data.createdAt instanceof Timestamp
+              ? data.createdAt.toDate()
+              : new Date(),
+          status: 'pending',
+          sourceRef: { path: `cases/${caseId}/approvals`, id: d.id },
+          metadata: {
+            approvalType: data.type,
+            amount: payload.amount,
+            paymentId: payload.paymentId,
+            expenseId: payload.expenseId,
+            notes: payload.notes,
+            assignedToRole: data.assignedToRole,
+            organizationId: data.organizationId,
+          },
+        });
+      }
+
+      setApprovalItems(
+        all.sort((a, b) => b.submittedAt.getTime() - a.submittedAt.getTime())
+      );
+      setLoadingApprovals(false);
+    });
+
+    return () => {
+      unsubQuot();
+      unsubApprovals();
+    };
   }, []);
 
-  return { items, loading };
+  // Merge both sources
+  const items = [...quotationItems, ...approvalItems].sort(
+    (a, b) => b.submittedAt.getTime() - a.submittedAt.getTime()
+  );
+
+  return { items, loading: loading || loadingApprovals };
 }

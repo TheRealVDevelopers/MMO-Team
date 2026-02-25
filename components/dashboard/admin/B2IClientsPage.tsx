@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { PlusIcon, BuildingLibraryIcon, MagnifyingGlassIcon, PhoneIcon, EnvelopeIcon, MapPinIcon, UserIcon, PencilIcon, XMarkIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
-import { B2IClient } from '../../../types';
+import { PlusIcon, BuildingLibraryIcon, MagnifyingGlassIcon, PhoneIcon, EnvelopeIcon, MapPinIcon, UserIcon, PencilIcon, XMarkIcon, CheckCircleIcon, XCircleIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { B2IClient, UserRole } from '../../../types';
 import { useB2IClients } from '../../../hooks/useB2IClients';
 import { useAuth } from '../../../context/AuthContext';
 import { createB2IParentAccount } from '../../../services/authService';
@@ -113,13 +113,15 @@ const B2IClientsPage: React.FC<B2IClientsPageProps> = ({ setCurrentPage, onSelec
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">B2I Clients</h1>
                     <p className="text-gray-500 dark:text-gray-400">Manage enterprise clients and their organizations</p>
                 </div>
-                <button
-                    onClick={openCreateModal}
-                    className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors shadow-sm"
-                >
-                    <PlusIcon className="w-5 h-5" />
-                    Add B2I Client
-                </button>
+                {(currentUser?.role === UserRole.ADMIN || currentUser?.role === UserRole.SALES_GENERAL_MANAGER || currentUser?.role === UserRole.SALES_TEAM_MEMBER || currentUser?.role === UserRole.SUPER_ADMIN) && (
+                    <button
+                        onClick={openCreateModal}
+                        className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors shadow-sm"
+                    >
+                        <PlusIcon className="w-5 h-5" />
+                        Add B2I Client
+                    </button>
+                )}
             </div>
 
             {/* Search */}
@@ -162,13 +164,24 @@ const B2IClientsPage: React.FC<B2IClientsPageProps> = ({ setCurrentPage, onSelec
                                     <BuildingLibraryIcon className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); openEditModal(client); }}
-                                        className="p-1.5 text-text-tertiary hover:text-primary hover:bg-primary/10 rounded-lg transition-colors bg-subtle-background"
-                                        title="Edit"
-                                    >
-                                        <PencilIcon className="w-4 h-4" />
-                                    </button>
+                                    {(currentUser?.role === UserRole.ADMIN || currentUser?.role === UserRole.SALES_GENERAL_MANAGER || currentUser?.role === UserRole.SALES_TEAM_MEMBER || currentUser?.role === UserRole.SUPER_ADMIN) && (
+                                        <>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); openEditModal(client); }}
+                                                className="p-1.5 text-text-tertiary hover:text-primary hover:bg-primary/10 rounded-lg transition-colors bg-subtle-background"
+                                                title="Edit"
+                                            >
+                                                <PencilIcon className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); handleDelete(client); }}
+                                                className="p-1.5 text-text-tertiary hover:text-error hover:bg-error/10 rounded-lg transition-colors bg-subtle-background"
+                                                title="Delete"
+                                            >
+                                                <TrashIcon className="w-4 h-4" />
+                                            </button>
+                                        </>
+                                    )}
                                     <span className={`text-xs font-bold px-2 py-1 rounded-full ${client.status === 'active'
                                         ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                                         : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'

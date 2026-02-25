@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { XMarkIcon, CalendarIcon, UserGroupIcon, MapPinIcon, BanknotesIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
-import { Project, ProjectStatus, User } from '../../../types';
+import { XMarkIcon, CalendarIcon, UserGroupIcon, MapPinIcon, BanknotesIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { Project, ProjectStatus, UserRole, User } from '../../../types';
 import { formatCurrencyINR, formatDate } from '../../../constants';
 import { USERS } from '../../../constants'; // MOCK DATA for user lookup
 import ProjectEditModal from '../execution-team/ProjectEditModal';
-import { updateProject } from '../../../hooks/useProjects';
+import { updateProject, deleteProject } from '../../../hooks/useProjects';
 import Modal from '../../shared/Modal';
+import { useAuth } from '../../../context/AuthContext';
 
 interface ProjectDetailModalProps {
     isOpen: boolean;
@@ -14,6 +15,7 @@ interface ProjectDetailModalProps {
 }
 
 const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ isOpen, onClose, project: initialProject }) => {
+    const { currentUser } = useAuth();
     const [project, setProject] = useState<Project | null>(initialProject);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
@@ -60,13 +62,33 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ isOpen, onClose
                 size="4xl"
             >
                 <div className="flex justify-end mb-6 border-b border-border/40 pb-4">
-                    <button
-                        onClick={() => setIsEditModalOpen(true)}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all text-sm font-bold shadow-md shadow-primary/20"
-                    >
-                        <PencilSquareIcon className="w-4 h-4" />
-                        Edit Project
-                    </button>
+                    {(currentUser?.role === UserRole.ADMIN || currentUser?.role === UserRole.SALES_GENERAL_MANAGER || currentUser?.role === UserRole.SALES_TEAM_MEMBER || currentUser?.role === UserRole.SUPER_ADMIN) && (
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setIsEditModalOpen(true)}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all text-sm font-bold shadow-md shadow-primary/20"
+                            >
+                                <PencilSquareIcon className="w-4 h-4" />
+                                Edit Project
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    if (window.confirm(`Are you sure you want to delete ${project.projectName}? This action cannot be undone.`)) {
+                                        try {
+                                            await deleteProject(project.id);
+                                            onClose();
+                                        } catch (err) {
+                                            alert('Failed to delete project.');
+                                        }
+                                    }
+                                }}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all text-sm font-bold shadow-md shadow-red-600/20"
+                            >
+                                <TrashIcon className="w-4 h-4" />
+                                Delete Project
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 <div className="mb-6">
@@ -93,7 +115,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ isOpen, onClose
 
                         <div>
                             <h4 className="text-sm font-black uppercase tracking-widest text-text-tertiary mb-3">Project Status</h4>
-                            <span className={`px-4 py-2 rounded-lg text-sm font-bold uppercase ${project.status === ProjectStatus.IN_EXECUTION ? 'bg-blue-100 text-blue-700' :
+                            <span className={`px-4 py-2 rounded-lg text-sm font-bold uppercase ${project.status === ProjectStatus.IN_PROGRESS ? 'bg-blue-100 text-blue-700' :
                                 project.status === ProjectStatus.COMPLETED ? 'bg-green-100 text-green-700' :
                                     'bg-yellow-100 text-yellow-700'
                                 }`}>
@@ -167,8 +189,8 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ isOpen, onClose
                 <ProjectEditModal
                     isOpen={isEditModalOpen}
                     onClose={() => setIsEditModalOpen(false)}
-                    project={project}
-                    onSave={handleUpdateProject}
+                    project={project as any}
+                    onSave={handleUpdateProject as any}
                 />
             )}
         </>

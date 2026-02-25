@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../firebase';
-import { PlusIcon, BuildingOfficeIcon, MagnifyingGlassIcon, UserIcon, MapPinIcon, XMarkIcon, CurrencyRupeeIcon, UserCircleIcon, MapIcon, CheckCircleIcon, PencilIcon, RocketLaunchIcon, BanknotesIcon } from '@heroicons/react/24/outline';
-import { Organization, ProjectStatus, Project, ExecutionStage, PaymentTerm, CaseStatus, Case } from '../../../types';
+import { PlusIcon, BuildingOfficeIcon, MagnifyingGlassIcon, UserIcon, MapPinIcon, XMarkIcon, CurrencyRupeeIcon, UserCircleIcon, MapIcon, CheckCircleIcon, PencilIcon, RocketLaunchIcon, BanknotesIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { Organization, ProjectStatus, Project, ExecutionStage, PaymentTerm, CaseStatus, Case, UserRole } from '../../../types';
 import { useCases } from '../../../hooks/useCases';
 import { useLeads } from '../../../hooks/useLeads';
 import { formatCurrencyINR } from '../../../constants';
@@ -19,6 +19,7 @@ interface OrganizationsPageProps {
 
 import { useOrganizations } from '../../../hooks/useOrganizations';
 import { useUsers } from '../../../hooks/useUsers';
+import { useAuth } from '../../../context/AuthContext';
 
 const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage }) => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -38,8 +39,9 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
     const { cases: allCases } = useCases({ isProject: true, fetchAll: true });
     const allProjects = allCases as unknown as Project[];
     const { leads } = useLeads();
-    const { organizations: realOrgs, addOrganization, updateOrganization, loading: orgsLoading, error: orgsError } = useOrganizations();
+    const { organizations: realOrgs, addOrganization, updateOrganization, deleteOrganization, loading: orgsLoading, error: orgsError } = useOrganizations();
     const { users } = useUsers();
+    const { currentUser } = useAuth();
 
     const organizations = realOrgs ?? [];
 
@@ -207,19 +209,39 @@ const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ setCurrentPage })
                                     <BuildingOfficeIcon className="w-8 h-8 text-primary" />
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (org) {
-                                                setOrganizationToEdit(org);
-                                                setIsCreateModalOpen(true);
-                                            }
-                                        }}
-                                        className="p-1.5 text-text-tertiary hover:text-primary hover:bg-primary/10 rounded-lg transition-colors bg-subtle-background"
-                                        title="Edit Organization"
-                                    >
-                                        <PencilIcon className="w-4 h-4" />
-                                    </button>
+                                    {(currentUser?.role === UserRole.ADMIN || currentUser?.role === UserRole.SALES_GENERAL_MANAGER || currentUser?.role === UserRole.SALES_TEAM_MEMBER || currentUser?.role === UserRole.SUPER_ADMIN) && (
+                                        <>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (org) {
+                                                        setOrganizationToEdit(org);
+                                                        setIsCreateModalOpen(true);
+                                                    }
+                                                }}
+                                                className="p-1.5 text-text-tertiary hover:text-primary hover:bg-primary/10 rounded-lg transition-colors bg-subtle-background"
+                                                title="Edit Organization"
+                                            >
+                                                <PencilIcon className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    if (org && window.confirm(`Are you sure you want to delete ${org.name}? This action cannot be undone.`)) {
+                                                        try {
+                                                            await deleteOrganization(org.id);
+                                                        } catch (err) {
+                                                            alert('Failed to delete organization. Please check for connected projects first.');
+                                                        }
+                                                    }
+                                                }}
+                                                className="p-1.5 text-text-tertiary hover:text-error hover:bg-error/10 rounded-lg transition-colors bg-subtle-background"
+                                                title="Delete Organization"
+                                            >
+                                                <TrashIcon className="w-4 h-4" />
+                                            </button>
+                                        </>
+                                    )}
                                     <span className="text-xs font-medium px-2 py-1 bg-subtle-background rounded-full text-text-secondary">
                                         {getOrgProjectCount(org?.id ?? '')} Projects
                                     </span>

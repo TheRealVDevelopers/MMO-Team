@@ -45,15 +45,19 @@ const SimpleItemsCatalog: React.FC = () => {
     const handleSave = async () => {
         if (!formData.name || !formData.price) return;
 
+        const finalCategory = formData.category === 'new'
+            ? ((formData as any).newCategoryName || 'General')
+            : formData.category || 'General';
+
         try {
             if (editingItem) {
                 // Update
-                await updateItem(editingItem.id, formData);
+                await updateItem(editingItem.id, { ...formData, category: finalCategory });
             } else {
                 // Create
                 await addItem({
                     name: formData.name,
-                    category: formData.category || 'General',
+                    category: finalCategory,
                     price: Number(formData.price),
                     description: formData.description,
                     warranty: formData.warranty,
@@ -103,15 +107,15 @@ const SimpleItemsCatalog: React.FC = () => {
                 {items.map(item => (
                     <Card key={item.id} className="relative group hover:border-primary transition-colors">
                         <div className="absolute top-4 right-4 flex gap-2">
-                            <button 
-                                onClick={() => handleOpenModal(item)} 
+                            <button
+                                onClick={() => handleOpenModal(item)}
                                 className="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all shadow-sm"
                                 title="Edit item"
                             >
                                 <PencilSquareIcon className="w-4 h-4" />
                             </button>
-                            <button 
-                                onClick={() => handleDelete(item.id)} 
+                            <button
+                                onClick={() => handleDelete(item.id)}
                                 className="p-2 rounded-lg bg-error/10 text-error hover:bg-error hover:text-white transition-all shadow-sm"
                                 title="Delete item"
                             >
@@ -189,17 +193,35 @@ const SimpleItemsCatalog: React.FC = () => {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium mb-1">Category</label>
-                                    <select
-                                        className="w-full rounded-lg border-border bg-subtle-background p-2"
-                                        value={formData.category}
-                                        onChange={e => setFormData({ ...formData, category: e.target.value })}
-                                    >
-                                        <option value="General">General</option>
-                                        <option value="Electrical">Electrical</option>
-                                        <option value="Plumbing">Plumbing</option>
-                                        <option value="Furniture">Furniture</option>
-                                        <option value="Civil">Civil</option>
-                                    </select>
+                                    {formData.category === 'new' ? (
+                                        <input
+                                            type="text"
+                                            className="w-full rounded-lg border-border bg-subtle-background p-2"
+                                            placeholder="New Category Name"
+                                            value={(formData as any).newCategoryName || ''}
+                                            onChange={e => setFormData({ ...formData, newCategoryName: e.target.value })}
+                                        />
+                                    ) : (
+                                        <select
+                                            className="w-full rounded-lg border-border bg-subtle-background p-2"
+                                            value={formData.category}
+                                            onChange={e => setFormData({ ...formData, category: e.target.value })}
+                                        >
+                                            {Array.from(new Set(items.map((i) => i.category).filter(Boolean))).map(cat => (
+                                                <option key={cat!} value={cat!}>{cat}</option>
+                                            ))}
+                                            <option value="new">+ Add New Category</option>
+                                        </select>
+                                    )}
+                                    {formData.category === 'new' && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, category: 'General' })}
+                                            className="text-[10px] text-primary mt-1 hover:underline"
+                                        >
+                                            Cancel
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 
