@@ -43,9 +43,26 @@ export const useStaffPerformance = () => {
                 ...user,
                 attendanceStatus: (attendanceMap[user.id] as any) || 'ABSENT'
             }));
-            // Filter out super admin if needed, though they might want to see themselves?
-            // Existing logic filtered them out.
-            setStaff(combinedStaff.filter(u => u.role !== UserRole.SUPER_ADMIN));
+
+            // Filter out deactivated users and non-staff external roles
+            const activeCompanyStaff = combinedStaff.filter(u => {
+                if ((u as any).isActive === false) return false;
+
+                // Exclude external roles that shouldn't be in the company headcount
+                const externalRoles: string[] = [
+                    UserRole.VENDOR,
+                    UserRole.B2I_CLIENT,
+                    UserRole.B2I_PARENT
+                ];
+                if (externalRoles.includes(u.role as string)) return false;
+
+                // Previously SUPER_ADMIN was filtered out, but TeamHeadcountModal 
+                // expects SUPER_ADMIN to be in 'Accounts & Admin'. 
+                // So we won't filter them out here anymore.
+                return true;
+            });
+
+            setStaff(activeCompanyStaff);
             setLoading(false);
         };
 
@@ -57,7 +74,7 @@ export const useStaffPerformance = () => {
                     id: doc.id,
                     flagUpdatedAt: data.flagUpdatedAt?.toDate ? data.flagUpdatedAt.toDate() : (data.flagUpdatedAt ? new Date(data.flagUpdatedAt) : undefined),
                     lastUpdateTimestamp: data.lastUpdateTimestamp?.toDate ? data.lastUpdateTimestamp.toDate() : (data.lastUpdateTimestamp ? new Date(data.lastUpdateTimestamp) : undefined),
-                } as User;
+                } as unknown as User;
             });
             updateCombinedState();
         });

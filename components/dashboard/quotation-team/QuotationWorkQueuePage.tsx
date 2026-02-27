@@ -351,13 +351,14 @@ const QuotationTaskCard: React.FC<{
     onEndTask: (task: TaskWithCase) => void;
     onOpenBuilder: (task: TaskWithCase) => void;
 }> = ({ task, onStart, onEndTask, onOpenBuilder }) => {
-    const statusConfig = {
+    const statusConfig: Record<string, { color: string; label: string }> = {
         [TaskStatus.PENDING]: { color: 'bg-yellow-100 text-yellow-800 border-yellow-300', label: 'PENDING' },
         [TaskStatus.STARTED]: { color: 'bg-green-100 text-green-800 border-green-300', label: 'IN PROGRESS' },
-        [TaskStatus.COMPLETED]: { color: 'bg-blue-100 text-blue-800 border-blue-300', label: 'COMPLETED' }
+        [TaskStatus.COMPLETED]: { color: 'bg-blue-100 text-blue-800 border-blue-300', label: 'COMPLETED' },
+        [TaskStatus.IN_PROGRESS]: { color: 'bg-green-100 text-green-800 border-green-300', label: 'IN PROGRESS' }
     };
 
-    const config = statusConfig[task.status];
+    const config = statusConfig[task.status] || { color: 'bg-gray-100 text-gray-800 border-gray-300', label: task.status?.toUpperCase() || 'UNKNOWN' };
 
     return (
         <div className="border-2 border-gray-200 rounded-xl p-6 bg-white hover:border-green-400 transition-all">
@@ -914,8 +915,8 @@ const CatalogSelectionModal: React.FC<{
                                     key={item.id}
                                     onClick={() => toggleItem(item.id)}
                                     className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${selectedItems.has(item.id)
-                                            ? 'border-green-500 bg-green-50'
-                                            : 'border-gray-200 hover:border-green-300'
+                                        ? 'border-green-500 bg-green-50'
+                                        : 'border-gray-200 hover:border-green-300'
                                         }`}
                                 >
                                     <div className="flex items-start gap-3">

@@ -2,28 +2,28 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { db } from '../../../firebase';
 import DrawingCompletionModal from './DrawingCompletionModal';
-import { 
-    collectionGroup, 
-    query, 
-    where, 
-    onSnapshot, 
-    doc, 
-    updateDoc, 
-    addDoc, 
+import {
+    collectionGroup,
+    query,
+    where,
+    onSnapshot,
+    doc,
+    updateDoc,
+    addDoc,
     collection,
     serverTimestamp,
     Timestamp,
     getDoc
 } from 'firebase/firestore';
-import { 
-    CaseTask, 
-    TaskType, 
-    TaskStatus, 
+import {
+    CaseTask,
+    TaskType,
+    TaskStatus,
     Case
 } from '../../../types';
 import { FIRESTORE_COLLECTIONS } from '../../../constants';
-import { 
-    ClockIcon, 
+import {
+    ClockIcon,
     CheckCircleIcon,
     PlayIcon,
     StopIcon,
@@ -75,10 +75,10 @@ const DrawingWorkQueuePage: React.FC = () => {
 
             for (const taskDoc of snapshot.docs) {
                 const taskData = taskDoc.data() as CaseTask;
-                
+
                 let projectName = 'Unknown Project';
                 let clientName = 'N/A';
-                
+
                 try {
                     const caseDoc = await getDoc(doc(db, FIRESTORE_COLLECTIONS.CASES, taskData.caseId));
                     if (caseDoc.exists()) {
@@ -95,8 +95,8 @@ const DrawingWorkQueuePage: React.FC = () => {
                     id: taskDoc.id,
                     projectName,
                     clientName,
-                    createdAt: taskData.createdAt instanceof Timestamp 
-                        ? taskData.createdAt.toDate() 
+                    createdAt: taskData.createdAt instanceof Timestamp
+                        ? taskData.createdAt.toDate()
                         : new Date(taskData.createdAt),
                     deadline: taskData.deadline instanceof Timestamp
                         ? taskData.deadline.toDate()
@@ -144,17 +144,17 @@ const DrawingWorkQueuePage: React.FC = () => {
 
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
-            filtered = filtered.filter(t => 
+            filtered = filtered.filter(t =>
                 t.projectName?.toLowerCase().includes(query) ||
                 t.clientName?.toLowerCase().includes(query)
             );
         }
 
         return filtered.sort((a, b) => {
-            const statusOrder = { 
+            const statusOrder = {
                 [TaskStatus.STARTED]: 1,
-                [TaskStatus.PENDING]: 2, 
-                [TaskStatus.COMPLETED]: 3 
+                [TaskStatus.PENDING]: 2,
+                [TaskStatus.COMPLETED]: 3
             };
             return (statusOrder[a.status] || 999) - (statusOrder[b.status] || 999);
         });
@@ -169,17 +169,17 @@ const DrawingWorkQueuePage: React.FC = () => {
 
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
-            filtered = filtered.filter(t => 
+            filtered = filtered.filter(t =>
                 t.projectName?.toLowerCase().includes(query) ||
                 t.clientName?.toLowerCase().includes(query)
             );
         }
 
         return filtered.sort((a, b) => {
-            const statusOrder = { 
+            const statusOrder = {
                 [TaskStatus.STARTED]: 1,
-                [TaskStatus.PENDING]: 2, 
-                [TaskStatus.COMPLETED]: 3 
+                [TaskStatus.PENDING]: 2,
+                [TaskStatus.COMPLETED]: 3
             };
             return (statusOrder[a.status] || 999) - (statusOrder[b.status] || 999);
         });
@@ -201,7 +201,7 @@ const DrawingWorkQueuePage: React.FC = () => {
     // SITE VISIT: Start Task
     const handleStartSiteVisit = async (task: TaskWithCase) => {
         console.log('[Work Queue] Starting site visit:', task.id);
-        
+
         try {
             const taskRef = doc(db!, FIRESTORE_COLLECTIONS.CASES, task.caseId, FIRESTORE_COLLECTIONS.TASKS, task.id);
 
@@ -236,7 +236,7 @@ const DrawingWorkQueuePage: React.FC = () => {
     // DRAWING: Start Task
     const handleStartDrawing = async (task: TaskWithCase) => {
         console.log('[Work Queue] Starting drawing task:', task.id);
-        
+
         try {
             const taskRef = doc(db!, FIRESTORE_COLLECTIONS.CASES, task.caseId, FIRESTORE_COLLECTIONS.TASKS, task.id);
 
@@ -470,13 +470,14 @@ const SiteVisitCard: React.FC<{
     onStart: (task: TaskWithCase) => void;
     onEnd: (task: TaskWithCase) => void;
 }> = ({ task, onStart, onEnd }) => {
-    const statusConfig = {
+    const statusConfig: Record<string, { color: string; label: string }> = {
         [TaskStatus.PENDING]: { color: 'bg-yellow-100 text-yellow-800 border-yellow-300', label: 'PENDING' },
         [TaskStatus.STARTED]: { color: 'bg-blue-100 text-blue-800 border-blue-300', label: 'IN PROGRESS' },
-        [TaskStatus.COMPLETED]: { color: 'bg-green-100 text-green-800 border-green-300', label: 'COMPLETED' }
+        [TaskStatus.COMPLETED]: { color: 'bg-green-100 text-green-800 border-green-300', label: 'COMPLETED' },
+        [TaskStatus.IN_PROGRESS]: { color: 'bg-blue-100 text-blue-800 border-blue-300', label: 'IN PROGRESS' }
     };
 
-    const config = statusConfig[task.status];
+    const config = statusConfig[task.status] || { color: 'bg-gray-100 text-gray-800 border-gray-300', label: task.status?.toUpperCase() || 'UNKNOWN' };
 
     return (
         <div className="border-2 rounded-xl p-6 border-gray-200 bg-white hover:border-blue-300 transition-all">
@@ -532,19 +533,19 @@ const DrawingTaskCard: React.FC<{
     onStart: (task: TaskWithCase) => void;
     onEnd: (task: TaskWithCase) => void;
 }> = ({ task, onStart, onEnd }) => {
-    const statusConfig = {
+    const statusConfig: Record<string, { color: string; label: string }> = {
         [TaskStatus.PENDING]: { color: 'bg-purple-100 text-purple-800 border-purple-300', label: 'PENDING' },
         [TaskStatus.STARTED]: { color: 'bg-indigo-100 text-indigo-800 border-indigo-300', label: 'IN PROGRESS' },
-        [TaskStatus.COMPLETED]: { color: 'bg-green-100 text-green-800 border-green-300', label: 'COMPLETED' }
+        [TaskStatus.COMPLETED]: { color: 'bg-green-100 text-green-800 border-green-300', label: 'COMPLETED' },
+        [TaskStatus.IN_PROGRESS]: { color: 'bg-indigo-100 text-indigo-800 border-indigo-300', label: 'IN PROGRESS' }
     };
 
-    const config = statusConfig[task.status];
+    const config = statusConfig[task.status] || { color: 'bg-gray-100 text-gray-800 border-gray-300', label: task.status?.toUpperCase() || 'UNKNOWN' };
     const isOverdue = task.deadline && new Date() > task.deadline && task.status !== TaskStatus.COMPLETED;
 
     return (
-        <div className={`border-2 rounded-xl p-6 transition-all ${
-            isOverdue ? 'border-red-300 bg-red-50' : 'border-purple-200 bg-white hover:border-purple-400'
-        }`}>
+        <div className={`border-2 rounded-xl p-6 transition-all ${isOverdue ? 'border-red-300 bg-red-50' : 'border-purple-200 bg-white hover:border-purple-400'
+            }`}>
             <div className="flex items-start justify-between">
                 <div className="flex-1">
                     <div className="flex items-center gap-3 mb-3">
