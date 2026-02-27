@@ -62,6 +62,16 @@ const LeadJourneyEditor: React.FC<LeadJourneyEditorProps> = ({ caseData }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [activeUploadKey, setActiveUploadKey] = useState<string | null>(null);
 
+    const activeLeadType = caseData.leadType === 'MFD' ? 'MFD' : 'SFD';
+
+    const activeStages = activeLeadType === 'MFD'
+        ? LEAD_STAGES.filter(s => ['quotation', 'purchase_order'].includes(s.key))
+        : LEAD_STAGES;
+
+    const activeMilestones = activeLeadType === 'MFD'
+        ? MILESTONE_STEPS.filter(m => m.key === 'callInitiated')
+        : MILESTONE_STEPS;
+
     const journey = caseData.leadJourney || {};
     const stages = (journey as any).stages || {} as Record<string, LeadJourneyDocStage>;
 
@@ -75,7 +85,7 @@ const LeadJourneyEditor: React.FC<LeadJourneyEditorProps> = ({ caseData }) => {
     };
 
     // Check if all milestones are done
-    const allMilestonesDone = MILESTONE_STEPS.every(m => isMilestoneDone(m.key));
+    const allMilestonesDone = activeMilestones.every(m => isMilestoneDone(m.key));
 
     // Get stage data or default
     const getStage = (key: string): LeadJourneyDocStage => {
@@ -86,7 +96,7 @@ const LeadJourneyEditor: React.FC<LeadJourneyEditorProps> = ({ caseData }) => {
     const isStageUnlocked = (idx: number): boolean => {
         if (!allMilestonesDone) return false;
         if (idx === 0) return true;
-        const prevKey = LEAD_STAGES[idx - 1].key;
+        const prevKey = activeStages[idx - 1].key;
         const prevStage = getStage(prevKey);
         return prevStage.status === 'approved';
     };
@@ -137,7 +147,7 @@ const LeadJourneyEditor: React.FC<LeadJourneyEditorProps> = ({ caseData }) => {
             };
 
             const updatedSubmissions = [...(stage.submissions || []), newSubmission];
-            const stageLabel = LEAD_STAGES.find(s => s.key === activeUploadKey)?.label || activeUploadKey;
+            const stageLabel = activeStages.find(s => s.key === activeUploadKey)?.label || activeUploadKey;
 
             const caseRef = doc(db as any, 'cases', caseData.id);
             await updateDoc(caseRef, {
@@ -201,7 +211,7 @@ const LeadJourneyEditor: React.FC<LeadJourneyEditorProps> = ({ caseData }) => {
             {/* ── Section 1: Milestones (Call, Site Visit) ── */}
             <div className="space-y-2 mb-6">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Initial Contact</p>
-                {MILESTONE_STEPS.map((ms) => {
+                {activeMilestones.map((ms) => {
                     const done = isMilestoneDone(ms.key);
                     const dateVal = getMilestoneDate((journey as any)[ms.key]);
                     return (
@@ -241,7 +251,7 @@ const LeadJourneyEditor: React.FC<LeadJourneyEditorProps> = ({ caseData }) => {
                     </div>
                 )}
 
-                {LEAD_STAGES.map((stg, idx) => {
+                {activeStages.map((stg, idx) => {
                     const stage = getStage(stg.key);
                     const unlocked = isStageUnlocked(idx);
                     const isExpanded = expandedStage === stg.key;

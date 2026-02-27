@@ -29,6 +29,7 @@ const CreateFreshProjectModal: React.FC<CreateFreshProjectModalProps> = ({
     const [projectTitle, setProjectTitle] = useState('');
     const [totalBudget, setTotalBudget] = useState('');
     const [projectWeight, setProjectWeight] = useState<ProjectWeight>('M');
+    const [leadType, setLeadType] = useState<'SFD' | 'MFD'>('SFD');
     const [projectHeadId, setProjectHeadId] = useState('');
     const [siteAddress, setSiteAddress] = useState('');
     const [clientPhone, setClientPhone] = useState('');
@@ -53,6 +54,7 @@ const CreateFreshProjectModal: React.FC<CreateFreshProjectModalProps> = ({
         setProjectTitle('');
         setTotalBudget('');
         setProjectWeight('M');
+        setLeadType('SFD');
         setProjectHeadId('');
         setSiteAddress('');
         setClientPhone('');
@@ -97,6 +99,7 @@ const CreateFreshProjectModal: React.FC<CreateFreshProjectModalProps> = ({
                 // Project-specific fields
                 projectHeadId,
                 projectWeight,
+                leadType,
 
                 // Financial info
                 financial: {
@@ -218,6 +221,35 @@ const CreateFreshProjectModal: React.FC<CreateFreshProjectModalProps> = ({
                             ))}
                         </div>
                     </div>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-bold text-text-secondary mb-1.5">
+                        Deal Type <span className="text-red-500">*</span>
+                    </label>
+                    <div className="flex gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setLeadType('SFD')}
+                            className={`flex flex-1 items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 transition-all ${leadType === 'SFD' ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-surface text-text-secondary hover:border-text-tertiary'
+                                }`}
+                        >
+                            <span className="font-bold">SFD</span>
+                            <span className="text-xs opacity-70">(Standard Flow)</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setLeadType('MFD')}
+                            className={`flex flex-1 items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 transition-all ${leadType === 'MFD' ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-surface text-text-secondary hover:border-text-tertiary'
+                                }`}
+                        >
+                            <span className="font-bold">MFD</span>
+                            <span className="text-xs opacity-70">(Minimal Flow)</span>
+                        </button>
+                    </div>
+                    <p className="text-xs text-text-tertiary mt-1.5">
+                        {leadType === 'SFD' ? 'Follows the standard lifecycle: Intro → Site Visit → Drawings → BOQ → Quote → PO' : 'Follows the minimal lifecycle: Intro → Quote → PO'}
+                    </p>
                 </div>
 
                 <div>

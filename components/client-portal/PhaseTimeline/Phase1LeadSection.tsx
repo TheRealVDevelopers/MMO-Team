@@ -48,6 +48,7 @@ interface Phase1LeadSectionProps {
   caseId: string;
   leadJourney: any;
   clientName?: string;
+  leadType?: 'SFD' | 'MFD';
   isDark?: boolean;
   defaultExpanded?: boolean;
 }
@@ -56,6 +57,7 @@ const Phase1LeadSection: React.FC<Phase1LeadSectionProps> = ({
   caseId,
   leadJourney,
   clientName,
+  leadType = 'SFD',
   isDark = true,
   defaultExpanded = true,
 }) => {
@@ -64,6 +66,14 @@ const Phase1LeadSection: React.FC<Phase1LeadSectionProps> = ({
   const [reviewingSubmission, setReviewingSubmission] = useState<{ stageKey: string; subId: string } | null>(null);
   const [remarks, setRemarks] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+
+  const activeStages = leadType === 'MFD'
+    ? LEAD_STAGES.filter(s => ['quotation', 'purchase_order'].includes(s.key))
+    : LEAD_STAGES;
+
+  const activeMilestones = leadType === 'MFD'
+    ? MILESTONE_STEPS.filter(m => m.key === 'callInitiated')
+    : MILESTONE_STEPS;
 
   const journey = leadJourney || {};
   const stages = journey.stages || {};
@@ -81,14 +91,14 @@ const Phase1LeadSection: React.FC<Phase1LeadSectionProps> = ({
     if (v instanceof Date) return v;
     return new Date(v);
   };
-  const allMilestonesDone = MILESTONE_STEPS.every(m => isMilestoneDone(m.key));
+  const allMilestonesDone = activeMilestones.every(m => isMilestoneDone(m.key));
 
   // Get stage info
   const getStage = (key: string) => stages[key] || { label: '', status: 'not_started', submissions: [] };
   const isStageUnlocked = (idx: number): boolean => {
     if (!allMilestonesDone) return false;
     if (idx === 0) return true;
-    const prevStage = getStage(LEAD_STAGES[idx - 1].key);
+    const prevStage = getStage(activeStages[idx - 1].key);
     return prevStage.status === 'approved';
   };
 
@@ -166,7 +176,7 @@ const Phase1LeadSection: React.FC<Phase1LeadSectionProps> = ({
           {/* Progress indicator */}
           {allMilestonesDone && (
             <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${isDark ? 'bg-white/10 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
-              {LEAD_STAGES.filter(s => getStage(s.key).status === 'approved').length}/{LEAD_STAGES.length} completed
+              {activeStages.filter(s => getStage(s.key).status === 'approved').length}/{activeStages.length} completed
             </span>
           )}
         </div>
@@ -182,7 +192,7 @@ const Phase1LeadSection: React.FC<Phase1LeadSectionProps> = ({
               {/* Vertical line */}
               <div className={`absolute left-3 top-2 bottom-2 w-0.5 ${isDark ? 'bg-white/10' : 'bg-slate-200'}`} />
 
-              {MILESTONE_STEPS.map((ms) => {
+              {activeMilestones.map((ms) => {
                 const done = isMilestoneDone(ms.key);
                 const date = getDate(journey[ms.key]);
                 return (
@@ -216,7 +226,7 @@ const Phase1LeadSection: React.FC<Phase1LeadSectionProps> = ({
               </div>
             )}
 
-            {LEAD_STAGES.map((stg, idx) => {
+            {activeStages.map((stg, idx) => {
               const stage = getStage(stg.key);
               const unlocked = isStageUnlocked(idx);
               const isExpanded = expandedStage === stg.key;

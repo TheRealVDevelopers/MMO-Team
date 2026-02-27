@@ -91,8 +91,11 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ isOpen, onClose
                     )}
                 </div>
 
-                <div className="mb-6">
+                <div className="mb-6 flex items-center gap-3">
                     <p className="text-text-secondary mt-1">{project.clientName}</p>
+                    <span className={`px-2 py-0.5 mt-1 rounded text-[10px] font-bold uppercase tracking-wider ${project.leadType === 'MFD' ? 'bg-secondary/10 text-secondary' : 'bg-primary/10 text-primary'}`}>
+                        {project.leadType || 'SFD'}
+                    </span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

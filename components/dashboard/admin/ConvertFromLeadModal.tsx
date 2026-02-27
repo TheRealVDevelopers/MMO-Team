@@ -21,6 +21,8 @@ interface LeadOption {
     status: CaseStatus;
     siteAddress: string;
     createdAt: Date;
+    leadType: 'SFD' | 'MFD';
+    leadJourney: any;
 }
 
 const ConvertFromLeadModal: React.FC<ConvertFromLeadModalProps> = ({
@@ -79,6 +81,8 @@ const ConvertFromLeadModal: React.FC<ConvertFromLeadModalProps> = ({
                     status: data.status as CaseStatus,
                     siteAddress: data.siteAddress || '',
                     createdAt: data.createdAt?.toDate() || new Date(),
+                    leadType: data.leadType || 'SFD',
+                    leadJourney: data.leadJourney || {},
                 };
             });
 
@@ -108,8 +112,31 @@ const ConvertFromLeadModal: React.FC<ConvertFromLeadModalProps> = ({
             return;
         }
 
+        const leadToConvert = leads.find(l => l.id === selectedLeadId);
+        if (!leadToConvert) return;
+
         setConverting(true);
         setError(null);
+
+        // Validation Rules
+        const stages = leadToConvert.leadJourney?.stages || {};
+        const isStageApproved = (key: string) => stages[key]?.status === 'approved';
+
+        if (leadToConvert.leadType === 'MFD') {
+            if (!isStageApproved('quotation') || !isStageApproved('purchase_order')) {
+                setError('For MFD leads, Quotation and Purchase Order must be approved before conversion.');
+                setConverting(false);
+                return;
+            }
+        } else {
+            const requiredSfdStages = ['recce_report', '2d_drawing', '3d_drawing', 'boq', 'quotation', 'purchase_order'];
+            const unapproved = requiredSfdStages.filter(k => !isStageApproved(k));
+            if (unapproved.length > 0) {
+                setError(`For SFD leads, all technical and financial stages must be approved. Missing: ${unapproved.join(', ')}`);
+                setConverting(false);
+                return;
+            }
+        }
 
         try {
             // 🔥 CRITICAL: Update the SAME document, do NOT create a new one
@@ -171,7 +198,12 @@ const ConvertFromLeadModal: React.FC<ConvertFromLeadModalProps> = ({
                                 >
                                     <div className="flex justify-between items-start">
                                         <div className="flex-1">
-                                            <h4 className="font-bold text-text-primary">{lead.title}</h4>
+                                            <div className="flex items-center gap-2">
+                                                <h4 className="font-bold text-text-primary">{lead.title}</h4>
+                                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${lead.leadType === 'MFD' ? 'bg-secondary/10 text-secondary' : 'bg-primary/10 text-primary'}`}>
+                                                    {lead.leadType}
+                                                </span>
+                                            </div>
                                             <p className="text-sm text-text-secondary">{lead.clientName}</p>
                                             <p className="text-xs text-text-tertiary mt-1">{lead.siteAddress}</p>
                                         </div>

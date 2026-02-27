@@ -186,6 +186,7 @@ export const useClientCase = (input: ClientCaseInput, clientUserId?: string) => 
                 totalPaid,
                 totalBudget,
                 budgetUtilizationPercent: budgetUtil,
+                leadType: data.leadType || 'SFD',
             };
 
             setProject(clientProject);

@@ -164,6 +164,7 @@ const ClientProjectCommandCenter: React.FC<ClientProjectCommandCenterProps> = (p
             projectName={project.projectName ?? 'Project'}
             clientName={project.clientName}
             projectCode={project.projectId}
+            leadType={project.leadType}
             health={health}
             completionPercent={completionPercent}
             daysRemaining={daysRemaining}
@@ -241,6 +242,7 @@ const ClientProjectCommandCenter: React.FC<ClientProjectCommandCenterProps> = (p
                       caseId={project.projectId}
                       leadJourney={project.leadJourney}
                       clientName={project.clientName}
+                      leadType={project.leadType}
                       isDark={isDark}
                       defaultExpanded
                     />

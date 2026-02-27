@@ -227,7 +227,8 @@ export interface Case {
   // Identifiers
   id: string;
   organizationId: string | null;  // null for individual leads
-  leadType?: 'organization' | 'individual';  // Lead type for data integrity
+  clientType?: 'organization' | 'individual';  // Client type for data integrity
+  leadType?: 'SFD' | 'MFD'; // SFD = Standard Flow Deal, MFD = Minimal Flow Deal
 
   // Core Info
   title: string;
@@ -1128,6 +1129,7 @@ export interface Lead {
   status: LeadPipelineStatus | string;
   assignedTo?: string;
   value?: number;
+  leadType?: 'SFD' | 'MFD';
   [key: string]: any;
 }
 

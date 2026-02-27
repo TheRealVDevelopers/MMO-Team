@@ -20,6 +20,7 @@ export interface ProjectIntelligenceHeaderProps {
   projectName: string;
   clientName: string;
   projectCode: string;
+  leadType?: 'SFD' | 'MFD';
   health: ProjectHealth;
   completionPercent: number;
   daysRemaining: number;
@@ -41,6 +42,7 @@ const ProjectIntelligenceHeader: React.FC<ProjectIntelligenceHeaderProps> = (pro
     projectName,
     clientName,
     projectCode,
+    leadType = 'SFD',
     health,
     completionPercent,
     daysRemaining,
@@ -88,11 +90,14 @@ const ProjectIntelligenceHeader: React.FC<ProjectIntelligenceHeaderProps> = (pro
         {/* Row 1: Identity & Health */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-10">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-4 mb-2">
+            <div className="flex items-center gap-4 mb-2 flex-wrap">
               <span className={`px-2.5 py-1 rounded-md text-[10px] font-black tracking-widest uppercase border ${isDark ? 'border-amber-500/30 text-amber-500' : 'border-slate-200 text-slate-500'}`}>
                 {projectCode || 'MMO-PN-001'}
               </span>
-              <div className="h-4 w-px bg-slate-200 dark:bg-white/10" />
+              <span className={`px-2.5 py-1 rounded-md text-[10px] font-black tracking-widest uppercase border ${leadType === 'MFD' ? (isDark ? 'border-blue-500/30 text-blue-400' : 'border-blue-200 text-blue-600') : (isDark ? 'border-emerald-500/30 text-emerald-400' : 'border-emerald-200 text-emerald-600')}`}>
+                {leadType} Project
+              </span>
+              <div className="h-4 w-px bg-slate-200 dark:bg-white/10 hidden sm:block" />
               <p className={`text-sm font-bold tracking-tight ${textSecondary}`}>{clientName}</p>
             </div>
             <h1 className={`text-3xl sm:text-5xl font-black tracking-tighter ${textPrimary} leading-[1.1]`}>

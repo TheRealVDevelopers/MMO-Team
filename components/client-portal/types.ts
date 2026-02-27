@@ -219,6 +219,7 @@ export interface ClientProject {
     budgetUtilizationPercent?: number;
     totalPaid: number;
     totalBudget: number;
+    leadType?: 'SFD' | 'MFD';
     // New fields for Case-Centric Architecture
     chat?: Array<{
         id: string;
