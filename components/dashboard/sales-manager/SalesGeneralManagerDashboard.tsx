@@ -254,6 +254,7 @@ service cloud.firestore {
         isOpen={isAddLeadModalOpen}
         onClose={() => setAddLeadModalOpen(false)}
         onAddLead={handleAddLead}
+        users={USERS}
       />
       <AssignLeadModal
         isOpen={isAssignLeadModalOpen}

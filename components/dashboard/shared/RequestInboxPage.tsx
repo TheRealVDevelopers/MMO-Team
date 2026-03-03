@@ -1,29 +1,29 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { db } from '../../../firebase';
-import { 
-    collectionGroup, 
-    query, 
-    where, 
-    onSnapshot, 
-    doc, 
+import {
+    collectionGroup,
+    query,
+    where,
+    onSnapshot,
+    doc,
     updateDoc,
     collection,
     getDocs,
     getDoc,
     Timestamp
 } from 'firebase/firestore';
-import { 
-    CaseTask, 
-    TaskType, 
-    TaskStatus, 
+import {
+    CaseTask,
+    TaskType,
+    TaskStatus,
     UserRole,
     Case
 } from '../../../types';
 import { FIRESTORE_COLLECTIONS } from '../../../constants';
-import { 
-    ClockIcon, 
-    CheckCircleIcon, 
+import {
+    ClockIcon,
+    CheckCircleIcon,
     PlayIcon,
     UserGroupIcon,
     ChartBarIcon,
@@ -56,12 +56,12 @@ const RequestInboxPage: React.FC = () => {
     const [editedDeadline, setEditedDeadline] = useState('');
 
     // Permission check - only Admin and Manager can access
-    const hasAccess = currentUser?.role === UserRole.SUPER_ADMIN || 
-                      currentUser?.role === UserRole.SALES_GENERAL_MANAGER;
+    const hasAccess = currentUser?.role === UserRole.SUPER_ADMIN ||
+        currentUser?.role === UserRole.SALES_GENERAL_MANAGER;
 
-    // Fetch staff users only when assign modal opens (deferred for faster initial load)
+    // Fetch staff users on mount so assignee names are available immediately on task cards
     useEffect(() => {
-        if (!showAssignModal || !db || staffUsers.length > 0) return;
+        if (!db) return;
         let cancelled = false;
         const fetchStaffUsers = async () => {
             try {
@@ -84,7 +84,7 @@ const RequestInboxPage: React.FC = () => {
         };
         fetchStaffUsers();
         return () => { cancelled = true; };
-    }, [showAssignModal]);
+    }, []);
 
     // Fetch all tasks from cases/{caseId}/tasks
     useEffect(() => {
@@ -185,8 +185,10 @@ const RequestInboxPage: React.FC = () => {
                 selectedTask.id
             );
 
+            const assigneeName = staffUsers.find(u => u.id === selectedUserId)?.name || '';
             await updateDoc(taskRef, {
                 assignedTo: selectedUserId,
+                assignedToName: assigneeName,
                 status: TaskStatus.PENDING,
                 notes: editedNotes,
                 deadline: editedDeadline ? new Date(editedDeadline) : null,
@@ -206,10 +208,11 @@ const RequestInboxPage: React.FC = () => {
         }
     };
 
-    // Get user name by ID
-    const getUserName = (userId: string) => {
+    // Get user name by ID — falls back to the name stored on the task itself
+    const getUserName = (userId: string, fallbackName?: string) => {
+        if (!userId) return fallbackName || '—';
         const user = staffUsers.find(u => u.id === userId);
-        return user ? user.name : 'Unknown';
+        return user ? user.name : (fallbackName || userId);
     };
 
     // Get role-specific users with prioritization
@@ -230,17 +233,17 @@ const RequestInboxPage: React.FC = () => {
         };
 
         const relevantRoles = roleMapping[taskType] || [];
-        
+
         // Separate users into priority (matching role) and others
         const priorityUsers = staffUsers.filter(user => relevantRoles.includes(user.role));
         const otherUsers = staffUsers.filter(user => !relevantRoles.includes(user.role));
-        
+
         // Return priority users first, then others
         return [...priorityUsers, ...otherUsers];
     };
 
     const renderTaskCard = (task: TaskWithCase) => (
-        <div 
+        <div
             key={task.id}
             onClick={() => handleTaskClick(task)}
             className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md cursor-pointer transition-all"
@@ -251,20 +254,20 @@ const RequestInboxPage: React.FC = () => {
                     {task.createdAt.toLocaleDateString()}
                 </span>
             </div>
-            
+
             <p className="text-sm text-gray-600 mb-2">{task.clientName}</p>
-            
+
             {task.notes && (
                 <p className="text-sm text-gray-500 line-clamp-2 mb-2">{task.notes}</p>
             )}
-            
+
             {task.assignedTo && (
                 <div className="flex items-center text-xs text-gray-500 mt-2">
                     <UserGroupIcon className="w-4 h-4 mr-1" />
-                    Assigned to: {getUserName(task.assignedTo)}
+                    Assigned to: {getUserName(task.assignedTo, (task as any).assignedToName)}
                 </div>
             )}
-            
+
             {task.deadline && (
                 <div className="flex items-center text-xs text-gray-500 mt-1">
                     <ClockIcon className="w-4 h-4 mr-1" />
@@ -390,7 +393,7 @@ const RequestInboxPage: React.FC = () => {
                             <h3 className="text-xl font-semibold text-gray-900">
                                 {selectedTask.status === TaskStatus.PENDING ? 'Assign Task' : 'Task Details'}
                             </h3>
-                            <button 
+                            <button
                                 onClick={() => {
                                     setShowAssignModal(false);
                                     setSelectedTask(null);
@@ -400,13 +403,13 @@ const RequestInboxPage: React.FC = () => {
                                 <XMarkIcon className="w-6 h-6" />
                             </button>
                         </div>
-                        
+
                         <div className="p-6 space-y-4">
                             {/* Task Details */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Task Type</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     value={selectedTask.type}
                                     disabled
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
@@ -415,8 +418,8 @@ const RequestInboxPage: React.FC = () => {
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Client</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     value={selectedTask.clientName || 'N/A'}
                                     disabled
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
@@ -449,12 +452,12 @@ const RequestInboxPage: React.FC = () => {
                                     <label className="block text-sm font-medium text-gray-700 mb-3">
                                         Select Team Member *
                                     </label>
-                                    
+
                                     {/* Team Members Grid */}
                                     <div className="max-h-[400px] overflow-y-auto border border-gray-200 rounded-lg p-4 bg-gray-50">
                                         <div className="grid grid-cols-2 gap-3">
                                             {getRoleBasedUsers(selectedTask.type).map((user, index) => {
-                                                const isRelevant = getRoleBasedUsers(selectedTask.type).findIndex(u => u.id === user.id) < 
+                                                const isRelevant = getRoleBasedUsers(selectedTask.type).findIndex(u => u.id === user.id) <
                                                     staffUsers.filter(u => {
                                                         const roleMapping: Record<TaskType, UserRole[]> = {
                                                             [TaskType.SITE_VISIT]: [UserRole.SITE_ENGINEER],
@@ -473,7 +476,7 @@ const RequestInboxPage: React.FC = () => {
                                                         const relevantRoles = roleMapping[selectedTask.type] || [];
                                                         return relevantRoles.includes(u.role);
                                                     }).length;
-                                                
+
                                                 return (
                                                     <button
                                                         key={user.id}
@@ -481,8 +484,8 @@ const RequestInboxPage: React.FC = () => {
                                                         onClick={() => setSelectedUserId(user.id)}
                                                         className={`
                                                             relative p-3 rounded-lg border-2 transition-all text-left
-                                                            ${selectedUserId === user.id 
-                                                                ? 'border-primary bg-primary/10' 
+                                                            ${selectedUserId === user.id
+                                                                ? 'border-primary bg-primary/10'
                                                                 : 'border-gray-200 hover:border-gray-300 bg-white'
                                                             }
                                                             ${isRelevant ? 'ring-2 ring-blue-200' : ''}
@@ -495,8 +498,8 @@ const RequestInboxPage: React.FC = () => {
                                                         )}
                                                         <div className="flex items-center space-x-3">
                                                             {user.profilePicture ? (
-                                                                <img 
-                                                                    src={user.profilePicture} 
+                                                                <img
+                                                                    src={user.profilePicture}
                                                                     alt={user.name}
                                                                     className="w-12 h-12 rounded-full object-cover"
                                                                 />
@@ -524,7 +527,7 @@ const RequestInboxPage: React.FC = () => {
                                             })}
                                         </div>
                                     </div>
-                                    
+
                                     <p className="text-xs text-gray-500 mt-2">
                                         {staffUsers.filter(u => {
                                             const roleMapping: Record<TaskType, UserRole[]> = {
@@ -551,7 +554,7 @@ const RequestInboxPage: React.FC = () => {
                             {selectedTask.status !== TaskStatus.PENDING && (
                                 <div className="bg-gray-50 p-4 rounded-lg">
                                     <p className="text-sm text-gray-600">
-                                        <strong>Assigned to:</strong> {getUserName(selectedTask.assignedTo)}
+                                        <strong>Assigned to:</strong> {getUserName(selectedTask.assignedTo, (selectedTask as any).assignedToName)}
                                     </p>
                                     <p className="text-sm text-gray-600 mt-1">
                                         <strong>Status:</strong> {selectedTask.status}

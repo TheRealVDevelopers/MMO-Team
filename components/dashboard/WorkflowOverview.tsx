@@ -113,28 +113,15 @@ const WorkflowOverview: React.FC = () => {
     const [isGenerating, setIsGenerating] = useState(false);
 
     const handleDownloadPDF = async () => {
-        if (isGenerating || !printRef.current) return;
+        if (isGenerating) return;
         setIsGenerating(true);
         try {
-            // Dynamic imports to keep bundle lean
-            const html2canvas = (await import('html2canvas')).default;
             const { jsPDF } = await import('jspdf');
-
-            const canvas = await html2canvas(printRef.current, {
-                scale: 2,
-                useCORS: true,
-                backgroundColor: '#ffffff',
-                logging: false,
-                ignoreElements: (el) => el.classList.contains('pdf-hide'),
-            });
-
-            const imgData = canvas.toDataURL('image/png');
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
             const margin = 14;
-            const usableWidth = pdfWidth - margin * 2;
 
             // Branded header
             pdf.setFillColor(15, 23, 42); // slate-900
@@ -149,51 +136,72 @@ const WorkflowOverview: React.FC = () => {
             pdf.setFontSize(7);
             pdf.text(`Generated: ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}`, pdfWidth - margin, 19, { align: 'right' });
 
-            // Content image (multi-page)
-            const imgRatio = canvas.width / canvas.height;
-            const imgWidthPx = canvas.width;
-            const contentStartY = 32;
-            const availHeight = pdfHeight - contentStartY - margin;
+            let y = 40;
 
-            // How many mm does the full image take?
-            const totalImgHeightMm = usableWidth / imgRatio;
-            let yOffset = 0;
-            let pageNum = 0;
+            pdf.setTextColor(15, 23, 42);
+            pdf.setFontSize(18);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('Operational Workflow', pdfWidth / 2, y, { align: 'center' });
+            y += 8;
 
-            while (yOffset < totalImgHeightMm) {
-                if (pageNum > 0) {
+            pdf.setTextColor(100, 116, 139);
+            pdf.setFontSize(10);
+            pdf.setFont('helvetica', 'normal');
+            const descLines = pdf.splitTextToSize('A comprehensive guide to the MMO project lifecycle. Understanding how a lead traverses through different departments to become a successful project.', pdfWidth - 2 * margin - 20);
+            pdf.text(descLines, pdfWidth / 2, y, { align: 'center' });
+            y += descLines.length * 5 + 10;
+
+            // Render steps
+            steps.forEach((step) => {
+                if (y > pdfHeight - 45) {
                     pdf.addPage();
-                    // Thin header on subsequent pages
+                    y = 20;
+
                     pdf.setFillColor(15, 23, 42);
                     pdf.rect(0, 0, pdfWidth, 10, 'F');
                     pdf.setTextColor(255, 255, 255);
                     pdf.setFontSize(7);
                     pdf.text('MMO Interiors — Operational Workflow Guide', margin, 7);
+                    y += 10;
                 }
 
-                const sliceHeightMm = Math.min(availHeight, totalImgHeightMm - yOffset);
-                const sliceRatio = sliceHeightMm / totalImgHeightMm;
-                const srcY = Math.round(yOffset / totalImgHeightMm * canvas.height);
-                const srcH = Math.round(sliceRatio * canvas.height);
+                pdf.setFillColor(248, 250, 252);
+                pdf.setDrawColor(226, 232, 240);
+                pdf.roundedRect(margin, y, pdfWidth - 2 * margin, 35, 3, 3, 'FD');
 
-                // Create a slice canvas
-                const sliceCanvas = document.createElement('canvas');
-                sliceCanvas.width = imgWidthPx;
-                sliceCanvas.height = srcH;
-                const ctx = sliceCanvas.getContext('2d')!;
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
-                ctx.drawImage(canvas, 0, srcY, imgWidthPx, srcH, 0, 0, imgWidthPx, srcH);
+                // Step ID
+                pdf.setFillColor(15, 23, 42);
+                pdf.circle(margin + 10, y + 17.5, 5, 'F');
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFontSize(10);
+                pdf.setFont('helvetica', 'bold');
+                pdf.text(step.id.toString(), margin + 10, y + 17.5 + 3.5, { align: 'center' });
 
-                const sliceData = sliceCanvas.toDataURL('image/png');
-                const yStart = pageNum === 0 ? contentStartY : 14;
-                pdf.addImage(sliceData, 'PNG', margin, yStart, usableWidth, sliceHeightMm);
+                // Step content
+                const textX = margin + 22;
+                pdf.setTextColor(15, 23, 42);
+                pdf.setFontSize(12);
+                pdf.text(step.title, textX, y + 10);
 
-                yOffset += sliceHeightMm;
-                pageNum++;
-            }
+                pdf.setTextColor(71, 85, 105);
+                pdf.setFontSize(9);
+                pdf.text(`Role: ${step.role}`, pdfWidth - margin - 5, y + 10, { align: 'right' });
 
-            // Footer on last page
+                pdf.setTextColor(100, 116, 139);
+                pdf.setFontSize(9);
+                pdf.setFont('helvetica', 'normal');
+                const pLines = pdf.splitTextToSize(step.description, pdfWidth - 2 * margin - 35);
+                pdf.text(pLines, textX, y + 18);
+
+                // actions
+                pdf.setTextColor(15, 23, 42);
+                pdf.setFontSize(8);
+                pdf.setFont('helvetica', 'bold');
+                pdf.text(`Actions: ${step.actions.join(', ')}`, textX, y + 23 + pLines.length * 4);
+
+                y += 42;
+            });
+
             pdf.setTextColor(100, 116, 139);
             pdf.setFontSize(7);
             pdf.text('This document is confidential and for internal use only.', pdfWidth / 2, pdfHeight - 8, { align: 'center' });

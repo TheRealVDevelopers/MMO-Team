@@ -9,6 +9,7 @@ import { approveQuotation, rejectQuotation } from '../../../hooks/useCases';
 import { createCaseTask, useCaseTasks, useCaseSiteVisits } from '../../../hooks/useCases';
 import { useCaseDocuments } from '../../../hooks/useCaseDocuments';
 import { useInvoices } from '../../../hooks/useInvoices';
+import { useUsers } from '../../../hooks/useUsers';
 import { Case, UserRole, CaseQuotation, CaseBOQ, CaseDrawing } from '../../../types';
 import { formatCurrencyINR, safeDate, safeDateTime } from '../../../constants';
 import Card from '../../shared/Card';
@@ -681,7 +682,15 @@ const QuotationsTab: React.FC<{
 const TasksTab: React.FC<{ caseId: string }> = ({ caseId }) => {
     const { tasks, loading } = useCaseTasks(caseId); // Pass caseId
     const { currentUser } = useAuth();
+    const { users: staffUsers } = useUsers();
     const [showCreateModal, setShowCreateModal] = useState(false);
+
+    // Get user name helper
+    const getUserName = (userId: string, fallbackName?: string) => {
+        if (!userId) return fallbackName || 'Unknown';
+        const user = staffUsers.find(u => u.id === userId);
+        return user ? user.name : (fallbackName || 'Unknown');
+    };
 
     if (loading) return <Card><div className="p-6">Loading tasks...</div></Card>;
 
@@ -732,17 +741,17 @@ const TasksTab: React.FC<{ caseId: string }> = ({ caseId }) => {
                                         )}
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3">
                                             <div className="flex items-center gap-4 text-xs text-text-tertiary">
-                                                <span>Assigned to: <span className="text-text-secondary font-medium">{task.assignedToName || 'Unknown'}</span></span>
+                                                <span>Assigned to: <span className="text-text-secondary font-medium">{getUserName(task.assignedTo, task.assignedToName)}</span></span>
                                                 {task.dueAt && (
                                                     <span>Due: <span className="text-text-secondary font-medium">{safeDate(task.dueAt)}</span></span>
                                                 )}
                                             </div>
                                             <div className="flex items-center gap-3 text-xs text-text-tertiary">
                                                 {task.startedAt && (
-                                                    <span>Started: <span className="text-text-secondary">{new Date(task.startedAt).toLocaleString()}</span></span>
+                                                    <span>Started: <span className="text-text-secondary">{safeDateTime(task.startedAt)}</span></span>
                                                 )}
                                                 {task.completedAt && (
-                                                    <span>Completed: <span className="text-success font-bold">{new Date(task.completedAt).toLocaleString()}</span></span>
+                                                    <span>Completed: <span className="text-success font-bold">{safeDateTime(task.completedAt)}</span></span>
                                                 )}
                                             </div>
                                         </div>
@@ -939,7 +948,7 @@ const DocumentsTab: React.FC<{ projectCase: Case }> = ({ projectCase }) => {
     };
 
     const getFileIcon = (fileName: string) => {
-        const ext = fileName.toLowerCase().split('.').pop();
+        const ext = (fileName || '').toLowerCase().split('.').pop();
         if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext || '')) {
             return (
                 <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
