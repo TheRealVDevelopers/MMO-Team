@@ -18,6 +18,7 @@ import { useLeads } from '../../../hooks/useLeads';
 import Card from '../../shared/Card';
 import LeadImporter from '../../sales/LeadImporter';
 import { Upload } from 'lucide-react';
+import { createNotification } from '../../../hooks/useNotifications';
 
 const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPage: (page: string) => void }> = ({ currentPage, setCurrentPage }) => {
   const { currentUser } = useAuth();
@@ -86,6 +87,16 @@ const SalesGeneralManagerDashboard: React.FC<{ currentPage: string, setCurrentPa
       };
       const updatedHistory = [...lead.history, newHistoryItem];
       await updateLead(leadId, { assignedTo: newOwnerId, history: updatedHistory });
+
+      // Notify the new assignee
+      createNotification({
+        user_id: newOwnerId,
+        title: 'New Lead Assigned',
+        message: `You have been assigned lead "${lead.projectName}" (${lead.clientName}) by ${currentUser?.name || 'Sales GM'}.`,
+        type: 'lead',
+        context_id: leadId,
+        context_type: 'lead',
+      }).catch(console.error);
     }
   };
 

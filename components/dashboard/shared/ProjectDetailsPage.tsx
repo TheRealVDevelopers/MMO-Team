@@ -178,6 +178,20 @@ const ProjectDetailsPage: React.FC<ProjectDetailsPageProps> = ({ initialTab = 'o
                         )}
 
                         <div>
+                            <p className="text-xs font-medium text-text-tertiary uppercase">Lead Value</p>
+                            <p className="text-sm font-semibold text-text-primary">
+                                {projectCase.leadValue ? formatCurrencyINR(projectCase.leadValue) : '—'}
+                            </p>
+                        </div>
+
+                        <div>
+                            <p className="text-xs font-medium text-text-tertiary uppercase">Project Value</p>
+                            <p className={`text-sm font-bold ${projectCase.projectValue ? 'text-success' : 'text-text-secondary'}`}>
+                                {projectCase.projectValue ? formatCurrencyINR(projectCase.projectValue) : '—'}
+                            </p>
+                        </div>
+
+                        <div>
                             <p className="text-xs font-medium text-text-tertiary uppercase">Status</p>
                             <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
                                 {projectCase.status}
@@ -408,7 +422,13 @@ const BOQTab: React.FC<{ boqs: CaseBOQ[]; loading: boolean; caseId: string; proj
                                         <p className="text-sm text-text-secondary">{boq.items.length} items</p>
                                         <p className="text-xs text-text-tertiary">
                                             Created: {safeDate(boq.createdAt)}
+                                            {(boq as any).createdByName && ` by ${(boq as any).createdByName}`}
                                         </p>
+                                        {boq.status === 'approved' && (
+                                            <p className="text-xs text-success mt-0.5">
+                                                Approved by: {(boq as any).resolvedByName || (boq as any).approvedByName || (boq as any).approvedBy || '—'}
+                                            </p>
+                                        )}
                                     </div>
                                     {boq.status && (
                                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${boq.status === 'approved' ? 'bg-success/10 text-success' :
@@ -580,9 +600,10 @@ const QuotationsTab: React.FC<{
                                         </>
                                     )}
 
-                                    {quot.auditStatus === 'approved' && quot.auditedBy && (
+                                    {quot.auditStatus === 'approved' && (
                                         <span className="text-xs text-text-tertiary">
-                                            Approved by {quot.auditedBy} on {quot.auditedAt && safeDate(quot.auditedAt)}
+                                            Approved by {(quot as any).resolvedByName || (quot as any).auditedByName || quot.auditedBy || '—'}
+                                            {quot.auditedAt && ` on ${safeDate(quot.auditedAt)}`}
                                         </span>
                                     )}
 

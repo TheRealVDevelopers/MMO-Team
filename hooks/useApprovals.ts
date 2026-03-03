@@ -15,6 +15,7 @@ import {
 import { ApprovalRequest, UserRole, CaseStatus } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { FIRESTORE_COLLECTIONS } from '../constants';
+import { createNotification } from './useNotifications';
 
 export const useApprovals = (role?: UserRole) => {
   const { currentUser } = useAuth();
@@ -77,10 +78,11 @@ export const useApprovals = (role?: UserRole) => {
       if (!caseDoc.exists()) throw new Error("Case not found");
       const caseData = caseDoc.data();
 
-      // Common Updates: Resolve Approval
+      // Common Updates: Resolve Approval (store name for audit trail)
       transaction.update(approvalRef, {
         status: 'resolved',
         resolvedBy: currentUser.id,
+        resolvedByName: currentUser.name || '—',
         resolvedAt: serverTimestamp(),
         notes: notes || ''
       });
@@ -220,6 +222,19 @@ export const useApprovals = (role?: UserRole) => {
           break;
       }
     });
+
+    // Notify the requester that their approval was resolved
+    if (request.requestedBy) {
+      createNotification({
+        user_id: request.requestedBy,
+        title: `${request.type} Approved`,
+        message: `Your ${request.type} request was approved by ${currentUser.name || 'an admin'}.`,
+        type: 'approval',
+        context_id: request.caseId,
+        context_type: 'case',
+        link: '/approvals',
+      }).catch(console.error);
+    }
   };
 
   // 3. Reject Request
@@ -246,6 +261,19 @@ export const useApprovals = (role?: UserRole) => {
         });
       }
     });
+
+    // Notify the requester that their request was rejected
+    if (request.requestedBy) {
+      createNotification({
+        user_id: request.requestedBy,
+        title: `${request.type} Rejected`,
+        message: `Your ${request.type} request was rejected: ${reason}`,
+        type: 'approval',
+        context_id: request.caseId,
+        context_type: 'case',
+        link: '/approvals',
+      }).catch(console.error);
+    }
   };
 
   return {
