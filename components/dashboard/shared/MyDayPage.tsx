@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { TASKS, formatDateTime, ATTENDANCE_DATA, safeDate } from '../../../constants';
 import { Task, TaskStatus, AttendanceType, UserRole, Reminder, AttendanceStatus } from '../../../types';
@@ -38,7 +38,7 @@ const SalesStats: React.FC<{ userId: string, leads: any[], timeEntries: any[] }>
     const { projects } = useProjects();
     const { costCenters } = useFinance();
 
-    const myProjects = (projects || []).filter(p => p.assignedSales === userId || p.projectHead === userId);
+    const myProjects = (projects || []).filter(p => p.assignedSales === userId || p.projectHeadId === userId);
     const totalRevenue = myProjects.reduce((sum, proj) => {
         const cc = costCenters.find(c => c.projectId === proj.id);
         return sum + (cc?.totalPayIn || 0);
@@ -154,42 +154,14 @@ const MyDayPage: React.FC = () => {
     const { leads, loading: leadsLoading } = useLeads(currentUser?.organizationId);
     const { tasks: calendarTasksByDate, toggleTask: toggleCalendarTask } = useCalendarTasks(currentUser?.id);
 
-    const [reminders, setReminders] = useState<EnrichedReminder[]>([]);
+    // Reminders: legacy feature — reminder data not yet in case-centric schema.
+    // Kept as state for future re-implementation; always empty until reminders subcollection is built.
+    const [reminders] = useState<EnrichedReminder[]>([]);
     const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
     const todayStr = new Date().toLocaleDateString('en-CA');
     const { entries: timeEntries, loading: timeLoading } = useTimeEntries(currentUser?.id || '', todayStr, todayStr);
     const todayTimeEntry = timeEntries.find(e => e.dateKey === todayStr || (e as any).date === todayStr);
-
-    useEffect(() => {
-        if (currentUser && !leadsLoading) {
-            if (currentUser.role === UserRole.SALES_TEAM_MEMBER) {
-                const userLeads = (leads || []).filter(lead => lead.assignedTo === currentUser.id);
-                // Note: reminders property doesn't exist on Lead type in case-centric schema
-                // This feature needs to be refactored to use case activities or a new reminders subcollection
-                const allReminders: EnrichedReminder[] = [];
-                /* Legacy reminder code disabled - reminders not in schema:
-                const allReminders: EnrichedReminder[] = userLeads.flatMap(lead =>
-                    (lead.reminders || []).map(reminder => ({
-                        ...reminder,
-                        leadId: lead.id,
-                        leadName: lead.clientName,
-                        projectName: lead.projectName
-                    }))
-                );
-                allReminders.sort((a, b) => {
-                    if (a.completed !== b.completed) {
-                        return a.completed ? 1 : -1;
-                    }
-                    return new Date(a.date).getTime() - new Date(b.date).getTime();
-                });
-                */
-                setReminders(allReminders);
-            } else {
-                setReminders([]);
-            }
-        }
-    }, [currentUser, leads, leadsLoading]);
 
     // Merge and filter tasks (Execution Stream = same source as Work Queue)
     const daysTasks = useMemo(() => {
@@ -197,29 +169,29 @@ const MyDayPage: React.FC = () => {
 
         const unifiedExecutionTasks: UnifiedTask[] = (assignedTasks || [])
             .map(t => ({
-            id: `exec-${t.id}`,
-            originalId: t.id,
-            caseId: t.caseId,
-            raw: t,
-            type: t.type,
-            projectName: t.projectName,
-            title: t.projectName ? `[${t.type}] ${t.projectName}` : `[${t.type}] ${t.caseId}`,
-            assignedTo: t.assignedTo,
-            userId: t.assignedTo,
-            status: t.status === TaskStatus.STARTED ? TaskStatus.IN_PROGRESS : t.status,
-            timeSpent: 0,
-            priority: 'Medium',
-            priorityOrder: 0,
-            deadline: t.deadline,
-            isPaused: false,
-            date: selectedDate,
-            description: t.notes,
-            createdAt: t.createdAt,
-            createdBy: t.assignedBy,
-            createdByName: '',
-            startedAt: t.startedAt,
-            source: 'execution' as const
-        }));
+                id: `exec-${t.id}`,
+                originalId: t.id,
+                caseId: t.caseId,
+                raw: t,
+                type: t.type,
+                projectName: t.projectName,
+                title: t.projectName ? `[${t.type}] ${t.projectName}` : `[${t.type}] ${t.caseId}`,
+                assignedTo: t.assignedTo,
+                userId: t.assignedTo,
+                status: t.status === TaskStatus.STARTED ? TaskStatus.IN_PROGRESS : t.status,
+                timeSpent: 0,
+                priority: 'Medium',
+                priorityOrder: 0,
+                deadline: t.deadline,
+                isPaused: false,
+                date: selectedDate,
+                description: t.notes,
+                createdAt: t.createdAt,
+                createdBy: t.assignedBy,
+                createdByName: '',
+                startedAt: t.startedAt,
+                source: 'execution' as const
+            }));
 
         // Filter valid operational requests
         const myRequests = (assignedRequests || []).filter(r =>
@@ -346,19 +318,9 @@ const MyDayPage: React.FC = () => {
         }
     };
 
-    const handleToggleReminder = (reminderId: string) => {
-        setReminders(prevReminders => {
-            const updated = prevReminders.map(r =>
-                r.id === reminderId ? { ...r, completed: !r.completed } : r
-            );
-            updated.sort((a, b) => {
-                if (a.completed !== b.completed) {
-                    return a.completed ? 1 : -1;
-                }
-                return new Date(a.date).getTime() - new Date(b.date).getTime();
-            });
-            return updated;
-        });
+    const handleToggleReminder = (_reminderId: string) => {
+        // Reminders are not yet active in the case-centric schema — toggle is a no-op.
+        // Re-implement once the reminders subcollection is built.
     };
 
     const handleAddTask = async (taskData: {

@@ -71,19 +71,21 @@ const CreateBOQModal: React.FC<CreateBOQModalProps> = ({
             // Get case data first
             const caseRef = doc(db!, FIRESTORE_COLLECTIONS.CASES, caseId);
             const caseSnap = await getDoc(caseRef);
-            
+
             if (!caseSnap.exists()) {
                 throw new Error('Case not found');
             }
-            
+
             const caseData = caseSnap.data() as Case;
 
             // 1. Save BOQ to cases/{caseId}/boq
-            const boqData: Omit<CaseBOQ, 'id' | 'pdfUrl'> & { pdfUrl: string } = {
+            const boqData: Omit<CaseBOQ, 'id' | 'pdfUrl'> & { pdfUrl: string; createdByName?: string; createdByRole?: string } = {
                 caseId,
                 items: boqItems,
                 subtotal,
                 createdBy: currentUser.id,
+                createdByName: currentUser.name || '—',
+                createdByRole: currentUser.role || '—',
                 createdAt: serverTimestamp(),
                 pdfUrl: '' // Will be updated after PDF generation
             };
@@ -100,9 +102,9 @@ const CreateBOQModal: React.FC<CreateBOQModalProps> = ({
                 ...boqData,
                 id: boqRef.id
             };
-            
+
             const pdfUrl = await generateBOQPDF(boqWithId, { ...caseData, id: caseId });
-            
+
             // Update BOQ with PDF URL
             await updateDoc(boqRef, { pdfUrl });
 
@@ -128,7 +130,12 @@ const CreateBOQModal: React.FC<CreateBOQModalProps> = ({
                     caseId,
                     type: TaskType.QUOTATION_TASK,
                     assignedTo: quotationTeamId,
+                    assignedToName: (caseData as any).assignedQuotationTeamName || '—',
                     assignedBy: currentUser.id,
+                    assignedByName: currentUser.name || '—',
+                    initiatedById: currentUser.id,
+                    initiatedByName: currentUser.name || '—',
+                    initiatedByRole: currentUser.role || '—',
                     status: TaskStatus.PENDING,
                     startedAt: null,
                     completedAt: null,
@@ -150,12 +157,12 @@ const CreateBOQModal: React.FC<CreateBOQModalProps> = ({
             console.log('[BOQ] ✅ QUOTATION_TASK created');
 
             alert('✅ BOQ created successfully! Quotation task assigned.');
-            
+
             // Call parent callback if provided
             if (onBOQCreated) {
                 onBOQCreated();
             }
-            
+
             onClose();
         } catch (error) {
             console.error('[BOQ] Error:', error);
@@ -378,9 +385,8 @@ export const CatalogSelectorModal: React.FC<{
                                 <div
                                     key={item.id}
                                     onClick={() => toggleItem(item.id)}
-                                    className={`p-4 border-2 rounded-xl cursor-pointer ${
-                                        selectedItems.has(item.id) ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-purple-300'
-                                    }`}
+                                    className={`p-4 border-2 rounded-xl cursor-pointer ${selectedItems.has(item.id) ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-purple-300'
+                                        }`}
                                 >
                                     <div className="flex items-start gap-3">
                                         <input

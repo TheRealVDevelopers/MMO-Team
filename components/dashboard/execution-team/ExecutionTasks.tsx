@@ -52,24 +52,38 @@ const ExecutionTasks: React.FC<Props> = ({ caseId }) => {
     return () => unsubscribe();
   }, [caseId]);
 
+  // Safe date formatter — never shows "Invalid Date" or crashes
+  const safeDate = (v: any): string => {
+    if (!v) return '—';
+    try {
+      const d = v?.toDate?.() ?? (typeof v === 'string' || typeof v === 'number' ? new Date(v) : null);
+      if (!d || isNaN(d.getTime())) return '—';
+      return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch { return '—'; }
+  };
+
   const handleAddTask = async () => {
     if (!caseId || !currentUser || !newTaskNotes.trim()) return;
-
     try {
       const tasksRef = collection(db, FIRESTORE_COLLECTIONS.CASES, caseId, FIRESTORE_COLLECTIONS.TASKS);
       await addDoc(tasksRef, {
         caseId,
         type: CaseTaskType.EXECUTION,
         assignedTo: currentUser.id,
+        assignedToName: currentUser.name || '—',
         assignedBy: currentUser.id,
+        assignedByName: currentUser.name || '—',
+        initiatedById: currentUser.id,
+        initiatedByName: currentUser.name || '—',
+        initiatedByRole: currentUser.role || '—',
         status: TaskStatus.PENDING,
         createdAt: serverTimestamp(),
-        notes: newTaskNotes
+        startedAt: null,
+        completedAt: null,
+        notes: newTaskNotes,
       });
-
       setNewTaskNotes('');
       setShowAddModal(false);
-      alert('Task added successfully!');
     } catch (error) {
       console.error('Error adding task:', error);
       alert('Failed to add task.');
@@ -142,8 +156,13 @@ const ExecutionTasks: React.FC<Props> = ({ caseId }) => {
               <div className="flex justify-between items-start mb-2">
                 <div className="flex-1">
                   <p className="font-medium">{task.notes || 'Execution Task'}</p>
-                  <p className="text-sm text-text-secondary mt-1">
-                    Created: {task.createdAt?.toDate?.().toLocaleDateString() || 'N/A'}
+                  <p className="text-xs text-text-tertiary mt-0.5">
+                    By: {(task as any).initiatedByName || (task as any).assignedByName || '—'}
+                  </p>
+                  <p className="text-xs text-text-tertiary">
+                    Created: {safeDate(task.createdAt)}
+                    {(task as any).startedAt ? ` · Started: ${safeDate((task as any).startedAt)}` : ''}
+                    {(task as any).completedAt ? ` · Completed: ${safeDate((task as any).completedAt)}` : ''}
                   </p>
                 </div>
                 {getStatusBadge(task.status)}
@@ -177,7 +196,7 @@ const ExecutionTasks: React.FC<Props> = ({ caseId }) => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-surface border border-border rounded-xl p-6 w-full max-w-md">
             <h2 className="text-xl font-bold mb-4">Add Execution Task</h2>
-            
+
             <textarea
               value={newTaskNotes}
               onChange={(e) => setNewTaskNotes(e.target.value)}

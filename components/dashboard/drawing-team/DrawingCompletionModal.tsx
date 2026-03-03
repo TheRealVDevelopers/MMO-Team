@@ -11,7 +11,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import { FIRESTORE_COLLECTIONS } from '../../../constants';
-import { TaskStatus, TaskType, Case } from '../../../types';
+import { TaskStatus, TaskType, Case, CaseStatus } from '../../../types';
 import { XMarkIcon, DocumentArrowUpIcon, TableCellsIcon } from '@heroicons/react/24/outline';
 
 interface DrawingCompletionModalProps {
@@ -71,7 +71,7 @@ const DrawingCompletionModal: React.FC<DrawingCompletionModalProps> = ({
             // Update case status
             const caseRef = doc(db!, FIRESTORE_COLLECTIONS.CASES, task.caseId);
             await updateDoc(caseRef, {
-                status: 'BOQ_COMPLETED',
+                status: CaseStatus.BOQ,
                 updatedAt: serverTimestamp()
             });
 

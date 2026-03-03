@@ -172,9 +172,10 @@ const ProjectTrackingPage: React.FC<{ setCurrentPage: (page: string) => void }> 
                                     </thead>
                                     <tbody className="divide-y divide-border/20">
                                         {filteredProjects.map((project, idx) => {
-                                            const progress = project.milestones.length > 0
-                                                ? Math.round((project.milestones.filter(m => m.completed).length / project.milestones.length) * 100)
-                                                : project.progress;
+                                            const milestones = project.milestones ?? [];
+                                            const progress = milestones.length > 0
+                                                ? Math.round((milestones.filter(m => m.completed).length / milestones.length) * 100)
+                                                : (project.progress ?? 0);
                                             const config = getStatusConfig(project.status);
 
                                             return (

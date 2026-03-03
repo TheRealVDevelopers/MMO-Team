@@ -24,6 +24,8 @@ import { useAuth } from '../../../context/AuthContext';
 import { doc, updateDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import { FIRESTORE_COLLECTIONS } from '../../../constants';
+import SalesManagerCaseDetailModal from './SalesManagerCaseDetailModal';
+import { createNotification } from '../../../hooks/useNotifications';
 
 interface SalesManagerProjectsPageProps {
     setCurrentPage: (page: string) => void;
@@ -45,15 +47,15 @@ const SalesManagerProjectsPage: React.FC<SalesManagerProjectsPageProps> = ({ set
     // Filter cases for sales manager view
     const filteredCases = useMemo(() => {
         return cases.filter(c => {
-            const matchesSearch = 
+            const matchesSearch =
                 (c.clientName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                 (c.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                 (c.id || '').toLowerCase().includes(searchTerm.toLowerCase());
-            
-            const matchesFilter = 
-                filterStatus === 'all' || 
+
+            const matchesFilter =
+                filterStatus === 'all' ||
                 c.status === filterStatus;
-            
+
             return matchesSearch && matchesFilter;
         });
     }, [cases, searchTerm, filterStatus]);
@@ -79,7 +81,7 @@ const SalesManagerProjectsPage: React.FC<SalesManagerProjectsPageProps> = ({ set
                     // Add other fields that need to be updated
                     ...(updatedCase.assignedSales && { assignedSales: updatedCase.assignedSales }),
                 });
-                
+
                 // Log activity for the status change
                 const activitiesRef = collection(
                     db,
@@ -87,7 +89,7 @@ const SalesManagerProjectsPage: React.FC<SalesManagerProjectsPageProps> = ({ set
                     updatedCase.id,
                     FIRESTORE_COLLECTIONS.ACTIVITIES
                 );
-                
+
                 await addDoc(activitiesRef, {
                     caseId: updatedCase.id,
                     action: `Status updated to ${updatedCase.status}`,
@@ -96,7 +98,7 @@ const SalesManagerProjectsPage: React.FC<SalesManagerProjectsPageProps> = ({ set
                     userName: currentUser?.name || 'System',
                     timestamp: serverTimestamp(),
                 });
-                
+
                 console.log('Case updated successfully:', updatedCase.id);
             }
         } catch (error) {
@@ -302,16 +304,15 @@ const SalesManagerProjectsPage: React.FC<SalesManagerProjectsPageProps> = ({ set
                 </>
             )}
 
-            {/* Lead Detail Modal */}
+            {/* Case Detail Modal – reads live from Firestore */}
             {isDetailModalOpen && selectedCase && (
-                <LeadDetailModal
+                <SalesManagerCaseDetailModal
+                    caseId={selectedCase.id}
                     isOpen={isDetailModalOpen}
                     onClose={() => {
                         setIsDetailModalOpen(false);
                         setSelectedCase(null);
                     }}
-                    caseItem={selectedCase}
-                    onUpdate={handleUpdateCase}
                 />
             )}
 
@@ -325,32 +326,46 @@ const SalesManagerProjectsPage: React.FC<SalesManagerProjectsPageProps> = ({ set
                     }}
                     onAssign={async (task) => {
                         if (!currentUser) return;
-                        
+
                         try {
                             // Create the task directly using Firestore
                             const tasksRef = collection(
-                                db!, 
-                                FIRESTORE_COLLECTIONS.CASES, 
-                                selectedCase.id, 
+                                db!,
+                                FIRESTORE_COLLECTIONS.CASES,
+                                selectedCase.id,
                                 FIRESTORE_COLLECTIONS.TASKS
                             );
-                                                    
+
                             await addDoc(tasksRef, {
                                 caseId: selectedCase.id,
                                 type: TaskType.SALES_CONTACT,
                                 title: task.title,
                                 assignedTo: task.userId,
                                 assignedBy: currentUser.id,
+                                assignedByName: currentUser.name || '—',
                                 status: TaskStatus.PENDING,
                                 priority: task.priority || 'Medium',
                                 notes: task.description || '',
                                 createdAt: serverTimestamp(),
                             });
 
+                            // Notify the assignee in real-time
+                            if (task.userId) {
+                                await createNotification({
+                                    user_id: task.userId,
+                                    title: `New Task: ${task.title}`,
+                                    message: `Assigned by ${currentUser.name || 'Sales Manager'} for ${selectedCase.clientName || selectedCase.title || 'a project'}.`,
+                                    type: 'task',
+                                    context_id: selectedCase.id,
+                                    context_type: 'case',
+                                    link: '/tasks',
+                                });
+                            }
+
                             // Update case status based on task type
                             let newStatus: CaseStatus;
                             const title = (task.title || '').toLowerCase();
-                            
+
                             if (title.includes('site') && (title.includes('visit') || title.includes('inspection'))) {
                                 newStatus = CaseStatus.SITE_VISIT;
                             } else if (title.includes('drawing') || title.includes('design')) {

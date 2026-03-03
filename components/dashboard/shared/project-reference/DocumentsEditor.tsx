@@ -24,7 +24,9 @@ const DocumentsEditor: React.FC<DocumentsEditorProps> = ({ caseData }) => {
     const [uploadProgress, setUploadProgress] = useState(0);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const documents = (caseData as any).projectDocuments || [];
+    const documents: any[] = Array.isArray((caseData as any).projectDocuments)
+        ? (caseData as any).projectDocuments
+        : [];
 
     const handleUpload = async (files: FileList | null) => {
         if (!files || files.length === 0) return;

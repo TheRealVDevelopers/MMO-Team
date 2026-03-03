@@ -21,6 +21,10 @@ import { FIRESTORE_COLLECTIONS } from '../constants';
 // ========================================
 // FORWARD MAPPING: CaseStatus → LeadPipelineStatus (for DISPLAY)
 // ========================================
+
+// Deduplication guard — prevents console spam on every Firestore snapshot tick
+const warnedStatuses = new Set<string>();
+
 export const mapCaseStatusToLeadStatus = (status: CaseStatus | string): LeadPipelineStatus => {
   switch (status) {
     case CaseStatus.LEAD:
@@ -56,7 +60,10 @@ export const mapCaseStatusToLeadStatus = (status: CaseStatus | string): LeadPipe
       if (leadStatusValues.includes(status as string)) {
         return status as LeadPipelineStatus;
       }
-      console.warn(`[useLeads] Unknown status: "${status}", defaulting to NEW_NOT_CONTACTED`);
+      if (!warnedStatuses.has(status as string)) {
+        console.warn(`[useLeads] Unknown status: "${status}", defaulting to NEW_NOT_CONTACTED`);
+        warnedStatuses.add(status as string);
+      }
       return LeadPipelineStatus.NEW_NOT_CONTACTED;
   }
 };

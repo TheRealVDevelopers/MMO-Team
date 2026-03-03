@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BellIcon, CheckCircleIcon, InformationCircleIcon, ExclamationTriangleIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import {
+    BellIcon,
+    CheckCircleIcon,
+    InformationCircleIcon,
+    ExclamationTriangleIcon,
+    XMarkIcon,
+    ClipboardDocumentListIcon,
+    ChatBubbleLeftRightIcon,
+    CurrencyRupeeIcon,
+    TagIcon,
+} from '@heroicons/react/24/outline';
 import { cn } from './DashboardUI';
 import { useNotifications } from '../../../hooks/useNotifications';
 import { useNotificationRouter } from '../../../hooks/useNotificationRouter';
@@ -34,8 +44,12 @@ const NotificationPopover: React.FC = () => {
 
     const getIcon = (type?: string) => {
         switch (type) {
-            case 'success': return <CheckCircleIcon className="w-5 h-5 text-green-500" />;
-            case 'warning': return <ExclamationTriangleIcon className="w-5 h-5 text-amber-500" />;
+            case 'task': return <ClipboardDocumentListIcon className="w-5 h-5 text-blue-500" />;
+            case 'chat': return <ChatBubbleLeftRightIcon className="w-5 h-5 text-green-500" />;
+            case 'payment': return <CurrencyRupeeIcon className="w-5 h-5 text-purple-500" />;
+            case 'approval': return <CheckCircleIcon className="w-5 h-5 text-amber-500" />;
+            case 'lead': return <TagIcon className="w-5 h-5 text-sky-500" />;
+            case 'warning': return <ExclamationTriangleIcon className="w-5 h-5 text-red-500" />;
             default: return <InformationCircleIcon className="w-5 h-5 text-accent-subtle-text" />;
         }
     };
@@ -54,9 +68,11 @@ const NotificationPopover: React.FC = () => {
                 onClick={handleToggle}
                 className="p-2 text-text-secondary hover:text-primary relative transition-colors rounded-full hover:bg-primary/5 active:bg-primary/10"
             >
-                <BellIcon className="w-6 h-6" />
+                <BellIcon className={`w-6 h-6 ${unreadCount > 0 ? 'text-primary' : ''}`} />
                 {unreadCount > 0 && (
-                    <span className="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-surface" />
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-black rounded-full border-2 border-surface px-1 animate-pulse">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
                 )}
             </button>
 
@@ -69,7 +85,14 @@ const NotificationPopover: React.FC = () => {
                         className="absolute right-0 mt-2 w-80 sm:w-96 bg-surface border border-border shadow-2xl rounded-2xl z-50 overflow-hidden"
                     >
                         <div className="p-4 border-b border-border flex items-center justify-between bg-background/50">
-                            <h3 className="font-bold text-text-primary">Notifications</h3>
+                            <div className="flex items-center gap-2">
+                                <h3 className="font-bold text-text-primary">Notifications</h3>
+                                {unreadCount > 0 && (
+                                    <span className="px-2 py-0.5 bg-red-500 text-white text-[10px] font-black rounded-full">
+                                        {unreadCount} unread
+                                    </span>
+                                )}
+                            </div>
                             {unreadCount > 0 && (
                                 <button
                                     onClick={markAllAsRead}

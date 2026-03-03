@@ -2,105 +2,84 @@ import React, { useState } from 'react';
 import {
     MagnifyingGlassIcon,
     FunnelIcon,
-    ClockIcon,
-    CheckCircleIcon,
-    ChatBubbleLeftRightIcon,
-    ExclamationTriangleIcon,
+    EyeIcon,
+    CurrencyRupeeIcon,
     UserCircleIcon,
-    CalendarIcon,
-    PencilIcon,
-    EyeIcon
+    MapPinIcon,
+    TagIcon,
 } from '@heroicons/react/24/outline';
-import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid';
-import {
-    useProjects,
-    updateProject
-} from '../../../hooks/useProjects';
-import { Project } from '../../../types';
-import { formatDate, formatCurrencyINR } from '../../../constants';
+import { useCases } from '../../../hooks/useCases';
+import { Case, CaseStatus } from '../../../types';
+import { formatCurrencyINR } from '../../../constants';
+import { useAuth } from '../../../context/AuthContext';
+import SalesManagerCaseDetailModal from './SalesManagerCaseDetailModal';
 
-interface ProjectStage {
-    id: number;
-    name: string;
+// ─── Status Badge ─────────────────────────────────────────────────────────────
+const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
+    [CaseStatus.LEAD]: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Lead' },
+    [CaseStatus.SITE_VISIT]: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Site Visit' },
+    [CaseStatus.DRAWING]: { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Drawing' },
+    [CaseStatus.BOQ]: { bg: 'bg-indigo-100', text: 'text-indigo-700', label: 'BOQ' },
+    [CaseStatus.QUOTATION]: { bg: 'bg-teal-100', text: 'text-teal-700', label: 'Quotation' },
+    [CaseStatus.NEGOTIATION]: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Negotiation' },
+    [CaseStatus.WAITING_FOR_PAYMENT]: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Awaiting Payment' },
+    [CaseStatus.WAITING_FOR_PLANNING]: { bg: 'bg-cyan-100', text: 'text-cyan-700', label: 'Planning' },
+    [CaseStatus.EXECUTION_ACTIVE]: { bg: 'bg-green-100', text: 'text-green-700', label: 'Execution Active' },
+    [CaseStatus.COMPLETED]: { bg: 'bg-gray-100', text: 'text-gray-600', label: 'Completed' },
+};
+
+function StatusBadge({ status }: { status?: string }) {
+    if (!status) return null;
+    const cfg = STATUS_COLORS[status] ?? { bg: 'bg-slate-100', text: 'text-slate-600', label: status };
+    return (
+        <span className={`px-2.5 py-1 text-[10px] font-black uppercase tracking-widest rounded-full ${cfg.bg} ${cfg.text}`}>
+            {cfg.label}
+        </span>
+    );
 }
 
+// ─── Safe value display ───────────────────────────────────────────────────────
+const d = (v: unknown): string => {
+    if (v == null || v === '' || v === 0) return '—';
+    return String(v);
+};
+
+const curr = (v: unknown): string => {
+    const n = Number(v);
+    if (!v || isNaN(n) || n === 0) return '—';
+    return formatCurrencyINR(n);
+};
+
+// ─── Main component ───────────────────────────────────────────────────────────
 const ClientProjectsPage: React.FC = () => {
+    const { currentUser } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterStage, setFilterStage] = useState('all');
-    const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-    const [showStageUpdateModal, setShowStageUpdateModal] = useState(false);
+    const [filterStatus, setFilterStatus] = useState('all');
+    const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+    const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-    // Get projects from unified Firestore collection
-    const { projects, loading, error } = useProjects();
+    // ── Fetch all cases that are projects ──────────────────────────────────────
+    const { cases, loading, error } = useCases({ isProject: true });
 
-    const stages: ProjectStage[] = [
-        { id: 1, name: 'Consultation' },
-        { id: 2, name: 'Requirement Finalization' },
-        { id: 3, name: 'Design Phase' },
-        { id: 4, name: 'Quotation & Approval' },
-        { id: 5, name: 'Material Selection' },
-        { id: 6, name: 'Manufacturing' },
-        { id: 7, name: 'Site Execution' },
-        { id: 8, name: 'Installation' },
-        { id: 9, name: 'Final Handover' }
-    ];
-
-    const getCurrentStageIndex = (p: Project) => {
-        if (p.stages && p.stages.length > 0) {
-            const completedCount = p.stages.filter(s => s.status === 'Completed').length;
-            return Math.min(stages.length, Math.max(1, completedCount + 1));
-        }
-        const idx = Math.round((p.progress || 0) / 100 * stages.length);
-        return Math.min(stages.length, Math.max(1, idx));
-    };
-
-    const getStageProgress = (p: Project) => {
-        return Math.max(0, Math.min(100, p.progress || Math.round((getCurrentStageIndex(p) / stages.length) * 100)));
-    };
-
-    const filteredProjects = projects.filter(project => {
+    const filtered = cases.filter((c) => {
+        const q = searchTerm.toLowerCase();
         const matchesSearch =
-            (project.clientName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (project.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (project.projectName || '').toLowerCase().includes(searchTerm.toLowerCase());
+            (c.clientName ?? '').toLowerCase().includes(q) ||
+            (c.title ?? '').toLowerCase().includes(q) ||
+            (c.id ?? '').toLowerCase().includes(q) ||
+            (c.siteAddress ?? '').toLowerCase().includes(q);
 
-        const matchesFilter =
-            filterStage === 'all' ||
-            getCurrentStageIndex(project) === parseInt(filterStage);
-
-        return matchesSearch && matchesFilter;
+        const matchesStatus = filterStatus === 'all' || c.status === filterStatus;
+        return matchesSearch && matchesStatus;
     });
 
-    const handleUpdateStage = (project: Project) => {
-        setSelectedProject(project);
-        setShowStageUpdateModal(true);
+    const openDetail = (caseId: string) => {
+        console.log('[ClientProjectsPage] Opening detail for caseId:', caseId);
+        setSelectedCaseId(caseId);
+        setIsDetailOpen(true);
     };
 
-    const confirmUpdateStage = async (newStage: number) => {
-        if (selectedProject) {
-            try {
-                const newProgress = Math.round((newStage / stages.length) * 100);
-                await updateProject(selectedProject.id, {
-                    progress: newProgress,
-                    history: [
-                        ...((selectedProject.history || [])),
-                        {
-                            action: 'Stage Progress Updated',
-                            user: 'Sales Team',
-                            timestamp: new Date(),
-                            notes: `Stage updated to ${stages[newStage - 1].name} (${newProgress}%)`
-                        }
-                    ]
-                });
-
-                setShowStageUpdateModal(false);
-                setSelectedProject(null);
-            } catch (error) {
-                console.error('Error updating stage:', error);
-                alert('Failed to update stage. Please try again.');
-            }
-        }
-    };
+    const statuses = Object.entries(STATUS_COLORS).map(([value, cfg]) => ({ value, label: cfg.label }));
 
     return (
         <div className="space-y-6">
@@ -108,211 +87,151 @@ const ClientProjectsPage: React.FC = () => {
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-text-primary">Client Projects</h1>
-                    <p className="text-text-secondary text-sm mt-1">Manage and track all client projects</p>
+                    <p className="text-text-secondary text-sm mt-1">Live data from Firestore · {cases.length} projects</p>
                 </div>
                 <div className="text-sm text-text-secondary">
-                    Total Projects: <span className="font-bold text-text-primary">{projects.length}</span>
+                    Showing <span className="font-bold text-text-primary">{filtered.length}</span> of {cases.length}
                 </div>
             </div>
 
-            {/* Loading State */}
+            {/* Loading */}
             {loading && (
-                <div className="bg-white rounded-xl shadow-sm border border-border p-12 text-center">
-                    <p className="text-text-secondary">Loading projects...</p>
+                <div className="flex justify-center py-16">
+                    <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent" />
                 </div>
             )}
 
-            {/* Error State */}
+            {/* Error */}
             {error && (
                 <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-                    <p className="text-red-800">Error loading projects: {error.message}</p>
-                    <p className="text-sm text-red-600 mt-2">Please ensure Firebase rules allow read access.</p>
+                    <p className="text-red-800 font-medium">Error: {error}</p>
                 </div>
             )}
 
-            {/* Filters & Search */}
+            {/* Filters */}
             {!loading && !error && (
                 <>
-                    <div className="bg-surface rounded-xl shadow-sm border border-border p-4">
-                        <div className="flex flex-col md:flex-row gap-4">
-                            {/* Search */}
-                            <div className="flex-1 relative">
-                                <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-text-secondary" />
-                                <input
-                                    type="text"
-                                    placeholder="Search by client name, project name or project ID..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                                />
-                            </div>
-
-                            {/* Stage Filter */}
-                            <div className="md:w-64">
-                                <div className="relative">
-                                    <FunnelIcon className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-text-secondary" />
-                                    <select
-                                        value={filterStage}
-                                        onChange={(e) => setFilterStage(e.target.value)}
-                                        className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary appearance-none"
-                                    >
-                                        <option value="all">All Stages</option>
-                                        {stages.map(stage => (
-                                            <option key={stage.id} value={stage.id.toString()}>{stage.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
+                    <div className="bg-surface rounded-xl border border-border p-4 flex flex-col md:flex-row gap-3">
+                        <div className="flex-1 relative">
+                            <MagnifyingGlassIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
+                            <input
+                                type="text"
+                                placeholder="Search by client, project name, or ID…"
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                                className="w-full pl-9 pr-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                            />
+                        </div>
+                        <div className="relative md:w-56">
+                            <FunnelIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
+                            <select
+                                value={filterStatus}
+                                onChange={e => setFilterStatus(e.target.value)}
+                                className="w-full pl-9 pr-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary text-sm appearance-none"
+                            >
+                                <option value="all">All Statuses</option>
+                                {statuses.map(s => (
+                                    <option key={s.value} value={s.value}>{s.label}</option>
+                                ))}
+                            </select>
                         </div>
                     </div>
 
-                    {/* Projects Grid */}
-                    <div className="grid grid-cols-1 gap-6">
-                        {filteredProjects.length === 0 ? (
-                            <div className="bg-white rounded-xl shadow-sm border border-border p-12 text-center">
-                                <p className="text-text-secondary">No projects found</p>
+                    {/* Project Cards */}
+                    <div className="grid grid-cols-1 gap-4">
+                        {filtered.length === 0 ? (
+                            <div className="bg-surface rounded-xl border border-border p-12 text-center">
+                                <p className="text-text-secondary">No projects found.</p>
                             </div>
                         ) : (
-                            filteredProjects.map(project => (
-                                <div key={project.id} className="bg-white rounded-xl shadow-sm border border-border hover:shadow-md transition-shadow duration-300">
-                                    <div className="p-6">
-                                        {/* Header Row */}
-                                        <div className="flex items-start justify-between mb-4">
-                                            <div className="flex-1">
-                                                <div className="flex items-center space-x-3 mb-2">
-                                                    <h3 className="text-lg font-bold text-text-primary">{project.clientName}</h3>
-                                                    <span className="px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full">
-                                                        {project.id}
-                                                    </span>
-                                                </div>
-                                                <p className="text-sm text-text-secondary">{project.projectName} • {project.clientAddress}</p>
-                                            </div>
+                            filtered.map(c => {
+                                const budget = c.financial?.totalBudget ?? (typeof c.budget === 'number' ? c.budget : null);
+                                const collected = c.financial?.totalCollected ?? null;
+                                const projectVal = c.projectValue ?? c.leadValue ?? null;
 
-                                            {/* Notification Badges */}
-                                            <div className="flex items-center space-x-2">
-                                                {Array.isArray(project.issues) && project.issues.length > 0 && (
-                                                    <div className="flex items-center space-x-1 px-3 py-1 bg-red-50 rounded-full">
-                                                        <ExclamationTriangleIcon className="w-4 h-4 text-red-600" />
-                                                        <span className="text-xs font-bold text-red-600">{project.issues.length}</span>
+                                return (
+                                    <div key={c.id} className="bg-surface rounded-2xl border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-200">
+                                        <div className="p-6">
+                                            {/* Title row */}
+                                            <div className="flex items-start justify-between gap-4 mb-4">
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                        <h3 className="text-base font-bold text-text-primary truncate">
+                                                            {d(c.clientName)}
+                                                        </h3>
+                                                        <StatusBadge status={c.status} />
+                                                        {c.leadType && (
+                                                            <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest bg-primary/10 text-primary rounded-full">
+                                                                {c.leadType}
+                                                            </span>
+                                                        )}
                                                     </div>
-                                                )}
+                                                    <p className="text-sm text-text-secondary truncate">
+                                                        {d(c.title)} {c.siteAddress ? `· ${c.siteAddress}` : ''}
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    onClick={() => openDetail(c.id)}
+                                                    className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary/90 transition-colors"
+                                                >
+                                                    <EyeIcon className="w-4 h-4" />
+                                                    View Details
+                                                </button>
                                             </div>
-                                        </div>
 
-                                        {/* Progress Bar */}
-                                        <div className="mb-4">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">
-                                                    Current Stage: {stages[getCurrentStageIndex(project) - 1]?.name || 'N/A'}
-                                                </span>
-                                                <span className="text-xs font-bold text-primary">{getStageProgress(project)}%</span>
-                                            </div>
-                                            <div className="w-full bg-gray-200 rounded-full h-2">
-                                                <div
-                                                    className="bg-primary h-2 rounded-full transition-all duration-500"
-                                                    style={{ width: `${getStageProgress(project)}%` }}
-                                                ></div>
-                                            </div>
-                                        </div>
-
-                                        {/* Info Grid */}
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 pt-4 border-t border-border">
-                                            <div>
-                                                <p className="text-xs text-text-secondary mb-1">Consultant</p>
-                                                <div className="flex items-center space-x-1">
-                                                    <UserCircleIcon className="w-4 h-4 text-primary" />
-                                                    <p className="text-sm font-medium text-text-primary">{project.assignedTeam?.drawing || 'Unassigned'}</p>
+                                            {/* Data grid */}
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-border">
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary mb-1 flex items-center gap-1">
+                                                        <CurrencyRupeeIcon className="w-3 h-3" /> Project Value
+                                                    </p>
+                                                    <p className={`text-sm font-bold ${projectVal ? 'text-primary' : 'text-text-secondary'}`}>
+                                                        {curr(projectVal)}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary mb-1 flex items-center gap-1">
+                                                        <CurrencyRupeeIcon className="w-3 h-3" /> Budget
+                                                    </p>
+                                                    <p className="text-sm font-bold text-text-primary">
+                                                        {curr(budget)}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary mb-1 flex items-center gap-1">
+                                                        <CurrencyRupeeIcon className="w-3 h-3" /> Collected
+                                                    </p>
+                                                    <p className={`text-sm font-bold ${collected ? 'text-green-600' : 'text-text-secondary'}`}>
+                                                        {curr(collected)}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary mb-1 flex items-center gap-1">
+                                                        <UserCircleIcon className="w-3 h-3" /> Sales Owner
+                                                    </p>
+                                                    <p className="text-sm font-bold text-text-primary">
+                                                        {d(c.assignedSales)}
+                                                    </p>
                                                 </div>
                                             </div>
-                                            <div>
-                                                <p className="text-xs text-text-secondary mb-1">Budget</p>
-                                                <p className="text-sm font-medium text-text-primary">{formatCurrencyINR(project.budget || 0)}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-xs text-text-secondary mb-1">Expected Completion</p>
-                                                <div className="flex items-center space-x-1">
-                                                    <CalendarIcon className="w-4 h-4 text-primary" />
-                                                    <p className="text-sm font-medium text-text-primary">{formatDate(project.endDate)}</p>
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <p className="text-xs text-text-secondary mb-1">Status</p>
-                                                <div className="flex items-center space-x-1 text-primary">
-                                                    <CheckCircleSolid className="w-4 h-4" />
-                                                    <p className="text-sm font-medium">{project.status}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Action Buttons */}
-                                        <div className="flex flex-wrap gap-2 pt-4 border-t border-border">
-                                            <button
-                                                onClick={() => handleUpdateStage(project)}
-                                                className="px-4 py-2 bg-gray-100 text-text-primary text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors flex items-center space-x-2"
-                                            >
-                                                <PencilIcon className="w-4 h-4" />
-                                                <span>Update Stage</span>
-                                            </button>
-                                            <button
-                                                className="px-4 py-2 bg-gray-100 text-text-primary text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors flex items-center space-x-2"
-                                            >
-                                                <ChatBubbleLeftRightIcon className="w-4 h-4" />
-                                                <span>View Chat</span>
-                                            </button>
-                                            <button
-                                                className="px-4 py-2 bg-gray-100 text-text-primary text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors flex items-center space-x-2"
-                                            >
-                                                <EyeIcon className="w-4 h-4" />
-                                                <span>View Details</span>
-                                            </button>
                                         </div>
                                     </div>
-                                </div>
-                            ))
+                                );
+                            })
                         )}
                     </div>
-
-                    {/* Stage Update Modal */}
-                    {showStageUpdateModal && selectedProject && (
-                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-6">
-                            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
-                                <h3 className="text-2xl font-bold text-text-primary mb-4">Update Project Stage</h3>
-                                <p className="text-text-secondary mb-6">
-                                    Current stage: <span className="font-bold text-text-primary">{stages[getCurrentStageIndex(selectedProject) - 1]?.name || 'N/A'}</span>
-                                </p>
-                                <div className="space-y-2 mb-6 max-h-80 overflow-y-auto">
-                                    {stages.map((stage) => (
-                                        <button
-                                            key={stage.id}
-                                            onClick={() => confirmUpdateStage(stage.id)}
-                                            className={`w-full px-4 py-3 text-left rounded-xl transition-colors ${stage.id === getCurrentStageIndex(selectedProject)
-                                                ? 'bg-primary text-white'
-                                                : 'bg-gray-50 text-text-primary hover:bg-gray-100'
-                                                }`}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <span className="font-medium">{stage.name}</span>
-                                                {stage.id === getCurrentStageIndex(selectedProject) && (
-                                                    <CheckCircleSolid className="w-5 h-5" />
-                                                )}
-                                            </div>
-                                        </button>
-                                    ))}
-                                </div>
-                                <button
-                                    onClick={() => {
-                                        setShowStageUpdateModal(false);
-                                        setSelectedProject(null);
-                                    }}
-                                    className="w-full px-4 py-3 bg-gray-100 text-text-primary font-medium rounded-xl hover:bg-gray-200 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        </div>
-                    )}
                 </>
             )}
+
+            {/* Case Detail Modal */}
+            <SalesManagerCaseDetailModal
+                caseId={selectedCaseId}
+                isOpen={isDetailOpen}
+                onClose={() => {
+                    setIsDetailOpen(false);
+                    setSelectedCaseId(null);
+                }}
+            />
         </div>
     );
 };

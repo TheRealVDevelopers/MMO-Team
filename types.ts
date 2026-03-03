@@ -258,6 +258,10 @@ export interface Case {
   priority?: string;
   quotationStatus?: string; // To track quotation workflow state
 
+  // Value tracking (separated by lifecycle stage)
+  leadValue?: number;   // Entered by salesperson at lead creation
+  projectValue?: number; // Set after quotation approval (authoritative post-approval value)
+
   // Workflow State (Derived helpers, NOT authority)
   workflow: CaseWorkflow;
 
